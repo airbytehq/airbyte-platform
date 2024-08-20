@@ -10,25 +10,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.NotImplementedMetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
-import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.RecordSchemaValidator;
@@ -55,13 +53,13 @@ import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.bookkeeping.StreamStatusTracker;
 import io.airbyte.workers.internal.bookkeeping.events.AirbyteControlMessageEventListener;
-import io.airbyte.workers.internal.bookkeeping.events.AirbyteStreamStatusMessageEventListener;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;
 import java.nio.file.Path;
@@ -136,7 +134,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false));
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());
@@ -152,7 +150,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
         new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
-            new EnvVariableFeatureFlags(), mock(MetricClient.class));
+            false, mock(MetricClient.class));
     final var workspaceID = UUID.randomUUID();
     final FeatureFlagClient featureFlagClient = new TestClient(Map.of("heartbeat.failSync", false));
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
@@ -162,10 +160,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         UUID.randomUUID(),
         "docker image",
         new NotImplementedMetricClient());
-    final StreamStatusTracker streamStatusTracker = new StreamStatusTracker(mock(AirbyteApiClient.class));
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
-        new AirbyteControlMessageEventListener(connectorConfigUpdater),
-        new AirbyteStreamStatusMessageEventListener(streamStatusTracker));
+        new AirbyteControlMessageEventListener(connectorConfigUpdater));
     final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
         workspaceID,
         UUID.randomUUID(),
@@ -178,18 +174,21 @@ public abstract class ReplicationWorkerPerformanceTest {
       final ReplicationAirbyteMessageEvent event = e.getArgument(0);
       listeners.forEach(l -> l.onApplicationEvent(event));
       return null;
-    }).when(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(any(ReplicationAirbyteMessageEvent.class));
+    }).when(replicationAirbyteMessageEventPublishingHelper).publishEvent(any(ReplicationAirbyteMessageEvent.class));
 
     final boolean fieldSelectionEnabled = false;
     final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
     final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
+    final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
+    when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
+    when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
 
+    final StreamStatusTrackerFactory streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
     final ReplicationWorkerHelper replicationWorkerHelper =
-        new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
-            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false,
-            analyticsMessageTracker,
-            Optional.empty(), mock(SourceApi.class), mock(DestinationApi.class), mock(StreamStatusCompletionTracker.class));
+        new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
+            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false, analyticsMessageTracker,
+            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

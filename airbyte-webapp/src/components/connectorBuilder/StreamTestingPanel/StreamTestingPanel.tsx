@@ -18,11 +18,11 @@ import {
 
 import addStreamScreenshotDark from "./add-stream-screenshot-dark.png";
 import addStreamScreenshotLight from "./add-stream-screenshot-light.png";
+import { AdvancedTestSettings } from "./AdvancedTestSettings";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
 import { TestingValuesMenu } from "./TestingValuesMenu";
-import { TestReadLimits } from "./TestReadLimits";
 import { useBuilderWatch } from "../types";
 
 const EMPTY_SCHEMA = {};
@@ -73,7 +73,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
           isOpen={isTestingValuesInputOpen}
           setIsOpen={setTestingValuesInputOpen}
         />
-        <TestReadLimits isOpen={isTestReadSettingsOpen} setIsOpen={setTestReadSettingsOpen} />
+        <AdvancedTestSettings isOpen={isTestReadSettingsOpen} setIsOpen={setTestReadSettingsOpen} />
       </FlexContainer>
       {hasStreams || mode === "yaml" ? (
         <>

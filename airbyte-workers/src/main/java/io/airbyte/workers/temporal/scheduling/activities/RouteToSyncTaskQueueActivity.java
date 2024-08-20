@@ -27,6 +27,9 @@ public interface RouteToSyncTaskQueueActivity {
   @ActivityMethod
   RouteToSyncTaskQueueOutput routeToCheckConnection(RouteToSyncTaskQueueInput input);
 
+  @ActivityMethod
+  RouteToSyncTaskQueueOutput routeToDiscoverCatalog(RouteToSyncTaskQueueInput input);
+
   /**
    * RouteToSyncTaskQueueInput.
    */

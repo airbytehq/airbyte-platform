@@ -3,6 +3,8 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.ScopedConfigurationRepository
 import io.airbyte.data.repositories.entities.ScopedConfiguration
+import io.airbyte.data.services.impls.data.mappers.EntityConfigOriginType
+import io.airbyte.data.services.impls.data.mappers.ModelConfigOriginType
 import io.airbyte.data.services.impls.data.mappers.ModelConfigScopeType
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
@@ -773,6 +775,70 @@ internal class ScopedConfigurationServiceDataImplTest {
         resourceId,
         EntityConfigScopeType.workspace,
         listOf(config.scopeId, config2.scopeId),
+      )
+    }
+  }
+
+  @Test
+  fun `test list configurations with values`() {
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id2",
+      )
+
+    every {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
+        "key",
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        EntityConfigOriginType.user,
+        listOf(config.value, config2.value),
+      )
+    } returns listOf(config, config2)
+
+    val res =
+      scopedConfigurationService.listScopedConfigurationsWithValues(
+        "key",
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        resourceId,
+        ModelConfigScopeType.WORKSPACE,
+        ModelConfigOriginType.USER,
+        listOf(config.value, config2.value),
+      )
+    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
+        "key",
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        EntityConfigOriginType.user,
+        listOf(config.value, config2.value),
       )
     }
   }

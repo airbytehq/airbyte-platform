@@ -10,14 +10,14 @@ import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.ConnectionCreateRequest
-import io.airbyte.public_api.model.generated.ConnectionPatchRequest
-import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.ConnectionsResponse
-import io.airbyte.public_api.model.generated.SourceResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionsResponse
+import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.ConnectionCreateMapper
@@ -26,7 +26,6 @@ import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionsResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -102,7 +101,7 @@ class ConnectionServiceImpl(
       )
     } catch (e: Exception) {
       log.error("Error while reading response and converting to Connection read: ", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      throw UnexpectedProblem()
     }
   }
 
@@ -115,7 +114,7 @@ class ConnectionServiceImpl(
         connectionHandler.deleteConnection(connectionId)
       }.onFailure {
         log.error("Error while deleting connection: ", it)
-        ConfigClientErrorHandler.handleError(it, connectionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result.getOrNull())
   }
@@ -129,7 +128,7 @@ class ConnectionServiceImpl(
         connectionHandler.getConnection(connectionId)
       }.onFailure {
         log.error("Error while getting connection: ", it)
-        ConfigClientErrorHandler.handleError(it, connectionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
@@ -140,7 +139,7 @@ class ConnectionServiceImpl(
 
     return ConnectionReadMapper.from(
       connectionRead,
-      sourceResponse.workspaceId,
+      UUID.fromString(sourceResponse.workspaceId),
     )
   }
 
@@ -168,7 +167,7 @@ class ConnectionServiceImpl(
       kotlin.runCatching { connectionHandler.updateConnection(connectionUpdate) }
         .onFailure {
           log.error("Error while updating connection: ", it)
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
@@ -181,7 +180,7 @@ class ConnectionServiceImpl(
       )
     } catch (e: java.lang.Exception) {
       log.error("Error while reading and converting to Connection Response: ", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      throw UnexpectedProblem()
     }
   }
 
@@ -208,7 +207,7 @@ class ConnectionServiceImpl(
         connectionHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val connectionReadList = result.getOrNull()!!

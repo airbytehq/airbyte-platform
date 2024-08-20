@@ -6,15 +6,15 @@ package io.airbyte.data.services.impls.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
@@ -28,7 +28,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 

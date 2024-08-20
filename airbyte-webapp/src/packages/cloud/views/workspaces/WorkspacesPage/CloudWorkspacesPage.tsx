@@ -47,7 +47,6 @@ export const CloudWorkspacesPageInner: React.FC = () => {
   /**
    * Check if we should show the "You don't have permission to anything" message, if:
    * - We're not currently still loading workspaces (i.e. we're not yet knowing if the user has access to any workspace potentially)
-   * - User is in at least one organization (if not, the user a regular non-org user who always can create workspaces for themselves)
    * - User has no permissions to create a workspace in any of those organizations (otherwise user could just create a workspace)
    * - No workspaces have been found (i.e. user doesn't have access to any workspace) while the search value was empty. Otherwise simply
    *   the search query couldn't have found any matching workspaces.
@@ -57,7 +56,6 @@ export const CloudWorkspacesPageInner: React.FC = () => {
   const showNoWorkspacesContent =
     !isFetching &&
     !organizationsToCreateIn.length &&
-    organizationsMemberOnly.length > 0 &&
     !workspaces.length &&
     searchValue.length === 0 &&
     searchValue === deferredSearchValue;

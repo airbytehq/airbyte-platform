@@ -27,7 +27,7 @@ import java.util.UUID
 internal class WorkloadApiClientTest {
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var workloadApi: WorkloadApi
-  private lateinit var internalWorkloadApiClient: io.airbyte.api.client.WorkloadApiClient
+  private lateinit var internalWorkloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient
 
   @BeforeEach
   internal fun setup() {
@@ -52,13 +52,11 @@ internal class WorkloadApiClientTest {
         autoId = UUID.randomUUID(),
       )
     val stageIo: StageIO = mockk()
-    val failure: StageError = mockk()
     val requestCapture = slot<WorkloadFailureRequest>()
 
     every { workloadApi.workloadFailure(any()) } returns Unit
     every { stageIo.msg } returns launcherInput
-    every { failure.stageName } returns StageName.LAUNCH
-    every { failure.io } returns stageIo
+    val failure = StageError(stageIo, StageName.LAUNCH, RuntimeException("Cause"))
 
     workloadApiClient.reportFailure(failure)
 
@@ -110,9 +108,13 @@ internal class WorkloadApiClientTest {
     val workloadId = "workload-id"
     val requestCapture = slot<WorkloadFailureRequest>()
 
+    val launcherInput = mockk<LauncherInput>()
+    every { launcherInput.workloadId } returns workloadId
+    val io = mockk<StageIO>()
+    every { io.msg } returns launcherInput
     every { workloadApi.workloadFailure(any()) } returns Unit
 
-    workloadApiClient.updateStatusToFailed(workloadId)
+    workloadApiClient.updateStatusToFailed(StageError(io, StageName.CLAIM, RuntimeException("Cause")))
 
     verify(exactly = 1) { workloadApi.workloadFailure(capture(requestCapture)) }
     assertEquals(workloadId, requestCapture.captured.workloadId)

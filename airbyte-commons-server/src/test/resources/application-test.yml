@@ -3,3 +3,4 @@ micronaut:
     netty:
       aggregator:
         max-content-length: 52428800 # 50MB
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.

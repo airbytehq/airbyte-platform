@@ -6,7 +6,7 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.public_api.model.generated.ConnectionsResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionsResponse
 import io.airbyte.server.apis.publicapi.constants.CONNECTIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
 import io.airbyte.server.apis.publicapi.constants.WORKSPACE_IDS
@@ -42,11 +42,14 @@ object ConnectionsResponseMapper {
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
     if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
-    val connectionsResponse = ConnectionsResponse()
-    connectionsResponse.next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder)
-    connectionsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    connectionsResponse.data =
-      connectionReadList.connections.map { connectionRead: ConnectionRead -> ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId) }
-    return connectionsResponse
+    return ConnectionsResponse(
+      next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder),
+      previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
+      data =
+        connectionReadList.connections.map {
+            connectionRead: ConnectionRead ->
+          ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId)
+        },
+    )
   }
 }

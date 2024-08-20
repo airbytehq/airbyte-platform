@@ -26,7 +26,7 @@ export const fillPostgresForm = (
 ) => {
   cy.intercept("/api/v1/source_definition_specifications/get").as("getSourceSpecifications");
 
-  selectServiceType("Postgres");
+  selectServiceType("Postgres", "certified");
 
   if (openOptional) {
     openOptionalFields();
@@ -44,7 +44,7 @@ export const fillPostgresForm = (
 export const fillPokeAPIForm = (name: string, pokeName: string) => {
   cy.intercept("/api/v1/source_definition_specifications/get").as("getSourceSpecifications");
 
-  selectServiceType("PokeAPI");
+  selectServiceType("PokeAPI", "marketplace");
 
   enterName(name);
   enterPokemonName(pokeName);
@@ -53,7 +53,7 @@ export const fillPokeAPIForm = (name: string, pokeName: string) => {
 export const fillDummyApiForm = (name: string, apiKey: string) => {
   cy.intercept("/api/v1/source_definition_specifications/get").as("getSourceSpecifications");
 
-  selectServiceType(name);
+  selectServiceType(name, "custom");
 
   enterName(name);
   enterApiKey(apiKey);
@@ -62,7 +62,7 @@ export const fillDummyApiForm = (name: string, apiKey: string) => {
 export const fillLocalJsonForm = (name: string, destinationPath: string) => {
   cy.intercept("/api/v1/destination_definition_specifications/get").as("getDestinationSpecifications");
 
-  selectServiceType("Local JSON");
+  selectServiceType("Local JSON", "marketplace");
 
   cy.wait("@getDestinationSpecifications");
 

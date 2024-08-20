@@ -6,12 +6,13 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.CONNECTION_SPECIFICATION_FIELD;
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.SPEC_FIELD;
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -37,6 +38,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInn
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
+import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
@@ -44,6 +47,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
@@ -54,9 +58,6 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.init.CdkVersionProvider;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -68,8 +69,12 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -77,17 +82,17 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class ConnectorBuilderProjectsHandlerTest {
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
@@ -95,6 +100,12 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
   private static final Long A_VERSION = 32L;
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
+  private static final Version A_CDK_VERSION = new Version("0.0.1");
+  private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
+      new DeclarativeManifestImageVersion(0, "0.79.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+          OffsetDateTime.now(), OffsetDateTime.now());
+  private static final String A_BASE_IMAGE =
+      "docker.io/airbyte/source-declarative-manifest:0.79.0@sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c";
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -102,7 +113,6 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
   private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
-  private static final String CDK_VERSION = "8.9.10";
 
   static {
     try {
@@ -113,18 +123,18 @@ class ConnectorBuilderProjectsHandlerTest {
     }
   }
 
-  private ConfigRepository configRepository;
+  private DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
+  private ConnectorBuilderService connectorBuilderService;
   private BuilderProjectUpdater builderProjectUpdater;
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
   private DeclarativeSourceManifestInjector manifestInjector;
-  private CdkVersionProvider cdkVersionProvider;
   private WorkspaceService workspaceService;
   private FeatureFlagClient featureFlagClient;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private SecretPersistenceConfigService secretPersistenceConfigService;
-  private ConnectorBuilderService connectorBuilderService;
+  private SourceService sourceService;
   private JsonSecretsProcessor secretsProcessor;
   private ConnectorBuilderServerApi connectorBuilderServerApiClient;
   private ConnectorSpecification adaptedConnectorSpecification;
@@ -168,32 +178,36 @@ class ConnectorBuilderProjectsHandlerTest {
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws JsonProcessingException {
-    configRepository = mock(ConfigRepository.class);
+    declarativeManifestImageVersionService = mock(DeclarativeManifestImageVersionService.class);
+    connectorBuilderService = mock(ConnectorBuilderService.class);
     builderProjectUpdater = mock(BuilderProjectUpdater.class);
     uuidSupplier = mock(Supplier.class);
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
-    cdkVersionProvider = mock(CdkVersionProvider.class);
     workspaceService = mock(WorkspaceService.class);
     featureFlagClient = mock(TestClient.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    connectorBuilderService = mock(ConnectorBuilderService.class);
+    sourceService = mock(SourceService.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     connectorBuilderServerApiClient = mock(ConnectorBuilderServerApi.class);
-    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
     connectorBuilderProjectsHandler =
-        new ConnectorBuilderProjectsHandler(configRepository, builderProjectUpdater, cdkVersionProvider, uuidSupplier, manifestInjector,
+        new ConnectorBuilderProjectsHandler(declarativeManifestImageVersionService, connectorBuilderService, builderProjectUpdater, uuidSupplier,
+            manifestInjector,
             workspaceService, featureFlagClient,
-            secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, connectorBuilderService, secretsProcessor,
+            secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, sourceService, secretsProcessor,
             connectorBuilderServerApiClient);
+
+    when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
+        .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
 
-  private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
+  private ConnectorBuilderProject generateBuilderProject() {
     final UUID projectId = UUID.randomUUID();
     return new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId).withName("Test project")
         .withHasDraft(true).withManifestDraft(draftManifest);
@@ -216,9 +230,27 @@ class ConnectorBuilderProjectsHandlerTest {
     assertEquals(project.getBuilderProjectId(), response.getBuilderProjectId());
     assertEquals(project.getWorkspaceId(), response.getWorkspaceId());
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
+  }
+
+  @Test
+  @DisplayName("publishConnectorBuilderProject throws a helpful error if no associated CDK version is found")
+  void testCreateConnectorBuilderProjectNoCdkVersion() {
+    final ConnectorBuilderProject project = generateBuilderProject();
+
+    when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
+        .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
+
+    final ConnectorBuilderPublishRequestBody publish = new ConnectorBuilderPublishRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .workspaceId(workspaceId)
+        .initialDeclarativeManifest(new DeclarativeSourceManifest().spec(A_SPEC).manifest(A_MANIFEST));
+
+    assertEquals("No declarative manifest image version found in database for major version 0",
+        assertThrows(IllegalStateException.class, () -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(publish)).getMessage());
   }
 
   @Test
@@ -226,7 +258,7 @@ class ConnectorBuilderProjectsHandlerTest {
   void testUpdateConnectorBuilderProject() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
 
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     final ExistingConnectorBuilderProjectWithWorkspaceId update = new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails()
@@ -256,11 +288,11 @@ class ConnectorBuilderProjectsHandlerTest {
         .builderProjectId(project.getBuilderProjectId());
 
     project.setWorkspaceId(wrongWorkspace);
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.updateConnectorBuilderProject(update));
 
-    verify(configRepository, never()).writeBuilderProjectDraft(any(UUID.class), any(UUID.class), any(String.class), any(JsonNode.class));
+    verify(connectorBuilderService, never()).writeBuilderProjectDraft(any(UUID.class), any(UUID.class), any(String.class), any(JsonNode.class));
   }
 
   @Test
@@ -270,12 +302,12 @@ class ConnectorBuilderProjectsHandlerTest {
     final UUID wrongWorkspace = UUID.randomUUID();
 
     project.setWorkspaceId(wrongWorkspace);
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId)));
 
-    verify(configRepository, never()).deleteBuilderProject(any(UUID.class));
+    verify(connectorBuilderService, never()).deleteBuilderProject(any(UUID.class));
   }
 
   @Test
@@ -283,12 +315,12 @@ class ConnectorBuilderProjectsHandlerTest {
   void testDeleteConnectorBuilderProject() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
 
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .deleteBuilderProject(
             project.getBuilderProjectId());
   }
@@ -302,7 +334,7 @@ class ConnectorBuilderProjectsHandlerTest {
     project1.setActiveDeclarativeManifestVersion(A_VERSION);
     project1.setActorDefinitionId(UUID.randomUUID());
 
-    when(configRepository.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(Stream.of(project1, project2));
+    when(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(Stream.of(project1, project2));
 
     final ConnectorBuilderProjectReadList response =
         connectorBuilderProjectsHandler.listConnectorBuilderProjects(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -315,10 +347,10 @@ class ConnectorBuilderProjectsHandlerTest {
 
     assertEquals(project1.getActiveDeclarativeManifestVersion(), response.getProjects().get(0).getActiveDeclarativeManifestVersion());
     assertEquals(project1.getActorDefinitionId(), response.getProjects().get(0).getSourceDefinitionId());
-    Assertions.assertNull(project2.getActiveDeclarativeManifestVersion());
-    Assertions.assertNull(project2.getActorDefinitionId());
+    assertNull(project2.getActiveDeclarativeManifestVersion());
+    assertNull(project2.getActorDefinitionId());
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .getConnectorBuilderProjectsByWorkspace(
             workspaceId);
   }
@@ -331,7 +363,7 @@ class ConnectorBuilderProjectsHandlerTest {
     project.setActiveDeclarativeManifestVersion(A_VERSION);
     project.setTestingValues(testingValuesWithSecretCoordinates);
 
-    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, Jsons.deserialize(specString)))
         .thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -355,7 +387,7 @@ class ConnectorBuilderProjectsHandlerTest {
     project.setActiveDeclarativeManifestVersion(A_VERSION);
     project.setTestingValues(null);
 
-    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
     final ConnectorBuilderProjectRead response =
         connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
@@ -378,7 +410,7 @@ class ConnectorBuilderProjectsHandlerTest {
     project.setHasDraft(false);
     project.setTestingValues(null);
 
-    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
     final ConnectorBuilderProjectRead response =
         connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
@@ -401,11 +433,12 @@ class ConnectorBuilderProjectsHandlerTest {
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
         .withTestingValues(testingValuesWithSecretCoordinates);
     final JsonNode manifest = addSpec(A_MANIFEST);
-    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
-    when(configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID)).thenReturn(new DeclarativeManifest()
-        .withManifest(manifest)
-        .withVersion(A_VERSION)
-        .withDescription(A_DESCRIPTION));
+    when(connectorBuilderService.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
+        .thenReturn(new DeclarativeManifest()
+            .withManifest(manifest)
+            .withVersion(A_VERSION)
+            .withDescription(A_DESCRIPTION));
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, Jsons.deserialize(specString)))
         .thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -424,9 +457,9 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void givenVersionWhenGetConnectorBuilderProjectWithManifestThenReturnSpecificVersion() throws ConfigNotFoundException, IOException {
     final JsonNode manifest = addSpec(A_MANIFEST);
-    when(configRepository.getConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(false))).thenReturn(
+    when(connectorBuilderService.getConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(false))).thenReturn(
         new ConnectorBuilderProject().withWorkspaceId(A_WORKSPACE_ID));
-    when(configRepository.getVersionedConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(A_VERSION))).thenReturn(
+    when(connectorBuilderService.getVersionedConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(A_VERSION))).thenReturn(
         new ConnectorBuilderProjectVersionedManifest()
             .withBuilderProjectId(A_BUILDER_PROJECT_ID)
             .withActiveDeclarativeManifestVersion(ACTIVE_MANIFEST_VERSION)
@@ -472,7 +505,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
-    verify(configRepository, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
+    verify(sourceService, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_SOURCE_NAME)
         .withSourceType(SourceType.CUSTOM)
@@ -482,15 +515,16 @@ class ConnectorBuilderProjectsHandlerTest {
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
-                .withDockerImageTag(CDK_VERSION)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
+                .withInternalSupportLevel(100L)
                 .withReleaseStage(ReleaseStage.CUSTOM)
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),
         eq(workspaceId),
         eq(ScopeType.WORKSPACE));
-    verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
+    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 
   @Test
@@ -500,13 +534,13 @@ class ConnectorBuilderProjectsHandlerTest {
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
-    verify(configRepository, times(1)).insertActiveDeclarativeManifest(eq(new DeclarativeManifest()
+    verify(connectorBuilderService, times(1)).insertActiveDeclarativeManifest(eq(new DeclarativeManifest()
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
         .withVersion(A_VERSION)
         .withDescription(A_DESCRIPTION)
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)));
-    verify(configRepository, times(1)).assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
+    verify(connectorBuilderService, times(1)).assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
   }
 
   @Test
@@ -514,12 +548,12 @@ class ConnectorBuilderProjectsHandlerTest {
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
-    verify(configRepository, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
+    verify(connectorBuilderService, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
   }
 
   @Test
   void testUpdateTestingValuesOnProjectWithNoExistingValues()
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
     final JsonNode spec = Jsons.deserialize(
         """
@@ -537,7 +571,7 @@ class ConnectorBuilderProjectsHandlerTest {
         }""");
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.empty(), testingValues, spec, true))
+    when(secretsRepositoryWriter.createFromConfig(workspaceId, testingValues, spec, null))
         .thenReturn(testingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -549,7 +583,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   void testUpdateTestingValuesOnProjectWithExistingValues()
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
     final JsonNode newTestingValues = Jsons.deserialize(
         """
@@ -570,8 +604,8 @@ class ConnectorBuilderProjectsHandlerTest {
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
     when(secretsProcessor.copySecrets(testingValues, newTestingValues, spec)).thenReturn(newTestingValues);
-    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
-        newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates,
+        newTestingValues, spec, null)).thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
     final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
@@ -595,7 +629,7 @@ class ConnectorBuilderProjectsHandlerTest {
     testStreamReadForProject(project, testingValues);
   }
 
-  private void testStreamReadForProject(ConnectorBuilderProject project, JsonNode testingValues) throws Exception {
+  private void testStreamReadForProject(final ConnectorBuilderProject project, final JsonNode testingValues) throws Exception {
     final String streamName = "stream1";
     final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
         .builderProjectId(project.getBuilderProjectId())
@@ -608,7 +642,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .sliceLimit(null);
 
     final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
-        project.getBuilderProjectId().toString(), null, null, null, null, project.getWorkspaceId().toString());
+        project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode record1 = Jsons.deserialize(
         """
@@ -664,6 +698,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .builderProjectId(project.getBuilderProjectId())
         .manifest(project.getManifestDraft())
         .streamName(streamName)
+        .state(List.of())
         .workspaceId(project.getWorkspaceId())
         .formGeneratedManifest(false)
         .recordLimit(null)
@@ -671,7 +706,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .sliceLimit(null);
 
     final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
-        project.getBuilderProjectId().toString(), null, null, null, null, project.getWorkspaceId().toString());
+        project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode newTestingValues = Jsons.deserialize(
         """
@@ -697,8 +732,8 @@ class ConnectorBuilderProjectsHandlerTest {
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
-    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
-        newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
+        .thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
 
     final ConnectorBuilderProjectStreamRead projectStreamRead =
@@ -706,6 +741,18 @@ class ConnectorBuilderProjectsHandlerTest {
 
     assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate());
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testGetBaseImageForDeclarativeManifest() {
+    final DeclarativeManifestRequestBody requestBody = new DeclarativeManifestRequestBody().manifest(A_MANIFEST);
+
+    when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
+        .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+
+    final DeclarativeManifestBaseImageRead responseBody = connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody);
+    assertEquals(A_BASE_IMAGE, responseBody.getBaseImage());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {
@@ -716,16 +763,12 @@ class ConnectorBuilderProjectsHandlerTest {
     return new DeclarativeSourceManifest().version(A_VERSION);
   }
 
-  private static ConnectorBuilderProject anyBuilderProject() {
-    return new ConnectorBuilderProject();
-  }
-
   private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(spec)).thenReturn(adaptedConnectorSpecification);
     when(adaptedConnectorSpecification.getDocumentationUrl()).thenReturn(URI.create(documentationUrl));
   }
 
-  private JsonNode addSpec(JsonNode manifest) {
+  private JsonNode addSpec(final JsonNode manifest) {
     final JsonNode spec = Jsons.deserialize("{\"" + CONNECTION_SPECIFICATION_FIELD + "\":" + specString + "}");
     return ((ObjectNode) Jsons.clone(manifest)).set(SPEC_FIELD, spec);
   }

@@ -1,7 +1,6 @@
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
 import {
   AirbyteStreamAndConfiguration,
@@ -16,8 +15,6 @@ import {
   SyncMode,
   SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
-
-import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
 
 /**
  * yup schema for the schedule data
@@ -81,6 +78,7 @@ const streamSchema: SchemaOf<AirbyteStream> = yup.object({
   defaultCursorField: yup.array().of(yup.string()).optional(),
   sourceDefinedPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   namespace: yup.string().optional(),
+  isResumable: yup.boolean().optional(),
 });
 
 /**
@@ -102,6 +100,9 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
+  minimumGenerationId: yup.number().optional(),
+  generationId: yup.number().optional(),
+  syncId: yup.number().optional(),
 });
 
 export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguration> = yup.object({
@@ -120,7 +121,11 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         // it's possible that primaryKey array is always present
         // however yup couldn't determine type correctly even with .required() call
 
-        if (DestinationSyncMode.append_dedup === value.destinationSyncMode && value.primaryKey?.length === 0) {
+        if (
+          (DestinationSyncMode.append_dedup === value.destinationSyncMode ||
+            DestinationSyncMode.overwrite_dedup === value.destinationSyncMode) &&
+          value.primaryKey?.length === 0
+        ) {
           errors.push(
             this.createError({
               message: "connectionForm.primaryKey.required",
@@ -134,7 +139,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         if (
           SyncMode.incremental === value.syncMode &&
           !this.parent.stream.sourceDefinedCursor &&
-          value.cursorField?.length === 0
+          value.cursorField?.filter(Boolean).length === 0 // filter out empty strings
         ) {
           errors.push(
             this.createError({
@@ -199,8 +204,6 @@ export const createConnectionValidationSchema = (
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),
       geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
-      normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
-      transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
       notifySchemaChanges: yup.boolean().optional(),
       backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),

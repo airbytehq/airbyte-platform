@@ -12,11 +12,11 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
-import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
-import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
-import io.airbyte.public_api.model.generated.WorkspaceResponse
-import io.airbyte.public_api.model.generated.WorkspaceUpdateRequest
-import io.airbyte.public_api.model.generated.WorkspacesResponse
+import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
+import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest
+import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
+import io.airbyte.publicApi.server.generated.models.WorkspaceUpdateRequest
+import io.airbyte.publicApi.server.generated.models.WorkspacesResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
@@ -105,7 +105,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
           log.error("Error for createWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceCreateRequest.name)
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(
@@ -127,7 +127,7 @@ open class WorkspaceServiceImpl(
       WORKSPACES_PATH,
       POST,
       userId,
-      workspaceResponse.workspaceId,
+      UUID.fromString(workspaceResponse.workspaceId),
     )
     return Response
       .status(Response.Status.OK.statusCode)
@@ -151,7 +151,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
         .onFailure {
           log.error("Error for updateWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(result.getOrNull()!!)
@@ -191,7 +191,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for getWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(result.getOrNull()!!)
@@ -232,7 +232,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -278,7 +278,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listWorkspaces", it)
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return io.airbyte.server.apis.publicapi.mappers.WorkspacesResponseMapper.from(

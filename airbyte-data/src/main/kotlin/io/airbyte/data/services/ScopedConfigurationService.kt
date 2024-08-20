@@ -9,8 +9,6 @@ import io.airbyte.data.services.shared.ScopedConfigurationKey
 import java.util.Optional
 import java.util.UUID
 
-data class KeyedScopeMap(val key: String, val scopeMap: Map<ConfigScopeType, UUID?>)
-
 /**
  * A service that manages scoped configurations.
  */
@@ -112,6 +110,18 @@ interface ScopedConfigurationService {
     resourceId: UUID,
     originType: ConfigOriginType,
     origins: List<String>,
+  ): List<ScopedConfiguration>
+
+  /**
+   * List scoped configurations with a given origin type and values.
+   */
+  fun listScopedConfigurationsWithValues(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    scopeType: ConfigScopeType,
+    originType: ConfigOriginType,
+    values: List<String>,
   ): List<ScopedConfiguration>
 
   /**

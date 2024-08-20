@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
@@ -37,6 +38,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -132,6 +134,22 @@ public class DestinationServiceJooqImpl implements DestinationService {
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns if a destination is active, i.e. the destination has at least one active or manual
+   * connection.
+   *
+   * @param destinationId - id of the destination
+   * @return boolean - if destination is active or not
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public Boolean isDestinationActive(final UUID destinationId) throws IOException {
+    return database.query(ctx -> ctx.fetchExists(select()
+        .from(CONNECTION)
+        .where(CONNECTION.DESTINATION_ID.eq(destinationId))
+        .and(CONNECTION.STATUS.eq(StatusType.active))));
   }
 
   /**
@@ -434,21 +452,14 @@ public class DestinationServiceJooqImpl implements DestinationService {
     actorDefinitionVersionUpdater.updateDestinationDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition);
   }
 
-  /**
-   * Returns all active destinations whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of DestinationConnections
-   * @throws IOException - you never know when you IO
-   */
   @Override
-  public List<DestinationConnection> listDestinationsWithVersionIds(
-                                                                    final List<UUID> actorDefinitionVersionIds)
+  public List<DestinationConnection> listDestinationsWithIds(
+                                                             final List<UUID> destinationIds)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .and(ACTOR.ID.in(destinationIds))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildDestinationConnection).toList();
   }
@@ -578,8 +589,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .execute();
 
       } else {
-        final UUID actorDefinitionDefaultVersionId =
-            getDefaultVersionForActorDefinitionId(destinationConnection.getDestinationDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, destinationConnection.getDestinationId())
             .set(ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
@@ -588,16 +597,11 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.destination)
             .set(ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
-            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
       }
     });
-  }
-
-  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {
@@ -647,6 +651,9 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.METRICS,
+                standardDestinationDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics())))
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition.getDestinationDefinitionId()))
             .execute();
@@ -665,6 +672,9 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.METRICS,
+                standardDestinationDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics())))
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .execute();
@@ -686,13 +696,55 @@ public class DestinationServiceJooqImpl implements DestinationService {
     final JsonNode hydratedConfig;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destination.getConfiguration(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration());
     }
     return Jsons.clone(destination).withConfiguration(hydratedConfig);
+  }
+
+  /**
+   * Delete destination: tombstone destination AND delete secrets
+   *
+   * @param name Destination name
+   * @param workspaceId workspace ID
+   * @param destinationId destination ID
+   * @param spec spec for the destination
+   * @throws JsonValidationException if the config is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
+  @Override
+  public void tombstoneDestination(
+                                   final String name,
+                                   final UUID workspaceId,
+                                   final UUID destinationId,
+                                   final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException {
+    // 1. Delete secrets from config
+    final DestinationConnection destinationConnection = getDestinationConnection(destinationId);
+    final JsonNode config = destinationConnection.getConfiguration();
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(workspaceId);
+    RuntimeSecretPersistence secretPersistence = null;
+    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+    }
+    secretsRepositoryWriter.deleteFromConfig(
+        config,
+        spec.getConnectionSpecification(),
+        secretPersistence);
+
+    // 2. Tombstone destination and void config
+    final DestinationConnection newDestinationConnection = new DestinationConnection()
+        .withName(name)
+        .withDestinationDefinitionId(destinationConnection.getDestinationDefinitionId())
+        .withWorkspaceId(workspaceId)
+        .withDestinationId(destinationId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    writeDestinationConnectionNoSecrets(newDestinationConnection);
   }
 
   /**
@@ -712,27 +764,26 @@ public class DestinationServiceJooqImpl implements DestinationService {
     final Optional<JsonNode> previousDestinationConnection =
         getDestinationIfExists(destination.getDestinationId()).map(DestinationConnection::getConfiguration);
 
-    // strip secrets
     final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
-    final JsonNode partialConfig;
+    RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination));
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
+
+    final JsonNode partialConfig;
+    if (previousDestinationConnection.isPresent()) {
+      partialConfig = secretsRepositoryWriter.updateFromConfig(destination.getWorkspaceId(),
+          previousDestinationConnection.get(),
+          destination.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(), secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.createFromConfig(destination.getWorkspaceId(),
+          destination.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(),
+          secretPersistence);
+    }
+
     final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
     writeDestinationConnectionNoSecrets(partialSource);
   }
@@ -744,10 +795,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
       log.warn("Unable to find destination with ID {}", destinationId);
       return Optional.empty();
     }
-  }
-
-  private boolean validate(final DestinationConnection destination) {
-    return destination.getTombstone() == null || !destination.getTombstone();
   }
 
 }

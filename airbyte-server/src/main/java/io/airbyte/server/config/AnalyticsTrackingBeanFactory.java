@@ -33,8 +33,8 @@ public class AnalyticsTrackingBeanFactory {
   public Supplier<DeploymentMetadataRead> deploymentSupplier(final DeploymentMetadataHandler deploymentMetadataHandler) {
     return () -> {
       final io.airbyte.api.model.generated.DeploymentMetadataRead deploymentMetadataRead = deploymentMetadataHandler.getDeploymentMetadata();
-      return new DeploymentMetadataRead().id(deploymentMetadataRead.getId()).mode(deploymentMetadataRead.getMode())
-          .environment(deploymentMetadataRead.getEnvironment()).version(deploymentMetadataRead.getVersion());
+      return new DeploymentMetadataRead(deploymentMetadataRead.getEnvironment(), deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
+          deploymentMetadataRead.getVersion());
     };
   }
 
@@ -45,24 +45,46 @@ public class AnalyticsTrackingBeanFactory {
     return (final UUID workspaceId) -> {
       try {
         final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-        return new WorkspaceRead()
-            .workspaceId(workspace.getWorkspaceId())
-            .customerId(workspace.getCustomerId())
-            .email(workspace.getEmail())
-            .name(workspace.getName())
-            .slug(workspace.getSlug())
-            .initialSetupComplete(workspace.getInitialSetupComplete())
-            .displaySetupWizard(workspace.getDisplaySetupWizard())
-            .anonymousDataCollection(workspace.getAnonymousDataCollection())
-            .news(workspace.getNews())
-            .securityUpdates(workspace.getSecurityUpdates())
-            .notifications(NotificationConverter.toClientApiList(workspace.getNotifications()))
-            .notificationSettings(NotificationSettingsConverter.toClientApi(workspace.getNotificationSettings()))
-            .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-            .organizationId(workspace.getOrganizationId());
+        return new WorkspaceRead(
+            workspace.getWorkspaceId(),
+            workspace.getCustomerId(),
+            workspace.getName(),
+            workspace.getSlug(),
+            workspace.getInitialSetupComplete(),
+            workspace.getOrganizationId(),
+            workspace.getEmail(),
+            workspace.getDisplaySetupWizard(),
+            workspace.getAnonymousDataCollection(),
+            workspace.getNews(),
+            workspace.getSecurityUpdates(),
+            NotificationConverter.toClientApiList(workspace.getNotifications()),
+            NotificationSettingsConverter.toClientApi(workspace.getNotificationSettings()),
+            workspace.getFirstCompletedSync(),
+            workspace.getFeedbackDone(),
+            Enums.convertTo(workspace.getDefaultGeography(), Geography.class),
+            null,
+            workspace.getTombstone());
       } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
         // No longer throwing a runtime exception so that we can support the Airbyte API.
-        return new WorkspaceRead().workspaceId(workspaceId).customerId(workspaceId);
+        return new WorkspaceRead(
+            workspaceId,
+            workspaceId,
+            "",
+            "",
+            true,
+            workspaceId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
       }
     };
   }

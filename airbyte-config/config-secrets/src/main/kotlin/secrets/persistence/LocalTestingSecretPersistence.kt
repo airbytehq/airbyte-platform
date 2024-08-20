@@ -38,10 +38,10 @@ open class LocalTestingSecretPersistence(
     initialize()
     val result =
       dslContext.fetch("SELECT payload FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
-    if (result.size == 0) {
-      return ""
+    return if (result.size == 0) {
+      ""
     } else {
-      return result[0].getValue(0, String::class.java) ?: ""
+      result[0].getValue(0, String::class.java) ?: ""
     }
   }
 
@@ -59,5 +59,10 @@ open class LocalTestingSecretPersistence(
       payload,
       coordinate.fullCoordinate,
     ).execute()
+  }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    initialize()
+    dslContext.execute("DELETE FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
   }
 }

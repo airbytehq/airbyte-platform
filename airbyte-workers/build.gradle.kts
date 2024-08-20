@@ -29,13 +29,8 @@ val airbyteProtocol by configurations.creating
 val jdbc by configurations.creating
 
 configurations.all {
-  // The quartz-scheduler brings in a really old version(of hikari, we do not want to inherit this version.)
+  // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
   exclude(group = "com.zaxxer", module = "HikariCP-java7")
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    force(libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts)
-  }
 }
 
 dependencies {
@@ -43,6 +38,9 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(libs.spotbugs.annotations)
   implementation(platform(libs.micronaut.platform))
@@ -69,32 +67,35 @@ dependencies {
   implementation(libs.micrometer.statsd)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
+  implementation(libs.failsafe)
 
-  implementation(project(":airbyte-analytics"))
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-commons-micronaut-security"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-config:specs"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-micronaut-temporal"))
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-analytics"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-logging"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-micronaut-temporal"))
+  implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-notification"))
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-notification"))
+  implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
@@ -109,12 +110,12 @@ dependencies {
   testImplementation(libs.temporal.testing)
   testImplementation(libs.json.path)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockk)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.bouncycastle)
-  testImplementation(project(":airbyte-api"))
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
@@ -164,7 +165,7 @@ tasks.register<Test>("cloudStorageIntegrationTest") {
   }
 }
 
-// Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol)
+// Duplicated in :oss:airbyte-container-orchestrator, eventually, this should be handled in :oss:airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
@@ -184,11 +185,18 @@ val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   }
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)
 }
 
 fun yamlToJson(rawYaml: String): String {
   val mappedYaml: Any = YAMLMapper().registerKotlinModule().readValue(rawYaml)
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

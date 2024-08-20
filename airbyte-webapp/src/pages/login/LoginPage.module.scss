@@ -1,0 +1,19 @@
+@use "scss/variables";
+
+.loginPage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+
+  &__logo {
+    display: block;
+    width: 200px;
+  }
+
+  &__form {
+    width: 350px;
+    max-width: 100%;
+    padding-bottom: variables.$spacing-2xl;
+  }
+}

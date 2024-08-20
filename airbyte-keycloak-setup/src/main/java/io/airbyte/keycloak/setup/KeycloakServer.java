@@ -5,7 +5,10 @@
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -19,68 +22,65 @@ import org.keycloak.representations.idm.RealmRepresentation;
 @Slf4j
 public class KeycloakServer {
 
+  private static final String FRONTEND_URL_ATTRIBUTE = "frontendUrl";
+
   private final Keycloak keycloakAdminClient;
   private final KeycloakAdminClientProvider keycloakAdminClientProvider;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final UserCreator userCreator;
-  private final WebClientCreator webClientCreator;
-  private final IdentityProvidersCreator identityProvidersCreator;
-  private final AccountClientUpdater accountClientUpdater;
-  private ClientScopeCreator clientScopeCreator;
+  private final UserConfigurator userConfigurator;
+  private final WebClientConfigurator webClientConfigurator;
+  private final IdentityProvidersConfigurator identityProvidersConfigurator;
+  private final ClientScopeConfigurator clientScopeConfigurator;
+  private final String airbyteUrl;
 
   public KeycloakServer(final KeycloakAdminClientProvider keycloakAdminClientProvider,
                         final AirbyteKeycloakConfiguration keycloakConfiguration,
-                        final UserCreator userCreator,
-                        final WebClientCreator webClientCreator,
-                        final IdentityProvidersCreator identityProvidersCreator,
-                        final AccountClientUpdater accountClientUpdater,
-                        final ClientScopeCreator clientScopeCreator) {
+                        final UserConfigurator userConfigurator,
+                        final WebClientConfigurator webClientConfigurator,
+                        final IdentityProvidersConfigurator identityProvidersConfigurator,
+                        final ClientScopeConfigurator clientScopeConfigurator,
+                        @Named("airbyteUrl") final String airbyteUrl) {
     this.keycloakAdminClientProvider = keycloakAdminClientProvider;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.userCreator = userCreator;
-    this.webClientCreator = webClientCreator;
-    this.identityProvidersCreator = identityProvidersCreator;
-    this.accountClientUpdater = accountClientUpdater;
-    this.clientScopeCreator = clientScopeCreator;
+    this.userConfigurator = userConfigurator;
+    this.webClientConfigurator = webClientConfigurator;
+    this.identityProvidersConfigurator = identityProvidersConfigurator;
+    this.clientScopeConfigurator = clientScopeConfigurator;
     this.keycloakAdminClient = initializeKeycloakAdminClient();
+    this.airbyteUrl = airbyteUrl;
   }
 
-  public void createAirbyteRealm() {
-    if (doesRealmExist()) {
-      log.info("Realm {} already exists, nothing to be done.", keycloakConfiguration.getAirbyteRealm());
-      return;
+  public void setupAirbyteRealm() {
+    if (airbyteRealmDoesNotExist()) {
+      log.info("Creating realm {}...", keycloakConfiguration.getAirbyteRealm());
+      createRealm();
+      log.info("Realm created successfully.");
     }
-    log.info("Creating realm {}...", keycloakConfiguration.getAirbyteRealm());
-    createRealm();
     configureRealm();
-    log.info("Realm created successfully.");
+    log.info("Realm configured successfully.");
   }
 
-  public void recreateAirbyteRealm() {
-    if (!doesRealmExist()) {
-      log.info("Ignoring reset because realm {} does not exist. Creating it...", keycloakConfiguration.getAirbyteRealm());
-      createAirbyteRealm();
-      return;
-    }
-
-    log.info("Recreating realm {}...", keycloakConfiguration.getAirbyteRealm());
-    final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
-    airbyteRealm.remove();
-    log.info("Realm removed successfully. Recreating...");
-    createRealm();
-    configureRealm();
-    log.info("Realm recreated successfully.");
-  }
-
-  private boolean doesRealmExist() {
+  private boolean airbyteRealmDoesNotExist() {
     return keycloakAdminClient.realms().findAll().stream()
-        .anyMatch(realmRepresentation -> realmRepresentation.getRealm().equals(keycloakConfiguration.getAirbyteRealm()));
+        .noneMatch(realmRepresentation -> realmRepresentation.getRealm().equals(keycloakConfiguration.getAirbyteRealm()));
   }
 
   private void createRealm() {
     log.info("Creating realm {}...", keycloakConfiguration.getAirbyteRealm());
     final RealmRepresentation airbyteRealmRepresentation = buildRealmRepresentation();
     keycloakAdminClient.realms().create(airbyteRealmRepresentation);
+  }
+
+  private void configureRealm() {
+    final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
+
+    // ensure webapp-url is applied as the frontendUrl before other configurations are updated
+    updateRealmFrontendUrl(airbyteRealm);
+
+    userConfigurator.configureUser(airbyteRealm);
+    webClientConfigurator.configureWebClient(airbyteRealm);
+    identityProvidersConfigurator.configureIdp(airbyteRealm);
+    clientScopeConfigurator.configureClientScope(airbyteRealm);
   }
 
   private RealmRepresentation buildRealmRepresentation() {
@@ -91,14 +91,12 @@ public class KeycloakServer {
     return airbyteRealmRepresentation;
   }
 
-  private void configureRealm() {
-    final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
-
-    userCreator.createUser(airbyteRealm);
-    webClientCreator.createWebClient(airbyteRealm);
-    identityProvidersCreator.createIdps(airbyteRealm);
-    accountClientUpdater.updateAccountClientHomeUrl(airbyteRealm);
-    clientScopeCreator.createClientScope(airbyteRealm);
+  private void updateRealmFrontendUrl(final RealmResource realm) {
+    final RealmRepresentation realmRep = realm.toRepresentation();
+    final Map<String, String> attributes = realmRep.getAttributesOrEmpty();
+    attributes.put(FRONTEND_URL_ATTRIBUTE, airbyteUrl + keycloakConfiguration.getBasePath());
+    realmRep.setAttributes(attributes);
+    realm.update(realmRep);
   }
 
   private Keycloak initializeKeycloakAdminClient() {
@@ -115,6 +113,27 @@ public class KeycloakServer {
     final String basePath = keycloakConfiguration.getBasePath();
     final String basePathWithLeadingSlash = basePath.startsWith("/") ? basePath : "/" + basePath;
     return keycloakConfiguration.getProtocol() + "://" + keycloakConfiguration.getHost() + basePathWithLeadingSlash;
+  }
+
+  // Should no longer be needed now that the realm is always updated on each run.
+  // Leaving it in for now in case any issues pop up and users need a way to reset their realm
+  // from scratch. We should remove this once we're confident that users no longer ever need to
+  // do this hard reset.
+  @Deprecated
+  public void destroyAndRecreateAirbyteRealm() {
+    if (airbyteRealmDoesNotExist()) {
+      log.info("Ignoring reset because realm {} does not exist. Creating it...", keycloakConfiguration.getAirbyteRealm());
+      setupAirbyteRealm();
+      return;
+    }
+    log.info("Recreating realm {}...", keycloakConfiguration.getAirbyteRealm());
+    final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
+    airbyteRealm.remove();
+    log.info("Realm removed successfully. Recreating...");
+    createRealm();
+    log.info("Realm recreated successfully. Configuring...");
+    configureRealm();
+    log.info("Realm configured successfully.");
   }
 
 }

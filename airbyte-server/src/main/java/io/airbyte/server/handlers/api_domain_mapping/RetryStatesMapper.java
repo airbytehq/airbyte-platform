@@ -18,7 +18,7 @@ public class RetryStatesMapper {
 
   // API to Domain
   public RetryState map(final JobRetryStateRequestBody api) {
-    return RetryState.builder()
+    return new RetryState.RetryStateBuilder()
         .id(api.getId())
         .connectionId(api.getConnectionId())
         .jobId(api.getJobId())

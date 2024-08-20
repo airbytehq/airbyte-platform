@@ -10,12 +10,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -127,11 +127,6 @@ class NamespacingMapperTest {
     final AirbyteMessage expectedMessage = AirbyteMessageUtils.createRecordMessage(OUTPUT_PREFIX + STREAM_NAME, FIELD_NAME, BLUE);
     expectedMessage.getRecord().withNamespace(null);
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
-
-    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
-        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
-        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
-    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(originalStreamStatusMessage);
 
     assertEquals(expectedMessage, actualMessage);
   }

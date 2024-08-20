@@ -1,14 +1,13 @@
 import dayjs from "dayjs";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { mockAirbyteStream } from "test-utils/mock-data/mockAirbyteStream";
 import { mockStreamStatusRead } from "test-utils/mock-data/mockStreamStatusRead";
 
 import {
   AirbyteStream,
-  ConnectionScheduleData,
-  ConnectionScheduleType,
   ConnectionSyncResultRead,
+  JobConfigType,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
@@ -17,13 +16,13 @@ import {
 
 import { computeStreamStatus, getStreamKey } from "./computeStreamStatus";
 
-const cronScheduleData: ConnectionScheduleData = { cron: { cronExpression: "* * * * *", cronTimeZone: "UTC" } };
-const basicScheduleData: ConnectionScheduleData = { basicSchedule: { timeUnit: "hours", units: 2 } };
+const now = dayjs();
 
-const oneYearAgo = dayjs().subtract(1, "year").valueOf();
-const oneHourAgo = dayjs().subtract(1, "hour").valueOf(); // within the 2-hour window of `basicScheduleData`
-const threeHoursAgo = dayjs().subtract(3, "hour").valueOf(); // 1 step outside the 2-hour window of `basicScheduleData`
-const fiveHoursAgo = dayjs().subtract(5, "hour").valueOf(); // 2 steps outside the 2-hour window of `basicScheduleData`
+const oneYearAgo = now.subtract(1, "year").valueOf();
+const oneHourAgo = now.subtract(1, "hour").valueOf();
+const threeHoursAgo = now.subtract(3, "hour").valueOf();
+const fiveHoursAgo = now.subtract(5, "hour").valueOf();
+const anHourFromNow = now.add(1, "hour").valueOf();
 
 describe("getStreamKey", () => {
   describe("when streamStatus is a StreamStatusRead", () => {
@@ -63,252 +62,57 @@ describe("getStreamKey", () => {
 });
 
 describe("computeStreamStatus", () => {
-  describe("undefined", () => {
-    it('returns "undefined" when there are no statuses', () => {
+  it.each`
+    description                                                                                      | statuses                                                                                                                                                                                                                                                                      | recordsExtracted | hasBreakingSchemaChange | isSyncing | runningJobConfigType              | expectedStatus                        | expectedIsRunning | expectedLastSuccessfulSync                                                                           | expectedQuotaReset
+    ${'returns "Synced" for successful, unscheduled sync'}                                           | ${[buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE })]}                                                                                                                                                                                                       | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Synced}            | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE })}                                | ${undefined}
+    ${'returns "Synced" for successful sync, long ago'}                                              | ${[buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneYearAgo })]}                                                                                                                                                                           | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Synced}            | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneYearAgo })}    | ${undefined}
+    ${'returns "Synced" with successful sync followed by a cancel'}                                  | ${[buildStreamStatusRead({ runState: StreamStatusRunState.INCOMPLETE, incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo })]}            | ${1}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Synced}            | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo })}    | ${undefined}
+    ${'returns "Failed" for breaking schema change after a successful sync'}                         | ${[buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo })]}                                                                                                                                                                           | ${1}             | ${true}                 | ${false}  | ${undefined}                      | ${StreamStatusType.Failed}            | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo })}    | ${undefined}
+    ${'returns "Incomplete" for  a sync that extracted no records'}                                  | ${[buildStreamStatusRead({ runState: StreamStatusRunState.INCOMPLETE, incompleteRunCause: StreamStatusIncompleteRunCause.FAILED, transitionedAt: oneHourAgo })]}                                                                                                              | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Incomplete}        | ${false}          | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Incomplete" for failed sync that extracted records'}                                 | ${[buildStreamStatusRead({ runState: StreamStatusRunState.INCOMPLETE, incompleteRunCause: StreamStatusIncompleteRunCause.FAILED, transitionedAt: fiveHoursAgo })]}                                                                                                            | ${1}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Incomplete}        | ${false}          | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Incomplete" when the most recent sync failed after a successful sync'}               | ${[buildStreamStatusRead({ runState: StreamStatusRunState.INCOMPLETE, incompleteRunCause: StreamStatusIncompleteRunCause.FAILED, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo })]}           | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Incomplete}        | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo })} | ${undefined}
+    ${'returns "Queued for next sync" when the most recent run state is pending'}                    | ${[buildStreamStatusRead({ runState: StreamStatusRunState.PENDING })]}                                                                                                                                                                                                        | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.QueuedForNextSync} | ${false}          | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Queued for next sync" when there are no previous statuses'}                          | ${[]}                                                                                                                                                                                                                                                                         | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.QueuedForNextSync} | ${false}          | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Queued for next sync" when the last job was a clear'}                                | ${[buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, jobType: StreamStatusJobType.RESET, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, jobType: StreamStatusJobType.SYNC, transitionedAt: threeHoursAgo })]} | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.QueuedForNextSync} | ${false}          | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo })} | ${undefined}
+    ${'returns "Queued" for a currently running sync with history'}                                  | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })]}                                                                          | ${0}             | ${false}                | ${false}  | ${undefined}                      | ${StreamStatusType.Queued}            | ${true}           | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })}  | ${undefined}
+    ${'returns "Queued" for only a currently running sync with no history'}                          | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo })]}                                                                                                                                                                            | ${0}             | ${false}                | ${true}   | ${JobConfigType.sync}             | ${StreamStatusType.Queued}            | ${true}           | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Queued" with a currently running refresh job'}                                       | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })]}                                                                          | ${0}             | ${false}                | ${true}   | ${JobConfigType.refresh}          | ${StreamStatusType.Queued}            | ${true}           | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })}  | ${undefined}
+    ${'returns "Syncing" if records were extracted with only a currently running sync (no history)'} | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo })]}                                                                                                                                                                            | ${1}             | ${false}                | ${true}   | ${JobConfigType.sync}             | ${StreamStatusType.Syncing}           | ${true}           | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Syncing" if records were extracted  with a currently running sync'}                  | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })]}                                                                          | ${1}             | ${false}                | ${true}   | ${JobConfigType.sync}             | ${StreamStatusType.Syncing}           | ${true}           | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })}  | ${undefined}
+    ${'returns "RateLimited" if the most recent status is RATE_LIMITED'}                             | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RATE_LIMITED, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.INCOMPLETE, transitionedAt: threeHoursAgo })]}                                                                  | ${0}             | ${false}                | ${true}   | ${JobConfigType.sync}             | ${StreamStatusType.RateLimited}       | ${true}           | ${undefined}                                                                                         | ${undefined}
+    ${'returns "RateLimited" with a quotaReset if the most recent status is RATE_LIMITED'}           | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RATE_LIMITED, transitionedAt: oneHourAgo, metadata: { quotaReset: anHourFromNow } })]}                                                                                                                              | ${5}             | ${false}                | ${true}   | ${JobConfigType.sync}             | ${StreamStatusType.RateLimited}       | ${true}           | ${undefined}                                                                                         | ${anHourFromNow}
+    ${'returns "Clearing" when job type is reset_connection'}                                        | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo })]}                                                                                                                                                                            | ${1}             | ${false}                | ${true}   | ${JobConfigType.reset_connection} | ${StreamStatusType.Clearing}          | ${true}           | ${undefined}                                                                                         | ${undefined}
+    ${'returns "Clearing" when job type is clear'}                                                   | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })]}                                                                          | ${1}             | ${false}                | ${true}   | ${JobConfigType.clear}            | ${StreamStatusType.Clearing}          | ${true}           | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })}  | ${undefined}
+    ${'returns "Refreshing" with records extracted during a currently running refresh'}              | ${[buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo }), buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })]}                                                                          | ${1}             | ${false}                | ${true}   | ${JobConfigType.refresh}          | ${StreamStatusType.Refreshing}        | ${true}           | ${buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo })}  | ${undefined}
+  `(
+    "$description",
+    ({
+      statuses,
+      recordsExtracted,
+      hasBreakingSchemaChange,
+      isSyncing,
+      runningJobConfigType,
+      expectedStatus,
+      expectedIsRunning,
+      expectedLastSuccessfulSync,
+      expectedQuotaReset,
+    }) => {
       const result = computeStreamStatus({
-        statuses: [],
-        scheduleType: undefined,
-        scheduleData: undefined,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
+        statuses,
+        recordsExtracted,
+        hasBreakingSchemaChange,
+        isSyncing,
+        runningJobConfigType,
       });
-      expect(result).toEqual({ status: undefined, isRunning: false, lastSuccessfulSync: undefined });
-    });
 
-    it('returns "undefined" with only a currently running sync (not enough history)', () => {
-      const status = buildStreamStatusRead({
-        runState: StreamStatusRunState.RUNNING,
-        transitionedAt: oneHourAgo,
-      });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
       expect(result).toEqual({
-        status: undefined,
-        isRunning: true,
-        lastSuccessfulSync: undefined,
+        status: expectedStatus,
+        isRunning: expectedIsRunning,
+        lastSuccessfulSync: expectedLastSuccessfulSync,
+        quotaReset: expectedQuotaReset,
       });
-    });
-  });
-
-  describe("pending", () => {
-    it('returns "Pending" when the most recent run state is pending', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.PENDING });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: undefined,
-        scheduleData: undefined,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Pending,
-        isRunning: false,
-        lastSuccessfulSync: undefined,
-      });
-    });
-
-    it('returns "Pending" when the most recent job is reset and is complete', () => {
-      const status = buildStreamStatusRead({
-        jobType: StreamStatusJobType.RESET,
-        runState: StreamStatusRunState.COMPLETE,
-      });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: undefined,
-        scheduleData: undefined,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Pending,
-        isRunning: false,
-        lastSuccessfulSync: undefined,
-      });
-    });
-
-    it('returns "Pending" when the most recent job is reset even if it is incomplete', () => {
-      const status = buildStreamStatusRead({
-        jobType: StreamStatusJobType.RESET,
-        runState: StreamStatusRunState.INCOMPLETE,
-      });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: undefined,
-        scheduleData: undefined,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Pending,
-        isRunning: false,
-        lastSuccessfulSync: undefined,
-      });
-    });
-  });
-
-  describe("on time", () => {
-    it('returns "OnTime" when the most recent sync was successful, unscheduled', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: undefined,
-        scheduleData: undefined,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "OnTime" when the most recent sync (long ago) was successful, cron', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneYearAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.cron,
-        scheduleData: cronScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "OnTime" when the most recent sync was successful, basic', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "OnTime" with a successful recent sync followed by a cancel', () => {
-      const successStatus = buildStreamStatusRead({
-        runState: StreamStatusRunState.COMPLETE,
-        transitionedAt: oneHourAgo,
-      });
-      const cancelStatus = buildStreamStatusRead({
-        runState: StreamStatusRunState.INCOMPLETE,
-        incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
-        transitionedAt: oneHourAgo,
-      });
-      const result = computeStreamStatus({
-        statuses: [cancelStatus, successStatus],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
-        isRunning: false,
-        lastSuccessfulSync: successStatus,
-      });
-    });
-  });
-
-  describe("late", () => {
-    it('returns "OnTrack" when the most recent sync was successful but one late', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTrack,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "Late" when the most recent sync was successful but two late', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Late,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-  });
-
-  describe("action required", () => {
-    it('returns "ActionRequired" when there is a breaking schema change (otherwise ontime)', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: true,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.ActionRequired,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "ActionRequired" when there is a breaking schema change (otherwise error)', () => {
-      const status = buildStreamStatusRead({
-        runState: StreamStatusRunState.INCOMPLETE,
-        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
-        transitionedAt: oneHourAgo,
-      });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: true,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.ActionRequired,
-        isRunning: false,
-        lastSuccessfulSync: undefined,
-      });
-    });
-  });
+    }
+  );
 });
 
 function buildStreamStatusRead({
@@ -316,11 +120,15 @@ function buildStreamStatusRead({
   runState = StreamStatusRunState.COMPLETE,
   incompleteRunCause,
   transitionedAt = mockStreamStatusRead.transitionedAt,
+  jobId = mockStreamStatusRead.jobId,
+  metadata = undefined,
 }: {
   jobType?: StreamStatusRead["jobType"];
   runState?: StreamStatusRead["runState"];
   incompleteRunCause?: StreamStatusRead["incompleteRunCause"];
   transitionedAt?: StreamStatusRead["transitionedAt"];
+  jobId?: StreamStatusRead["jobId"];
+  metadata?: StreamStatusRead["metadata"];
 }): StreamStatusRead {
-  return { ...mockStreamStatusRead, jobType, runState, incompleteRunCause, transitionedAt };
+  return { ...mockStreamStatusRead, jobType, runState, incompleteRunCause, transitionedAt, jobId, metadata };
 }

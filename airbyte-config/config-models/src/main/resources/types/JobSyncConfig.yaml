@@ -22,10 +22,13 @@ properties:
   configuredAirbyteCatalog:
     description: the configured airbyte catalog
     type: object
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+    existingJavaType: io.airbyte.config.ConfiguredAirbyteCatalog
   sourceDockerImage:
     description: Image name of the source with tag.
     type: string
+  sourceDockerImageIsDefault:
+    description: Whether sourceDockerImage is the default image version for the connector.
+    type: boolean
   sourceProtocolVersion:
     description: Airbyte Protocol Version of the source
     type: object
@@ -33,6 +36,9 @@ properties:
   destinationDockerImage:
     description: Image name of the destination with tag.
     type: string
+  destinationDockerImageIsDefault:
+    description: Whether destinationDockerImage is the default image version for the connector.
+    type: boolean
   destinationProtocolVersion:
     description: Airbyte Protocol Version of the destination
     type: object

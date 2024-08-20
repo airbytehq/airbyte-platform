@@ -19,14 +19,16 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.function.Supplier
 
 val DEFAULT_WORKSPACE_PERMISSION_TYPE = PermissionType.WORKSPACE_ADMIN
 val DEFAULT_ORGANIZATION_PERMISSION_TYPE = PermissionType.ORGANIZATION_ADMIN
+
+val logger = KotlinLogging.logger { }
 
 @Singleton
 open class ResourceBootstrapHandler(
@@ -37,10 +39,6 @@ open class ResourceBootstrapHandler(
   private val currentUserService: CurrentUserService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
 ) : ResourceBootstrapHandlerInterface {
-  companion object {
-    val LOGGER = LoggerFactory.getLogger(ResourceBootstrapHandler::class.java)
-  }
-
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
    */
@@ -60,8 +58,11 @@ open class ResourceBootstrapHandler(
       }
 
     // Ensure user has the required permissions to create a workspace
-    val allowedRoles = setOf(OrganizationAuthRole.ORGANIZATION_ADMIN, OrganizationAuthRole.ORGANIZATION_EDITOR)
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organization.organizationId.toString()), allowedRoles)
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.ORGANIZATION,
+      listOf(organization.organizationId.toString()),
+      setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
+    )
 
     val standardWorkspace = buildStandardWorkspace(workspaceCreateWithId, organization, uuidSupplier)
     workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
@@ -71,9 +72,9 @@ open class ResourceBootstrapHandler(
     kotlin.runCatching { permissionService.createPermission(workspacePermission) }.onFailure { e ->
       when (e) {
         is PermissionRedundantException ->
-          LOGGER.info(
-            "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}",
-          )
+          logger.info {
+            "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}"
+          }
         else -> throw e
       }
     }
@@ -81,7 +82,7 @@ open class ResourceBootstrapHandler(
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
 
-  public fun findOrCreateOrganizationAndPermission(user: User): Organization {
+  fun findOrCreateOrganizationAndPermission(user: User): Organization {
     findExistingOrganization(user)?.let { return it }
 
     val organization =
@@ -113,16 +114,14 @@ open class ResourceBootstrapHandler(
       when {
         hasSingleOrganization -> {
           organizationPermissionList.first().organizationId.let {
-            LOGGER.info(
-              "User {} is associated with only one organization with ID {}",
-              user.userId,
-              it,
-            )
+            logger.info {
+              "User ${user.userId} is associated with only one organization with ID $it"
+            }
             it
           }
         }
         hasNoOrganization -> {
-          LOGGER.info("User {} is associated with no organization.", user.userId)
+          logger.info { "User ${user.userId} is associated with no organization." }
           null
         }
         else -> throw ApplicationErrorKnownException("User is associated with more than one organization. Please specify an organization id.")
@@ -156,15 +155,17 @@ open class ResourceBootstrapHandler(
   }
 
   private fun getDefaultOrganizationName(user: User): String {
-    when {
+    return when {
       user.companyName != null -> {
-        return "${user.companyName}'s Organization"
+        "${user.companyName}'s Organization"
       }
+
       user.name != null -> {
-        return "${user.name}'s Organization"
+        "${user.name}'s Organization"
       }
+
       else -> {
-        return "${user.email.split("@").first()}'s Organization"
+        "${user.email.split("@").first()}'s Organization"
       }
     }
   }

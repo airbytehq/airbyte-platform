@@ -45,16 +45,6 @@ properties:
     description: The webhook operation configs belonging to this workspace. See webhookOperationConfigs in StandardWorkspace.yaml.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
-  catalog:
-    description: DEPRECATED - this is now retrieved separately via API. The configured airbyte catalog.
-    type: object
-    # necessary because the configuration declaration is in a separate package.
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-    deprecated: true
-  state:
-    description: DEPRECATED - this is now retrieved separately via API. Optional state of the previous run. this object is defined per integration.
-    "$ref": State.yaml
-    deprecated: true
   syncResourceRequirements:
     description: Resource requirements to use for the sync
     $ref: SyncResourceRequirements.yaml
@@ -66,10 +56,6 @@ properties:
     description: The id of the connection associated with this sync
     type: string
     format: uuid
-  normalizeInDestinationContainer:
-    description: whether normalization should be run in the destination container
-    type: boolean
-    default: false
   isReset:
     description: whether this 'sync' is performing a logical reset
     type: boolean

@@ -1,14 +1,14 @@
 package io.airbyte.server.apis.publicapi.errorHandlers
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.InvalidApiKeyProblem
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.ValueConflictKnownException
-import io.airbyte.commons.server.errors.problems.BadRequestProblem
-import io.airbyte.commons.server.errors.problems.ConflictProblem
-import io.airbyte.commons.server.errors.problems.InvalidApiKeyProblem
-import io.airbyte.commons.server.errors.problems.ResourceNotFoundProblem
-import io.airbyte.commons.server.errors.problems.SyncConflictProblem
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -33,7 +33,7 @@ class ConfigClientErrorHandlerTest {
     val conflictResponse =
       httpResponseFactory.status<String>(HttpStatus.CONFLICT, "test")
         .body(mapOf("message" to "test"))
-    assertThrows<SyncConflictProblem> { ConfigClientErrorHandler.handleError(conflictResponse, resourceId.toString()) }
+    assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(conflictResponse, resourceId.toString()) }
 
     val unauthorizedResponse = httpResponseFactory.status<String>(HttpStatus.UNAUTHORIZED)
     assertThrows<InvalidApiKeyProblem> { ConfigClientErrorHandler.handleError(unauthorizedResponse, resourceId.toString()) }
@@ -52,13 +52,13 @@ class ConfigClientErrorHandlerTest {
 
   @Test
   fun `test that it can handle throwables`() {
-    assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(ConfigNotFoundException("test", "test"), resourceId.toString()) }
+    assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(ConfigNotFoundException("test", "test")) }
 
-    assertThrows<SyncConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test"), resourceId.toString()) }
+    assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test")) }
 
-    assertThrows<ConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException(), resourceId.toString()) }
+    assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException()) }
 
-    assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(JsonValidationException("test"), resourceId.toString()) }
+    assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(JsonValidationException("test")) }
   }
 
   @Test
@@ -88,14 +88,14 @@ class ConfigClientErrorHandlerTest {
       )
 
     runCatching { JsonSchemaValidator().ensure(schema, Jsons.deserialize("{\"test\": \"test\"}")) }
-      .onFailure { assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(it, resourceId.toString()) } }
+      .onFailure { assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(it) } }
   }
 
   @Test
   fun `test that it can handle job cancellation failures gracefully`() {
     val failureReason = "Could not find job with id: -1"
-    assertThrows<ConflictProblem>(JOB_NOT_RUNNING_MESSAGE) {
-      ConfigClientErrorHandler.handleError(RuntimeException(failureReason), resourceId.toString())
+    assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) {
+      ConfigClientErrorHandler.handleError(RuntimeException(failureReason))
     }
   }
 

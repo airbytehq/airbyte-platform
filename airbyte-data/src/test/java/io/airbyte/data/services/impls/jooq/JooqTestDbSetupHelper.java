@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services.impls.jooq;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -68,10 +67,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private SourceConnection source;
   @Getter
   private DestinationConnection destination;
-  @Getter
-  private UUID initialSourceDefaultVersionId;
-  @Getter
-  private UUID initialDestinationDefaultVersionId;
 
   public JooqTestDbSetupHelper() {
     this.featureFlagClient = mock(TestClient.class);
@@ -137,21 +132,15 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     source = createActorForActorDefinition(sourceDefinition);
     destination = createActorForActorDefinition(destinationDefinition);
 
-    // Verify and store initial source versions
+    // Verify initial source version
     final UUID initialSourceDefinitionDefaultVersionId =
         sourceServiceJooqImpl.getStandardSourceDefinition(SOURCE_DEFINITION_ID).getDefaultVersionId();
-    initialSourceDefaultVersionId =
-        sourceServiceJooqImpl.getSourceConnection(source.getSourceId()).getDefaultVersionId();
     assertNotNull(initialSourceDefinitionDefaultVersionId);
-    assertEquals(initialSourceDefinitionDefaultVersionId, initialSourceDefaultVersionId);
 
-    // Verify and store initial destination versions
+    // Verify initial destination version
     final UUID initialDestinationDefinitionDefaultVersionId =
         destinationServiceJooqImpl.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID).getDefaultVersionId();
-    initialDestinationDefaultVersionId =
-        destinationServiceJooqImpl.getDestinationConnection(destination.getDestinationId()).getDefaultVersionId();
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
-    assertEquals(initialDestinationDefinitionDefaultVersionId, initialDestinationDefaultVersionId);
   }
 
   public void createActorDefinition(final StandardSourceDefinition sourceDefinition, final ActorDefinitionVersion actorDefinitionVersion)
@@ -218,6 +207,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withDockerImageTag("0.0.1")
         .withProtocolVersion("1.0.0")
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withSpec(new ConnectorSpecification()
             .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value1"))).withProtocolVersion("1.0.0"));
   }

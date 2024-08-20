@@ -1,6 +1,9 @@
 micronaut:
   application:
     name: airbyte-bootloader
+  caches:
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   server:
@@ -28,6 +31,20 @@ airbyte:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
   auth:
     default-realm: ${DEFAULT_REALM:airbyte}
+    kubernetes-secret:
+      creation-enabled: ${AB_AUTH_SECRET_CREATION_ENABLED:false}
+      name: ${AB_KUBERNETES_SECRET_NAME:airbyte-auth-secrets}
+      keys:
+        instance-admin-password-secret-key: ${AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY:instance-admin-password}
+        instance-admin-client-id-secret-key: ${AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY:instance-admin-client-id}
+        instance-admin-client-secret-secret-key: ${AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY:instance-admin-client-secret}
+        jwt-signature-secret-key: ${AB_JWT_SIGNATURE_SECRET_KEY:jwt-signature-secret}
+      values:
+        instance-admin-password: ${AB_INSTANCE_ADMIN_PASSWORD:}
+        instance-admin-client-id: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
+        instance-admin-client-secret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}
+        jwt-signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
+
   protocol:
     target:
       range:

@@ -35,3 +35,16 @@
     padding-bottom: 0;
   }
 }
+
+.jsonEditor {
+  min-height: 50px;
+  height: 200px;
+  overflow: hidden;
+  resize: vertical;
+}
+
+.inputPreview {
+  color: colors.$grey-300;
+  font-size: variables.$font-size-sm;
+  margin-top: variables.$spacing-sm;
+}

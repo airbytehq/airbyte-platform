@@ -58,11 +58,12 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
       ),
     },
   ];
+  const label = getLabelByManifest("DeclarativeStream.properties.transformations");
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderTransformations}
-      label={getLabelByManifest("DeclarativeStream.properties.transformations")}
+      label={label}
       tooltip={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
       inputsConfig={{
         toggleable: true,
@@ -81,8 +82,7 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
       copyConfig={{
         path: "transformations",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromTransformationTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToTransformationTitle" }),
+        componentName: label,
       }}
     >
       <BuilderList

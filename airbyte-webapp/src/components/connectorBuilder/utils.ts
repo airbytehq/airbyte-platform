@@ -1,6 +1,11 @@
 import { SetValueConfig, useFormContext } from "react-hook-form";
 
 import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
+import {
+  DeclarativeStream,
+  SimpleRetrieverPartitionRouter,
+  SimpleRetrieverPartitionRouterAnyOfItem,
+} from "core/api/types/ConnectorManifest";
 
 export function formatJson(json: unknown, order?: boolean): string {
   return JSON.stringify(order ? orderKeys(json) : json, null, 2);
@@ -79,3 +84,31 @@ export const useCopyValueIncludingArrays = () => {
     });
   };
 };
+
+export function filterPartitionRouterToType(
+  partitionRouter: SimpleRetrieverPartitionRouter | undefined,
+  types: Array<SimpleRetrieverPartitionRouterAnyOfItem["type"]>
+) {
+  if (!partitionRouter) {
+    return undefined;
+  }
+
+  if (Array.isArray(partitionRouter)) {
+    return partitionRouter.filter((subRouter) => subRouter.type && types.includes(subRouter.type));
+  }
+
+  if (types.includes(partitionRouter.type)) {
+    return [partitionRouter];
+  }
+
+  return undefined;
+}
+
+export function streamRef(streamName: string) {
+  // force cast to DeclarativeStream so that this still validates against the types
+  return { $ref: `#/definitions/streams/${streamName}` } as unknown as DeclarativeStream;
+}
+
+export function streamNameOrDefault(streamName: string | undefined, index: number) {
+  return streamName || `stream_${index}`;
+}

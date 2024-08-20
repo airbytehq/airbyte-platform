@@ -13,8 +13,8 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.protocol.models.StreamDescriptor;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
@@ -42,8 +42,10 @@ public interface JobCreator {
                                DestinationConnection destination,
                                StandardSync standardSync,
                                String sourceDockerImage,
+                               Boolean sourceDockerImageIsDefault,
                                Version sourceProtocolVersion,
                                String destinationDockerImage,
+                               Boolean destinationDockerImageIsDefault,
                                Version destinationProtocolVersion,
                                List<StandardSyncOperation> standardSyncOperations,
                                @Nullable JsonNode webhookOperationConfigs,

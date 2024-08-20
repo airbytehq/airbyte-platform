@@ -8,7 +8,7 @@ import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { BuilderProject, useCurrentOrganizationInfo } from "core/api";
+import { BuilderProject, useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -65,12 +65,15 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const organization = useCurrentOrganizationInfo();
+  const workspace = useCurrentWorkspace();
   const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions", {
-    organizationId: organization?.organizationId,
+    organizationId: workspace.organizationId,
+  });
+  const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
+    workspaceId: workspace.workspaceId,
   });
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
-  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
+  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
 
   const showVersionUpdateColumn = useCallback(
     (definitions: ConnectorDefinition[]) => {

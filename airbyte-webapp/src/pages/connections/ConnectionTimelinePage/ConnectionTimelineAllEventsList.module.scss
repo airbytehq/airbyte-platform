@@ -1,0 +1,26 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.eventList {
+  padding: 0;
+  margin: 0;
+
+  li {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+
+    /* stylelint-disable-next-line selector-not-notation */
+    &:not(:last-child):not(:has(> span))::before {
+      content: "";
+      position: absolute;
+      top: variables.$spacing-lg;
+      left: 30px;
+      height: 100%;
+      width: variables.$border-thick;
+      background-color: colors.$grey-100;
+      transform: translateX(-50%);
+    }
+  }
+}

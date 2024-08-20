@@ -1,22 +1,23 @@
 import classNames from "classnames";
-import React from "react";
+import React, { HTMLAttributes } from "react";
 
 import styles from "./Heading.module.scss";
 
-type HeadingSize = "sm" | "md" | "lg" | "xl";
+type HeadingSize = "xs" | "sm" | "md" | "lg" | "xl";
 type HeadingColor = "darkBlue" | "blue";
 type HeadingElementType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
-interface HeadingProps {
+type HeadingProps = HTMLAttributes<HTMLHeadingElement> & {
   className?: string;
   centered?: boolean;
   as: HeadingElementType;
   size?: HeadingSize;
   color?: HeadingColor;
   inverseColor?: boolean;
-}
+};
 
 const sizes: Record<HeadingSize, string> = {
+  xs: styles.xs,
   sm: styles.sm,
   md: styles.md,
   lg: styles.lg,

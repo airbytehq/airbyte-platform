@@ -1,10 +1,14 @@
+import { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
-import { SessionTokenAuthenticatorRequestAuthentication } from "core/api/types/ConnectorManifest";
+import {
+  HttpRequesterAuthenticator,
+  SessionTokenAuthenticatorRequestAuthentication,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
@@ -20,6 +24,7 @@ import { KeyValueListField } from "./KeyValueListField";
 import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } from "./manifestHelpers";
 import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -35,8 +40,14 @@ import {
   BuilderFormAuthenticator,
   interpolateConfigKey,
   BuilderFormOAuthAuthenticator,
+  builderAuthenticatorToManifest,
+  builderInputsToSpec,
 } from "../types";
-import { LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE, useGetUniqueKey } from "../useLockedInputs";
+import {
+  LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
+  getAuthKeyToDesiredLockedInput,
+  useGetUniqueKey,
+} from "../useLockedInputs";
 
 const AUTH_PATH = "formValues.global.authenticator";
 const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
@@ -45,11 +56,32 @@ export const AuthenticationSection: React.FC = () => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const getUniqueKey = useGetUniqueKey();
+  const inputs = useBuilderWatch("formValues.inputs");
+
+  const manifestAuthToBuilder = useCallback(
+    (authenticator: HttpRequesterAuthenticator | undefined) =>
+      manifestAuthenticatorToBuilder(authenticator, builderInputsToSpec(inputs)),
+    [inputs]
+  );
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderAuthentication}
       label={formatMessage({ id: "connectorBuilder.authentication.label" })}
+      inputsConfig={{
+        toggleable: false,
+        path: AUTH_PATH,
+        defaultValue: {
+          type: NO_AUTH,
+        },
+        yamlConfig: {
+          builderToManifest: builderAuthenticatorToManifest,
+          manifestToBuilder: manifestAuthToBuilder,
+          getLockedInputKeys: (authenticator: BuilderFormAuthenticator) => {
+            return Object.keys(getAuthKeyToDesiredLockedInput(authenticator));
+          },
+        },
+      }}
     >
       <BuilderOneOf<BuilderFormAuthenticator>
         path={AUTH_PATH}

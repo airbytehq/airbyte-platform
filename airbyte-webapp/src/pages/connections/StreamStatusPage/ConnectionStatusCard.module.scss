@@ -8,3 +8,9 @@
     border-bottom: none;
   }
 }
+
+.collapseEmpty {
+  &:empty {
+    display: none;
+  }
+}

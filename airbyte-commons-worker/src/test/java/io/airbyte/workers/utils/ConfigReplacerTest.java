@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.ExceptionAsFlowControl"})
 class ConfigReplacerTest {
 
   final Logger logger = LoggerFactory.getLogger(ConfigReplacerTest.class);
@@ -60,7 +61,6 @@ class ConfigReplacerTest {
     final JsonNode config = mapper.readValue(configJson, JsonNode.class);
     final AllowedHosts response = replacer.getAllowedHosts(allowedHosts, config);
 
-    System.out.println(response.getHosts());
     assertThat(response.getHosts()).isEqualTo(expected);
   }
 

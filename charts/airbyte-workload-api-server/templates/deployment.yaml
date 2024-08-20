@@ -1,3 +1,4 @@
+{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.workloadsOptIn true)}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,6 +6,7 @@ metadata:
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
+  minReadySeconds: 30
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -77,21 +79,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_API_HOST
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_URL
-        - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DATABASE_USER
         - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
@@ -122,6 +109,9 @@ spec:
             secretKeyRef:
               name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
               key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        # Database
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+
         {{- end }}
 
         # Values from secret
@@ -217,3 +207,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
       {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

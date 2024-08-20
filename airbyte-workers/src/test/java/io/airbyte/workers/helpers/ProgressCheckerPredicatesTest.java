@@ -24,11 +24,11 @@ class ProgressCheckerPredicatesTest {
 
   public static Stream<Arguments> statsProgressMatrix() {
     return Stream.of(
-        Arguments.of(new AttemptStats().recordsCommitted(0L), false),
-        Arguments.of(new AttemptStats().recordsCommitted(1L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(3L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(9999L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(null), false));
+        Arguments.of(new AttemptStats(null, null, null, null, 0L, null, null), false),
+        Arguments.of(new AttemptStats(null, null, null, null, 1L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, 3L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, 9999L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, null, null, null), false));
   }
 
 }

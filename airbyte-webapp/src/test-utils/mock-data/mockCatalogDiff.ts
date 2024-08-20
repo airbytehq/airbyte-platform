@@ -5,18 +5,21 @@ export const mockCatalogDiff: CatalogDiff = {
     {
       transformType: "update_stream",
       streamDescriptor: { namespace: "apple", name: "harissa_paste" },
-      updateStream: [
-        { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
-        { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
-        { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
+      updateStream: {
+        streamAttributeTransforms: [],
+        fieldTransforms: [
+          { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
+          { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
+          { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
 
-        {
-          transformType: "update_field_schema",
-          breaking: false,
-          fieldName: ["users", "address"],
-          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
-        },
-      ],
+          {
+            transformType: "update_field_schema",
+            breaking: false,
+            fieldName: ["users", "address"],
+            updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+          },
+        ],
+      },
     },
     {
       transformType: "add_stream",

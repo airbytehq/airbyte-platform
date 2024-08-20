@@ -4,17 +4,12 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
-import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
-import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
@@ -31,12 +26,10 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.storage.DocumentType;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;
-import io.airbyte.workers.sync.DbtLauncherWorker;
-import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -47,7 +40,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -64,13 +57,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
-  }
-
-  @Singleton
-  EnvConfigs envConfigs(@Named("envVars") final Map<String, String> env) {
-    return new EnvConfigs(env);
+  EnvConfigs envConfigs() {
+    return new EnvConfigs();
   }
 
   @Singleton
@@ -90,7 +78,6 @@ class ContainerOrchestratorFactory {
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
                                     final FeatureFlagClient featureFlagClient,
-                                    final EnvConfigs configs,
                                     @Value("${micronaut.server.port}") final int serverPort,
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
@@ -112,23 +99,18 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
-                                     @Named("application") final String application,
+                                     @Value("${airbyte.application}") final String application,
                                      @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
-                                     final ProcessFactory processFactory,
-                                     final WorkerConfigsProvider workerConfigsProvider,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
-                                     final AsyncStateManager asyncStateManager,
+                                     final Optional<AsyncStateManager> asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
-                                     final WorkloadIdGenerator workloadIdGenerator,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
-      case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
-      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
+          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadEnabled, jobOutputDocStore);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

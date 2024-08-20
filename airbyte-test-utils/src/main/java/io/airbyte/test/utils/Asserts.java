@@ -4,13 +4,10 @@
 
 package io.airbyte.test.utils;
 
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.FINAL_INTERVAL_SECS;
 import static io.airbyte.test.utils.AcceptanceTestHarness.JITTER_MAX_INTERVAL_SECS;
 import static io.airbyte.test.utils.AcceptanceTestHarness.MAX_TRIES;
 import static io.airbyte.test.utils.AcceptanceTestHarness.OUTPUT_STREAM_PREFIX;
-import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.AirbyteApiClient;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
@@ -28,11 +25,10 @@ import io.airbyte.api.client.model.generated.StreamStatusRead;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.db.Database;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -79,30 +75,36 @@ public class Asserts {
       throws Exception {
     // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
     // the sync is marked complete but the destination tables aren't finalized yet.
-    AirbyteApiClient.retryWithJitterThrows(() -> {
-      try {
-        Set<SchemaTableNamePair> sourceTables = new HashSet<>();
-        for (String inputSchema : inputSchemas) {
-          sourceTables.addAll(Databases.listAllTables(source, inputSchema));
-        }
+    Failsafe.with(RetryPolicy.builder()
+        .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS), Duration.ofSeconds(FINAL_INTERVAL_SECS))
+        .withMaxRetries(MAX_TRIES)
+        .build()).run(() -> assertSourceAndDestinationInSync(source, destination, inputSchemas, outputSchema, withNormalizedTable, withScdTable));
+  }
 
-        final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
+  private static void assertSourceAndDestinationInSync(final Database source,
+                                                       final Database destination,
+                                                       final Set<String> inputSchemas,
+                                                       final String outputSchema,
+                                                       final boolean withNormalizedTable,
+                                                       final boolean withScdTable)
+      throws Exception {
+    Set<SchemaTableNamePair> sourceTables = new HashSet<>();
+    for (String inputSchema : inputSchemas) {
+      sourceTables.addAll(Databases.listAllTables(source, inputSchema));
+    }
 
-        final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
-        assertEquals(expDestTables, destinationTables,
-            String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+    final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
 
-        for (final SchemaTableNamePair pair : sourceTables) {
-          final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-          // generate the raw stream with the correct schema
-          // retrieve and assert the recordds
-          assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
-        }
-      } catch (final Exception e) {
-        return e;
-      }
-      return null;
-    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
+    assertEquals(expDestTables, destinationTables,
+        String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+
+    for (final SchemaTableNamePair pair : sourceTables) {
+      final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+      // generate the raw stream with the correct schema
+      // retrieve and assert the records
+      assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
+    }
   }
 
   public static void assertRawDestinationContains(final Database dst,
@@ -123,78 +125,13 @@ public class Asserts {
     }
   }
 
-  public static void assertNormalizedDestinationContains(final Database dst, final String outputSchema, final List<JsonNode> sourceRecords)
-      throws Exception {
-    assertNormalizedDestinationContains(dst, outputSchema, sourceRecords, STREAM_NAME);
-  }
-
-  private static void assertNormalizedDestinationContains(final Database dst,
-                                                          final String outputSchema,
-                                                          final List<JsonNode> sourceRecords,
-                                                          final String streamName)
-      throws Exception {
-    final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
-    final List<JsonNode> destinationRecords = Databases.retrieveRecordsFromDatabase(dst, finalDestinationTable);
-    for (final var record : destinationRecords) {
-      LOGGER.info("destination record: {}", record.toPrettyString());
-    }
-    dropAirbyteSystemColumns(destinationRecords);
-
-    assertEquals(sourceRecords.size(), destinationRecords.size(),
-        String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
-    for (final JsonNode sourceStreamRecord : sourceRecords) {
-      LOGGER.info("sourceStreamRecord: {}", sourceStreamRecord.toPrettyString());
-      assertTrue(recordIsContainedIn(sourceStreamRecord, destinationRecords));
-      assertTrue(
-          destinationRecords.stream()
-              .anyMatch(r -> r.get(COLUMN_NAME).asText().equals(sourceStreamRecord.get(COLUMN_NAME).asText())
-                  && r.get(COLUMN_ID).asInt() == sourceStreamRecord.get(COLUMN_ID).asInt()),
-          String.format("destination does not contain record:\n %s \n destination contains:\n %s\n", sourceStreamRecord, destinationRecords));
-    }
-  }
-
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
-  private static boolean recordIsContainedIn(JsonNode sourceStreamRecord, final List<JsonNode> destinationRecords) {
-    // NOTE: I would expect the simple `equals` method to do this deep comparison, but it didn't seem to
-    // be working, so this is a short-term workaround.
-    for (final JsonNode destinationRecord : destinationRecords) {
-      if (sourceStreamRecord.size() != destinationRecord.size()) {
-        continue;
-      }
-      boolean fieldsMatch = true;
-      for (Iterator<Map.Entry<String, JsonNode>> it = sourceStreamRecord.fields(); it.hasNext();) {
-        final var field = it.next();
-        final var destinationValue = destinationRecord.findValue(field.getKey());
-        fieldsMatch &= destinationValue.asText().equals(field.getValue().asText());
-      }
-      if (fieldsMatch) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static void dropAirbyteSystemColumns(final List<JsonNode> destinationRecords) {
-    for (final var record : destinationRecords) {
-      // Clear the properties prefixed with "_airbyte", since we add those, and they won't be in the
-      // source.
-      final List<String> fieldsToKeep = new ArrayList<>();
-      record.fieldNames().forEachRemaining(fieldName -> {
-        if (!fieldName.startsWith("_airbyte")) {
-          fieldsToKeep.add(fieldName);
-        }
-      });
-      ((ObjectNode) record).retain(fieldsToKeep);
-    }
-  }
-
   /**
    * Asserts that all streams associated with the most recent job and attempt for the provided
    * connection are the in expected state.
    *
    * @param workspaceId The workspace that contains the connection.
    * @param connectionId The connection that just executed a sync or reset.
-   * @param jobInfoRead The job associated with the sync execution.
+   * @param jobId The job associated with the sync execution.
    * @param expectedRunState The expected stream status for each stream in the connection for the most
    *        recent job and attempt.
    * @param expectedJobType The expected type of the stream status.

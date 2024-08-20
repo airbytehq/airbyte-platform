@@ -5,9 +5,11 @@
 package io.airbyte.persistence.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.commons.protocol.CatalogTransforms;
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -15,6 +17,8 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -24,17 +28,15 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
+import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
-import io.airbyte.config.persistence.RefreshJobStateUpdater;
-import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestResourceOverrides;
@@ -48,15 +50,15 @@ import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -71,25 +73,19 @@ public class DefaultJobCreator implements JobCreator {
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
-  private final GenerationBumper generationBumper;
-  private final StatePersistence statePersistence;
-  private final RefreshJobStateUpdater refreshJobStateUpdater;
   private final StreamRefreshesRepository streamRefreshesRepository;
+  private final String variantOverride;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
                            final FeatureFlagClient featureFlagClient,
-                           final GenerationBumper generationBumper,
-                           final StatePersistence statePersistence,
-                           final RefreshJobStateUpdater refreshJobStateUpdater,
-                           final StreamRefreshesRepository streamRefreshesRepository) {
+                           final StreamRefreshesRepository streamRefreshesRepository,
+                           @Nullable final String variantOverride) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
-    this.generationBumper = generationBumper;
-    this.statePersistence = statePersistence;
-    this.refreshJobStateUpdater = refreshJobStateUpdater;
     this.streamRefreshesRepository = streamRefreshesRepository;
+    this.variantOverride = variantOverride;
   }
 
   @Override
@@ -97,8 +93,10 @@ public class DefaultJobCreator implements JobCreator {
                                       final DestinationConnection destination,
                                       final StandardSync standardSync,
                                       final String sourceDockerImageName,
+                                      final Boolean sourceDockerImageIsDefault,
                                       final Version sourceProtocolVersion,
                                       final String destinationDockerImageName,
+                                      final Boolean destinationDockerImageIsDefault,
                                       final Version destinationProtocolVersion,
                                       final List<StandardSyncOperation> standardSyncOperations,
                                       @Nullable final JsonNode webhookOperationConfigs,
@@ -116,8 +114,10 @@ public class DefaultJobCreator implements JobCreator {
         .withNamespaceFormat(standardSync.getNamespaceFormat())
         .withPrefix(standardSync.getPrefix())
         .withSourceDockerImage(sourceDockerImageName)
+        .withSourceDockerImageIsDefault(sourceDockerImageIsDefault)
         .withSourceProtocolVersion(sourceProtocolVersion)
         .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationDockerImageIsDefault(destinationDockerImageIsDefault)
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withWebhookOperationConfigs(webhookOperationConfigs)
@@ -132,6 +132,7 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
+
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 
@@ -150,12 +151,7 @@ public class DefaultJobCreator implements JobCreator {
                                                 final UUID workspaceId,
                                                 final List<StreamRefresh> streamsToRefresh)
       throws IOException {
-    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
-        List.of(
-            new Workspace(workspaceId),
-            new Connection(standardSync.getConnectionId()),
-            new SourceDefinition(sourceDefinition.getSourceDefinitionId()),
-            new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()))));
+    final boolean canRunRefreshes = destinationDefinitionVersion.getSupportsRefreshes();
 
     if (!canRunRefreshes) {
       throw new IllegalStateException("Trying to create a refresh job for a destination which doesn't support refreshes");
@@ -182,36 +178,36 @@ public class DefaultJobCreator implements JobCreator {
         .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
         .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId())
         .withStreamsToRefresh(
-            streamsToRefresh.stream().map(streamRefresh -> new StreamDescriptor()
-                .withName(streamRefresh.getStreamName())
-                .withNamespace(streamRefresh.getStreamNamespace())).toList());
+            streamsToRefresh.stream().map(streamRefresh -> new RefreshStream()
+                .withRefreshType(convertToApi(streamRefresh.getRefreshType()))
+                .withStreamDescriptor(new StreamDescriptor()
+                    .withName(streamRefresh.getStreamName())
+                    .withNamespace(streamRefresh.getStreamNamespace())))
+                .toList());
+
+    streamsToRefresh.forEach(
+        s -> streamRefreshesRepository.deleteByConnectionIdAndStreamNameAndStreamNamespace(standardSync.getConnectionId(), s.getStreamName(),
+            s.getStreamNamespace()));
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
-    final Optional<Long> maybeJobId = jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
-
-    if (maybeJobId.isPresent()) {
-      final long jobId = maybeJobId.get();
-      generationBumper.updateGenerationForStreams(standardSync.getConnectionId(), jobId, streamsToRefresh);
-      final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
-      updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
-    }
-
-    return maybeJobId;
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 
-  // TODO: Add Transactional annotation
-  private void updateStateAndDeleteRefreshes(final UUID connectionId,
-                                             final List<StreamRefresh> streamsToRefresh,
-                                             final Optional<StateWrapper> currentState)
-      throws IOException {
-    if (currentState.isPresent()) {
-      refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, currentState.get(), streamsToRefresh);
+  @VisibleForTesting
+  Set<StreamDescriptor> getResumableFullRefresh(final StandardSync standardSync, final boolean supportResumableFullRefresh) {
+    if (!supportResumableFullRefresh) {
+      return Set.of();
     }
-    streamsToRefresh.forEach(
-        s -> streamRefreshesRepository.deleteByConnectionIdAndStreamNameAndStreamNamespace(connectionId, s.getStreamName(), s.getStreamNamespace()));
+
+    return standardSync.getCatalog().getStreams().stream()
+        .filter(stream -> stream.getSyncMode() == SyncMode.FULL_REFRESH
+            && stream.getStream().isResumable() != null
+            && stream.getStream().isResumable())
+        .map(ConfiguredAirbyteStream::getStreamDescriptor)
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -262,7 +258,9 @@ public class DefaultJobCreator implements JobCreator {
                                                                final StandardDestinationDefinition destinationDefinition,
                                                                final boolean isReset) {
     final var ffContext = buildFeatureFlagContext(workspaceId, standardSync, sourceDefinition, destinationDefinition);
-    final String variant = featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, ffContext);
+    final String variant =
+        variantOverride == null || variantOverride.isBlank() ? featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, ffContext)
+            : variantOverride;
 
     // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
     // going to be slow. With this in mind, we align the resources given to the orchestrator and the
@@ -402,6 +400,18 @@ public class DefaultJobCreator implements JobCreator {
       return Optional.empty();
     }
     return Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString);
+  }
+
+  private static RefreshType convertToApi(final io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType type) {
+    switch (type) {
+      case MERGE -> {
+        return RefreshType.MERGE;
+      }
+      case TRUNCATE -> {
+        return RefreshType.TRUNCATE;
+      }
+      default -> throw new IllegalStateException("Unsupported enum value: " + type.getLiteral());
+    }
   }
 
 }

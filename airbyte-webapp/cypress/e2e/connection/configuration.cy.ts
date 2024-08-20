@@ -24,8 +24,10 @@ import {
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { getSyncEnabledSwitch, visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
+import * as connectionSettings from "@cy/pages/connection/connectionSettingsPageObject";
 import * as statusPage from "@cy/pages/connection/statusPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
+import { getTestId } from "@cy/utils/selectors";
 import {
   AirbyteStreamAndConfiguration,
   ConnectionStatus,
@@ -36,8 +38,6 @@ import {
   WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
-
-import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
 
 describe("Connection Configuration", () => {
   let pokeApiSource: SourceRead;
@@ -64,7 +64,7 @@ describe("Connection Configuration", () => {
     });
   });
 
-  afterEach(() => {
+  after(() => {
     if (connection) {
       requestDeleteConnection({ connectionId: connection.connectionId });
       connection = null;
@@ -91,18 +91,18 @@ describe("Connection Configuration", () => {
     runDbQuery(dropUsersTableQuery);
   });
 
-  describe("Replication settings", () => {
+  describe("Connection settings", () => {
     beforeEach(() => {
       interceptGetConnectionRequest();
       interceptUpdateConnectionRequest();
     });
 
-    describe("Replication frequency", { testIsolation: false }, () => {
+    describe("Sync frequency", { testIsolation: false }, () => {
       let loadedConnection: WebBackendConnectionRead;
       it("Default to manual schedule", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
 
         waitForGetConnectionRequest().then((interception) => {
@@ -120,7 +120,7 @@ describe("Connection Configuration", () => {
       });
 
       it("Set cron as schedule type", () => {
-        connectionForm.expandConfigurationSection();
+        connectionForm.toggleAdvancedSettingsSection();
 
         connectionForm.selectScheduleType("Cron");
         submitButtonClick();
@@ -133,14 +133,16 @@ describe("Connection Configuration", () => {
             cronTimeZone: "UTC",
             cronExpression: "0 0 12 * * ?",
           });
+
           expect(loadedConnection).to.deep.eq(connectionUpdate);
         });
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
+
       it("Set manual as schedule type", () => {
         connectionForm.selectScheduleType("Manual");
         submitButtonClick();
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
         waitForUpdateConnectionRequest().then((interception) => {
           // Schedule is pulled out here, but we don't do anything with is as it's legacy
           const { scheduleType, scheduleData, schedule, ...connectionUpdate } = interception.response?.body;
@@ -165,7 +167,7 @@ describe("Connection Configuration", () => {
           expect(loadedConnection).to.deep.eq(connectionUpdate);
         });
 
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
     });
 
@@ -173,16 +175,15 @@ describe("Connection Configuration", () => {
       it("Set destination namespace with 'Custom format' option", () => {
         createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
-        connectionForm.expandConfigurationSection();
+        connectionForm.toggleAdvancedSettingsSection();
 
         const namespace = "_DestinationNamespaceCustomFormat";
         connectionForm.setupDestinationNamespaceCustomFormat(namespace);
 
-        // Ensures the DestinationNamespace is applied to the streams
-        const row = streamsTable.getRow("public", "users");
-        row.checkDestinationNamespace(`public${namespace}`);
+        // Ensures the DestinationNamespace preview shows and is correct
+        cy.get(connectionForm.destinationNamespaceCustomPreview).should("have.text", `public${namespace}`);
 
         submitButtonClick();
 
@@ -195,7 +196,6 @@ describe("Connection Configuration", () => {
               name: `${connection?.name}`,
               namespaceDefinition: "customformat",
               namespaceFormat: "${SOURCE_NAMESPACE}_DestinationNamespaceCustomFormat",
-              status: "active",
             });
 
           const streamToCheck = interception.request.body.syncCatalog.streams.filter(
@@ -208,22 +208,20 @@ describe("Connection Configuration", () => {
             namespace: "public",
           });
         });
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
       it("Set destination namespace with 'Custom format' option and interpolates an empty string if relevant", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
-        connectionForm.expandConfigurationSection();
+        connectionForm.toggleAdvancedSettingsSection();
 
         const namespace = "_DestinationNamespaceCustomFormat";
         connectionForm.setupDestinationNamespaceCustomFormat(namespace);
 
-        // Ensures the DestinationNamespace is applied to the streams
-        const row = streamsTable.getRow("no-namespace", "pokemon");
-        // Because there
-        row.checkDestinationNamespace(`${namespace}`);
+        // Ensures the DestinationNamespace preview shows and is correct
+        cy.get(connectionForm.destinationNamespaceCustomPreview).should("have.text", `${namespace}`);
 
         submitButtonClick();
 
@@ -236,7 +234,6 @@ describe("Connection Configuration", () => {
               name: `${connection?.name}`,
               namespaceDefinition: "customformat",
               namespaceFormat: "${SOURCE_NAMESPACE}_DestinationNamespaceCustomFormat",
-              status: "active",
             });
 
           const streamToUpdate = interception.request.body.syncCatalog.streams[0];
@@ -247,48 +244,41 @@ describe("Connection Configuration", () => {
           // check that we did NOT set the namespace on the stream
           expect(streamToUpdate.stream).not.to.have.property("namespace");
         });
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
 
-      it("Set destination namespace with 'Mirror source structure' option", () => {
+      it("Set destination namespace with 'Source-defined' option", () => {
         createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
+        connectionForm.toggleAdvancedSettingsSection();
 
         const namespace = "public";
 
-        // Ensures the DestinationNamespace is applied to the streams
-        const row = streamsTable.getRow("public", "users");
-        row.checkDestinationNamespace(namespace);
+        // Ensures the DestinationNamespace preview shows and is correct
+        cy.get(connectionForm.destinationNamespaceSourcePreview).should("have.text", namespace);
       });
-      it("Set destination namespace with 'Mirror source structure' option and shows destination fallback if relevant", () => {
+
+      it("Set destination namespace with 'Source-defined' option and shows destination fallback if relevant", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
+        connectionForm.toggleAdvancedSettingsSection();
 
-        const namespace = "<destination schema>";
-
-        // Ensures the DestinationNamespace is applied to the streams
-        const row = streamsTable.getRow("no-namespace", "pokemon");
-        row.checkDestinationNamespace(namespace);
+        // Ensures the DestinationNamespace preview isn't visible, as there is no namespace in pokeapi
+        cy.get(connectionForm.destinationNamespaceSourcePreview).should("not.exist");
       });
 
       it("Set destination namespace with 'Destination default' option", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
-        connectionForm.expandConfigurationSection();
+        connectionForm.toggleAdvancedSettingsSection();
 
-        connectionForm.setupDestinationNamespaceDefaultFormat();
-
-        const namespace = "<destination schema>";
-
-        // Ensures the DestinationNamespace is applied to the stream rows in table
-        const row = streamsTable.getRow("no-namespace", "pokemon");
-        row.checkDestinationNamespace(namespace);
+        connectionForm.setupDestinationNamespaceDestinationFormat();
 
         submitButtonClick();
 
@@ -300,7 +290,6 @@ describe("Connection Configuration", () => {
             .to.contain({
               name: `${connection?.name}`,
               namespaceDefinition: "destination",
-              status: "active",
             });
 
           const streamToUpdate = interception.request.body.syncCatalog.streams[0];
@@ -312,7 +301,7 @@ describe("Connection Configuration", () => {
           // verify nothing changed in the saved stream
           expect(streamToUpdate.stream).to.not.have.property("namespace");
         });
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
     });
 
@@ -320,19 +309,17 @@ describe("Connection Configuration", () => {
       it("add destination prefix, set destination namespace custom format, change prefix and make sure that it's applied to all streams", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
-          visit(connection, "replication");
+          visit(connection, "settings");
         });
 
-        connectionForm.expandConfigurationSection();
-
-        const row = streamsTable.getRow("no-namespace", "pokemon");
+        connectionForm.toggleAdvancedSettingsSection();
 
         const prefix = "auto_test";
-        connectionForm.fillOutDestinationPrefix(prefix);
+        cy.get(connectionForm.streamPrefixInput).type(prefix);
         connectionForm.setupDestinationNamespaceCustomFormat("_test");
 
-        // Ensures the prefix is applied to the streams
-        row.checkDestinationStreamName(`${prefix}pokemon`);
+        // Ensures the prefix is previewed
+        cy.get(connectionForm.streamPrefixPreview).should("contain.text", prefix);
 
         submitButtonClick();
 
@@ -346,7 +333,6 @@ describe("Connection Configuration", () => {
               prefix: "auto_test",
               namespaceDefinition: "customformat",
               namespaceFormat: "${SOURCE_NAMESPACE}_test",
-              status: "active",
             });
 
           const streamToUpdate = interception.request.body.syncCatalog.streams[0];
@@ -362,7 +348,7 @@ describe("Connection Configuration", () => {
           });
           expect(streamToUpdate.stream.supportedSyncModes).to.contain("full_refresh");
         });
-        replicationPage.checkSuccessResult();
+        connectionSettings.checkSuccessResult();
       });
       it("can remove destination prefix", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination)
@@ -376,17 +362,14 @@ describe("Connection Configuration", () => {
           .as("pokeConnection");
 
         cy.get<WebBackendConnectionRead>("@pokeConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
         });
 
-        connectionForm.expandConfigurationSection();
+        connectionForm.toggleAdvancedSettingsSection();
 
-        const row = streamsTable.getRow("no-namespace", "pokemon");
-
-        connectionForm.removeDestinationPrefix();
-
-        // Ensures the prefix is applied to the streams
-        row.checkDestinationStreamName("pokemon");
+        cy.get(connectionForm.streamPrefixPreview).should("contain.text", "auto_test");
+        cy.get(connectionForm.streamPrefixInput).clear();
+        cy.get(connectionForm.streamPrefixPreview).should("not.exist");
 
         submitButtonClick();
 
@@ -399,7 +382,7 @@ describe("Connection Configuration", () => {
           expect(interception.response).property("body").to.contain({
             prefix: "",
           });
-          replicationPage.checkSuccessResult();
+          connectionSettings.checkSuccessResult();
         });
       });
     });
@@ -431,12 +414,12 @@ describe("Connection Configuration", () => {
         const newSyncCatalog = {
           streams: [...postgresConnection.syncCatalog.streams],
         };
-        // update so one stream is enabled, to test that you can still filter by enabled/disabled streams
+        // update so one stream is disabled, to test that you can still filter by enabled/disabled streams
         newSyncCatalog.streams[streamToUpdate].config = {
           ...newSyncCatalog.streams[streamToUpdate].config,
           syncMode: SyncMode.full_refresh,
           destinationSyncMode: DestinationSyncMode.append,
-          selected: true,
+          selected: false,
         };
 
         requestUpdateConnection(
@@ -466,22 +449,11 @@ describe("Connection Configuration", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           getSyncEnabledSwitch().should("be.disabled");
-          cy.get(statusPage.jobHistoryDropdownMenu).click();
-          cy.get(statusPage.resetDataDropdownOption).should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
         });
       });
     });
     describe("Replication tab", () => {
-      it("Cannot edit fields in Configuration section", () => {
-        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          cy.get(connectionForm.scheduleTypeDropdown).should("be.disabled");
-          cy.get(connectionForm.destinationNamespaceEditButton).should("be.disabled");
-          cy.get(connectionForm.destinationPrefixEditButton).should("be.disabled");
-          cy.get(replicationPage.nonBreakingChangesPreference).should("be.disabled");
-        });
-      });
       it("Cannot enable/disable streams", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
@@ -499,41 +471,59 @@ describe("Connection Configuration", () => {
           row.checkSyncModeDropdownDisabled();
         });
       });
-      it("Stream filters are disabled and not applied", () => {
+      it("Stream filters are still enabled", () => {
         cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
           // input for filtering streams by name
-          cy.get('input[placeholder*="Search stream name"]').should("be.disabled");
-          cy.get('input[placeholder*="Search stream name"]').should("be.empty");
+          cy.get('input[placeholder*="Search stream name"]').should("be.enabled");
 
           // "hide disabled streams" switch
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.disabled");
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.not.checked");
+          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.enabled");
         });
       });
     });
 
     describe("Settings tab", () => {
-      it("Can only edit the connection name", () => {
+      it("Can edit the connection name", () => {
         interceptUpdateConnectionRequest();
 
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
           const newName = appendRandomString("new connection name");
+          connectionForm.toggleAdvancedSettingsSection();
           // I am not 100% sure why this call is so long.  I assume it may have something to do with the fact
           // that this connection is tombstoned
-          cy.get('input[name="notifySchemaChanges"]', { timeout: 8000 }).should("be.disabled");
-          cy.get('input[name="connectionName"]').clear();
-          cy.get('input[name="connectionName"]').type(newName);
+          cy.get(`${getTestId("nonBreakingChangesPreference")} button`, { timeout: 8000 }).should("be.disabled");
+          cy.get(getTestId("connectionName")).clear();
+          cy.get(getTestId("connectionName")).type(newName);
           submitButtonClick();
 
           waitForUpdateConnectionRequest().then((interception) => {
-            expect(interception.request.body).to.deep.equal({
+            expect(interception.request.body).to.include({
               name: newName,
               connectionId: connection.connectionId,
               notifySchemaChanges: connection.notifySchemaChanges,
             });
           });
+        });
+      });
+
+      it("Cannot edit non-name fields", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
+          connectionForm.toggleAdvancedSettingsSection();
+          cy.get(connectionForm.scheduleTypeDropdown).should("be.disabled");
+          cy.get(connectionForm.destinationNamespaceListBox).should("be.disabled");
+          cy.get(connectionForm.streamPrefixInput).should("be.disabled");
+          cy.get(connectionForm.nonBreakingChangesPreference).should("be.disabled");
+        });
+      });
+
+      it("cannot reset data or delete connection", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}/`);
+          cy.get(connectionSettings.resetDataButton).should("not.exist");
+          cy.get(connectionSettings.deleteConnectionButton).should("not.exist");
         });
       });
     });
@@ -552,12 +542,17 @@ describe("Connection Configuration", () => {
         .as("postgresConnection");
     });
 
+    it("should show empty streams table", () => {
+      cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
+        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+        cy.contains("users").should("exist");
+      });
+    });
+
     it("should not be allowed to trigger a reset or a sync", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
         cy.get(statusPage.manualSyncButton).should("be.disabled");
-        cy.get(statusPage.jobHistoryDropdownMenu).click();
-        cy.get(statusPage.resetDataDropdownOption).should("be.disabled");
       });
     });
 
@@ -566,7 +561,8 @@ describe("Connection Configuration", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
         cy.get(replicationPage.refreshSourceSchemaBtn).should("not.be.disabled");
-        connectionForm.expandConfigurationSection();
+
+        cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Settings}`);
         connectionForm.selectScheduleType("Scheduled");
         submitButtonClick();
 

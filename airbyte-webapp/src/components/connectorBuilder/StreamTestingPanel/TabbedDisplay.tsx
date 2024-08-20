@@ -1,6 +1,6 @@
-import { Tab } from "@headlessui/react";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
 import classNames from "classnames";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -22,11 +22,16 @@ export interface TabData {
 
 export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, defaultTabIndex = 0 }) => {
   const [selectedIndex, setSelectedIndex] = useState(defaultTabIndex);
+  useEffect(() => {
+    if (selectedIndex >= tabs.length) {
+      setSelectedIndex(defaultTabIndex);
+    }
+  }, [defaultTabIndex, selectedIndex, tabs.length]);
 
   return (
-    <FlexContainer className={classNames(className, styles.container)} direction="column">
-      <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-        <Tab.List className={styles.tabList}>
+    <TabGroup className={styles.tabGroup} selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+      <FlexContainer className={classNames(className, styles.container)} direction="column">
+        <TabList className={styles.tabList}>
           {tabs.map((tab) => (
             <Tab className={styles.tab} key={tab.key} data-testid={tab["data-testid"]}>
               {({ selected }) => (
@@ -41,15 +46,15 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
               )}
             </Tab>
           ))}
-        </Tab.List>
-        <Tab.Panels className={styles.tabPanelContainer}>
+        </TabList>
+        <TabPanels className={styles.tabPanelContainer}>
           {tabs.map((tab) => (
-            <Tab.Panel className={styles.tabPanel} key={tab.key}>
+            <TabPanel className={styles.tabPanel} key={tab.key}>
               {tab.content}
-            </Tab.Panel>
+            </TabPanel>
           ))}
-        </Tab.Panels>
-      </Tab.Group>
-    </FlexContainer>
+        </TabPanels>
+      </FlexContainer>
+    </TabGroup>
   );
 };

@@ -9,35 +9,23 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
-import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
-import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
-import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -98,115 +86,6 @@ class DockerProcessFactoryTest {
 
     final DockerProcessFactory processFactory = new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
     assertFalse(processFactory.checkImageExists("airbyte/fake:0.1.2"));
-  }
-
-  @Test
-  void testFileWriting() throws IOException, WorkerException {
-    final Path workspaceRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), PROCESS_FACTORY);
-    final Path jobRoot = workspaceRoot.resolve("job");
-
-    final DockerProcessFactory processFactory =
-        new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
-    processFactory.create(ResourceType.DEFAULT, "tester", "job_id", 0, CONNECTION_ID, WORKSPACE_ID, jobRoot, BUSYBOX, false, false,
-        ImmutableMap.of("config.json", "{\"data\": 2}"),
-        "echo hi", expectedResourceRequirements, null, Map.of(), Map.of(), Map.of(), Collections.emptyMap());
-
-    assertEquals(
-        Jsons.jsonNode(ImmutableMap.of("data", 2)),
-        Jsons.deserialize(IOs.readFile(jobRoot.resolve("config.json"))));
-  }
-
-  /**
-   * Tests that the env var map passed in is accessible within the process.
-   */
-  @Test
-  void testEnvMapSet() throws IOException, WorkerException, InterruptedException {
-    final Path workspaceRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), PROCESS_FACTORY);
-    final Path jobRoot = workspaceRoot.resolve("job");
-
-    final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
-    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
-
-    final DockerProcessFactory processFactory =
-        new DockerProcessFactory(
-            createConfigProviderStub(workerConfigs),
-            workspaceRoot,
-            null,
-            null,
-            "host");
-
-    waitForDockerToInitialize(processFactory, jobRoot);
-
-    final Process process = processFactory.create(
-        ResourceType.DEFAULT,
-        "tester",
-        "job_id",
-        0,
-        CONNECTION_ID,
-        WORKSPACE_ID,
-        jobRoot,
-        BUSYBOX,
-        false,
-        false,
-        Map.of(),
-        "/bin/sh",
-        expectedResourceRequirements,
-        null,
-        Map.of(),
-        Map.of(),
-        Map.of(),
-        Collections.emptyMap(), "-c",
-        "echo ENV_VAR_1=$ENV_VAR_1");
-
-    final StringBuilder out = new StringBuilder();
-    final StringBuilder err = new StringBuilder();
-    final ExecutorService stdoutGobblerExecutor = Executors.newSingleThreadExecutor();
-    final ExecutorService stderrGobblerExecutor = Executors.newSingleThreadExecutor();
-    LineGobbler.gobble(process.getInputStream(), out::append, "unused", MdcScope.DEFAULT_BUILDER, stdoutGobblerExecutor);
-    LineGobbler.gobble(process.getErrorStream(), err::append, "unused", MdcScope.DEFAULT_BUILDER, stderrGobblerExecutor);
-    WorkerUtils.gentleClose(process, 20, TimeUnit.SECONDS);
-    stdoutGobblerExecutor.awaitTermination(10, TimeUnit.SECONDS);
-    stderrGobblerExecutor.awaitTermination(10, TimeUnit.SECONDS);
-
-    assertEquals(0, process.exitValue(), String.format("Process failed with stdout: %s and stderr: %s", out, err));
-    assertEquals("ENV_VAR_1=ENV_VALUE_1", out.toString(), String.format("Output did not contain the expected string. stdout: %s", out));
-  }
-
-  private void waitForDockerToInitialize(final ProcessFactory processFactory, final Path jobRoot)
-      throws InterruptedException, WorkerException {
-    final var stopwatch = Stopwatch.createStarted();
-
-    while (stopwatch.elapsed().compareTo(Duration.ofSeconds(30)) < 0) {
-      final Process p = processFactory.create(
-          ResourceType.DEFAULT,
-          "tester",
-          "job_id_" + RandomStringUtils.randomAlphabetic(4),
-          0,
-          CONNECTION_ID,
-          WORKSPACE_ID,
-          jobRoot,
-          BUSYBOX,
-          false,
-          false,
-          Map.of(),
-          "/bin/sh",
-          expectedResourceRequirements,
-          null,
-          Map.of(),
-          Map.of(),
-          Map.of(),
-          Collections.emptyMap(), "-c",
-          "echo ENV_VAR_1=$ENV_VAR_1");
-      p.waitFor();
-      final int exitStatus = p.exitValue();
-
-      if (exitStatus == 0) {
-        log.info("Successfully ran test docker command.");
-        return;
-      }
-    }
-
-    throw new RuntimeException("Failed to run test docker command after timeout.");
   }
 
   static class DebuggingOptionsTestArgumentsProvider implements ArgumentsProvider {

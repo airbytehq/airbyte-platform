@@ -7,16 +7,20 @@ package io.airbyte.config.persistence;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthUser;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
+import io.airbyte.config.helpers.UserInfoConverter;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -24,6 +28,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -32,11 +37,13 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -46,6 +53,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
   private UserPersistence userPersistence;
   private ConfigRepository configRepository;
+  private OrganizationService organizationService;
 
   @BeforeEach
   void setup() {
@@ -86,6 +94,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryWriter,
             secretPersistenceConfigService));
     userPersistence = new UserPersistence(database);
+    organizationService = new OrganizationServiceJooqImpl(database);
   }
 
   @Nested
@@ -98,6 +107,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     private void setupTestData() throws IOException, JsonValidationException {
+      // Create organization
+      organizationService.writeOrganization(MockData.defaultOrganization());
       // write workspace table
       for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -125,14 +136,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     @Test
-    void getUserByAuthIdFromUserTableTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromUserTable(user.getAuthUserId());
-        Assertions.assertEquals(user, userFromDb.get());
-      }
-    }
-
-    @Test
     void getUserByAuthIdFromAuthUserTableTest() throws IOException {
       for (final User user : MockData.users()) {
         final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
@@ -150,12 +153,12 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
     @Test
     void getUsersByEmailTest() throws IOException {
-      for (final User user : MockData.dupEmailUsers()) {
-        userPersistence.writeUser(user);
+      for (final User user : MockData.users()) {
+        final List<UserInfo> usersFromDb = userPersistence.getUsersByEmail(user.getEmail());
+        Assertions.assertEquals(1, usersFromDb.size());
+        Assertions.assertEquals(user.getUserId(), usersFromDb.getFirst().getUserId());
+        Assertions.assertEquals(user.getEmail(), usersFromDb.getFirst().getEmail());
       }
-
-      final List<User> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
-      Assertions.assertEquals(new HashSet<>(MockData.dupEmailUsers()), new HashSet<>(usersWithSameEmail));
     }
 
     @Test
@@ -175,6 +178,45 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       Assertions.assertEquals(Set.of(expectedAuthUserId, user1.getAuthUserId()), actualAuthUserIds);
     }
 
+    @Test
+    void listAuthUsersTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // add an extra auth user
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final List<AuthUser> expectedAuthUsers = Stream.of(
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(user1.getAuthUserId()).withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM),
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(newAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK))
+          .sorted(Comparator.comparing(AuthUser::getUserId))
+          .toList();
+
+      final List<AuthUser> authUsers = userPersistence.listAuthUsersForUser(user1.getUserId());
+      Assertions.assertEquals(expectedAuthUsers, authUsers.stream().sorted(Comparator.comparing(AuthUser::getUserId)).toList());
+    }
+
+    @Test
+    void replaceAuthUserTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // create auth users
+      final String oldAuthUserId = UUID.randomUUID().toString();
+      final String oldAuthUserId2 = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId2, AuthProvider.KEYCLOAK);
+
+      final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(oldAuthUserId, oldAuthUserId2, user1.getAuthUserId()), actualAuthUserIds);
+
+      // replace auth_user_id
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.replaceAuthUserForUserId(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final Set<String> newAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(newAuthUserId), newAuthUserIds);
+    }
+
   }
 
   @Nested
@@ -184,6 +226,14 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withUserId(UUID.randomUUID())
         .withOrganizationId(UUID.randomUUID())
         .withName("Org")
+        .withEmail("test@org.com")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+
+    private static final Organization ORG_2 = new Organization()
+        .withUserId(UUID.randomUUID())
+        .withOrganizationId(UUID.randomUUID())
+        .withName("Org 2")
         .withEmail("test@org.com")
         .withPba(false)
         .withOrgLevelBilling(false);
@@ -206,11 +256,11 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
 
-    private static final StandardWorkspace WORKSPACE_3_NO_ORG = new StandardWorkspace()
+    private static final StandardWorkspace WORKSPACE_3_ORG_2 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withName("workspace3_no_org")
         .withSlug("workspace3_no_org-slug")
-        .withOrganizationId(null)
+        .withOrganizationId(ORG_2.getOrganizationId())
         .withInitialSetupComplete(true)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
@@ -269,7 +319,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     private static final Permission WORKSPACE_3_READER_PERMISSION = new Permission()
         .withPermissionId(UUID.randomUUID())
         .withUserId(WORKSPACE_2_AND_3_READER_USER.getUserId())
-        .withWorkspaceId(WORKSPACE_3_NO_ORG.getWorkspaceId())
+        .withWorkspaceId(WORKSPACE_3_ORG_2.getWorkspaceId())
         .withPermissionType(PermissionType.WORKSPACE_READER);
 
     private static final Permission BOTH_USER_WORKSPACE_PERMISSION = new Permission()
@@ -291,8 +341,9 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
       organizationPersistence.createOrganization(ORG);
+      organizationPersistence.createOrganization(ORG_2);
 
-      for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_NO_ORG)) {
+      for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_ORG_2)) {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
       }
 
@@ -308,13 +359,16 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
     @Test
     void getUsersWithWorkspaceAccess() throws IOException {
-      final Set<User> expectedUsersWorkspace1 = Set.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace2 = Set.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace3 = Set.of(WORKSPACE_2_AND_3_READER_USER);
+      final Set<UserInfo> expectedUsersWorkspace1 =
+          Set.copyOf(Stream.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(UserInfoConverter::userInfoFromUser).toList());
+      final Set<UserInfo> expectedUsersWorkspace2 = Set.copyOf(
+          Stream.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(UserInfoConverter::userInfoFromUser).toList());
+      final Set<UserInfo> expectedUsersWorkspace3 =
+          Set.copyOf(Stream.of(WORKSPACE_2_AND_3_READER_USER).map(UserInfoConverter::userInfoFromUser).toList());
 
-      final Set<User> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
-      final Set<User> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));
-      final Set<User> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_NO_ORG.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_ORG_2.getWorkspaceId()));
 
       Assertions.assertEquals(expectedUsersWorkspace1, actualUsersWorkspace1);
       Assertions.assertEquals(expectedUsersWorkspace2, actualUsersWorkspace2);
@@ -394,7 +448,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       final Set<UUID> actualUsersWorkspace2 =
           new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_2_ORG_1.getWorkspaceId()));
       final Set<UUID> actualUsersWorkspace3 =
-          new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_3_NO_ORG.getWorkspaceId()));
+          new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_3_ORG_2.getWorkspaceId()));
 
       Assertions.assertEquals(expectedUsersWorkspace1, actualUsersWorkspace1);
       Assertions.assertEquals(expectedUsersWorkspace2, actualUsersWorkspace2);

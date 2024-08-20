@@ -53,6 +53,7 @@ import org.junit.platform.commons.util.ClassLoaderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.InvalidLogMessageFormat")
 class VersionedAirbyteStreamFactoryTest {
 
   AirbyteMessageSerDeProvider serDeProvider;

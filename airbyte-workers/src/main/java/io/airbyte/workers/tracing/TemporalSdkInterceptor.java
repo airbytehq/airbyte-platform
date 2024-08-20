@@ -106,7 +106,7 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
 
     return trace.isError()
         && ERROR_MESSAGE_TAG_KEYS.stream().map(key -> trace.getTags().getOrDefault(key, "").toString())
-            .anyMatch(v -> EXIT_ERROR_MESSAGE.equalsIgnoreCase(v))
+            .anyMatch(EXIT_ERROR_MESSAGE::equalsIgnoreCase)
         && (safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME)
             || safeEquals(trace.getResourceName(), CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME)
             || safeEquals(trace.getResourceName(), SYNC_WORKFLOW_IMPL_RESOURCE_NAME));

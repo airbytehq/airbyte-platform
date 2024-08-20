@@ -5,18 +5,20 @@
 package io.airbyte.test.acceptance;
 
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
+import static io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
-import io.airbyte.api.client.model.generated.CheckConnectionRead.StatusEnum;
+import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -26,7 +28,9 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  * components, and we migrate more operations to them, we will run these tests in CI to catch
  * regressions.
  */
-public class WorkloadBasicAcceptanceTests {
+@Tags({@Tag("sync"), @Tag("enterprise")})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class WorkloadBasicAcceptanceTests {
 
   AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 
@@ -77,10 +81,10 @@ public class WorkloadBasicAcceptanceTests {
 
     final UUID destinationId = testResources.getTestHarness().createPostgresDestination(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID).getDestinationId();
 
-    final CheckConnectionRead.StatusEnum checkOperationStatus = testResources.getTestHarness().checkDestination(destinationId);
+    final CheckConnectionRead.Status checkOperationStatus = testResources.getTestHarness().checkDestination(destinationId);
 
     Assertions.assertNotNull(checkOperationStatus);
-    assertEquals(StatusEnum.SUCCEEDED, checkOperationStatus);
+    assertEquals(Status.SUCCEEDED, checkOperationStatus);
   }
 
   @Test

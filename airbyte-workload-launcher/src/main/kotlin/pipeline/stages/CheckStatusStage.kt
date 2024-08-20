@@ -9,7 +9,7 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.airbyte.workload.launcher.pods.PodClient
+import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -25,7 +25,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("check")
 open class CheckStatusStage(
-  private val podClient: PodClient,
+  private val podClient: KubePodClient,
   private val customMetricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
 ) : LaunchStage(customMetricPublisher, dataplaneId) {

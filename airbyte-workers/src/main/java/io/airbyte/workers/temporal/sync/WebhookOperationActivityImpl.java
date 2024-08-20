@@ -9,8 +9,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KE
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
@@ -27,11 +28,15 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
+import io.micronaut.http.HttpStatus;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,13 +52,18 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(WebhookOperationActivityImpl.class);
   private static final int MAX_RETRIES = 3;
 
-  private final HttpClient httpClient;
+  private static final RetryPolicy<Object> WEBHOOK_RETRY_POLICY = RetryPolicy.builder()
+      .withBackoff(1, 5, ChronoUnit.SECONDS)
+      .withMaxRetries(MAX_RETRIES)
+      .handle(Exception.class)
+      .build();
 
+  private final HttpClient httpClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
 
-  public WebhookOperationActivityImpl(final HttpClient httpClient,
+  public WebhookOperationActivityImpl(@Named("webhookHttpClient") final HttpClient httpClient,
                                       final SecretsRepositoryReader secretsRepositoryReader,
                                       final AirbyteApiClient airbyteApiClient,
                                       final FeatureFlagClient featureFlagClient) {
@@ -76,13 +86,14 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullWebhookConfigJson =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
+      } catch (final IOException e) {
+        LOGGER.error("Unable to retrieve hydrated webhook configuration for webhook {}.", input.getWebhookConfigId(), e);
+        return false;
       }
     } else {
       fullWebhookConfigJson = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(input.getWorkspaceWebhookConfigs());
@@ -90,42 +101,49 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
     final WebhookOperationConfigs webhookConfigs = Jsons.object(fullWebhookConfigJson, WebhookOperationConfigs.class);
     final Optional<WebhookConfig> webhookConfig =
         webhookConfigs.getWebhookConfigs().stream().filter((config) -> config.getId().equals(input.getWebhookConfigId())).findFirst();
-    if (webhookConfig.isEmpty()) {
-      throw new RuntimeException(String.format("Cannot find webhook config %s", input.getWebhookConfigId().toString()));
+
+    if (webhookConfig.isPresent()) {
+      ApmTraceUtils.addTagsToTrace(Map.of(WEBHOOK_CONFIG_ID_KEY, input.getWebhookConfigId()));
+      LOGGER.info("Invoking webhook operation \"{}\" using URL \"{}\"...", webhookConfig.get().getName(), input.getExecutionUrl());
+      final HttpRequest.Builder requestBuilder = buildRequest(input, webhookConfig.get());
+      return Failsafe.with(WEBHOOK_RETRY_POLICY).get(() -> sendWebhook(requestBuilder, webhookConfig.get()));
+    } else {
+      LOGGER.error("Webhook configuration for webhook {} not found.", input.getWebhookConfigId());
+      return false;
     }
+  }
 
-    ApmTraceUtils.addTagsToTrace(Map.of(WEBHOOK_CONFIG_ID_KEY, input.getWebhookConfigId()));
-    LOGGER.info("Invoking webhook operation {}", webhookConfig.get().getName());
-
+  private HttpRequest.Builder buildRequest(final OperatorWebhookInput input, final WebhookConfig webhookConfig) {
     final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
         .uri(URI.create(input.getExecutionUrl()));
     if (input.getExecutionBody() != null) {
       requestBuilder.POST(HttpRequest.BodyPublishers.ofString(input.getExecutionBody()));
     }
-    if (webhookConfig.get().getAuthToken() != null) {
+    if (webhookConfig.getAuthToken() != null) {
       requestBuilder
           .header("Content-Type", "application/json")
-          .header("Authorization", "Bearer " + webhookConfig.get().getAuthToken()).build();
+          .header("Authorization", "Bearer " + webhookConfig.getAuthToken()).build();
     }
 
-    Exception finalException = null;
-    // TODO(mfsiega-airbyte): replace this loop with retries configured on the HttpClient impl.
-    for (int i = 0; i < MAX_RETRIES; i++) {
-      try {
-        final HttpResponse<String> response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-        LOGGER.debug("Webhook response: {}", response == null ? null : response.body());
-        LOGGER.info("Webhook response status: {}", response == null ? "empty response" : response.statusCode());
-        // Return true if the request was successful.
-        final boolean isSuccessful = response != null && response.statusCode() >= 200 && response.statusCode() <= 300;
-        LOGGER.info("Webhook {} execution status {}", webhookConfig.get().getName(), isSuccessful ? "successful" : "failed");
-        return isSuccessful;
-      } catch (final Exception e) {
-        LOGGER.warn(e.getMessage());
-        finalException = e;
+    return requestBuilder;
+  }
+
+  private boolean sendWebhook(final HttpRequest.Builder requestBuilder, final WebhookConfig webhookConfig)
+      throws IOException, InterruptedException {
+    final HttpResponse<String> response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+    if (response != null) {
+      final boolean result = response.statusCode() >= HttpStatus.OK.getCode() && response.statusCode() <= HttpStatus.MULTIPLE_CHOICES.getCode();
+      if (result) {
+        LOGGER.info("Webhook operation \"{}\" ({}) successful.", webhookConfig.getName(), webhookConfig.getId());
+      } else {
+        LOGGER.info("Webhook operation \"{}\" ({}) response: {} {}", webhookConfig.getName(), webhookConfig.getId(),
+            response.statusCode(), response.body());
       }
+      return result;
+    } else {
+      LOGGER.info("Webhook operation did not return a response.  Reporting invocation as failed...");
+      return false;
     }
-    // If we ever get here, it means we exceeded MAX_RETRIES without returning in the happy path.
-    throw new RuntimeException(finalException);
   }
 
 }

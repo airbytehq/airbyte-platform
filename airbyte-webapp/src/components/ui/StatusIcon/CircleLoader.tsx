@@ -1,11 +1,21 @@
+import classNames from "classnames";
+
 import styles from "./CircleLoader.module.scss";
 
 interface CircleLoaderProps {
   title?: string;
+  className?: string;
 }
 
-export const CircleLoader = ({ title }: CircleLoaderProps): JSX.Element => (
-  <svg className={styles.spinner} role="img" viewBox="0 0 16 16" width="40" height="40" data-icon="circle-loader">
+export const CircleLoader = ({ title, className }: CircleLoaderProps): JSX.Element => (
+  <svg
+    className={classNames(styles.spinner, className)}
+    role="img"
+    viewBox="0 0 16 16"
+    width="40"
+    height="40"
+    data-icon="circle-loader"
+  >
     <defs>
       <linearGradient
         id="circleLoaderGradient"

@@ -305,6 +305,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
 
   return (
     <Table<TableStream>
+      rowId={(row) => row.path.join(".")}
       variant="light"
       columns={columns}
       data={tableData}

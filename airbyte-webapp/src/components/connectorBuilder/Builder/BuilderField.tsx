@@ -1,7 +1,7 @@
+import classNames from "classnames";
 import { ReactNode, useEffect, useRef } from "react";
 import { useController, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { Rnd } from "react-rnd";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
@@ -48,6 +48,7 @@ interface BaseFieldProps {
   optional?: boolean;
   pattern?: string;
   adornment?: ReactNode;
+  preview?: (arg0: string) => ReactNode;
   className?: string;
   omitInterpolationContext?: boolean;
 }
@@ -128,6 +129,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   readOnly,
   pattern,
   adornment,
+  preview,
   manifestPath,
   omitInterpolationContext,
   ...props
@@ -146,10 +148,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     false,
     omitInterpolationContext
   );
+
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
-
   const elementRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     // Call handler in here to make sure it handles new scrollToField value from the context
     handleScrollToField(elementRef, path);
@@ -161,11 +162,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       <LabeledSwitch
         {...field}
         id={switchId}
-        ref={(ref) => {
-          elementRef.current = ref;
-          // Call handler in here to make sure it handles new refs
-          handleScrollToField(elementRef, path);
-        }}
+        ref={elementRef}
         checked={fieldValue as boolean}
         label={
           <ControlLabels
@@ -201,31 +198,31 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       label={label}
       infoTooltipContent={tooltip}
       optional={optional}
-      ref={(ref) => {
-        elementRef.current = ref;
-        handleScrollToField(elementRef, path);
-      }}
+      ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
-        <Input
-          {...field}
-          onChange={(e) => {
-            setValue(e.target.value);
-          }}
-          className={props.className}
-          type={props.type}
-          value={(fieldValue as string | number | undefined) ?? ""}
-          error={hasError}
-          readOnly={readOnly}
-          adornment={adornment}
-          disabled={props.disabled}
-          step={props.step}
-          min={props.min}
-          onBlur={(e) => {
-            field.onBlur();
-            props.onBlur?.(e.target.value);
-          }}
-        />
+        <>
+          <Input
+            {...field}
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            className={props.className}
+            type={props.type}
+            value={(fieldValue as string | number | undefined) ?? ""}
+            error={hasError}
+            readOnly={readOnly}
+            adornment={adornment}
+            disabled={props.disabled}
+            step={props.step}
+            min={props.min}
+            onBlur={(e) => {
+              field.onBlur();
+              props.onBlur?.(e.target.value);
+            }}
+          />
+          {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
+        </>
       )}
       {(props.type === "date" || props.type === "date-time") && (
         <DatePicker
@@ -250,38 +247,17 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         />
       )}
       {props.type === "jsoneditor" && (
-        <div style={{ position: "relative" }}>
-          <Rnd
-            disableDragging
-            enableResizing={{
-              top: false,
-              right: false,
-              bottom: true,
-              left: false,
-              topRight: false,
-              bottomRight: false,
-              bottomLeft: false,
-              topLeft: false,
+        <div className={classNames(props.className, styles.jsonEditor)}>
+          <CodeEditor
+            key={path}
+            automaticLayout
+            value={fieldValue || ""}
+            language="json"
+            onChange={(val: string | undefined) => {
+              setValue(val);
             }}
-            default={{
-              x: 0,
-              y: 0,
-              width: "100%",
-              height: 300,
-            }}
-            resizeHandleClasses={{ bottom: styles.draghandle }}
-            style={{ position: "relative" }}
-          >
-            <CodeEditor
-              key={path}
-              automaticLayout
-              value={fieldValue || ""}
-              language="json"
-              onChange={(val: string | undefined) => {
-                setValue(val);
-              }}
-            />
-          </Rnd>
+            bubbleUpUndoRedo
+          />
         </div>
       )}
       {props.type === "array" && (

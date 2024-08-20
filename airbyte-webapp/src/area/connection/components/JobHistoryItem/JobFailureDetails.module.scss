@@ -1,0 +1,36 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.failedMessage {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seeMore {
+  color: colors.$grey-500;
+  min-width: fit-content;
+}
+
+.seeMoreIcon {
+  vertical-align: middle;
+}
+
+.secondaryMessage {
+  padding: variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
+  font-family: monospace;
+
+  &.errorMessage {
+    background-color: colors.$red-50;
+  }
+
+  &.warningMessage {
+    background-color: colors.$yellow-50;
+  }
+}

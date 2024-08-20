@@ -23,6 +23,7 @@ interface IProps {
   connectionTestSuccess: boolean;
   hasDefinition: boolean;
   isEditMode: boolean;
+  leftSlot?: React.ReactNode;
 }
 
 export const Controls: React.FC<IProps> = ({
@@ -34,6 +35,7 @@ export const Controls: React.FC<IProps> = ({
   dirty,
   onDeleteClick,
   onCancelClick,
+  leftSlot = null,
   ...restProps
 }) => {
   const showTestCard =
@@ -51,6 +53,7 @@ export const Controls: React.FC<IProps> = ({
         />
       )}
       <FlexContainer>
+        {leftSlot}
         <FlexItem grow>
           {isEditMode && (
             <Button variant="danger" type="button" onClick={onDeleteClick} data-id="open-delete-modal">

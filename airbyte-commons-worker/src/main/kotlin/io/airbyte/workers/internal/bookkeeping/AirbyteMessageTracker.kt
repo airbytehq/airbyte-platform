@@ -1,6 +1,5 @@
 package io.airbyte.workers.internal.bookkeeping
 
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
@@ -15,20 +14,20 @@ import java.util.ArrayList
 private val logger = KotlinLogging.logger {}
 
 /**
- * This class is responsible for stats and metadata tracking surrounding [AirbyteRecordMessage].
+ * This class is responsible for stats and metadata tracking surrounding [io.airbyte.protocol.models.AirbyteRecordMessage].
  *
  * It is not intended to perform meaningful operations - transforming, mutating, triggering
  * downstream actions etc. - on specific messages.
  */
 class AirbyteMessageTracker(
   val syncStatsTracker: SyncStatsTracker,
-  featureFlags: FeatureFlags,
+  private val logStateMsgs: Boolean,
+  private val logConnectorMsgs: Boolean,
   private val sourceDockerImage: String,
   private val destinationDockerImage: String,
 ) {
   private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
-  private val logConnectorMsgs: Boolean = featureFlags.logConnectorMessages()
   private val stateAggregator: StateAggregator = DefaultStateAggregator()
 
   /**
@@ -78,7 +77,7 @@ class AirbyteMessageTracker(
       srcErrorTraceMsgs.map {
         FailureHelper.sourceFailure(it, jobId, attempt)
       } + dstErrorTraceMsgs.map { FailureHelper.destinationFailure(it, jobId, attempt) }
-    return allErrors.sortedBy { it.getTimestamp() }
+    return allErrors.sortedBy { it.timestamp }
   }
 
   /**
@@ -123,9 +122,15 @@ class AirbyteMessageTracker(
   private fun logMsgAsJson(
     caller: String,
     msg: AirbyteMessage,
-  ): Unit =
-    when (logConnectorMsgs) {
-      true -> logger.info { "$caller message | ${Jsons.serialize(msg)}" }
-      else -> Unit
+  ) {
+    if (logConnectorMsgs) {
+      logger.info { "$caller message | ${Jsons.serialize(msg)}" }
+    } else if (logStateMsgs && msg.type == AirbyteMessage.Type.STATE) {
+      logger.info { "$caller state message | ${Jsons.serialize(msg)}" }
     }
+  }
+
+  fun endOfReplication(completedSuccessfully: Boolean) {
+    syncStatsTracker.endOfReplication(completedSuccessfully)
+  }
 }

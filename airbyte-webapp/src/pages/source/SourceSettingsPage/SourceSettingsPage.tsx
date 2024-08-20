@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -15,6 +16,7 @@ import {
   useUpdateSource,
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { trackTiming } from "core/utils/datadog";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
@@ -29,7 +31,7 @@ export const SourceSettingsPage: React.FC = () => {
   const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId, source.sourceId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceId);
 
   const reloadSource = useInvalidateSource(source.sourceId);
   const { mutateAsync: updateSource } = useUpdateSource();
@@ -38,6 +40,10 @@ export const SourceSettingsPage: React.FC = () => {
   const { clearFormChange } = useFormChangeTrackerService();
 
   useTrackPage(PageTrackingCodes.SOURCE_ITEM_SETTINGS);
+
+  useEffectOnce(() => {
+    trackTiming("SourceSettingsPage");
+  });
 
   const onSubmit = async (values: ConnectorCardValues) => {
     await updateSource({

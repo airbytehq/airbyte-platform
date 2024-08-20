@@ -22,10 +22,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("PMD.AvoidReassigningParameters")
+@Tag("oauth")
 public abstract class OAuthFlowIntegrationTest {
 
   /**

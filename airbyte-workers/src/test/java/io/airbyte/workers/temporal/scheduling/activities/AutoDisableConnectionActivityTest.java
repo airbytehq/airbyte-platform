@@ -6,13 +6,14 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.InternalOperationResult;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
+import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AutoDisableConnectionActivityTest {
 
   @Mock
-  private FeatureFlags mFeatureFlags;
+  private AirbyteApiClient mAirbyteApiClient;
+
   @Mock
   private ConnectionApi connectionApi;
 
@@ -40,32 +42,23 @@ class AutoDisableConnectionActivityTest {
     activityInput = new AutoDisableConnectionActivityInput();
     activityInput.setConnectionId(CONNECTION_ID);
 
-    Mockito.when(mFeatureFlags.autoDisablesFailingConnections()).thenReturn(true);
-
-    autoDisableActivity = new AutoDisableConnectionActivityImpl(
-        mFeatureFlags,
-        connectionApi);
+    autoDisableActivity = new AutoDisableConnectionActivityImpl(mAirbyteApiClient);
   }
 
   @Test
-  void testConnectionAutoDisabled() throws ApiException {
-    Mockito.when(connectionApi.autoDisableConnection(Mockito.any()))
-        .thenReturn(new InternalOperationResult().succeeded(true));
+  void testConnectionAutoDisabled() throws IOException {
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
+    when(connectionApi.autoDisableConnection(Mockito.any()))
+        .thenReturn(new InternalOperationResult(true));
     final AutoDisableConnectionOutput output = autoDisableActivity.autoDisableFailingConnection(activityInput);
     assertTrue(output.isDisabled());
   }
 
   @Test
-  void testConnectionNotAutoDisabled() throws ApiException {
-    Mockito.when(connectionApi.autoDisableConnection(Mockito.any()))
-        .thenReturn(new InternalOperationResult().succeeded(false));
-    final AutoDisableConnectionOutput output = autoDisableActivity.autoDisableFailingConnection(activityInput);
-    assertFalse(output.isDisabled());
-  }
-
-  @Test
-  void testFeatureFlagDisabled() {
-    Mockito.when(mFeatureFlags.autoDisablesFailingConnections()).thenReturn(false);
+  void testConnectionNotAutoDisabled() throws IOException {
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
+    when(connectionApi.autoDisableConnection(Mockito.any()))
+        .thenReturn(new InternalOperationResult(false));
     final AutoDisableConnectionOutput output = autoDisableActivity.autoDisableFailingConnection(activityInput);
     assertFalse(output.isDisabled());
   }

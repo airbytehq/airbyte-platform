@@ -4,10 +4,13 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static io.airbyte.commons.logging.LoggingHelper.RESET;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,10 +26,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.WorkerDestinationConfig;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.WorkerUtils;
@@ -48,6 +48,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +74,6 @@ class DefaultAirbyteDestinationTest {
   static {
     try {
       logJobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-      LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, logJobRoot);
     } catch (final IOException e) {
       LOGGER.error(e.toString());
     }
@@ -83,7 +84,7 @@ class DefaultAirbyteDestinationTest {
   private Process process;
   private AirbyteStreamFactory streamFactory;
   private AirbyteMessageBufferedWriterFactory messageWriterFactory;
-  private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
+  private final ProtocolSerializer protocolSerializer = spy(new DefaultProtocolSerializer());
   private ByteArrayOutputStream outputStream;
   private DestinationTimeoutMonitor destinationTimeoutMonitor;
   private MetricClient metricClient;
@@ -121,7 +122,7 @@ class DefaultAirbyteDestinationTest {
   @AfterEach
   void tearDown() throws IOException {
     // The log file needs to be present and empty
-    final Path logFile = logJobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logFile = logJobRoot.resolve(DEFAULT_LOG_FILENAME);
     if (Files.exists(logFile)) {
       Files.delete(logFile);
     }
@@ -135,6 +136,10 @@ class DefaultAirbyteDestinationTest {
         new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
             metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
+
+    // Making sure we are calling the serializer in order to convert internal catalog into protocol
+    // catalog
+    verify(protocolSerializer).serialize(DESTINATION_CONFIG.getCatalog(), false);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
     destination.accept(recordMessage);
@@ -191,7 +196,7 @@ class DefaultAirbyteDestinationTest {
 
     destination.close();
 
-    final Path logPath = logJobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logPath = logJobRoot.resolve(DEFAULT_LOG_FILENAME);
     final Stream<String> logs = IOs.readFile(logPath).lines();
 
     logs.forEach(line -> {
@@ -246,6 +251,24 @@ class DefaultAirbyteDestinationTest {
     // call a second time to verify that exit value is cached
     assertEquals(2, destination.getExitValue());
     verify(process, times(1)).exitValue();
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testSupportRefreshIsPassedToTheSerializer(final boolean supportRefreshes) throws Exception {
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
+            metricClient);
+    final WorkerDestinationConfig config = Jsons.clone(DESTINATION_CONFIG);
+    config.setSupportRefreshes(supportRefreshes);
+
+    when(process.isAlive()).thenReturn(false);
+    destination.start(config, jobRoot);
+
+    destination.notifyEndOfInput();
+    destination.close();
+
+    verify(protocolSerializer).serialize(any(), eq(supportRefreshes));
   }
 
 }

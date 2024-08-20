@@ -233,6 +233,7 @@ export const ConnectorBuilderProjectTable = ({
                       type="button"
                       variant="clear"
                       disabled={Boolean(props.row.original.sourceDefinitionId)}
+                      data-testid={`delete-project-button_${props.row.original.name}`}
                       icon="trash"
                       onClick={() => {
                         unregisterNotificationById(NOTIFICATION_ID);
@@ -298,6 +299,7 @@ export const ConnectorBuilderProjectTable = ({
 
   return (
     <Table
+      rowId="id"
       columns={columns}
       data={projects}
       className={styles.table}

@@ -19,32 +19,27 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectorBuilderProject;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectorBuilderService;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class ConfigRepositoryBuilderProjectUpdaterTest {
+class ConfigRepositoryBuilderProjectUpdaterTest {
 
   private final JsonNode draftManifest = addSpec(Jsons.deserialize("{\"test\":123,\"empty\":{\"array_in_object\":[]}}"));
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID A_BUILDER_PROJECT_ID = UUID.randomUUID();
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
-  private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
-  private static final String A_NAME = "a name";
-  private static final String A_DOCUMENTATION_URL = "http://documentation.url";
   private static final JsonNode A_MANIFEST;
-  private static final JsonNode A_SPEC;
 
   static {
     try {
       A_MANIFEST = new ObjectMapper().readTree("{\"a_manifest\": \"manifest_value\"}");
-      A_SPEC = new ObjectMapper().readTree("{\"a_spec\": \"spec_value\"}");
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -65,14 +60,14 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
         }
       }""";
 
-  private ConfigRepository configRepository;
+  private ConnectorBuilderService connectorBuilderService;
   private UUID workspaceId;
   private ConfigRepositoryBuilderProjectUpdater projectUpdater;
 
   @BeforeEach
   void setUp() {
-    configRepository = mock(ConfigRepository.class);
-    projectUpdater = new ConfigRepositoryBuilderProjectUpdater(configRepository);
+    connectorBuilderService = mock(ConnectorBuilderService.class);
+    projectUpdater = new ConfigRepositoryBuilderProjectUpdater(connectorBuilderService);
   }
 
   @Test
@@ -80,7 +75,7 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
   void testUpdateConnectorBuilderProjectWipeDraft() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
 
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     final ExistingConnectorBuilderProjectWithWorkspaceId update = new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails().name(project.getName()))
@@ -88,7 +83,7 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
 
     projectUpdater.persistBuilderProjectUpdate(update);
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null);
   }
@@ -98,7 +93,7 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
   void testUpdateConnectorBuilderProject() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
 
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
     final ExistingConnectorBuilderProjectWithWorkspaceId update = new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails()
@@ -109,14 +104,14 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
 
     projectUpdater.persistBuilderProjectUpdate(update);
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
   }
 
   @Test
   void givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() throws Exception {
-    when(configRepository.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(anyBuilderProject()
+    when(connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(anyBuilderProject()
         .withBuilderProjectId(A_BUILDER_PROJECT_ID)
         .withWorkspaceId(A_WORKSPACE_ID)
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID));
@@ -128,7 +123,7 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
         .workspaceId(A_WORKSPACE_ID)
         .builderProjectId(A_BUILDER_PROJECT_ID));
 
-    verify(configRepository, times(1))
+    verify(connectorBuilderService, times(1))
         .updateBuilderProjectAndActorDefinition(
             A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_SOURCE_DEFINITION_ID);
   }
@@ -139,7 +134,7 @@ public class ConfigRepositoryBuilderProjectUpdaterTest {
         .withHasDraft(true).withManifestDraft(draftManifest);
   }
 
-  private JsonNode addSpec(JsonNode manifest) {
+  private JsonNode addSpec(final JsonNode manifest) {
     final JsonNode spec = Jsons.deserialize("{\"" + CONNECTION_SPECIFICATION_FIELD + "\":" + specString + "}");
     return ((ObjectNode) Jsons.clone(manifest)).set(SPEC_FIELD, spec);
   }

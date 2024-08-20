@@ -9,16 +9,17 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.InternalOperationResult;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * AutoDisableConnectionActivityImpl.
@@ -27,13 +28,11 @@ import java.util.Map;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionActivity {
 
-  private final FeatureFlags featureFlags;
-  private final ConnectionApi connectionApi;
+  private final AirbyteApiClient airbyteApiClient;
 
   @SuppressWarnings("LineLength")
-  public AutoDisableConnectionActivityImpl(final FeatureFlags featureFlags, final ConnectionApi connectionApi) {
-    this.featureFlags = featureFlags;
-    this.connectionApi = connectionApi;
+  public AutoDisableConnectionActivityImpl(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   // Given a connection id, this activity will make an api call that will set a connection
@@ -44,19 +43,18 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
   @Override
   public AutoDisableConnectionOutput autoDisableFailingConnection(final AutoDisableConnectionActivityInput input) {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
-    if (featureFlags.autoDisablesFailingConnections()) {
-      try {
-        final InternalOperationResult autoDisableConnection = AirbyteApiClient.retryWithJitterThrows(
-            () -> connectionApi.autoDisableConnection(new ConnectionIdRequestBody()
-                .connectionId(input.getConnectionId())),
-            "auto disable connection");
-        return new AutoDisableConnectionOutput(autoDisableConnection.getSucceeded());
-      } catch (final Exception e) {
-        throw new RetryableException(e);
+    try {
+      final InternalOperationResult autoDisableConnection =
+          airbyteApiClient.getConnectionApi().autoDisableConnection(new ConnectionIdRequestBody(input.getConnectionId()));
+      return new AutoDisableConnectionOutput(autoDisableConnection.getSucceeded());
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
       }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
+      throw new RetryableException(e);
     }
-
-    return new AutoDisableConnectionOutput(false);
   }
 
 }

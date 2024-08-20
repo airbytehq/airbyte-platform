@@ -14,6 +14,7 @@ interface YamlEditorProps {
   onMount?: (editor: editor.IStandaloneCodeEditor) => void;
   lineNumberCharacterWidth?: number;
   paddingTop?: boolean;
+  bubbleUpUndoRedo?: boolean;
 }
 
 export const YamlEditor: React.FC<YamlEditorProps> = ({
@@ -24,6 +25,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({
   onMount,
   lineNumberCharacterWidth,
   paddingTop,
+  bubbleUpUndoRedo,
 }) => {
   const yamlEditorRef = useRef<editor.IStandaloneCodeEditor>();
   const monaco = useMonaco();
@@ -83,6 +85,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({
       }}
       lineNumberCharacterWidth={lineNumberCharacterWidth}
       paddingTop={paddingTop}
+      bubbleUpUndoRedo={bubbleUpUndoRedo}
     />
   );
 };

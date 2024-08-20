@@ -1,0 +1,9 @@
+.switch {
+  width: 100px;
+}
+
+.scheduleButton {
+  // Max width on the schedule button to prevent it from becoming too wide in case the
+  // schedule is a complex cron expression.
+  max-width: 250px;
+}

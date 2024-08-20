@@ -22,6 +22,7 @@ import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.Permission;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -48,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Singleton
 @Slf4j
+@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
 public class UserInvitationHandler {
 
   static final String ACCEPT_INVITE_PATH = "/accept-invite?inviteCode=";
@@ -213,7 +215,7 @@ public class UserInvitationHandler {
     log.info("orgId: " + orgId);
 
     final Set<UUID> userIdsWithEmail = userPersistence.getUsersByEmail(email).stream()
-        .map(User::getUserId)
+        .map(UserInfo::getUserId)
         .collect(Collectors.toSet());
 
     log.info("userIdsWithEmail: " + userIdsWithEmail);

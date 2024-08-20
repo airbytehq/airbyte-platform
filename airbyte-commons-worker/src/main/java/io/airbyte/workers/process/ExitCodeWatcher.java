@@ -103,7 +103,7 @@ public class ExitCodeWatcher implements ResourceEventHandler<Pod> {
   private Optional<Integer> getExitCode(final Pod pod) {
     final ContainerStatus mainContainerStatus = pod.getStatus().getContainerStatuses()
         .stream()
-        .filter(containerStatus -> containerStatus.getName().equals(KubePodProcess.MAIN_CONTAINER_NAME))
+        .filter(containerStatus -> (KubePodProcess.MAIN_CONTAINER_NAME).equals(containerStatus.getName()))
         .collect(MoreCollectors.onlyElement());
 
     if (mainContainerStatus.getState() != null && mainContainerStatus.getState().getTerminated() != null) {

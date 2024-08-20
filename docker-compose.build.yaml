@@ -43,13 +43,6 @@ services:
       context: airbyte-server
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
-  airbyte-api-server:
-    image: airbyte/airbyte-api-server:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-api-server
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
   webapp:
     image: airbyte/webapp:${VERSION}
     build:

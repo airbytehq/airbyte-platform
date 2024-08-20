@@ -62,6 +62,7 @@ interface ConnectorCardBaseProps {
   formId?: string;
   fetchingConnectorError?: Error | null;
   isLoading?: boolean;
+  leftFooterSlot?: React.ReactNode;
 }
 
 interface ConnectorCardCreateProps extends ConnectorCardBaseProps {
@@ -85,9 +86,11 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   reloadConfig,
   headerBlock,
   supportLevel,
+  leftFooterSlot = null,
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const { formatMessage } = useIntl();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -244,7 +247,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
-              errorMessage={error && generateMessageFromError(error)}
+              errorMessage={error && generateMessageFromError(error, formatMessage)}
               formType={props.formType}
               hasDefinition={Boolean(selectedConnectorDefinitionId)}
               onRetestClick={() => {
@@ -263,6 +266,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                 resetConnectorForm();
               }}
               connectionTestSuccess={connectionTestSuccess}
+              leftSlot={leftFooterSlot}
             />
           </>
         )

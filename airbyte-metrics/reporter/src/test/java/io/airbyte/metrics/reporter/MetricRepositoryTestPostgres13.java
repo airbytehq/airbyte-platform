@@ -17,6 +17,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
@@ -32,7 +33,7 @@ public class MetricRepositoryTestPostgres13 extends MetricRepositoryTest {
 
   @BeforeAll
   public static void setUpAll() throws DatabaseInitializationException, IOException {
-    final var psqlContainer = new PostgreSQLContainer<>("postgres:13-alpine")
+    final var psqlContainer = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withUsername("user")
         .withPassword("hunter2");
     psqlContainer.start();
@@ -51,9 +52,9 @@ public class MetricRepositoryTestPostgres13 extends MetricRepositoryTest {
 
     ctx.insertInto(ACTOR_DEFINITION_VERSION, ACTOR_DEFINITION_VERSION.ID, ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID,
         ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC,
-        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL)
-        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community)
-        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL)
+        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community, 100L)
+        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community, 100L)
         .execute();
 
     // drop constraints to simplify test set up

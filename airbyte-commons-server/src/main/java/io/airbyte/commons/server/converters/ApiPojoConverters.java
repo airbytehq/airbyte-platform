@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobType;
 import io.airbyte.api.model.generated.JobTypeResourceLimit;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
-import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
@@ -36,6 +35,9 @@ import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -135,17 +137,6 @@ public class ApiPojoConverters {
         .cpuLimit(resourceReqs.getCpuLimit())
         .memoryRequest(resourceReqs.getMemoryRequest())
         .memoryLimit(resourceReqs.getMemoryLimit());
-  }
-
-  public static NormalizationDestinationDefinitionConfig normalizationDestinationDefinitionConfigToApi(final io.airbyte.config.NormalizationDestinationDefinitionConfig normalizationDestinationDefinitionConfig) {
-    if (normalizationDestinationDefinitionConfig == null) {
-      return new NormalizationDestinationDefinitionConfig().supported(false);
-    }
-    return new NormalizationDestinationDefinitionConfig()
-        .supported(true)
-        .normalizationRepository(normalizationDestinationDefinitionConfig.getNormalizationRepository())
-        .normalizationTag(normalizationDestinationDefinitionConfig.getNormalizationTag())
-        .normalizationIntegrationType(normalizationDestinationDefinitionConfig.getNormalizationIntegrationType());
   }
 
   public static ConnectionRead internalToConnectionRead(final StandardSync standardSync) {
@@ -276,6 +267,13 @@ public class ApiPojoConverters {
       return null;
     }
     return LocalDate.parse(date);
+  }
+
+  public static OffsetDateTime toOffsetDateTime(Date date) {
+    if (date == null) {
+      return null;
+    }
+    return date.toInstant().atOffset(ZoneOffset.UTC);
   }
 
   public static ConnectionScheduleDataBasicSchedule.TimeUnitEnum toApiBasicScheduleTimeUnit(final BasicSchedule.TimeUnit timeUnit) {

@@ -37,7 +37,7 @@ class RetryStatesMapperTest {
         .successivePartialFailures(successivePartialFailures)
         .totalPartialFailures(totalPartialFailures);
 
-    final var expected = RetryState.builder()
+    final var expected = new RetryState.RetryStateBuilder()
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
@@ -61,7 +61,7 @@ class RetryStatesMapperTest {
                             final Integer totalCompleteFailures,
                             final Integer successivePartialFailures,
                             final Integer totalPartialFailures) {
-    final var domain = RetryState.builder()
+    final var domain = new RetryState.RetryStateBuilder()
         .id(retryId)
         .jobId(jobId)
         .connectionId(connectionId)

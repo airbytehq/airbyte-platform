@@ -11,7 +11,7 @@ const jestConfig: Config = {
   snapshotSerializers: ["./src/test-utils/classname-serializer.js"],
   coveragePathIgnorePatterns: ["\\.stories\\.tsx$"],
   modulePathIgnorePatterns: ["src/.*/__mocks__"],
-  testEnvironment: "jsdom",
+  testEnvironment: "./patchJSDOMEnvironment.ts",
   moduleDirectories: ["node_modules", "src"],
   moduleNameMapper: {
     "\\.module\\.scss$": "test-utils/mock-data/mockIdentity.js",

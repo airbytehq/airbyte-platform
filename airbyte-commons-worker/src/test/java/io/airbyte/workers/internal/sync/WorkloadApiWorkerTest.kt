@@ -1,10 +1,13 @@
 package io.airbyte.workers.internal.sync
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.generated.ConnectionApi
+import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.ConnectionRead
+import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
+import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
@@ -18,8 +21,10 @@ import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
+import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
@@ -44,6 +49,7 @@ internal class WorkloadApiWorkerTest {
   private var workloadApiClient: WorkloadApiClient = mockk()
   private var featureFlagClient: FeatureFlagClient = mockk()
   private var jobOutputDocStore: JobOutputDocStore = mockk()
+  private var logClientManager: LogClientManager = mockk()
   private lateinit var replicationActivityInput: ReplicationActivityInput
   private lateinit var replicationInput: ReplicationInput
   private lateinit var workloadApiWorker: WorkloadApiWorker
@@ -53,6 +59,7 @@ internal class WorkloadApiWorkerTest {
   fun beforeEach() {
     every { apiClient.connectionApi } returns connectionApi
     every { workloadApiClient.workloadApi } returns workloadApi
+    every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args.first().toString(), DEFAULT_LOG_FILENAME).toString() }
     featureFlagClient = TestClient()
     jobRoot = Path.of("test", "path")
     replicationActivityInput = ReplicationActivityInput()
@@ -62,9 +69,11 @@ internal class WorkloadApiWorkerTest {
         jobOutputDocStore,
         apiClient,
         workloadApiClient,
+        WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,
+        logClientManager,
       )
   }
 
@@ -80,7 +89,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
@@ -102,7 +123,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.FAILURE)
 
@@ -125,7 +158,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } throws ServerException(statusCode = 409)
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
@@ -145,7 +190,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
     every { storageClient.read("$expectedDocPrefix/SUCCEEDED") } returns null
@@ -162,7 +219,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
       mockWorkload(
@@ -183,7 +252,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
       mockWorkload(
@@ -204,7 +285,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
       mockWorkload(
@@ -225,7 +318,19 @@ internal class WorkloadApiWorkerTest {
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every {
+      connectionApi.getConnection(any())
+    } returns
+      ConnectionRead(
+        connectionId = replicationInput.connectionId,
+        name = "name",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(listOf()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+        geography = Geography.US,
+      )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
       mockWorkload(

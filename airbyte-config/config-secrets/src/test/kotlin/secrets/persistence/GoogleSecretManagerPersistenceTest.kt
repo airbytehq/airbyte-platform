@@ -17,8 +17,11 @@ import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.persistence.GoogleSecretManagerPersistence.Companion.replicationPolicy
+import io.airbyte.metrics.lib.MetricClient
 import io.grpc.Status
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
@@ -36,13 +39,15 @@ class GoogleSecretManagerPersistenceTest {
     val mockGoogleClient: SecretManagerServiceClient = mockk()
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
     every { mockGoogleClient.accessSecretVersion(ofType(SecretVersionName::class)) } returns mockResponse
     every { mockGoogleClient.close() } returns Unit
     every { mockClient.createClient() } returns mockGoogleClient
+    every { mockMetric.count(any(), any()) } returns Unit
 
     val result = persistence.read(coordinate)
     Assertions.assertEquals(secret, result)
@@ -54,7 +59,8 @@ class GoogleSecretManagerPersistenceTest {
     val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
     val mockClient: GoogleSecretManagerServiceClient = mockk()
     val mockGoogleClient: SecretManagerServiceClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
 
     every { mockGoogleClient.accessSecretVersion(ofType(SecretVersionName::class)) } throws
       NotFoundException(
@@ -66,6 +72,7 @@ class GoogleSecretManagerPersistenceTest {
       )
     every { mockGoogleClient.close() } returns Unit
     every { mockClient.createClient() } returns mockGoogleClient
+    every { mockMetric.count(any(), any()) } returns Unit
 
     Assertions.assertDoesNotThrow {
       val result = persistence.read(coordinate)
@@ -82,7 +89,8 @@ class GoogleSecretManagerPersistenceTest {
     val mockGoogleClient: SecretManagerServiceClient = mockk()
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -98,6 +106,7 @@ class GoogleSecretManagerPersistenceTest {
     every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
     every { mockGoogleClient.close() } returns Unit
     every { mockClient.createClient() } returns mockGoogleClient
+    every { mockMetric.count(any(), any(), any()) } returns Unit
 
     persistence.write(coordinate, secret)
 
@@ -114,7 +123,8 @@ class GoogleSecretManagerPersistenceTest {
     val mockGoogleClient: SecretManagerServiceClient = mockk()
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -130,6 +140,7 @@ class GoogleSecretManagerPersistenceTest {
     every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
     every { mockGoogleClient.close() } returns Unit
     every { mockClient.createClient() } returns mockGoogleClient
+    every { mockMetric.count(any(), any(), any()) } returns Unit
 
     val expiry = Instant.now().plus(Duration.ofMinutes(1))
     persistence.writeWithExpiry(coordinate, secret, expiry)
@@ -151,7 +162,8 @@ class GoogleSecretManagerPersistenceTest {
     val mockGoogleClient: SecretManagerServiceClient = mockk()
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -159,9 +171,34 @@ class GoogleSecretManagerPersistenceTest {
     every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
     every { mockGoogleClient.close() } returns Unit
     every { mockClient.createClient() } returns mockGoogleClient
+    every { mockMetric.count(any(), any(), any()) } returns Unit
 
     persistence.write(coordinate, secret)
 
     verify { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) }
+  }
+
+  @Test
+  fun `test deleting a secret via the client deletes the secret`() {
+    val secret = "secret value"
+    val projectId = "test"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: GoogleSecretManagerServiceClient = mockk()
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    val mockResponse: AccessSecretVersionResponse = mockk()
+    val mockPayload: SecretPayload = mockk()
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+
+    every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
+    every { mockResponse.payload } returns mockPayload
+    every { mockClient.createClient() } returns mockGoogleClient
+    every { mockGoogleClient.deleteSecret(ofType(SecretName::class)) } just Runs
+    every { mockGoogleClient.close() } returns Unit
+    every { mockMetric.count(any(), any()) } returns Unit
+
+    persistence.delete(coordinate)
+
+    verify { mockGoogleClient.deleteSecret(any<SecretName>()) }
   }
 }

@@ -20,17 +20,19 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -53,6 +55,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   private static final UUID ANOTHER_ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final Long A_VERSION = 1L;
   private static final Long ANOTHER_VERSION = 2L;
+  private static final String A_CDK_VERSION = "0.29.0";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode ANOTHER_MANIFEST;
   private static final JsonNode A_SPEC;
@@ -61,7 +64,8 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   static {
     try {
       A_MANIFEST = new ObjectMapper().readTree("{\"a_manifest\": \"manifest_value\"}");
-      ANOTHER_MANIFEST = new ObjectMapper().readTree("{\"another_manifest\": \"another_manifest_value\"}");
+      ANOTHER_MANIFEST =
+          new ObjectMapper().readTree("{\"another_manifest\": \"another_manifest_value\"}");
       A_SPEC = new ObjectMapper().readTree("{\"a_spec\": \"spec_value\"}");
       ANOTHER_SPEC = new ObjectMapper().readTree("{\"another_spec\": \"another_spec_value\"}");
     } catch (final JsonProcessingException e) {
@@ -69,7 +73,10 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     }
   }
 
-  private ConfigRepository configRepository;
+  private ConnectorBuilderService connectorBuilderService;
+  private SourceService sourceService;
+  private ActorDefinitionService actorDefinitionService;
+  private WorkspaceService workspaceService;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -83,83 +90,63 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+
+    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater);
+    workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService);
+    connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test
   void whenInsertDeclarativeManifestThenEntryIsInDb() throws IOException, ConfigNotFoundException {
     final DeclarativeManifest manifest = MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION);
-    configRepository.insertDeclarativeManifest(manifest);
-    assertEquals(manifest, configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION));
+    connectorBuilderService.insertDeclarativeManifest(manifest);
+    assertEquals(manifest, connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION));
   }
 
   @Test
   void givenActorDefinitionIdAndVersionAlreadyInDbWhenInsertDeclarativeManifestThenThrowException() throws IOException {
     final DeclarativeManifest manifest = MockData.declarativeManifest();
-    configRepository.insertDeclarativeManifest(manifest);
-    assertThrows(DataAccessException.class, () -> configRepository.insertDeclarativeManifest(manifest));
+    connectorBuilderService.insertDeclarativeManifest(manifest);
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.insertDeclarativeManifest(manifest));
   }
 
   @Test
   void givenManifestIsNullWhenInsertDeclarativeManifestThenThrowException() {
     final DeclarativeManifest declarativeManifestWithoutManifest = MockData.declarativeManifest().withManifest(null);
-    assertThrows(DataAccessException.class, () -> configRepository.insertDeclarativeManifest(declarativeManifestWithoutManifest));
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.insertDeclarativeManifest(declarativeManifestWithoutManifest));
   }
 
   @Test
   void givenSpecIsNullWhenInsertDeclarativeManifestThenThrowException() {
     final DeclarativeManifest declarativeManifestWithoutManifest = MockData.declarativeManifest().withSpec(null);
-    assertThrows(DataAccessException.class, () -> configRepository.insertDeclarativeManifest(declarativeManifestWithoutManifest));
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.insertDeclarativeManifest(declarativeManifestWithoutManifest));
   }
 
   @Test
   void whenGetDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifestWithoutManifestAndSpec() throws IOException {
     final DeclarativeManifest declarativeManifest =
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(A_SPEC);
-    configRepository.insertDeclarativeManifest(declarativeManifest);
+    connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
 
-    final DeclarativeManifest result = configRepository.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).findFirst().orElse(null);
+    final DeclarativeManifest result =
+        connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).findFirst().orElse(null);
 
     assertEquals(declarativeManifest.withManifest(null).withSpec(null), result);
   }
 
   @Test
   void givenManyEntriesMatchingWhenGetDeclarativeManifestsByActorDefinitionIdThenReturnAllEntries() throws IOException {
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(1L));
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(2L));
+    connectorBuilderService.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(1L));
+    connectorBuilderService.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(2L));
 
-    final List<DeclarativeManifest> manifests = configRepository.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).toList();
+    final List<DeclarativeManifest> manifests = connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).toList();
 
     assertEquals(2, manifests.size());
   }
@@ -168,9 +155,9 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   void whenGetDeclarativeManifestByActorDefinitionIdAndVersionThenReturnDeclarativeManifest() throws IOException, ConfigNotFoundException {
     final DeclarativeManifest declarativeManifest =
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION);
-    configRepository.insertDeclarativeManifest(declarativeManifest);
+    connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
 
-    final DeclarativeManifest result = configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION);
+    final DeclarativeManifest result = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION);
 
     assertEquals(declarativeManifest, result);
   }
@@ -178,40 +165,28 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void givenNoDeclarativeManifestMatchingWhenGetDeclarativeManifestByActorDefinitionIdAndVersionThenThrowException() {
     assertThrows(ConfigNotFoundException.class,
-        () -> configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION));
+        () -> connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION));
   }
 
   @Test
   void whenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() throws IOException, ConfigNotFoundException {
     final DeclarativeManifest activeDeclarativeManifest =
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION);
-    configRepository
+    connectorBuilderService
         .insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION));
-    configRepository.insertActiveDeclarativeManifest(activeDeclarativeManifest);
+    connectorBuilderService.insertActiveDeclarativeManifest(activeDeclarativeManifest);
 
-    final DeclarativeManifest result = configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID);
+    final DeclarativeManifest result = connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID);
 
     assertEquals(activeDeclarativeManifest, result);
   }
 
   @Test
   void givenNoActiveManifestWhenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() throws IOException {
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
+    connectorBuilderService
+        .insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
     assertThrows(ConfigNotFoundException.class,
-        () -> configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
-  }
-
-  @Test
-  void whenGetActorDefinitionIdsWithActiveDeclarativeManifestThenReturnActorDefinitionIds() throws IOException {
-    final UUID activeActorDefinitionId = UUID.randomUUID();
-    final UUID anotherActorDefinitionId = UUID.randomUUID();
-    givenActiveDeclarativeManifestWithActorDefinitionId(activeActorDefinitionId);
-    givenActiveDeclarativeManifestWithActorDefinitionId(anotherActorDefinitionId);
-
-    final List<UUID> results = configRepository.getActorDefinitionIdsWithActiveDeclarativeManifest().toList();
-
-    assertEquals(2, results.size());
-    assertEquals(results, List.of(activeActorDefinitionId, anotherActorDefinitionId));
+        () -> connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
   }
 
   @Test
@@ -227,50 +202,51 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         .withJsonToInject(A_MANIFEST);
     final ConnectorSpecification connectorSpecification = MockData.connectorSpecification().withConnectionSpecification(A_SPEC);
 
-    configRepository.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
+    connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification, A_CDK_VERSION);
 
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
-    assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
-    assertEquals(declarativeManifest, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
+    assertEquals(connectorSpecification, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
+    assertEquals(A_CDK_VERSION, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(List.of(configInjection), connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
+    assertEquals(declarativeManifest, connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
   }
 
   @Test
   void givenSourceDefinitionDoesNotExistWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    assertThrows(DataAccessException.class, () -> configRepository.createDeclarativeManifestAsActiveVersion(
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
   void givenActorDefinitionIdMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    assertThrows(IllegalArgumentException.class, () -> configRepository.createDeclarativeManifestAsActiveVersion(
+    assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(ANOTHER_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
   void givenManifestMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    assertThrows(IllegalArgumentException.class, () -> configRepository.createDeclarativeManifestAsActiveVersion(
+    assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(ANOTHER_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
   void givenSpecMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    assertThrows(IllegalArgumentException.class, () -> configRepository.createDeclarativeManifestAsActiveVersion(
+    assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(ANOTHER_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(ANOTHER_SPEC), A_CDK_VERSION));
   }
 
   @Test
   void whenSetDeclarativeSourceActiveVersionThenUpdateSourceDefinitionAndConfigInjectionAndActiveDeclarativeManifest() throws Exception {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest()
+    connectorBuilderService.insertDeclarativeManifest(MockData.declarativeManifest()
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
         .withManifest(A_MANIFEST)
         .withVersion(A_VERSION));
@@ -279,40 +255,43 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         .withJsonToInject(A_MANIFEST);
     final ConnectorSpecification connectorSpecification = MockData.connectorSpecification().withConnectionSpecification(A_SPEC);
 
-    configRepository.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification);
+    connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification,
+        A_CDK_VERSION);
 
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
-    assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
-    assertEquals(A_VERSION, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion());
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
+    assertEquals(connectorSpecification, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
+    assertEquals(A_CDK_VERSION, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(List.of(configInjection), connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
+    assertEquals(A_VERSION, connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion());
   }
 
   @Test
   void givenSourceDefinitionDoesNotExistWhenSetDeclarativeSourceActiveVersionThenThrowException() {
-    assertThrows(DataAccessException.class, () -> configRepository.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
         A_VERSION,
         MockData.actorDefinitionConfigInjection(),
-        MockData.connectorSpecification()));
+        MockData.connectorSpecification(), A_CDK_VERSION));
   }
 
   @Test
   void givenActiveDeclarativeManifestDoesNotExistWhenSetDeclarativeSourceActiveVersionThenThrowException() throws Exception {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    assertThrows(DataAccessException.class, () -> configRepository.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
+    assertThrows(DataAccessException.class, () -> connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
         A_VERSION,
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID),
-        MockData.connectorSpecification()));
+        MockData.connectorSpecification(), A_CDK_VERSION));
   }
 
   void givenActiveDeclarativeManifestWithActorDefinitionId(final UUID actorDefinitionId) throws IOException {
     final Long version = 4L;
-    configRepository.insertActiveDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
+    connectorBuilderService
+        .insertActiveDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
   }
 
   void givenSourceDefinition(final UUID sourceDefinitionId) throws JsonValidationException, IOException {
     final UUID workspaceId = UUID.randomUUID();
-    configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(workspaceId));
-    configRepository.writeCustomConnectorMetadata(
+    workspaceService.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(workspaceId));
+    sourceService.writeCustomConnectorMetadata(
         MockData.customSourceDefinition().withSourceDefinitionId(sourceDefinitionId),
         MockData.actorDefinitionVersion().withActorDefinitionId(sourceDefinitionId),
         workspaceId,

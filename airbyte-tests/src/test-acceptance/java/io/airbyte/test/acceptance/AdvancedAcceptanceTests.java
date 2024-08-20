@@ -4,13 +4,10 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.commons.auth.AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
-import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
-import static io.airbyte.test.acceptance.AcceptanceTestConstants.X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
+import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
@@ -25,12 +22,14 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
-import java.net.URI;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -59,11 +58,10 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"ConstantConditions"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(Lifecycle.PER_CLASS)
+@Tags({@Tag("sync"), @Tag("enterprise")})
 class AdvancedAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AdvancedAcceptanceTests.class);
-  private static final String TYPE = "type";
-  private static final String COLUMN1 = "column1";
 
   private static AcceptanceTestHarness testHarness;
   private static UUID workspaceId;
@@ -71,34 +69,21 @@ class AdvancedAcceptanceTests {
 
   @BeforeAll
   static void init() throws Exception {
-    final URI url = new URI(AIRBYTE_SERVER_HOST);
-    final var apiClient = new AirbyteApiClient(
-        new ApiClient().setScheme(url.getScheme())
-            .setHost(url.getHost())
-            .setPort(url.getPort())
-            .setBasePath("/api")
-            .setRequestInterceptor(builder -> {
-              if (IS_ENTERPRISE_TRUE) {
-                // In Enterprise, auth features are enabled. Add this header
-                // so that the API client can auth as an instance admin.
-                builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE);
-              }
-            }));
+    final var apiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of());
+
     // work in whatever default workspace is present.
-    workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
-    LOGGER.info("workspaceId = " + workspaceId);
+    workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().getFirst().getWorkspaceId();
+    LOGGER.info("workspaceId = {}", workspaceId);
 
     // log which connectors are being used.
     final SourceDefinitionRead sourceDef = apiClient.getSourceDefinitionApi()
-        .getSourceDefinition(new SourceDefinitionIdRequestBody()
-            .sourceDefinitionId(UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")));
+        .getSourceDefinition(new SourceDefinitionIdRequestBody(UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")));
     final DestinationDefinitionRead destinationDef = apiClient.getDestinationDefinitionApi()
-        .getDestinationDefinition(new DestinationDefinitionIdRequestBody()
-            .destinationDefinitionId(UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")));
+        .getDestinationDefinition(new DestinationDefinitionIdRequestBody(UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")));
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @AfterAll
@@ -115,10 +100,21 @@ class AdvancedAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
 
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
+    final AirbyteCatalog catalog = modifyCatalog(
+        discoverResult.getCatalog(),
+        Optional.of(syncMode),
+        Optional.of(destinationSyncMode),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
     final var conn =
         testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,

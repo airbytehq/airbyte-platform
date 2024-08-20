@@ -7,6 +7,7 @@ package io.airbyte.server.apis.publicapi.services
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationIdRequestBody
+import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
@@ -15,15 +16,13 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.DestinationCreateRequest
-import io.airbyte.public_api.model.generated.DestinationPatchRequest
-import io.airbyte.public_api.model.generated.DestinationPutRequest
-import io.airbyte.public_api.model.generated.DestinationResponse
-import io.airbyte.public_api.model.generated.DestinationsResponse
+import io.airbyte.publicApi.server.generated.models.DestinationCreateRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPatchRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPutRequest
+import io.airbyte.publicApi.server.generated.models.DestinationResponse
+import io.airbyte.publicApi.server.generated.models.DestinationsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
-import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
-import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper
 import io.airbyte.server.apis.publicapi.mappers.DestinationsResponseMapper
 import io.micronaut.context.annotation.Secondary
@@ -59,9 +58,11 @@ interface DestinationService {
     offset: Int = 0,
   ): DestinationsResponse?
 
+  fun getDestinationRead(destinationId: UUID): DestinationRead
+
   fun getDestinationSyncModes(destinationId: UUID): List<DestinationSyncMode>
 
-  fun getDestinationSyncModes(destinationResponse: DestinationResponse): List<DestinationSyncMode>
+  fun getDestinationSyncModes(destinationRead: DestinationRead): List<DestinationSyncMode>
 }
 
 @Singleton
@@ -97,7 +98,7 @@ class DestinationServiceImpl(
         destinationHandler.createDestination(destinationCreateOss)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationCreateRequest.workspaceId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -116,13 +117,33 @@ class DestinationServiceImpl(
       kotlin.runCatching {
         destinationHandler.getDestination(destinationIdRequestBody)
       }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        log.error("Error while getting destination: ", it)
+        ConfigClientErrorHandler.handleError(it)
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
     return DestinationReadMapper.from(destinationRead)
+  }
+
+  /**
+   * Gets a DestinationRead by ID.
+   */
+  override fun getDestinationRead(destinationId: UUID): DestinationRead {
+    val destinationIdRequestBody = DestinationIdRequestBody()
+    destinationIdRequestBody.destinationId = destinationId
+
+    val result =
+      kotlin.runCatching {
+        destinationHandler.getDestination(destinationIdRequestBody)
+      }.onFailure {
+        log.error("Error while getting destination: ", it)
+        ConfigClientErrorHandler.handleError(it)
+      }
+
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    val destinationRead = result.getOrThrow()
+    return destinationRead
   }
 
   /**
@@ -143,7 +164,7 @@ class DestinationServiceImpl(
         destinationHandler.updateDestination(destinationUpdate)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -168,7 +189,7 @@ class DestinationServiceImpl(
         destinationHandler.partialDestinationUpdate(partialDestinationUpdate)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -185,7 +206,7 @@ class DestinationServiceImpl(
         destinationHandler.deleteDestination(destinationIdRequestBody)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -211,7 +232,7 @@ class DestinationServiceImpl(
         destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
       }.onFailure {
         log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return DestinationsResponseMapper.from(
@@ -225,23 +246,22 @@ class DestinationServiceImpl(
   }
 
   override fun getDestinationSyncModes(destinationId: UUID): List<DestinationSyncMode> {
-    val destinationResponse: DestinationResponse = getDestination(destinationId)
-    return getDestinationSyncModes(destinationResponse)
+    val destinationRead: DestinationRead = getDestinationRead(destinationId)
+    return getDestinationSyncModes(destinationRead)
   }
 
-  override fun getDestinationSyncModes(destinationResponse: DestinationResponse): List<DestinationSyncMode> {
-    val destinationDefinitionId: UUID =
-      getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationResponse.destinationType)
+  override fun getDestinationSyncModes(destinationRead: DestinationRead): List<DestinationSyncMode> {
+    val destinationDefinitionId: UUID = destinationRead.destinationDefinitionId
     val destinationDefinitionIdWithWorkspaceId = DestinationDefinitionIdWithWorkspaceId()
     destinationDefinitionIdWithWorkspaceId.destinationDefinitionId = destinationDefinitionId
-    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationResponse.workspaceId
+    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationRead.workspaceId
 
     val result =
       kotlin.runCatching {
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId)
       }.onFailure {
         log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationDefinitionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     val destinationDefinitionSpecificationRead = result.getOrNull()!!

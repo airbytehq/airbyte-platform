@@ -22,7 +22,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_55_1_003__EditRefreshTableTest extends AbstractConfigsDatabaseTest {
+class V0_55_1_003__EditRefreshTableTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {
@@ -37,7 +37,7 @@ public class V0_55_1_003__EditRefreshTableTest extends AbstractConfigsDatabaseTe
   }
 
   @Test
-  public void test() {
+  void test() {
     final DSLContext dslContext = getDslContext();
     V0_55_1_003__EditRefreshTable.editRefreshTable(dslContext);
     final Set<String> index = dslContext.select()

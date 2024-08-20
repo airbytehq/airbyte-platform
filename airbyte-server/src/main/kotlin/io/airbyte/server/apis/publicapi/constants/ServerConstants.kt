@@ -7,7 +7,10 @@ package io.airbyte.server.apis.publicapi.constants
 const val SOURCE_TYPE = "sourceType"
 const val DESTINATION_TYPE = "destinationType"
 
-const val ROOT_PATH = "/api/public"
+const val API_PATH = "/api"
+const val ROOT_PATH = "/public"
+const val APPLICATIONS_PATH = "$ROOT_PATH/v1/applications"
+const val APPLICATIONS_PATH_WITH_ID = "$ROOT_PATH/v1/applications/{applicationId}"
 const val CONNECTIONS_PATH = "$ROOT_PATH/v1/connections"
 const val CONNECTIONS_WITH_ID_PATH = "$CONNECTIONS_PATH/{connectionId}"
 const val STREAMS_PATH = "$ROOT_PATH/v1/streams"
@@ -22,6 +25,10 @@ const val OAUTH_PATH = "$ROOT_PATH/v1/oauth"
 const val WORKSPACES_PATH = "$ROOT_PATH/v1/workspaces"
 const val WORKSPACES_WITH_ID_PATH = "$WORKSPACES_PATH/{workspaceId}"
 const val WORKSPACES_WITH_ID_AND_OAUTH_PATH = "$WORKSPACES_WITH_ID_PATH/oauth_credentials"
+const val PERMISSIONS_PATH = "$ROOT_PATH/v1/permissions"
+const val PERMISSIONS_WITH_ID_PATH = "$PERMISSIONS_PATH/{permissionId}"
+const val USERS_PATH = "$ROOT_PATH/v1/users"
+const val ORGANIZATIONS_PATH = "$ROOT_PATH/v1/organizations"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name
@@ -36,7 +43,5 @@ const val INCLUDE_DELETED = "includeDeleted"
 const val OAUTH_CALLBACK_PATH = "$ROOT_PATH/v1/oauth/callback"
 
 const val MESSAGE = "message"
-
-const val PARTIAL_UPDATE_OAUTH_KEY = "PARTIAL_UPDATE_OAUTH_KEY"
 
 const val HTTP_RESPONSE_BODY_DEBUG_MESSAGE = "HttpResponse body: "

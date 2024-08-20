@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -12,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -30,7 +30,6 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,38 +62,10 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSetActorDefaultVersions() throws IOException {
-    final UUID actorId = jooqTestDbSetupHelper.getSource().getSourceId();
-    final UUID otherActorId = UUID.randomUUID();
-    final SourceConnection otherSource = Jsons.clone(jooqTestDbSetupHelper.getSource()).withSourceId(otherActorId);
-    sourceService.writeSourceConnectionNoSecrets(otherSource);
-
-    final ActorDefinitionVersion newVersion =
-        Jsons.clone(jooqTestDbSetupHelper.getSourceDefinitionVersion()).withVersionId(UUID.randomUUID()).withDockerImageTag("5.0.0");
-    actorDefinitionService.writeActorDefinitionVersion(newVersion);
-
-    actorDefinitionService.setActorDefaultVersions(List.of(actorId), newVersion.getVersionId());
-
-    final Set<UUID> actorsOnNewDefaultVersion = actorDefinitionService.getActorsWithDefaultVersionId(newVersion.getVersionId());
-    assertEquals(Set.of(actorId), actorsOnNewDefaultVersion);
-
-    final Set<UUID> actorsOnOldDefaultVersion =
-        actorDefinitionService.getActorsWithDefaultVersionId(jooqTestDbSetupHelper.getInitialSourceDefaultVersionId());
-    assertEquals(Set.of(otherActorId), actorsOnOldDefaultVersion);
-  }
-
-  @Test
-  void testGetActorsWithDefaultVersionId() throws IOException {
-    final UUID actorId = jooqTestDbSetupHelper.getSource().getSourceId();
-    final Set<UUID> actorIds = actorDefinitionService.getActorsWithDefaultVersionId(jooqTestDbSetupHelper.getInitialSourceDefaultVersionId());
-    assertEquals(Set.of(actorId), actorIds);
-  }
-
-  @Test
   void updateActorDefinitionDefaultVersionId() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID actorDefinitionId = jooqTestDbSetupHelper.getSourceDefinition().getSourceDefinitionId();
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId);
-    assertEquals(sourceDefinition.getDefaultVersionId(), jooqTestDbSetupHelper.getInitialSourceDefaultVersionId());
+    final UUID initialSourceDefVersionId = sourceDefinition.getDefaultVersionId();
 
     final ActorDefinitionVersion newVersion =
         Jsons.clone(jooqTestDbSetupHelper.getSourceDefinitionVersion()).withVersionId(UUID.randomUUID()).withDockerImageTag("5.0.0");
@@ -104,6 +75,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     final StandardSourceDefinition updatedSourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId);
     assertEquals(updatedSourceDefinition.getDefaultVersionId(), newVersion.getVersionId());
+    assertNotEquals(updatedSourceDefinition.getDefaultVersionId(), initialSourceDefVersionId);
   }
 
   @Test

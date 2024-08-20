@@ -15,8 +15,10 @@ import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
@@ -31,15 +33,9 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.notification.NotificationClient;
-import io.airbyte.notification.messages.SyncSummary;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class JobNotifierTest {
 
   private static final String WEBAPP_URL = "http://localhost:8000";
@@ -66,12 +63,10 @@ class JobNotifierTest {
   private final WebUrlHelper webUrlHelper = new WebUrlHelper(WEBAPP_URL);
 
   private ConfigRepository configRepository;
-  private WorkspaceHelper workspaceHelper;
   private JobNotifier jobNotifier;
   private NotificationClient notificationClient;
   private NotificationClient customerIoNotificationClient;
   private TrackingClient trackingClient;
-  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private Job job;
   private StandardSourceDefinition sourceDefinition;
@@ -81,10 +76,10 @@ class JobNotifierTest {
   @BeforeEach
   void setup() throws Exception {
     configRepository = mock(ConfigRepository.class);
-    workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
-    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
+    ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
     jobNotifier = Mockito.spy(new JobNotifier(webUrlHelper, configRepository, workspaceHelper, trackingClient, actorDefinitionVersionHelper));
     notificationClient = mock(NotificationClient.class);
     customerIoNotificationClient = mock(NotificationClient.class);
@@ -122,11 +117,9 @@ class JobNotifierTest {
   }
 
   @Test
-  void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+  void testFailJob() throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.failJob(job, attemptStats);
-    final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
-    SyncSummary summary = SyncSummary.builder().build();
     verify(notificationClient).notifyJobFailure(any(), ArgumentMatchers.eq(null));
 
     final Builder<String, Object> metadata = ImmutableMap.builder();
@@ -144,8 +137,7 @@ class JobNotifierTest {
   }
 
   @Test
-  void testSuccessfulJobDoNotSendNotificationPerSettings()
-      throws IOException, InterruptedException {
+  void testSuccessfulJobDoNotSendNotificationPerSettings() {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
   }
@@ -180,7 +172,7 @@ class JobNotifierTest {
 
   @Test
   void testSendOnSyncDisabled()
-      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnection(job, attemptStats);
     verify(notificationClient).notifyConnectionDisabled(any(), any());

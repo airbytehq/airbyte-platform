@@ -1,3 +1,4 @@
+import classnames from "classnames";
 import set from "lodash/set";
 import React from "react";
 import { useFormContext } from "react-hook-form";
@@ -13,7 +14,6 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
@@ -39,6 +39,7 @@ interface StreamsConfigTableHeaderProps
   streams: AirbyteStreamAndConfiguration[];
   onStreamsChanged: (streams: AirbyteStreamAndConfiguration[]) => void;
   syncSwitchDisabled?: boolean;
+  headerClassName?: string;
 }
 
 export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> = ({
@@ -48,11 +49,11 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   namespaceDefinition,
   namespaceFormat,
   prefix,
+  headerClassName,
 }) => {
   const { mode } = useConnectionFormService();
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
     setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
@@ -86,7 +87,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
     <FlexContainer
       justifyContent="flex-start"
       alignItems="center"
-      className={styles.headerContainer}
+      className={classnames(styles.headerContainer, headerClassName)}
       data-testid="catalog-tree-table-header"
     >
       <CellText size="fixed" className={styles.syncCell}>
@@ -104,7 +105,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         </Text>
       </CellText>
       <HeaderCell size="fixed" className={styles.dataDestinationCell}>
-        <FormattedMessage id={isSimplifiedCreation ? "form.namespace" : "form.dataDestination"} />
+        <FormattedMessage id="form.namespace" />
         <Button
           type="button"
           variant="clear"

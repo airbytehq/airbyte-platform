@@ -15,6 +15,7 @@ import io.sentry.IHub;
 import io.sentry.NoOpHub;
 import io.sentry.SentryEvent;
 import io.sentry.SentryOptions;
+import io.sentry.protocol.Contexts;
 import io.sentry.protocol.Message;
 import io.sentry.protocol.SentryException;
 import io.sentry.protocol.User;
@@ -27,6 +28,7 @@ import java.util.Optional;
 /**
  * Sentry implementation for job error reporting.
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public class SentryJobErrorReportingClient implements JobErrorReportingClient {
 
   static final String STACKTRACE_PARSE_ERROR_TAG_KEY = "stacktrace_parse_error";
@@ -89,7 +91,9 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
     if (workspace != null) {
       final User sentryUser = new User();
       sentryUser.setId(String.valueOf(workspace.getWorkspaceId()));
-      sentryUser.setUsername(workspace.getName());
+      if (workspace.getName() != null) {
+        sentryUser.setUsername(workspace.getName());
+      }
       event.setUser(sentryUser);
     }
 
@@ -129,34 +133,36 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
       }
     }
 
-    sentryHub.configureScope(scope -> {
-      final Map<String, String> failureReasonContext = new HashMap<>();
-      failureReasonContext.put("internalMessage", failureReason.getInternalMessage());
-      failureReasonContext.put("externalMessage", failureReason.getExternalMessage());
-      failureReasonContext.put("stacktrace", failureReason.getStacktrace());
-      failureReasonContext.put("timestamp", failureReason.getTimestamp().toString());
+    // Attach contexts to provide more debugging info
+    final Contexts contexts = event.getContexts();
 
-      final Metadata failureReasonMeta = failureReason.getMetadata();
-      if (failureReasonMeta != null) {
-        failureReasonContext.put("metadata", failureReasonMeta.toString());
-      }
+    final Map<String, String> failureReasonContext = new HashMap<>();
+    failureReasonContext.put("internalMessage", failureReason.getInternalMessage());
+    failureReasonContext.put("externalMessage", failureReason.getExternalMessage());
+    failureReasonContext.put("stacktrace", failureReason.getStacktrace());
+    failureReasonContext.put("timestamp", failureReason.getTimestamp().toString());
 
-      if (attemptConfig != null) {
-        final Map<String, String> stateContext = new HashMap<>();
-        stateContext.put("state", attemptConfig.state() != null ? attemptConfig.state().toString() : "null");
-        scope.setContexts("State", stateContext);
-        scope.setContexts("Source Configuration", getContextFromNode(attemptConfig.sourceConfig()));
-        scope.setContexts("Destination Configuration", getContextFromNode(attemptConfig.destinationConfig()));
-      }
+    final Metadata failureReasonMeta = failureReason.getMetadata();
+    if (failureReasonMeta != null) {
+      failureReasonContext.put("metadata", failureReasonMeta.toString());
+    }
 
-      scope.setContexts("Failure Reason", failureReasonContext);
-    });
+    contexts.put("Failure Reason", failureReasonContext);
 
+    if (attemptConfig != null) {
+      final Map<String, String> stateContext = new HashMap<>();
+      stateContext.put("state", attemptConfig.state() != null ? attemptConfig.state().toString() : "null");
+      contexts.put("State", stateContext);
+      contexts.put("Source Configuration", getContextFromNode(attemptConfig.sourceConfig()));
+      contexts.put("Destination Configuration", getContextFromNode(attemptConfig.destinationConfig()));
+    }
+
+    // Send the event to sentry
     sentryHub.captureEvent(event);
   }
 
-  private static Map<String, String> getContextFromNode(@Nullable JsonNode node) {
-    Map<String, String> flatMap = new HashMap<>();
+  private static Map<String, String> getContextFromNode(@Nullable final JsonNode node) {
+    final Map<String, String> flatMap = new HashMap<>();
     if (node != null) {
       flattenJsonNode("", node, flatMap);
     }
@@ -168,21 +174,21 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
    *
    * e.g. {"a": { "b": [{"c": 1}]}} -> {"a.b[0].c": 1}
    */
-  public static void flattenJsonNode(String currentPath, JsonNode node, Map<String, String> flatMap) {
+  public static void flattenJsonNode(final String currentPath, final JsonNode node, final Map<String, String> flatMap) {
     if (node.isArray()) {
       for (int i = 0; i < node.size(); i++) {
-        JsonNode item = node.get(i);
-        String newPath = String.format("%s[%d]", currentPath, i);
+        final JsonNode item = node.get(i);
+        final String newPath = String.format("%s[%d]", currentPath, i);
         flattenJsonNode(newPath, item, flatMap);
       }
     } else if (node.isObject()) {
-      Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+      final Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
       while (fields.hasNext()) {
-        Map.Entry<String, JsonNode> field = fields.next();
-        String fieldName = field.getKey();
-        JsonNode fieldValue = field.getValue();
+        final Map.Entry<String, JsonNode> field = fields.next();
+        final String fieldName = field.getKey();
+        final JsonNode fieldValue = field.getValue();
 
-        String newPath = currentPath.isEmpty() ? fieldName : currentPath + "." + fieldName;
+        final String newPath = currentPath.isEmpty() ? fieldName : currentPath + "." + fieldName;
         flattenJsonNode(newPath, fieldValue, flatMap);
       }
     } else {

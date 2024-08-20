@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.notification.messages.ConnectionInfo;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class SlackNotificationClientTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClientTest.class);
@@ -82,7 +84,7 @@ class SlackNotificationClientTest {
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
         .source(SourceInfo.builder()
@@ -103,7 +105,7 @@ class SlackNotificationClientTest {
   void testEmptyWebhookUrl() throws IOException, InterruptedException {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration());
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
         .source(SourceInfo.builder()
@@ -119,7 +121,7 @@ class SlackNotificationClientTest {
   @Test
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
         .source(SourceInfo.builder()
@@ -137,7 +139,7 @@ class SlackNotificationClientTest {
   @Test
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
         .source(SourceInfo.builder()
@@ -169,7 +171,7 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
         .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
         .source(SourceInfo.builder().name(SOURCE_TEST).build())
@@ -196,7 +198,7 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    SyncSummary summary = SyncSummary.builder()
+    final SyncSummary summary = SyncSummary.builder()
         .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
         .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
         .source(SourceInfo.builder().name(SOURCE_TEST).build())
@@ -211,22 +213,22 @@ class SlackNotificationClientTest {
     final UUID connectionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final CatalogDiff diff = new CatalogDiff();
-    String workspaceName = "";
-    String workspaceUrl = "http://airbyte.io/workspaces/123";
-    String connectionName = "PSQL ->> BigQuery";
-    String sourceName = "";
-    String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
-    boolean isBreaking = false;
-    String connectionUrl = "http://airbyte.io/your_connection";
-    String recipient = "";
+    final String workspaceName = "";
+    final String workspaceUrl = "http://airbyte.io/workspaces/123";
+    final String connectionName = "PSQL ->> BigQuery";
+    final String sourceName = "";
+    final String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
+    final boolean isBreaking = false;
+    final String connectionUrl = "http://airbyte.io/your_connection";
+    final String recipient = "";
 
     final String expectedNotificationMessage = "The schema of '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>' has changed.";
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
-    UUID workpaceId = UUID.randomUUID();
-    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+    final UUID workpaceId = UUID.randomUUID();
+    final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
         .connectionInfo(ConnectionInfo.builder().name(connectionName).id(connectionId).url(connectionUrl).build())
         .workspace(WorkspaceInfo.builder().name(workspaceName).id(workpaceId).url(workspaceUrl).build())
         .catalogDiff(diff)
@@ -238,44 +240,44 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  public void buildSummaryNewStreamTest() {
-    CatalogDiff diff = new CatalogDiff();
+  void buildSummaryNewStreamTest() {
+    final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo").namespace("ns")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("invoices")));
 
-    String expected = """
-                       • Streams (+2/-0)
-                         ＋ invoices
-                         ＋ ns.foo
-                      """;
+    final String expected = """
+                             • Streams (+2/-0)
+                               ＋ invoices
+                               ＋ ns.foo
+                            """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
 
   @Test
-  public void buildSummaryDeletedStreamTest() {
-    CatalogDiff diff = new CatalogDiff();
+  void buildSummaryDeletedStreamTest() {
+    final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("deprecated")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
 
-    String expected = """
-                       • Streams (+0/-2)
-                         － deprecated
-                         － schema1.also_removed
-                      """;
+    final String expected = """
+                             • Streams (+0/-2)
+                               － deprecated
+                               － schema1.also_removed
+                            """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
 
   }
 
   @Test
-  public void buildSummaryAlteredStreamTest() {
-    CatalogDiff diff = new CatalogDiff();
+  void buildSummaryAlteredStreamTest() {
+    final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
-        .updateStream(List.of(
+        .updateStream(new StreamTransformUpdateStream().fieldTransforms(List.of(
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
                 .fieldName(List.of("alpha", "beta", "delta")),
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
@@ -285,23 +287,23 @@ class SlackNotificationClientTest {
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                 .fieldName(List.of("added_too")),
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
-                .fieldName(List.of("cow")))));
+                .fieldName(List.of("cow"))))));
 
-    String expected = """
-                       • Fields (+2/~1/-2)
-                         • main.users
-                           ＋ added_too
-                           ＋ new.field
-                           － alpha.beta.delta
-                           － another_removal
-                           ～ cow
-                      """;
+    final String expected = """
+                             • Fields (+2/~1/-2)
+                               • main.users
+                                 ＋ added_too
+                                 ＋ new.field
+                                 － alpha.beta.delta
+                                 － another_removal
+                                 ～ cow
+                            """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
 
   @Test
   void buildSummaryComplexChangeTest() {
-    CatalogDiff diff = new CatalogDiff();
+    final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo").namespace("ns")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
@@ -310,25 +312,25 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
-        .updateStream(List.of(
+        .updateStream(new StreamTransformUpdateStream().fieldTransforms(List.of(
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                 .fieldName(List.of("new", "field")),
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                 .fieldName(List.of("added_too")),
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
-                .fieldName(List.of("cow")))));
+                .fieldName(List.of("cow"))))));
 
-    String expected = """
-                       • Streams (+1/-2)
-                         ＋ ns.foo
-                         － deprecated
-                         － schema1.also_removed
-                       • Fields (+2/~1/-0)
-                         • main.users
-                           ＋ added_too
-                           ＋ new.field
-                           ～ cow
-                      """;
+    final String expected = """
+                             • Streams (+1/-2)
+                               ＋ ns.foo
+                               － deprecated
+                               － schema1.also_removed
+                             • Fields (+2/~1/-0)
+                               • main.users
+                                 ＋ added_too
+                                 ＋ new.field
+                                 ～ cow
+                            """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
 

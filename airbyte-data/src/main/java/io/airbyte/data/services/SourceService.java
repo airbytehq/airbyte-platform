@@ -41,19 +41,19 @@ public interface SourceService {
 
   SourceConnection getSourceConnection(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
-
-  boolean deleteSource(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
   List<SourceConnection> listSourceConnection() throws IOException;
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;
+
+  Boolean isSourceActive(UUID sourceId) throws IOException;
 
   List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
   List<SourceConnection> listSourcesForDefinition(UUID definitionId) throws IOException;
 
   List<SourceAndDefinition> getSourceAndDefinitionsFromSourceIds(List<UUID> sourceIds) throws IOException;
+
+  List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException;
 
   void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
                               final ActorDefinitionVersion actorDefinitionVersion,
@@ -66,12 +66,19 @@ public interface SourceService {
                                     final io.airbyte.config.ScopeType scopeType)
       throws IOException;
 
-  List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
-
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
+
+  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 
   void writeSourceConnectionWithSecrets(final SourceConnection source,
                                         final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  void tombstoneSource(
+                       final String name,
+                       final UUID workspaceId,
+                       final UUID sourceId,
+                       final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

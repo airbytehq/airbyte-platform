@@ -14,20 +14,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -68,9 +65,7 @@ class WorkspaceHelperTest {
   private static final StandardSyncOperation OPERATION = new StandardSyncOperation()
       .withOperationId(OPERATION_ID)
       .withWorkspaceId(WORKSPACE_ID)
-      .withOperatorType(OperatorType.DBT)
       .withName("the new normal")
-      .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
       .withTombstone(false);
 
   ConfigRepository configRepository;

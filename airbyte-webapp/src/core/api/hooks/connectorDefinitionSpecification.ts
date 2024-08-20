@@ -27,17 +27,11 @@ export const sourceDefinitionSpecificationKeys = {
 };
 
 export const useGetDestinationDefinitionSpecification = (
-  destinationDefinitionId: string,
-  destinationId?: string
+  destinationId: string
 ): DestinationDefinitionSpecificationRead => {
   const requestOptions = useRequestOptions();
-  const { workspaceId } = useCurrentWorkspace();
-  return useSuspenseQuery(destinationDefinitionSpecificationKeys.detail(destinationDefinitionId, destinationId), () => {
-    if (destinationId) {
-      return getSpecificationForDestinationId({ destinationId }, requestOptions);
-    }
-
-    return getDestinationDefinitionSpecification({ destinationDefinitionId, workspaceId }, requestOptions);
+  return useSuspenseQuery(destinationDefinitionSpecificationKeys.detail(destinationId), () => {
+    return getSpecificationForDestinationId({ destinationId }, requestOptions);
   });
 };
 
@@ -55,15 +49,10 @@ export const useGetDestinationDefinitionSpecificationAsync = (id: string | null)
   );
 };
 
-export const useGetSourceDefinitionSpecification = (sourceDefinitionId: string, sourceId?: string) => {
+export const useGetSourceDefinitionSpecification = (sourceId: string) => {
   const requestOptions = useRequestOptions();
-  const { workspaceId } = useCurrentWorkspace();
-  return useSuspenseQuery(sourceDefinitionSpecificationKeys.detail(sourceDefinitionId, sourceId), () => {
-    if (sourceId) {
-      return getSpecificationForSourceId({ sourceId }, requestOptions);
-    }
-
-    return getSourceDefinitionSpecification({ sourceDefinitionId, workspaceId }, requestOptions);
+  return useSuspenseQuery(sourceDefinitionSpecificationKeys.detail(sourceId), () => {
+    return getSpecificationForSourceId({ sourceId }, requestOptions);
   });
 };
 

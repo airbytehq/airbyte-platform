@@ -73,7 +73,7 @@ readinessProbe:
   successThreshold: 1
 
 startupProbe:
-  enabled: false
+  enabled: true
   initialDelaySeconds: 30
   periodSeconds: 5
   timeoutSeconds: 1

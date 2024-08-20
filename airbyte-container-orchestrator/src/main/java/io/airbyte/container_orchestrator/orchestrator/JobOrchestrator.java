@@ -4,25 +4,20 @@
 
 package io.airbyte.container_orchestrator.orchestrator;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.OrchestratorConstants;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 /**
- * The job orchestrator helps abstract over container launcher application differences across
- * replication, normalization, and custom dbt operators.
+ * The job orchestrator helps abstract over container launcher application differences.
  *
  * @param <INPUT> job input type
  */
 public interface JobOrchestrator<INPUT> {
-
-  // used for logging
-  String getOrchestratorName();
 
   // used to serialize the loaded input
   Class<INPUT> getInputClass();
@@ -50,17 +45,8 @@ public interface JobOrchestrator<INPUT> {
    */
   Optional<String> runJob() throws Exception;
 
-  static <T> T readAndDeserializeFile(final Path path, final Class<T> type) throws IOException {
-    return Jsons.deserialize(Files.readString(path), type);
-  }
-
-  static String workloadId(final Path configDir) throws IOException {
-    final Path workloadIdFile = configDir.resolve(OrchestratorConstants.WORKLOAD_ID_FILE);
-    if (Files.exists(workloadIdFile)) {
-      return Files.readString(workloadIdFile);
-    } else {
-      throw new FileNotFoundException("Workload file not found at path " + workloadIdFile);
-    }
+  static String workloadId() {
+    return EnvVar.WORKLOAD_ID.fetch();
   }
 
 }

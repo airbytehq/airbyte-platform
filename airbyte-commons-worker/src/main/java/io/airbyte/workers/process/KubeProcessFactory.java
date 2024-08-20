@@ -8,7 +8,6 @@ import static io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID;
 import static io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID;
 import static io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY;
 
-import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.helper.DockerImageNameHelper;
@@ -32,6 +31,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.airbyte.workers.models.SecretMetadata;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import jakarta.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -121,7 +121,6 @@ public class KubeProcessFactory implements ProcessFactory {
                         final boolean isCustomConnector,
                         final boolean usesStdin,
                         final Map<String, String> files,
-                        final String entrypoint,
                         final ConnectorResourceRequirements resourceRequirements,
                         final AllowedHosts allowedHosts,
                         final Map<String, String> customLabels,
@@ -178,7 +177,6 @@ public class KubeProcessFactory implements ProcessFactory {
           kubeHeartbeatUrl,
           usesStdin,
           files,
-          entrypoint,
           resourceRequirements,
           workerConfigs.getJobImagePullSecrets(),
           workerConfigs.getWorkerKubeTolerations(),

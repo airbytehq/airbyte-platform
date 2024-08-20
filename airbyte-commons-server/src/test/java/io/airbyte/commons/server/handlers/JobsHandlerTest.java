@@ -23,27 +23,33 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobFailureRequest;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.errors.BadRequestException;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.SyncMode;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -69,6 +75,7 @@ public class JobsHandlerTest {
   private JobsHandler jobsHandler;
   private JobCreationAndStatusUpdateHelper helper;
   private JobErrorReporter jobErrorReporter;
+  private ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   private static final long JOB_ID = 12;
   private static final int ATTEMPT_NUMBER = 1;
@@ -76,11 +83,15 @@ public class JobsHandlerTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
+  private static final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog()
+      .withStreams(
+          List.of(new ConfiguredAirbyteStream(new AirbyteStream("stream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND)));
+  private static final JobConfig simpleConfig =
+      new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
 
   private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
       .withFailures(Collections.singletonList(
@@ -92,9 +103,10 @@ public class JobsHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     jobNotifier = mock(JobNotifier.class);
     jobErrorReporter = mock(JobErrorReporter.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     helper = mock(JobCreationAndStatusUpdateHelper.class);
-    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter);
+    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper);
   }
 
   @Test
@@ -102,9 +114,11 @@ public class JobsHandlerTest {
     final var request = new JobSuccessWithAttemptNumberRequest()
         .attemptNumber(ATTEMPT_NUMBER)
         .jobId(JOB_ID)
-        .connectionId(UUID.randomUUID())
+        .connectionId(CONNECTION_ID)
         .standardSyncOutput(standardSyncOutput);
-    Job job = new Job(JOB_ID, SYNC, "", null, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+
+    final Job job =
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -112,6 +126,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobNotifier).successJob(any(), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
+    verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(eq(job), eq(CONNECTION_ID), any());
   }
 
   @Test
@@ -121,7 +136,7 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
-    Job job = new Job(JOB_ID, RESET_CONNECTION, "", null, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -295,6 +310,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failJob(JOB_ID);
     verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
+    verify(connectionTimelineEventHelper).logJobFailureEventInConnectionTimeline(eq(mJob), eq(CONNECTION_ID), any());
   }
 
   @Test

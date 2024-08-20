@@ -21,7 +21,7 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_50_41_006__AlterSupportLevelAddArchivedTest extends AbstractConfigsDatabaseTest {
+class V0_50_41_006__AlterSupportLevelAddArchivedTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {

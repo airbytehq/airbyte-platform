@@ -105,7 +105,7 @@ export const useCheckConnector = (type: "source" | "destination") => {
     if (!result.jobInfo?.succeeded) {
       throw new ErrorWithJobInfo(formatMessage({ id: "connector.check.jobFailed" }), result.jobInfo);
     } else if (result.status === CheckConnectionReadStatus.failed) {
-      throw new ErrorWithJobInfo(result.message ?? formatMessage({ id: "connector.check.failed" }), result.jobInfo);
+      throw new ErrorWithJobInfo(result.message || formatMessage({ id: "connector.check.failed" }), result.jobInfo);
     }
 
     return result;

@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +20,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
@@ -28,9 +32,8 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -40,48 +43,38 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
-import io.airbyte.config.persistence.RefreshJobStateUpdater;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
-import io.airbyte.featureflag.ActivateRefreshes;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.DestResourceOverrides;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.OrchestratorResourceOverrides;
 import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseResourceRequirementsVariant;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.ArgumentCaptor;
@@ -99,8 +92,10 @@ class DefaultJobCreatorTest {
   private static final StreamDescriptor STREAM2_DESCRIPTOR = new StreamDescriptor().withName(STREAM2_NAME).withNamespace(NAMESPACE);
 
   private static final String SOURCE_IMAGE_NAME = "daxtarity/sourceimagename";
+  private static final Boolean SOURCE_IMAGE_IS_DEFAULT = true;
   private static final Version SOURCE_PROTOCOL_VERSION = new Version("0.2.2");
   private static final String DESTINATION_IMAGE_NAME = "daxtarity/destinationimagename";
+  private static final Boolean DESTINATION_IMAGE_IS_DEFAULT = true;
   private static final Version DESTINATION_PROTOCOL_VERSION = new Version("0.2.3");
   private static final SourceConnection SOURCE_CONNECTION;
   private static final DestinationConnection DESTINATION_CONNECTION;
@@ -118,15 +113,14 @@ class DefaultJobCreatorTest {
 
   private JobPersistence jobPersistence;
   private StatePersistence statePersistence;
-  private RefreshJobStateUpdater refreshJobStateUpdater;
-  private StreamRefreshesRepository streamRefreshesRepository;
-  private JobCreator jobCreator;
+  private DefaultJobCreator jobCreator;
   private ResourceRequirementsProvider resourceRequirementsProvider;
   private ResourceRequirements workerResourceRequirements;
   private ResourceRequirements sourceResourceRequirements;
   private ResourceRequirements destResourceRequirements;
-  private GenerationBumper generationBumper;
+  private final FeatureFlagClient mFeatureFlagClient = spy(TestClient.class);
 
+  private StreamRefreshesRepository streamRefreshesRepository;
   private static final JsonNode PERSISTED_WEBHOOK_CONFIGS;
 
   private static final UUID WEBHOOK_CONFIG_ID;
@@ -164,18 +158,18 @@ class DefaultJobCreatorTest {
     final UUID connectionId = UUID.randomUUID();
     final UUID operationId = UUID.randomUUID();
 
-    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.INCREMENTAL)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
+    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.INCREMENTAL,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)).withIsResumable(true),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.OVERWRITE);
     CONFIGURED_AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog().withStreams(List.of(stream1, stream2, stream3));
 
     STANDARD_SYNC = new StandardSync()
@@ -193,9 +187,7 @@ class DefaultJobCreatorTest {
     STANDARD_SYNC_OPERATION = new StandardSyncOperation()
         .withOperationId(operationId)
         .withName("normalize")
-        .withTombstone(false)
-        .withOperatorType(OperatorType.NORMALIZATION)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC));
+        .withTombstone(false);
 
     PERSISTED_WEBHOOK_CONFIGS = Jsons.deserialize(
         String.format("{\"webhookConfigs\": [{\"id\": \"%s\", \"name\": \"%s\", \"authToken\": {\"_secret\": \"a-secret_v1\"}}]}",
@@ -214,8 +206,6 @@ class DefaultJobCreatorTest {
   void setup() {
     jobPersistence = mock(JobPersistence.class);
     statePersistence = mock(StatePersistence.class);
-    refreshJobStateUpdater = new RefreshJobStateUpdater(statePersistence);
-    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     workerResourceRequirements = new ResourceRequirements()
         .withCpuLimit("0.2")
         .withCpuRequest("0.2")
@@ -234,45 +224,26 @@ class DefaultJobCreatorTest {
     resourceRequirementsProvider = mock(ResourceRequirementsProvider.class);
     when(resourceRequirementsProvider.getResourceRequirements(any(), any(), any()))
         .thenReturn(workerResourceRequirements);
-    generationBumper = mock(GenerationBumper.class);
+    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), generationBumper, statePersistence,
-            refreshJobStateUpdater,
-            streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
   }
 
-  @Test
-  void testCreateRefreshJobWithStreamState() throws IOException {
+  @ParameterizedTest
+  @EnumSource(RefreshStream.RefreshType.class)
+  void testCreateRefreshJob(final RefreshStream.RefreshType refreshType) throws IOException {
     final String streamToRefresh = "name";
-    final String streamToNotRefresh = "stream-not-refresh";
     final String streamNamespace = "namespace";
 
-    final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.stringVariation(eq(UseResourceRequirementsVariant.INSTANCE), any())).thenReturn("default");
     when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
 
-    final AirbyteStateMessage stateMessageFromRefreshStream = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
-        .withStream(new AirbyteStreamState()
-            .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace))
-            .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor", 1))));
-
-    final AirbyteStateMessage stateMessageFromNonRefreshStream = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
-        .withStream(new AirbyteStreamState()
-            .withStreamDescriptor(new StreamDescriptor().withName(streamToNotRefresh).withNamespace(streamNamespace))
-            .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor-2", 2))));
-
     final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.STREAM)
-        .withStateMessages(Arrays.asList(stateMessageFromRefreshStream, stateMessageFromNonRefreshStream));
+        .withStateMessages(List.of());
 
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
-            refreshJobStateUpdater,
-            streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     final Optional<String> expectedSourceType = Optional.of("database");
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
@@ -298,7 +269,9 @@ class DefaultJobCreatorTest {
         srcStdoutResourceRequirements);
 
     final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
-        new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)));
+        new RefreshStream()
+            .withRefreshType(refreshType)
+            .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace))));
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.REFRESH)
@@ -307,8 +280,9 @@ class DefaultJobCreatorTest {
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
     when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
 
+    final RefreshType expectedRefreshType = refreshType == RefreshStream.RefreshType.TRUNCATE ? RefreshType.TRUNCATE : RefreshType.MERGE;
     List<StreamRefresh> refreshes =
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null));
+        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null, expectedRefreshType));
 
     jobCreator.createRefreshConnection(
         STANDARD_SYNC,
@@ -321,116 +295,15 @@ class DefaultJobCreatorTest {
         STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(true),
         WORKSPACE_ID,
         refreshes);
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
-    verify(generationBumper).updateGenerationForStreams(STANDARD_SYNC.getConnectionId(), JOB_ID, refreshes);
-
-    final StateWrapper expected =
-        new StateWrapper().withStateType(StateType.STREAM).withStateMessages(Collections.singletonList(stateMessageFromNonRefreshStream));
-    verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
-    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
-        streamNamespace);
-  }
-
-  @Test
-  void testCreateRefreshJobWithGlobalState() throws IOException {
-    final String streamToRefresh = "name";
-    final String streamToNotRefresh = "stream-not-refresh";
-    final String streamNamespace = "namespace";
-
-    final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.stringVariation(eq(UseResourceRequirementsVariant.INSTANCE), any())).thenReturn("default");
-    when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
-
-    final AirbyteStreamState stateMessageFromRefreshStream = new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace))
-        .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor", 1)));
-
-    final AirbyteStreamState stateMessageFromNonRefreshStream = new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(streamToNotRefresh).withNamespace(streamNamespace))
-        .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor-2", 2)));
-
-    final JsonNode sharedState = Jsons.jsonNode(ImmutableMap.of("shared-state", 5));
-
-    final AirbyteStateMessage existingStateMessage = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-        .withGlobal(new AirbyteGlobalState().withSharedState(sharedState)
-            .withStreamStates(Arrays.asList(stateMessageFromRefreshStream, stateMessageFromNonRefreshStream)));
-
-    final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(existingStateMessage);
-
-    when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
-
-    jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
-            refreshJobStateUpdater,
-            streamRefreshesRepository);
-
-    final Optional<String> expectedSourceType = Optional.of("database");
-    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-
-    mockResourcesRequirement(expectedSourceType,
-        destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
-
-    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
-
-    final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
-        new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)));
-
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(ConfigType.REFRESH)
-        .withRefresh(refreshConfig);
-
-    jobCreator.createRefreshConnection(
-        STANDARD_SYNC,
-        SOURCE_IMAGE_NAME,
-        SOURCE_PROTOCOL_VERSION,
-        DESTINATION_IMAGE_NAME,
-        DESTINATION_PROTOCOL_VERSION,
-        List.of(STANDARD_SYNC_OPERATION),
-        PERSISTED_WEBHOOK_CONFIGS,
-        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
-        STANDARD_DESTINATION_DEFINITION,
-        SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID,
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null)));
-
-    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
-
-    final AirbyteStateMessage expectedStateMessage = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-        .withGlobal(
-            new AirbyteGlobalState().withSharedState(sharedState).withStreamStates(Collections.singletonList(stateMessageFromNonRefreshStream)));
-
-    final StateWrapper expected = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(expectedStateMessage);
-    verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
-    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
-        streamNamespace);
   }
 
   private static RefreshConfig getRefreshConfig(final SyncResourceRequirements expectedSyncResourceRequirements,
-                                                final List<StreamDescriptor> streamToRefresh) {
+                                                final List<RefreshStream> streamToRefresh) {
     return new RefreshConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -452,110 +325,10 @@ class DefaultJobCreatorTest {
   }
 
   @Test
-  void testCreateRefreshJobWithFullGlobalState() throws IOException {
-    final String streamToRefresh = "name";
-    final String streamToRefresh2 = "stream-refresh2";
-    final String streamNamespace = "namespace";
-
-    final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.stringVariation(eq(UseResourceRequirementsVariant.INSTANCE), any())).thenReturn("default");
-    when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
-
-    final AirbyteStreamState stateMessageFromRefreshStream = new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace))
-        .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor", 1)));
-
-    final AirbyteStreamState stateMessageFromNonRefreshStream = new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh2).withNamespace(streamNamespace))
-        .withStreamState(Jsons.jsonNode(ImmutableMap.of("cursor-2", 2)));
-
-    final JsonNode sharedState = Jsons.jsonNode(ImmutableMap.of("shared-state", 5));
-
-    final AirbyteStateMessage existingStateMessage = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-        .withGlobal(new AirbyteGlobalState().withSharedState(sharedState)
-            .withStreamStates(Arrays.asList(stateMessageFromRefreshStream, stateMessageFromNonRefreshStream)));
-
-    final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(existingStateMessage);
-
-    when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
-
-    jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
-            refreshJobStateUpdater,
-            streamRefreshesRepository);
-
-    final Optional<String> expectedSourceType = Optional.of("database");
-    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-
-    mockResourcesRequirement(expectedSourceType,
-        destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
-
-    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
-
-    final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
-        new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace),
-        new StreamDescriptor().withName(streamToRefresh2).withNamespace(streamNamespace)));
-
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(ConfigType.REFRESH)
-        .withRefresh(refreshConfig);
-
-    jobCreator.createRefreshConnection(
-        STANDARD_SYNC,
-        SOURCE_IMAGE_NAME,
-        SOURCE_PROTOCOL_VERSION,
-        DESTINATION_IMAGE_NAME,
-        DESTINATION_PROTOCOL_VERSION,
-        List.of(STANDARD_SYNC_OPERATION),
-        PERSISTED_WEBHOOK_CONFIGS,
-        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
-        STANDARD_DESTINATION_DEFINITION,
-        SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID,
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null),
-            new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh2, streamNamespace, null)));
-
-    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
-
-    final AirbyteStateMessage expectedStateMessage = new AirbyteStateMessage()
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-        .withGlobal(new AirbyteGlobalState().withSharedState(null).withStreamStates(Collections.emptyList()));
-
-    final StateWrapper expected = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(expectedStateMessage);
-    verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
-    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
-        streamNamespace);
-    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh2,
-        streamNamespace);
-  }
-
-  @Test
   void testFailToCreateRefreshIfNotAllowed() {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
-            refreshJobStateUpdater,
-            streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
         STANDARD_SYNC,
@@ -568,7 +341,7 @@ class DefaultJobCreatorTest {
         STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(false),
         WORKSPACE_ID,
         List.of()));
   }
@@ -603,8 +376,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -620,13 +395,18 @@ class DefaultJobCreatorTest {
         .withConfigType(JobConfig.ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
+    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         PERSISTED_WEBHOOK_CONFIGS,
@@ -636,7 +416,6 @@ class DefaultJobCreatorTest {
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
 
-    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
   }
 
@@ -694,8 +473,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -714,8 +495,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -733,8 +516,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -761,8 +546,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -796,8 +583,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         standardSync,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -824,8 +613,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -863,14 +654,18 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -892,8 +687,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -941,23 +738,25 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
-        refreshJobStateUpdater,
-        streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -1007,8 +806,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
-        refreshJobStateUpdater, streamRefreshesRepository);
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     final var standardSync = new StandardSync()
         .withConnectionId(UUID.randomUUID())
@@ -1028,13 +826,17 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         standardSync,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -1084,22 +886,25 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
-        refreshJobStateUpdater, streamRefreshesRepository);
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -1141,23 +946,25 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), generationBumper, statePersistence,
-        refreshJobStateUpdater,
-        streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -1215,14 +1022,14 @@ class DefaultJobCreatorTest {
 
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -1277,14 +1084,14 @@ class DefaultJobCreatorTest {
   void testCreateResetConnectionJobEnsureNoQueuing() throws IOException {
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -1332,6 +1139,27 @@ class DefaultJobCreatorTest {
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
     assertTrue(jobId.isEmpty());
+  }
+
+  @Test
+  void testGetResumableFullRefresh() {
+    StandardSync standardSync = new StandardSync()
+        .withCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
+            new ConfiguredAirbyteStream(new AirbyteStream("no1", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withIsResumable(true),
+                SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("no2", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(false),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("yes", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(true),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND))));
+
+    Set<StreamDescriptor> streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, true);
+    assertEquals(1, streamDescriptors.size());
+    assertEquals("yes", streamDescriptors.stream().findFirst().get().getName());
+
+    streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, false);
+    assertTrue(streamDescriptors.isEmpty());
   }
 
 }

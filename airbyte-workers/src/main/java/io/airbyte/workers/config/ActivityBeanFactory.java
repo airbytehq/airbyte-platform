@@ -11,6 +11,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity;
@@ -18,19 +19,17 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
-import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
+import io.airbyte.workers.temporal.sync.InvokeOperationsActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
-import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
+import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
+import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
 import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
@@ -98,8 +97,9 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("discoverActivities")
   public List<Object> discoverActivities(
-                                         final DiscoverCatalogActivity discoverCatalogActivity) {
-    return List.of(discoverCatalogActivity);
+                                         final DiscoverCatalogActivity discoverCatalogActivity,
+                                         final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
+    return List.of(discoverCatalogActivity, discoverCatalogHelperActivity);
   }
 
   @Singleton
@@ -112,25 +112,17 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("syncActivities")
-  public List<Object> syncActivities(
-                                     final ReplicationActivity replicationActivity,
-                                     final NormalizationActivity normalizationActivity,
-                                     final DbtTransformationActivity dbtTransformationActivity,
-                                     final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
-                                     final WebhookOperationActivity webhookOperationActivity,
+  public List<Object> syncActivities(final ReplicationActivity replicationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity);
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  @Named("notificationActivities")
-  public List<Object> notificationActivities(
-                                             final NotifyActivity notifyActivity) {
-    return List.of(notifyActivity);
+                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
+                                     final ReportRunTimeActivity reportRunTimeActivity,
+                                     final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
+                                     final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
+                                     final InvokeOperationsActivity invokeOperationsActivity) {
+    return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
+        workloadFeatureFlagActivity, reportRunTimeActivity, syncFeatureFlagFetcherActivity,
+        routeToSyncTaskQueueActivity, invokeOperationsActivity);
   }
 
   @Singleton
@@ -150,6 +142,18 @@ public class ActivityBeanFactory {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
         .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
+  @Named("discoveryActivityOptionsWithRetry")
+  public ActivityOptions discoveryActivityOptionsWithRetry(@Property(name = "airbyte.activity.discovery-timeout",
+                                                                     defaultValue = "30") final Integer discoveryTimeoutMinutes,
+                                                           @Named("shortRetryOptions") final RetryOptions retryOptions) {
+    return ActivityOptions.newBuilder()
+        .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
+        .setRetryOptions(retryOptions)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
   }
 

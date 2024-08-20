@@ -15,7 +15,6 @@ import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
 import io.airbyte.workload.launcher.pipeline.handlers.SuccessHandler
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -24,8 +23,6 @@ import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
-
-private val logger = KotlinLogging.logger {}
 
 @Singleton
 class LaunchPipeline(

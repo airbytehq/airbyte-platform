@@ -1,6 +1,6 @@
 # keycloak-setup
 
-![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.67.17](https://img.shields.io/badge/Version-0.67.17-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte-keycloak-setup
 
@@ -28,6 +28,7 @@ Helm chart to deploy airbyte-keycloak-setup
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
+| global.edition | string | `"community"` |  |
 | global.env_vars | object | `{}` |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |

@@ -14,6 +14,7 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+// this controller is only usable in self-managed versions of Airbyte. Not Cloud!
 @Controller("/api/v1/instance_configuration")
 @Secured(SecurityRule.IS_ANONYMOUS)
 public class InstanceConfigurationApiController implements InstanceConfigurationApi {

@@ -7,10 +7,10 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
-import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
@@ -40,6 +40,7 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -74,14 +75,11 @@ import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
-import org.jooq.Table;
 import org.jooq.impl.DSL;
 
 @Slf4j
 @Singleton
 public class SourceServiceJooqImpl implements SourceService {
-
-  public static final String PRIMARY_KEY = "id";
 
   private final ExceptionWrappingDatabase database;
   private final FeatureFlagClient featureFlagClient;
@@ -288,21 +286,6 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   /**
-   * Delete a source by id.
-   *
-   * @param sourceId
-   * @return true if a source was deleted, false otherwise.
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public boolean deleteSource(final UUID sourceId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    return deleteById(ACTOR, sourceId);
-  }
-
-  /**
    * Returns all sources in the database. Does not contain secrets.
    *
    * @return sources
@@ -328,6 +311,21 @@ public class SourceServiceJooqImpl implements SourceService {
         .and(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns if a source is active, i.e. the source has at least one active or manual connection.
+   *
+   * @param sourceId - id of the source
+   * @return boolean - if source is active or not
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public Boolean isSourceActive(final UUID sourceId) throws IOException {
+    return database.query(ctx -> ctx.fetchExists(select()
+        .from(CONNECTION)
+        .where(CONNECTION.SOURCE_ID.eq(sourceId))
+        .and(CONNECTION.STATUS.eq(StatusType.active))));
   }
 
   /**
@@ -440,21 +438,12 @@ public class SourceServiceJooqImpl implements SourceService {
     actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, List.of());
   }
 
-  /**
-   * Returns all active sources whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of SourceConnections
-   * @throws IOException - you never know when you IO
-   */
   @Override
-  public List<SourceConnection> listSourcesWithVersionIds(
-                                                          final List<UUID> actorDefinitionVersionIds)
-      throws IOException {
+  public List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .and(ACTOR.ID.in(sourceIds))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildSourceConnection).toList();
   }
@@ -567,7 +556,7 @@ public class SourceServiceJooqImpl implements SourceService {
         .fetch());
   }
 
-  public Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
     final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
         .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
     return optionalRecord.map(Record1::value1);
@@ -580,7 +569,7 @@ public class SourceServiceJooqImpl implements SourceService {
     return Map.entry(actorDefinition, granted);
   }
 
-  static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
+  private static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((standardSourceDefinition) -> {
       final boolean isExistingConfig = ctx.fetchExists(DSL.select()
@@ -608,6 +597,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardSourceDefinition.getSourceDefinitionId()))
             .execute();
 
@@ -633,6 +625,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .execute();
       }
     });
@@ -658,8 +653,6 @@ public class SourceServiceJooqImpl implements SourceService {
             .where(ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute();
       } else {
-        final UUID actorDefinitionDefaultVersionId =
-            getDefaultVersionForActorDefinitionId(sourceConnection.getSourceDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, sourceConnection.getSourceId())
             .set(ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
@@ -668,29 +661,11 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.source)
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
-            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
       }
     });
-  }
-
-  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
-  }
-
-  /**
-   * Deletes all records with given id. If it deletes anything, returns true. Otherwise, false.
-   *
-   * @param table - table from which to delete the record
-   * @param id - id of the record to delete
-   * @return true if anything was deleted, otherwise false.
-   * @throws IOException - you never know when you io
-   */
-  @SuppressWarnings("SameParameterValue")
-  private boolean deleteById(final Table<?> table, final UUID id) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(table)).where(field(DSL.name(PRIMARY_KEY)).eq(id)).execute() > 0;
   }
 
   private Stream<SourceConnection> listSourceQuery(final Optional<UUID> configId) throws IOException {
@@ -726,13 +701,55 @@ public class SourceServiceJooqImpl implements SourceService {
     final JsonNode hydratedConfig;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(source.getConfiguration(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       hydratedConfig = secretRepositoryReader.hydrateConfigFromDefaultSecretPersistence(source.getConfiguration());
     }
     return Jsons.clone(source).withConfiguration(hydratedConfig);
+  }
+
+  /**
+   * Delete source: tombstone source AND delete secrets
+   *
+   * @param name Source name
+   * @param workspaceId workspace ID
+   * @param sourceId source ID
+   * @param spec spec for the destination
+   * @throws JsonValidationException if the config is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
+  @Override
+  public void tombstoneSource(
+                              final String name,
+                              final UUID workspaceId,
+                              final UUID sourceId,
+                              final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException {
+    // 1. Delete secrets from config
+    final SourceConnection sourceConnection = getSourceConnection(sourceId);
+    final JsonNode config = sourceConnection.getConfiguration();
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(workspaceId);
+    RuntimeSecretPersistence secretPersistence = null;
+    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+    }
+    secretsRepositoryWriter.deleteFromConfig(
+        config,
+        spec.getConnectionSpecification(),
+        secretPersistence);
+
+    // 2. Tombstone source and void config
+    final SourceConnection newSourceConnection = new SourceConnection()
+        .withName(name)
+        .withSourceDefinitionId(sourceConnection.getSourceDefinitionId())
+        .withWorkspaceId(workspaceId)
+        .withSourceId(sourceId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    writeSourceConnectionNoSecrets(newSourceConnection);
   }
 
   /**
@@ -752,42 +769,39 @@ public class SourceServiceJooqImpl implements SourceService {
     final Optional<JsonNode> previousSourceConnection =
         getSourceIfExists(source.getSourceId()).map(SourceConnection::getConfiguration);
 
-    // strip secrets
     final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(source.getWorkspaceId());
-    final JsonNode partialConfig;
+
+    RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
-          source.getWorkspaceId(),
-          previousSourceConnection,
-          source.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(source),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
-          source.getWorkspaceId(),
-          previousSourceConnection,
-          source.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(source));
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
+    final JsonNode partialConfig;
+    if (previousSourceConnection.isPresent()) {
+      partialConfig = secretsRepositoryWriter.updateFromConfig(
+          source.getWorkspaceId(),
+          previousSourceConnection.get(),
+          source.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(), secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.createFromConfig(
+          source.getWorkspaceId(),
+          source.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(),
+          secretPersistence);
+    }
+
     final SourceConnection partialSource = Jsons.clone(source).withConfiguration(partialConfig);
     writeSourceConnectionNoSecrets(partialSource);
   }
 
-  public Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
+  private Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
     try {
       return Optional.of(getSourceConnection(sourceId));
     } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
       log.warn("Unable to find source with ID {}", sourceId);
       return Optional.empty();
     }
-  }
-
-  private boolean validate(final SourceConnection source) {
-    return source.getTombstone() == null || !source.getTombstone();
   }
 
 }

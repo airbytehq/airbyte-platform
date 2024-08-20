@@ -52,6 +52,10 @@ $icon-width: 18px;
   }
 }
 
+.labelContainer {
+  min-width: 0;
+}
+
 .label {
   color: inherit;
   font-size: inherit;

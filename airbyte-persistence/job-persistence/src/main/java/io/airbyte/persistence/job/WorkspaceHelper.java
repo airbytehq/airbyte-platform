@@ -4,19 +4,20 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.config.Job.REPLICATION_TYPES;
+
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.JobConfig;
+import io.airbyte.config.Job;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Objects;
@@ -33,7 +34,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Helpers for interacting with Workspaces.
  */
-@SuppressWarnings("PMD.AvoidCatchingThrowable")
+@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.PreserveStackTrace"})
 public class WorkspaceHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceHelper.class);
@@ -98,7 +99,7 @@ public class WorkspaceHelper {
         if (job == null) {
           throw new ConfigNotFoundException(Job.class.toString(), jobId.toString());
         }
-        if (job.getConfigType() == JobConfig.ConfigType.SYNC || job.getConfigType() == JobConfig.ConfigType.RESET_CONNECTION) {
+        if (REPLICATION_TYPES.contains(job.getConfigType())) {
           return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.getScope()));
         } else {
           throw new IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.getConfigType() + " job was requested!");

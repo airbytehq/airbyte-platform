@@ -24,11 +24,11 @@ const clearBreakingFieldChanges = (
   let clearPrimaryKey = false;
   let clearCursorField = false;
   for (const streamTransformation of breakingChangesByStream) {
-    if (!streamTransformation.updateStream || !streamTransformation.updateStream?.length) {
+    if (!streamTransformation.updateStream || !streamTransformation.updateStream?.fieldTransforms?.length) {
       continue;
     }
     // get all of the removed field paths for this transformation
-    const breakingFieldPaths = streamTransformation.updateStream
+    const breakingFieldPaths = streamTransformation.updateStream.fieldTransforms
       .filter(({ breaking }) => breaking)
       .map((update) => update.fieldName);
     // if there is a primary key in the config, and any of its field paths were removed, we'll be clearing it
@@ -90,7 +90,7 @@ export const analyzeSyncCatalogBreakingChanges = (
     catalogDiff?.transforms.filter(
       (streamTransform) =>
         streamTransform.transformType === "update_stream" &&
-        streamTransform.updateStream?.filter((fieldTransform) => fieldTransform.breaking)
+        streamTransform.updateStream?.fieldTransforms?.filter((fieldTransform) => fieldTransform.breaking)
     ) || [];
 
   return {

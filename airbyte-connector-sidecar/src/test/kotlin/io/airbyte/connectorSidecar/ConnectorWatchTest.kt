@@ -1,6 +1,5 @@
 package io.airbyte.connectorSidecar
 
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.config.ActorType
@@ -17,6 +16,7 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
@@ -58,6 +58,9 @@ class ConnectorWatchTest {
   private lateinit var jobOutputDocStore: JobOutputDocStore
 
   @MockK
+  private lateinit var logContextFactory: SidecarLogContextFactory
+
+  @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
   private lateinit var connectorWatcher: ConnectorWatcher
@@ -78,12 +81,14 @@ class ConnectorWatchTest {
           outputPath,
           configDir,
           fileTimeoutMinutes = 42,
+          fileTimeoutMinutesWithinSync = 43,
           connectorMessageProcessor,
           serDeProvider,
           airbyteProtocolVersionedMigratorFactory,
           gsonPksExtractor,
           workloadApiClient,
           jobOutputDocStore,
+          logContextFactory,
         ),
       )
 
@@ -98,6 +103,8 @@ class ConnectorWatchTest {
     every { connectorWatcher.exitInternalError() } returns Unit
 
     every { jobOutputDocStore.write(any(), any()) } returns Unit
+
+    every { logContextFactory.create(any()) } returns mapOf()
   }
 
   @ParameterizedTest
@@ -108,7 +115,7 @@ class ConnectorWatchTest {
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
@@ -132,7 +139,7 @@ class ConnectorWatchTest {
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED))
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
@@ -160,7 +167,7 @@ class ConnectorWatchTest {
       }
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
 
@@ -190,11 +197,11 @@ class ConnectorWatchTest {
   @EnumSource(OperationType::class)
   fun `run for failed with file timeout`(operationType: OperationType) {
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorWatcher.areNeededFilesPresent() } returns false
 
-    every { connectorWatcher.fileTimeoutReach(any()) } returns true
+    every { connectorWatcher.fileTimeoutReach(any(), any()) } returns true
 
     every { connectorWatcher.exitFileNotFound() } returns Unit
 

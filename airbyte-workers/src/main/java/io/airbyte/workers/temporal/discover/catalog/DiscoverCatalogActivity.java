@@ -12,7 +12,6 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.models.DiscoverCatalogInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
-import java.util.UUID;
 
 /**
  * DiscoverCatalogActivity.
@@ -27,14 +26,5 @@ public interface DiscoverCatalogActivity {
 
   @ActivityMethod
   ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException;
-
-  @ActivityMethod
-  boolean shouldUseWorkload(final UUID workspaceId);
-
-  @ActivityMethod
-  void reportSuccess(final Boolean workloadEnabled);
-
-  @ActivityMethod
-  void reportFailure(final Boolean workloadEnabled);
 
 }

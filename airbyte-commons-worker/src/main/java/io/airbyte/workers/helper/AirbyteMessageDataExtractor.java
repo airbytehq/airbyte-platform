@@ -34,7 +34,7 @@ public class AirbyteMessageDataExtractor {
     return extractedStreamDescriptor != null ? extractedStreamDescriptor : defaultValue;
   }
 
-  private StreamDescriptor getStreamFromMessage(final AirbyteMessage airbyteMessage) {
+  public StreamDescriptor getStreamFromMessage(final AirbyteMessage airbyteMessage) {
     switch (airbyteMessage.getType()) {
       case RECORD:
         return new StreamDescriptor().withName(airbyteMessage.getRecord().getStream()).withNamespace(airbyteMessage.getRecord().getNamespace());

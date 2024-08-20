@@ -34,6 +34,9 @@ micronaut:
     enabled: false
 
 airbyte:
+  application: ${WORKER_APPLICATION:replication-orchestrator}
+  job-id: ${JOB_ID:}
+  attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
@@ -42,6 +45,16 @@ airbyte:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
+    pubsub:
+      enabled: ${PUB_SUB_ENABLED:false}
+      topic: ${PUB_SUB_TOPIC_NAME:}
+      request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
+      message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
+      publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
@@ -73,12 +86,17 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:config}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+    base-url: ${FEATURE_FLAG_BASEURL:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
@@ -110,11 +128,6 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      normalization:
-        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
@@ -123,7 +136,7 @@ airbyte:
         memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
         memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
     replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -134,6 +147,7 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload:
     enabled: false
+  workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
   beans:

@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -125,6 +126,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
     truncateAllTables();
+    organizationPersistence.createOrganization(MockData.defaultOrganization());
     for (final Organization organization : MockData.organizations()) {
       organizationPersistence.createOrganization(organization);
     }
@@ -132,7 +134,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testGetWorkspace() throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardWorkspaceNoSecrets(createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID()));
+    configRepository.writeStandardWorkspaceNoSecrets(
+        createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID()).withOrganizationId(DEFAULT_ORGANIZATION_ID));
     assertReturnsWorkspace(createBaseStandardWorkspace());
   }
 
@@ -158,7 +161,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 
   private static SourceConnection createBaseSource() {
@@ -194,6 +198,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withDockerImageTag("0.0.1")
         .withReleaseStage(releaseStage);
   }

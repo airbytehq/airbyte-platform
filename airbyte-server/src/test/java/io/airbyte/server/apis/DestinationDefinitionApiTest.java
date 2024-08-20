@@ -123,7 +123,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListDestinationDefinitionsForWorkspace() throws IOException {
+  void testListDestinationDefinitionsForWorkspace() throws IOException, JsonValidationException, ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(Mockito.any()))
         .thenReturn(new DestinationDefinitionReadList());
     final String path = "/api/v1/destination_definitions/list_for_workspace";

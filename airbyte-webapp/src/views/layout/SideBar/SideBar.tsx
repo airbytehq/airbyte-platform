@@ -1,6 +1,7 @@
 import classNames from "classnames";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { matchPath, useLocation } from "react-router-dom";
 
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexContainer } from "components/ui/Flex";
@@ -11,7 +12,9 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
+import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
 
 import { AirbyteHomeLink } from "./AirbyteHomeLink";
@@ -26,15 +29,31 @@ interface SideBarProps {
   settingHighlight?: boolean;
 }
 
+const HIDDEN_SIDEBAR_PATHS = [
+  `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
+];
+
 export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   workspaceFetcher,
   bottomSlot,
   settingHighlight,
 }) => {
-  const { logout, user } = useAuthService();
+  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
+
+  const { pathname } = useLocation();
+  const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
+
+  const username = useMemo(() => {
+    if (authType === "simple" || authType === "none") {
+      return formatMessage({ id: "sidebar.defaultUsername" });
+    }
+    return user?.name?.trim() || user?.email?.trim();
+  }, [authType, user?.name, user?.email, formatMessage]);
+
   return (
-    <nav className={classNames(styles.sidebar)}>
+    <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteHomeLink />
       <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
         <AdminWorkspaceWarning />
@@ -67,16 +86,17 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             icon="wrench"
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
-            withBadge="beta"
           />
-          <IfFeatureEnabled feature={FeatureItem.Billing}>
-            <NavItem
-              icon="credits"
-              label={<FormattedMessage id="sidebar.billing" />}
-              to={CloudRoutes.Billing}
-              testId="creditsButton"
-            />
-          </IfFeatureEnabled>
+          {!isBillingInArrearsActive && (
+            <IfFeatureEnabled feature={FeatureItem.Billing}>
+              <NavItem
+                icon="credits"
+                label={<FormattedMessage id="sidebar.billing" />}
+                to={CloudRoutes.Billing}
+                testId="creditsButton"
+              />
+            </IfFeatureEnabled>
+          )}
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon="gear"
@@ -111,7 +131,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
                 },
               ]}
               icon="user"
-              label={user.name}
+              label={username}
             />
           )}
         </MenuContent>

@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
  * @param <OUTPUT> either {@link Void} or a json-serializable output class for the worker
  */
 @Slf4j
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LauncherWorker.class);
@@ -137,17 +138,16 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
       // Manually add the worker environment to the env var map
       envMap.put(WorkerConstants.WORKER_ENVIRONMENT, containerOrchestratorConfig.workerEnvironment().name());
+      envMap.put(WorkerConstants.WORKER_APPLICATION, ReplicationLauncherWorker.REPLICATION);
+      envMap.put(WorkerConstants.JOB_ID, jobRunConfig.getJobId());
+      envMap.put(WorkerConstants.ATTEMPT_ID, jobRunConfig.getAttemptId().toString());
 
       // Merge in the env from the ContainerOrchestratorConfig
       containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
 
       final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
       fileMap.putAll(Map.of(
-          OrchestratorConstants.INIT_FILE_APPLICATION, application,
-          OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, Jsons.serialize(jobRunConfig),
-          OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input),
-          // OrchestratorConstants.INIT_FILE_ENV_MAP might be duplicated since the pod env contains everything
-          OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)));
+          OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input)));
 
       final Map<Integer, Integer> portMap = Map.of(
           serverPort, serverPort,

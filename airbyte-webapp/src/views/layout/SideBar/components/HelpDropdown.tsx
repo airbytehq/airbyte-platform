@@ -1,3 +1,4 @@
+import { Placement } from "@floating-ui/react-dom";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -11,10 +12,17 @@ import { links } from "core/utils/links";
 import styles from "./HelpDropdown.module.scss";
 import { NavDropdown } from "./NavDropdown";
 
-export const HelpDropdown: React.FC = () => {
+export interface HelpDropdownProps {
+  className?: string;
+  hideLabel?: boolean;
+  placement?: Placement;
+}
+
+export const HelpDropdown: React.FC<HelpDropdownProps> = ({ className, hideLabel, placement }) => {
   const { formatMessage } = useIntl();
   return (
     <NavDropdown
+      className={className}
       options={[
         {
           as: "a",
@@ -53,8 +61,9 @@ export const HelpDropdown: React.FC = () => {
           ),
         },
       ]}
-      label={<FormattedMessage id="sidebar.help" />}
+      label={hideLabel ? undefined : <FormattedMessage id="sidebar.help" />}
       icon="question"
+      placement={placement}
     />
   );
 };

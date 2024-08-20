@@ -10,8 +10,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.config.WorkerMode;
@@ -25,14 +24,15 @@ import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Implementation of the {@link RecordMetricActivity} that is managed by the application framework
@@ -43,12 +43,12 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class RecordMetricActivityImpl implements RecordMetricActivity {
 
+  private final AirbyteApiClient airbyteApiClient;
   private final MetricClient metricClient;
-  private final WorkspaceApi workspaceApi;
 
-  public RecordMetricActivityImpl(final MetricClient metricClient, final WorkspaceApi workspaceApi) {
+  public RecordMetricActivityImpl(final AirbyteApiClient airbyteApiClient, final MetricClient metricClient) {
+    this.airbyteApiClient = airbyteApiClient;
     this.metricClient = metricClient;
-    this.workspaceApi = workspaceApi;
   }
 
   /**
@@ -62,7 +62,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     ApmTraceUtils.addTagsToTrace(generateTags(metricInput.getConnectionUpdaterInput()));
     final List<MetricAttribute> baseMetricAttributes = generateMetricAttributes(metricInput.getConnectionUpdaterInput());
     if (metricInput.getMetricAttributes() != null) {
-      baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).collect(Collectors.toList()));
+      baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).toList());
     }
     metricInput.getFailureCause().ifPresent(fc -> baseMetricAttributes.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, fc.name())));
     metricClient.count(metricInput.getMetricName(), 1L, baseMetricAttributes.toArray(new MetricAttribute[] {}));
@@ -96,7 +96,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    * @return The map of tags for instrumentation.
    */
   private Map<String, Object> generateTags(final ConnectionUpdaterInput connectionUpdaterInput) {
-    final Map<String, Object> tags = new HashMap();
+    final Map<String, Object> tags = new HashMap<>();
 
     if (connectionUpdaterInput != null) {
       if (connectionUpdaterInput.getConnectionId() != null) {
@@ -121,12 +121,16 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   String getWorkspaceId(final UUID connectionId) {
     try {
       log.debug("Calling workspaceApi to fetch workspace ID for connection ID {}", connectionId);
-      final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspaceRead =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspaceRead.getWorkspaceId().toString();
-    } catch (final ApiException e) {
-      if (e.getCode() == HttpStatus.NOT_FOUND.getCode()) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        // Metric recording should not fail because of a 404
         return null;
       }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

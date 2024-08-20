@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Copy the latest job state for each standard sync to the config database.
  */
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class V0_30_22_001__Store_last_sync_state extends BaseJavaMigration {
 
   private static final String MIGRATION_NAME = "Configs db migration 0.30.22.001";

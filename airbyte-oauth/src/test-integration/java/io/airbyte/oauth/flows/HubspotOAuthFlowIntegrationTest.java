@@ -23,8 +23,10 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Tag("oauth")
 public class HubspotOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
 
   @Override

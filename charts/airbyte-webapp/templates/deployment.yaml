@@ -62,11 +62,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TRACKING_STRATEGY
-        - name: INTERNAL_API_HOST
+        - name: AIRBYTE_SERVER_HOST
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: INTERNAL_API_HOST
+              key: AIRBYTE_SERVER_HOST
         - name: KEYCLOAK_INTERNAL_HOST
           valueFrom:
             configMapKeyRef:

@@ -9,7 +9,6 @@ import {
   deleteWorkspace,
   getWorkspace,
   listAccessInfoByWorkspaceId,
-  listWorkspaces,
   listWorkspacesByUser,
   updateWorkspace,
   updateWorkspaceName,
@@ -39,9 +38,7 @@ export const workspaceKeys = {
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
 
-  return useGetWorkspace(workspaceId, {
-    staleTime: Infinity,
-  });
+  return useGetWorkspace(workspaceId);
 };
 
 export const getCurrentWorkspaceStateQueryKey = (workspaceId: string) => {
@@ -100,22 +97,6 @@ export const useInvalidateWorkspaceStateQuery = () => {
   }, [queryClient, workspaceId]);
 };
 
-// todo: after merging https://github.com/airbytehq/airbyte-platform-internal/pull/7779 this should get workspace by user id
-export const useListWorkspaces = () => {
-  const requestOptions = useRequestOptions();
-  return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions));
-};
-
-export const getListWorkspacesAsyncQueryKey = () => {
-  return workspaceKeys.lists();
-};
-
-export const useListWorkspacesAsyncQuery = () => {
-  const requestOptions = useRequestOptions();
-
-  return () => listWorkspaces(requestOptions);
-};
-
 export const getWorkspaceQueryKey = (workspaceId: string) => {
   return workspaceKeys.detail(workspaceId);
 };
@@ -125,14 +106,11 @@ export const useGetWorkspaceQuery = (workspaceId: string) => {
   return () => getWorkspace({ workspaceId }, requestOptions);
 };
 
-export const useGetWorkspace = (
-  workspaceId: string,
-  options?: Parameters<typeof useSuspenseQuery<WorkspaceRead>>[2]
-) => {
+export const useGetWorkspace = (workspaceId: string, options?: { enabled?: boolean }) => {
   const queryKey = getWorkspaceQueryKey(workspaceId);
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
-  return useSuspenseQuery(queryKey, queryFn, options);
+  return useSuspenseQuery(queryKey, queryFn, { ...options, staleTime: 30 * 60_000 });
 };
 
 export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {

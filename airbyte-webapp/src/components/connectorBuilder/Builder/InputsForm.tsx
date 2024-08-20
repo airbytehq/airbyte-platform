@@ -270,7 +270,7 @@ const InputModal = ({
   onSubmit: (inputInEditing: InputInEditing) => void;
 }) => {
   const {
-    formState: { isValid },
+    formState: { isValid, isSubmitting },
     setValue,
     handleSubmit,
   } = useFormContext<InputInEditing>();
@@ -411,7 +411,7 @@ const InputModal = ({
           <Button variant="secondary" type="reset" onClick={onClose}>
             <FormattedMessage id="form.cancel" />
           </Button>
-          <Button type="submit" disabled={!isValid}>
+          <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
             <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
           </Button>
         </ModalFooter>

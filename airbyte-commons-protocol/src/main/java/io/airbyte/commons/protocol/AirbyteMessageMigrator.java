@@ -8,7 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.protocol.migrations.AirbyteMessageMigration;
 import io.airbyte.commons.protocol.migrations.MigrationContainer;
 import io.airbyte.commons.version.Version;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
 import java.util.List;

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -21,7 +22,6 @@ import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleases;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -56,16 +56,17 @@ class ConnectorRegistryConvertersTest {
       .withScopeType(ScopeType.STREAM)
       .withImpactedScopes(List.of("stream1", "stream2"));
 
-  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
-      .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com").withScopedImpact(
-          List.of(breakingChangeScope)));
+  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
+      new VersionBreakingChange()
+          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com").withScopedImpact(
+              List.of(breakingChangeScope)));
 
   private static final BreakingChanges registryBreakingChangesWithoutScopedImpact =
-      new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
+      new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION, new VersionBreakingChange()
           .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
   private static final List<ActorDefinitionBreakingChange> expectedBreakingChanges = List.of(new ActorDefinitionBreakingChange()
       .withActorDefinitionId(DEF_ID)
-      .withVersion(new Version("1.0.0"))
+      .withVersion(new Version(PROTOCOL_VERSION))
       .withMigrationDocumentationUrl("https://example.com")
       .withUpgradeDeadline("2023-07-20")
       .withMessage("Sample message")
@@ -86,6 +87,7 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion("doesnt matter")
@@ -111,6 +113,7 @@ class ConnectorRegistryConvertersTest {
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -150,11 +153,6 @@ class ConnectorRegistryConvertersTest {
 
   @Test
   void testConvertRegistryDestinationToInternalTypes() {
-    final NormalizationDestinationDefinitionConfig normalizationConfig = new NormalizationDestinationDefinitionConfig()
-        .withNormalizationRepository("normalization")
-        .withNormalizationTag("0.1.0")
-        .withNormalizationIntegrationType("bigquery");
-
     final ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
         .withName(CONNECTOR_NAME)
@@ -166,13 +164,12 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
@@ -190,12 +187,11 @@ class ConnectorRegistryConvertersTest {
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
-        .withAllowedHosts(ALLOWED_HOSTS)
-        .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true);
+        .withAllowedHosts(ALLOWED_HOSTS);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
@@ -219,7 +215,6 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final ActorDefinitionVersion convertedAdv = ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef);
@@ -243,7 +238,6 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChangesWithoutScopedImpact));
 
     final List<ActorDefinitionBreakingChange> actorDefinitionBreakingChanges =

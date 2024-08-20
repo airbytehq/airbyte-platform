@@ -3,6 +3,11 @@ import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import {
+  appendChangesModes,
+  pruneUnsupportedModes,
+  replicateSourceModes,
+} from "components/connection/ConnectionForm/preferredSyncModes";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { updateStreamSyncMode } from "components/connection/syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { SyncModeValue } from "components/connection/syncCatalog/SyncModeSelect";
@@ -13,22 +18,23 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useGetDestinationDefinitionSpecification } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SimplifiedSchemaQuestionnaire.module.scss";
 
-type Delivery = "mirrorSource" | "appendChanges";
+type Delivery = "replicateSource" | "appendChanges";
 type IncrementOrRefresh = SyncMode;
 type QuestionnaireOutcomes = Record<Delivery, Array<[SyncMode, DestinationSyncMode]>>;
 
 const deliveryOptions: ComponentProps<typeof RadioButtonTiles<Delivery>>["options"] = [
   {
-    value: "mirrorSource",
+    value: "replicateSource",
     label: (
       <FormattedMessage
-        id="connectionForm.questionnaire.delivery.mirrorSource.title"
+        id="connectionForm.questionnaire.delivery.replicateSource.title"
         values={{
           badge: (
             <Badge variant="blue" className={styles.badgeAlignment}>
@@ -38,7 +44,7 @@ const deliveryOptions: ComponentProps<typeof RadioButtonTiles<Delivery>>["option
         }}
       />
     ),
-    description: <FormattedMessage id="connectionForm.questionnaire.delivery.mirrorSource.subtitle" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.delivery.replicateSource.subtitle" />,
   },
   {
     value: "appendChanges",
@@ -68,30 +74,20 @@ const deletionRecordsOptions: ComponentProps<typeof RadioButtonTiles<IncrementOr
   },
 ];
 
-export const pruneUnsupportedModes = (
-  modes: Array<[SyncMode, DestinationSyncMode]>,
-  supportedSyncModes: SyncMode[],
-  supportedDestinationSyncModes: DestinationSyncMode[] | undefined
-) => {
-  return modes.filter(([syncMode, destinationSyncMode]) => {
-    return supportedSyncModes.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode);
-  });
-};
-
 export const getEnforcedDelivery = (outcomes: QuestionnaireOutcomes): Delivery | undefined => {
-  if (outcomes.mirrorSource.length === 0) {
-    // there are no mirrorSource choices; return appendChanges if present otherwise choice valid
+  if (outcomes.replicateSource.length === 0) {
+    // there are no replicateSource choices; return appendChanges if present otherwise choice valid
     return outcomes.appendChanges.length > 0 ? "appendChanges" : undefined;
   } else if (outcomes.appendChanges.length === 0) {
-    return "mirrorSource"; // has mirrorSource but no appendChanges, pre-select mirrorSource
+    return "replicateSource"; // has replicateSource but no appendChanges, pre-select replicateSource
   } else if (
-    outcomes.mirrorSource.length === 1 &&
+    outcomes.replicateSource.length === 1 &&
     outcomes.appendChanges.length === 1 &&
-    outcomes.mirrorSource[0][0] === outcomes.appendChanges[0][0] &&
-    outcomes.mirrorSource[0][1] === outcomes.appendChanges[0][1]
+    outcomes.replicateSource[0][0] === outcomes.appendChanges[0][0] &&
+    outcomes.replicateSource[0][1] === outcomes.appendChanges[0][1]
   ) {
-    // has mirrorSource and has appendChanges; both are [length=1] and have the same SyncMode
-    return "mirrorSource"; // which value is returned doesn't matter, so mirrorSource it is
+    // has replicateSource and has appendChanges; both are [length=1] and have the same SyncMode
+    return "replicateSource"; // which value is returned doesn't matter, so replicateSource it is
   }
 
   // multiple options, pre-select nothing so user can choose
@@ -104,10 +100,10 @@ export const getEnforcedIncrementOrRefresh = (supportedSyncModes: SyncMode[]) =>
 
 export const SimplifiedSchemaQuestionnaire = () => {
   const analyticsService = useAnalyticsService();
-  const {
-    connection,
-    destDefinitionSpecification: { supportedDestinationSyncModes },
-  } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
+    connection.destination.destinationId
+  );
 
   const supportedSyncModes: SyncMode[] = useMemo(() => {
     const foundModes = new Set<SyncMode>();
@@ -120,23 +116,8 @@ export const SimplifiedSchemaQuestionnaire = () => {
 
   const questionnaireOutcomes = useMemo<QuestionnaireOutcomes>(
     () => ({
-      mirrorSource: pruneUnsupportedModes(
-        [
-          [SyncMode.incremental, DestinationSyncMode.append_dedup],
-          [SyncMode.full_refresh, DestinationSyncMode.overwrite],
-          [SyncMode.incremental, DestinationSyncMode.append],
-        ],
-        supportedSyncModes,
-        supportedDestinationSyncModes
-      ),
-      appendChanges: pruneUnsupportedModes(
-        [
-          [SyncMode.incremental, DestinationSyncMode.append],
-          [SyncMode.full_refresh, DestinationSyncMode.append],
-        ],
-        supportedSyncModes,
-        supportedDestinationSyncModes
-      ),
+      replicateSource: pruneUnsupportedModes(replicateSourceModes, supportedSyncModes, supportedDestinationSyncModes),
+      appendChanges: pruneUnsupportedModes(appendChangesModes, supportedSyncModes, supportedDestinationSyncModes),
     }),
     [supportedSyncModes, supportedDestinationSyncModes]
   );
@@ -144,7 +125,7 @@ export const SimplifiedSchemaQuestionnaire = () => {
   const enforcedSelectedDelivery = getEnforcedDelivery(questionnaireOutcomes);
   const enforcedIncrementOrRefresh = getEnforcedIncrementOrRefresh(supportedSyncModes);
 
-  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery>(enforcedSelectedDelivery ?? "mirrorSource");
+  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery>(enforcedSelectedDelivery ?? "replicateSource");
   const [selectedIncrementOrRefresh, _setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
     enforcedIncrementOrRefresh
   );
@@ -157,8 +138,8 @@ export const SimplifiedSchemaQuestionnaire = () => {
     });
 
     _setSelectedDelivery(value);
-    if (value === "mirrorSource") {
-      // clear any user-provided answer for the second question when switching to mirrorSource
+    if (value === "replicateSource") {
+      // clear any user-provided answer for the second question when switching to replicateSource
       // this is purely a UX decision
       setSelectedIncrementOrRefresh(enforcedIncrementOrRefresh, { automatedAction: true });
     }
@@ -180,8 +161,8 @@ export const SimplifiedSchemaQuestionnaire = () => {
   };
 
   const selectedModes = useMemo<SyncModeValue[]>(() => {
-    if (selectedDelivery === "mirrorSource") {
-      return questionnaireOutcomes.mirrorSource.map(([syncMode, destinationSyncMode]) => {
+    if (selectedDelivery === "replicateSource") {
+      return questionnaireOutcomes.replicateSource.map(([syncMode, destinationSyncMode]) => {
         return {
           syncMode,
           destinationSyncMode,
@@ -196,7 +177,7 @@ export const SimplifiedSchemaQuestionnaire = () => {
       ];
     }
     return [];
-  }, [selectedDelivery, questionnaireOutcomes.mirrorSource, selectedIncrementOrRefresh]);
+  }, [selectedDelivery, questionnaireOutcomes.replicateSource, selectedIncrementOrRefresh]);
 
   // when a sync mode is selected, choose it for all streams
   const { trigger, getValues, setValue } = useFormContext<FormConnectionFormValues>();

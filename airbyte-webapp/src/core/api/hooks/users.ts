@@ -4,13 +4,14 @@ import set from "lodash/set";
 import { useCallback } from "react";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { AuthGetAccessToken } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { getUtmFromStorage } from "core/utils/utmStorage";
 
 import { useGetInstanceConfiguration } from "./instanceConfiguration";
 import { getOrCreateUserByAuthId, getUser, updateUser } from "../generated/AirbyteClient";
 import { UserUpdate } from "../types/AirbyteClient";
-import { useRequestOptions } from "../useRequestOptions";
+import { emptyGetAccessToken, useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const userKeys = {
@@ -19,13 +20,27 @@ const userKeys = {
 };
 
 // In Community, we do not need to pass an access token to get the current user. This function can be passed in place of an actual getAccessToken callback.
-const emptyGetAccesToken = () => Promise.resolve(null);
-
-export const useGetDefaultUser = ({ getAccessToken }: { getAccessToken?: () => Promise<string | null> }) => {
+export const useGetDefaultUser = () => {
   const { defaultUserId: userId } = useGetInstanceConfiguration();
 
-  return useSuspenseQuery(userKeys.detail(userId), () =>
-    getUser({ userId }, { getAccessToken: getAccessToken ?? emptyGetAccesToken })
+  return useSuspenseQuery(userKeys.detail(userId), () => getUser({ userId }, { getAccessToken: emptyGetAccessToken }));
+};
+
+export const useGetDefaultUserAsync = () => {
+  const { defaultUserId: userId } = useGetInstanceConfiguration();
+  return useMutation(
+    () =>
+      getUser(
+        { userId },
+        {
+          getAccessToken: emptyGetAccessToken,
+          // Currently this is only used in the Simple Auth flow, so we need to include cookies
+          includeCredentials: true,
+        }
+      ),
+    {
+      retry: false,
+    }
   );
 };
 
@@ -43,7 +58,7 @@ export const useGetOrCreateUser = () => {
       if (newUserCreated) {
         analytics.track(Namespace.USER, Action.CREATE, {
           actionDescription: "New user registered",
-          user_id: userRead.authUserId,
+          user_id: authUserId,
           name: userRead.name,
           email: userRead.email,
           isCorporate: isCorporateEmail(userRead.email),
@@ -66,14 +81,17 @@ export const useGetUserAsync = (userId: string) => {
 };
 
 export const useUpdateUser = () => {
-  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
-  return useMutation((user: UserUpdate) => updateUser(user, requestOptions), {
-    onSuccess(user) {
-      queryClient.setQueryData(userKeys.detail(user.userId), user);
-    },
-  });
+  return useMutation(
+    ({ userUpdate, getAccessToken }: { userUpdate: UserUpdate; getAccessToken: AuthGetAccessToken }) =>
+      updateUser(userUpdate, { getAccessToken }),
+    {
+      onSuccess(user) {
+        queryClient.setQueryData(userKeys.detail(user.userId), user);
+      },
+    }
+  );
 };
 
 // https://stackoverflow.com/questions/71096136/how-to-implement-a-gettypebypath-type-in-typescript
@@ -120,6 +138,7 @@ export const useUserMetadata = <
 export const useSetUserMetadata = <T extends string | undefined>(userId: string) => {
   const { refetch: getUser } = useGetUserAsync(userId);
   const { mutateAsync: updateUser } = useUpdateUser();
+  const { getAccessToken } = useRequestOptions();
 
   return useCallback(
     async (path: T, value: DeepIndex<UserMetadata, T>) => {
@@ -127,11 +146,14 @@ export const useSetUserMetadata = <T extends string | undefined>(userId: string)
       if (user) {
         const metadata = path ? set(structuredClone(user.metadata ?? {}), path, value) : value;
         await updateUser({
-          ...user,
-          metadata,
+          userUpdate: {
+            userId,
+            metadata,
+          },
+          getAccessToken,
         });
       }
     },
-    [getUser, updateUser]
+    [getAccessToken, getUser, updateUser, userId]
   );
 };

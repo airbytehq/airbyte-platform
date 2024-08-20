@@ -7,8 +7,8 @@ package io.airbyte.server.pro;
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 
 import io.airbyte.commons.auth.AirbyteAuthConstants;
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.RbacRoleHelper;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.token.validator.TokenValidator;
@@ -26,7 +26,10 @@ import reactor.core.publisher.Flux;
  **/
 @Slf4j
 @Singleton
-@RequiresAirbyteProEnabled
+@Requires(property = "micronaut.security.enabled",
+          value = "true")
+@Requires(property = "airbyte.deployment-mode",
+          value = "OSS")
 public class AirbyteAuthInternalTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   @Override

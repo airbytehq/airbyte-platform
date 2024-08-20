@@ -24,10 +24,10 @@
 .item {
   cursor: pointer;
   display: flex;
+  gap: variables.$spacing-md;
   align-items: center;
-  height: 42px;
   width: 100%;
-  padding: 0 variables.$spacing-xl;
+  padding: variables.$spacing-md variables.$spacing-lg;
   border: 0;
   background-color: transparent;
   text-decoration: none;
@@ -35,9 +35,7 @@
   .icon {
     display: flex;
     align-items: center;
-    font-size: 22px;
     color: colors.$dark-blue;
-    width: 20px;
     flex-shrink: 0;
   }
 
@@ -49,7 +47,7 @@
     text-align: left;
   }
 
-  &.active {
+  &.focus {
     background-color: colors.$blue-50;
   }
 
@@ -60,17 +58,9 @@
 
   &.iconPositionRight {
     flex-direction: row-reverse;
-
-    .icon {
-      margin-left: variables.$spacing-md;
-    }
   }
 
   &.iconPositionLeft {
     flex-direction: row;
-
-    .icon {
-      margin-right: variables.$spacing-md;
-    }
   }
 }

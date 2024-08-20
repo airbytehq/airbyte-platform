@@ -9,9 +9,12 @@ import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.exceptions.DisabledBeanException;
 import io.micronaut.core.util.StringUtils;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -30,7 +33,7 @@ public class AirbyteConfigurationBeanFactory {
   }
 
   @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
+  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode:OSS}") final String deploymentMode) {
     return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
   }
 
@@ -40,6 +43,19 @@ public class AirbyteConfigurationBeanFactory {
   @Singleton
   public AirbyteEdition airbyteEdition(@Value("${airbyte.edition:COMMUNITY}") final String airbyteEdition) {
     return convertToEnum(airbyteEdition.toUpperCase(), AirbyteEdition::valueOf, AirbyteEdition.COMMUNITY);
+  }
+
+  /**
+   * This method provides the airbyte url by preferring the `airbyte.airbyte-url` property over the
+   * deprecated `airbyte-yml.webapp-url` property. For backwards compatibility, if
+   * `airbyte-yml.airbyte-url` is not provided, this method falls back on `airbyte-yml.webapp-url`.
+   */
+  @Singleton
+  @Named("airbyteUrl")
+  public String airbyteUrl(@Value("${airbyte.airbyte-url}") final Optional<String> airbyteUrl,
+                           @Value("${airbyte-yml.webapp-url}") final Optional<String> webappUrl) {
+    return airbyteUrl.filter(StringUtils::isNotEmpty)
+        .orElseGet(() -> webappUrl.orElseThrow(() -> new DisabledBeanException("Airbyte URL not provided.")));
   }
 
 }

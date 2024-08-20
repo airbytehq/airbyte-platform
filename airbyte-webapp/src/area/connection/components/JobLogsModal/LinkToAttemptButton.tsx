@@ -11,38 +11,52 @@ import { copyToClipboard } from "core/utils/clipboard";
 interface Props {
   jobId: string | number;
   attemptId?: number;
+  eventId?: string;
+  openedFromTimeline?: boolean;
 }
 
-export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId }) => {
+export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId, openedFromTimeline }) => {
   const { formatMessage } = useIntl();
-
-  const [showCopyTooltip, setShowCopyTooltip] = useState(false);
-  const [hideTooltip] = useDebounce(() => setShowCopyTooltip(false), 3000, [showCopyTooltip]);
-
+  const [showCopiedTooltip, setShowCopiedTooltip] = useState(false);
+  const [hideTooltip] = useDebounce(() => setShowCopiedTooltip(false), 3000, [showCopiedTooltip]);
   const onCopyLink = async () => {
-    // Get the current URL and replace (or add) hash to current log
     const url = new URL(window.location.href);
-    url.hash = buildAttemptLink(jobId, attemptId);
+
+    if (openedFromTimeline) {
+      url.searchParams.set("openLogs", "true");
+      if (eventId) {
+        url.searchParams.set("eventId", eventId);
+      } else {
+        url.searchParams.set("jobId", jobId.toString());
+      }
+      if (attemptId) {
+        url.searchParams.set("attemptId", attemptId.toString());
+      }
+    } else {
+      url.hash = buildAttemptLink(jobId, attemptId);
+    }
+
     await copyToClipboard(url.href);
-    // Show and hide tooltip with a delay again
-    setShowCopyTooltip(true);
+    setShowCopiedTooltip(true);
     hideTooltip();
   };
 
   return (
     <Tooltip
-      disabled={!showCopyTooltip}
       control={
         <Button
           variant="secondary"
           onClick={onCopyLink}
-          title={formatMessage({ id: "connection.copyLogLink" })}
           aria-label={formatMessage({ id: "connection.copyLogLink" })}
           icon="link"
         />
       }
     >
-      <FormattedMessage id="connection.linkCopied" />
+      {showCopiedTooltip ? (
+        <FormattedMessage id="connection.linkCopied" />
+      ) : (
+        <FormattedMessage id="connection.copyLogLink" />
+      )}
     </Tooltip>
   );
 };

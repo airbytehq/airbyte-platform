@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useLocation } from "react-router-dom";
 import * as yup from "yup";
 
 import { Form, FormControl } from "components/forms";
@@ -11,11 +12,13 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
+import { SSO_LOGIN_REQUIRED_STATE } from "packages/cloud/services/auth/CloudAuthService";
 
 import styles from "./SSOIdentifierPage.module.scss";
 
@@ -28,8 +31,13 @@ const schema = yup.object().shape({
 });
 
 export const SSOIdentifierPage = () => {
-  const { changeRealmAndRedirectToSignin } = useKeycloakService();
+  const { changeRealmAndRedirectToSignin } = useAuthService();
   const { formatMessage } = useIntl();
+  const { state } = useLocation();
+
+  if (!changeRealmAndRedirectToSignin) {
+    throw new Error("Rendered SSOIdentifierPage while AuthService does not provide changeRealmAndRedirectToSignin");
+  }
 
   const handleSubmit: FormSubmissionHandler<CompanyIdentifierValues> = async ({ companyIdentifier }, methods) => {
     try {
@@ -48,6 +56,11 @@ export const SSOIdentifierPage = () => {
             <FormattedMessage id="login.sso.title" />
           </Heading>
         </Box>
+        {state?.[SSO_LOGIN_REQUIRED_STATE] && (
+          <Box mb="lg">
+            <Message type="warning" text={formatMessage({ id: "login.sso.ssoLoginRequired" })} />
+          </Box>
+        )}
         <Box mb="lg">
           <Text>
             <FormattedMessage id="login.sso.description" />

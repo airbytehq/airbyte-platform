@@ -7,6 +7,7 @@ micronaut:
     netty:
       aggregator:
         max-content-length: 52428800 # 50MB
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
     port: 9000
   caches:
     # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
@@ -99,12 +100,17 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+    base-url: ${FEATURE_FLAG_BASEURL:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}
@@ -127,7 +133,7 @@ airbyte:
         base: ${SYNC_JOB_RETRIES_COMPLETE_FAILURES_BACKOFF_BASE:3} # 10s, 30s, 90s, 4.5m
     partial-failures:
       max-successive: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_SUCCESSIVE:1000}
-      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:10}
+      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:20}
   worker:
     kube-job-configs:
       default:
@@ -150,11 +156,6 @@ airbyte:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
         labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
-      normalization:
-        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
         labels: ${REPLICATION_JOB_KUBE_LABELS:}
@@ -191,7 +192,7 @@ airbyte:
           jitter-amount-minutes: ${SCHEDULE_VERY_LOW_JITTER_AMOUNT_MINUTES:25} # anything greater than every 6.5 hours has up to 25 minutes of added jitter
     discover:
       enabled: ${SHOULD_RUN_DISCOVER_WORKFLOWS:true}
-      max-workers: ${MAX_DISCOVER_WORKERS:5}
+      max-workers: ${MAX_CHECK_WORKERS:5}
     job:
       error-reporting:
         sentry:
@@ -213,13 +214,13 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
     replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
     spec:
       enabled: ${SHOULD_RUN_GET_SPEC_WORKFLOWS:true}
-      max-workers: ${MAX_SPEC_WORKERS:5}
+      max-workers: ${MAX_CHECK_WORKERS:5}
     sync:
       enabled: ${SHOULD_RUN_SYNC_WORKFLOWS:true}
-      max-workers: ${MAX_SYNC_WORKERS:5}
+      max-workers: ${MAX_SYNC_WORKERS:10}
       max-attempts: ${SYNC_JOB_MAX_ATTEMPTS:3}
       max-timeout: ${SYNC_JOB_MAX_TIMEOUT_DAYS:3}
       max-init-timeout: ${SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES:3}

@@ -4,22 +4,17 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.process.KubePodProcess;
-import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * Code for handling configuration files for orchestrated pods.
@@ -44,41 +39,16 @@ public class ConfigFactory {
   }
 
   /**
-   * Returns the contents of the OrchestratorConstants.INIT_FILE_APPLICATION file.
-   *
-   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_APPLICATION file.
-   * @return Contents of OrchestratorConstants.INIT_FILE_APPLICATION
-   * @throws IOException exception while reading the file
-   */
-  @Singleton
-  @Named("application")
-  String application(@Named("configDir") final String configDir) throws IOException {
-    return Files.readString(Path.of(configDir, OrchestratorConstants.INIT_FILE_APPLICATION));
-  }
-
-  /**
-   * Returns the contents of the OrchestratorConstants.INIT_FILE_ENV_MAP file.
-   *
-   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_ENV_MAP file.
-   * @return Contents of OrchestratorConstants.INIT_FILE_ENV_MAP
-   */
-  @Singleton
-  @Named("envVars")
-  Map<String, String> envVars(@Named("configDir") final String configDir) {
-    return Jsons.deserialize(
-        Path.of(configDir, OrchestratorConstants.INIT_FILE_ENV_MAP).toFile(), new TypeReference<>() {});
-  }
-
-  /**
    * Returns the contents of the OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG file.
    *
-   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG
-   *        file.
+   * @param jobId Which job is being run.
+   * @param attemptId Which attempt of the job is being run.
    * @return Contents of OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG
    */
   @Singleton
-  JobRunConfig jobRunConfig(@Named("configDir") final String configDir) {
-    return Jsons.deserialize(Path.of(configDir, OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG).toFile(), JobRunConfig.class);
+  JobRunConfig jobRunConfig(@Value("${airbyte.job-id}") @Nullable final String jobId,
+                            @Value("${airbyte.attempt-id}") @Nullable final long attemptId) {
+    return new JobRunConfig().withJobId(jobId).withAttemptId(attemptId);
   }
 
   /**
@@ -90,6 +60,12 @@ public class ConfigFactory {
   @Singleton
   KubePodInfo kubePodInfo(@Named("configDir") final String configDir) {
     return Jsons.deserialize(Path.of(configDir, AsyncOrchestratorPodProcess.KUBE_POD_INFO).toFile(), KubePodInfo.class);
+  }
+
+  @Singleton
+  @Named("workspaceRoot")
+  public Path workspaceRoot(@Value("${airbyte.workspace-root}") final String workspaceRoot) {
+    return Path.of(workspaceRoot);
   }
 
 }

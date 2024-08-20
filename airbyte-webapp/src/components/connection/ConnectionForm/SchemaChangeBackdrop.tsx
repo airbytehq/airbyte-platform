@@ -1,13 +1,13 @@
 import { FormattedMessage } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { OctaviaRedFlag } from "./OctaviaRedFlag";
-import { OctaviaYellowFlag } from "./OctaviaYellowFlag";
 import styles from "./SchemaChangeBackdrop.module.scss";
 
 export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
@@ -18,9 +18,12 @@ export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = 
     connection: { schemaChange },
   } = useConnectionEditService();
 
-  const { hasBreakingSchemaChange, hasNonBreakingSchemaChange } = useSchemaChanges(schemaChange);
+  const { refreshSchema } = useConnectionFormService();
+  const { schemaRefreshing } = useConnectionEditService();
 
-  if (!allowAutoDetectSchema || !hasBreakingSchemaChange || schemaHasBeenRefreshed) {
+  const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
+
+  if (!allowAutoDetectSchema || !hasBreakingSchemaChange || schemaHasBeenRefreshed || schemaRefreshing) {
     return <>{children}</>;
   }
 
@@ -28,12 +31,12 @@ export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = 
     <div className={styles.schemaChangeBackdropContainer} data-testid="schemaChangesBackdrop">
       <div className={styles.backdrop}>
         <div className={styles.contentContainer}>
-          <div>
-            {hasBreakingSchemaChange ? <OctaviaRedFlag /> : hasNonBreakingSchemaChange ? <OctaviaYellowFlag /> : null}
-          </div>
-          <Text className={styles.text}>
+          <Text align="center" size="lg">
             <FormattedMessage id="connectionForm.schemaChangesBackdrop.message" />
           </Text>
+          <Button variant="primaryDark" type="button" onClick={refreshSchema}>
+            <FormattedMessage id="connection.schemaChange.reviewAction" />
+          </Button>
         </div>
       </div>
       {children}

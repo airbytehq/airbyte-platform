@@ -7,21 +7,14 @@
  */
 
 export interface Experiments {
-  "authPage.keycloak": boolean;
   "authPage.rightSideUrl": string | undefined;
-  "authPage.signup.hideCompanyName": boolean;
-  "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
-  "connection.clearNotReset": boolean;
   "connection.columnSelection": boolean;
-  "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.streamCentricUI.errorMultiplier": number;
-  "connection.streamCentricUI.lateMultiplier": number;
-  "connection.streamCentricUI.v2": boolean;
-  "connection.streamCentricUI.historicalOverview": boolean;
+  "connection.rateLimitedUI": boolean;
+  "connection.timeline": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
@@ -30,4 +23,7 @@ export interface Experiments {
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
+  "connection.syncCatalogV2": boolean;
+  "connectorBuilder.contributeToMarketplace": boolean;
+  "billing.organizationBillingPage": boolean;
 }

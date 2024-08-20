@@ -1,12 +1,12 @@
-import dayjs from "dayjs";
 import React from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { AttemptRead, AttemptStats, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
+import { useFormatLengthOfTime } from "core/utils/time";
 
 import styles from "./AttemptDetails.module.scss";
 
@@ -36,6 +36,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   aggregatedAttemptStats,
 }) => {
   const { formatMessage } = useIntl();
+  const attemptRunTime = useFormatLengthOfTime((attempt.updatedAt - attempt.createdAt) * 1000);
 
   if (attempt.status !== AttemptStatus.succeeded && attempt.status !== AttemptStatus.failed) {
     return null;
@@ -59,11 +60,6 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
     })}: ${failureMessage}`;
   };
 
-  const date1 = dayjs(attempt.createdAt * 1000);
-  const date2 = dayjs(attempt.updatedAt * 1000);
-  const hours = Math.abs(date2.diff(date1, "hour"));
-  const minutes = Math.abs(date2.diff(date1, "minute")) - hours * 60;
-  const seconds = Math.abs(date2.diff(date1, "second")) - minutes * 60 - hours * 3600;
   const isCancelled = isCancelledAttempt(attempt);
   const isFailed = attempt.status === AttemptStatus.failed && !isCancelled;
 
@@ -78,10 +74,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
         {showEndedAt && attempt.endedAt && (
           <>
             <Text as="span" color="grey" size="sm">
-              <FormattedTimeParts value={attempt.createdAt * 1000} hour="numeric" minute="2-digit">
-                {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-              </FormattedTimeParts>
-              <FormattedDate value={attempt.createdAt * 1000} month="2-digit" day="2-digit" year="numeric" />
+              <FormattedDate value={attempt.endedAt * 1000} dateStyle="medium" timeStyle="short" />
             </Text>
             <Text as="span" color="grey" size="sm">
               |
@@ -119,9 +112,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
           |
         </Text>
         <Text as="span" color="grey" size="sm">
-          {hours ? <FormattedMessage id="sources.hour" values={{ hour: hours }} /> : null}
-          {hours || minutes ? <FormattedMessage id="sources.minute" values={{ minute: minutes }} /> : null}
-          <FormattedMessage id="sources.second" values={{ second: seconds }} />
+          {attemptRunTime}
         </Text>
       </FlexContainer>
       {showFailureMessage && isFailed && (

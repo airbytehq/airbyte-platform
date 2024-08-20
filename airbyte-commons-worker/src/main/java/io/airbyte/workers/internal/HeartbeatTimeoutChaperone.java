@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
  * in cases like the platform reading from the source. The thread that reads from the source is
  * allowed to run as long as the heartbeat from the sources is fresh.
  */
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HeartbeatTimeoutChaperone.class);
@@ -154,11 +155,6 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
         LOGGER.info("Stopping the heartbeat monitor");
         return;
       }
-
-      heartbeatMonitor.getTimeSinceLastBeat()
-          .ifPresent(duration -> metricClient.distribution(OssMetricsRegistry.SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS, duration.toMillis(),
-              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
-              new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage)));
 
       // if not beating, return. otherwise, if it is beating or heartbeat hasn't started, continue.
       if (!heartbeatMonitor.isBeating().orElse(true)) {

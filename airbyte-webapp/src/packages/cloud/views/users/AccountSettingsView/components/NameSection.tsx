@@ -6,7 +6,7 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { AuthChangeName, useCurrentUser } from "core/services/auth";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
 const nameFormSchema = yup.object({
@@ -25,7 +25,6 @@ export const NameSection: React.FC<NameSectionProps> = ({ updateName }) => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
 
   const onSuccess = () => {
     registerNotification({

@@ -4,6 +4,9 @@ import isEqual from "lodash/isEqual";
 import React, { useContext, useMemo, useState } from "react";
 import { IntlProvider } from "react-intl";
 
+import errorMessages from "locales/en.errors.json";
+import messages from "locales/en.json";
+
 type Messages = IntlConfig["messages"];
 
 interface I18nContext {
@@ -17,11 +20,15 @@ export const useI18nContext = () => {
 };
 
 interface I18nProviderProps {
-  messages: Messages;
-  locale: string;
+  /**
+   * The locale to use for internationalization. If not provided, the browser locale will be used.
+   */
+  locale?: string;
 }
 
-export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> = ({ children, messages, locale }) => {
+const getBrowserLocale = () => new Intl.DateTimeFormat().resolvedOptions().locale ?? "en";
+
+export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> = ({ children, locale }) => {
   const [overwrittenMessages, setOvewrittenMessages] = useState<Messages>({});
 
   const i18nOverwriteContext = useMemo<I18nContext>(
@@ -36,19 +43,25 @@ export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> 
   const mergedMessages = useMemo(
     () => ({
       ...messages,
+      ...Object.fromEntries(Object.entries(errorMessages).map(([key, value]) => [`error:${key}`, value])),
       ...(overwrittenMessages ?? {}),
     }),
-    [messages, overwrittenMessages]
+    [overwrittenMessages]
   );
+
+  // Silence all warnings and errors during unit tests
+  const logger = process.env.NODE_ENV === "test" ? () => {} : undefined;
 
   return (
     <i18nContext.Provider value={i18nOverwriteContext}>
       <IntlProvider
-        locale={locale}
+        locale={locale ?? getBrowserLocale()}
         messages={mergedMessages}
         defaultRichTextElements={{
           b: (chunk) => <strong>{chunk}</strong>,
         }}
+        onWarn={logger}
+        onError={logger}
       >
         {children}
       </IntlProvider>

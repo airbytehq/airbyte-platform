@@ -17,7 +17,7 @@ First, the entryoint script for Keycloak must be altered to disable caching. The
 
 After this, the `airbyte-keycloak` image needs to be built with gradle:
 
-`./gradlew -p oss :airbyte-keycloak:assemble`.
+`./gradlew :oss:airbyte-keycloak:assemble`.
 
 Then you can use the `make deploy` command to deploy Airbyte Cloud locally, or use helm directly to redeploy `airbyte-keycloak` for a Self Managed Enterprise instance. 
 

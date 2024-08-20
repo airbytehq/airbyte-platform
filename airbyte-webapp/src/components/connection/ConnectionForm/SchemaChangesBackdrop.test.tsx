@@ -1,12 +1,19 @@
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { mockConnection, TestWrapper } from "test-utils/testutils";
+import { mockConnection } from "test-utils/mock-data/mockConnection";
+import { TestWrapper } from "test-utils/testutils";
 
 import { SchemaChange } from "core/api/types/AirbyteClient";
 import { FeatureItem } from "core/services/features";
 const mockUseConnectionEditService = jest.fn();
+const mockUseConnectionFormService = () => {
+  return {};
+};
 
+jest.doMock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
+  useConnectionFormService: mockUseConnectionFormService,
+}));
 jest.doMock("hooks/services/ConnectionEdit/ConnectionEditService", () => ({
   useConnectionEditService: mockUseConnectionEditService,
 }));

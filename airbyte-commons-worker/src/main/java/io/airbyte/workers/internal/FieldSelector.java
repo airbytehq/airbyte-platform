@@ -6,12 +6,14 @@ package io.airbyte.workers.internal;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
+import io.micronaut.core.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
@@ -35,8 +38,8 @@ public class FieldSelector {
    * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
    * concurrently for performance.
    */
-  private final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields = new HashMap<>();
@@ -102,7 +105,7 @@ public class FieldSelector {
     if (data.isObject()) {
       ((ObjectNode) data).retain(selectedFields);
     } else {
-      throw new RuntimeException(String.format("Unexpected data in record: %s", data.toString()));
+      throw new RuntimeException(String.format("Unexpected data in record: %s", data));
     }
   }
 
@@ -145,11 +148,11 @@ public class FieldSelector {
       final List<String> selectedFields = new ArrayList<>();
       final JsonNode propertiesNode = s.getStream().getJsonSchema().findPath("properties");
       if (propertiesNode.isObject()) {
-        propertiesNode.fieldNames().forEachRemaining((fieldName) -> selectedFields.add(fieldName));
+        propertiesNode.fieldNames().forEachRemaining((fieldName) -> selectedFields.add(replaceEscapeCharacter(fieldName)));
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
-      streamToSelectedFields.put(AirbyteStreamNameNamespacePair.fromConfiguredAirbyteSteam(s), selectedFields);
+      streamToSelectedFields.put(extractStream(s), selectedFields);
     }
   }
 
@@ -164,12 +167,16 @@ public class FieldSelector {
       final Set<String> fields = new HashSet<>();
       final JsonNode propertiesNode = s.getStream().getJsonSchema().findPath("properties");
       if (propertiesNode.isObject()) {
-        propertiesNode.fieldNames().forEachRemaining((fieldName) -> fields.add(fieldName));
+        propertiesNode.fieldNames().forEachRemaining((fieldName) -> fields.add(replaceEscapeCharacter(fieldName)));
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
-      streamToAllFields.put(AirbyteStreamNameNamespacePair.fromConfiguredAirbyteSteam(s), fields);
+      streamToAllFields.put(extractStream(s), fields);
     }
+  }
+
+  private AirbyteStreamNameNamespacePair extractStream(final ConfiguredAirbyteStream stream) {
+    return new AirbyteStreamNameNamespacePair(stream.getStream().getName(), stream.getStream().getNamespace());
   }
 
   private void validateSchemaUncounted(final AirbyteMessage message) {
@@ -221,6 +228,17 @@ public class FieldSelector {
       }
     }
     return unexpectedFieldNames;
+  }
+
+  /**
+   * Removes JSON Schema escape character (<code>$</code>) from field names in order to ensure that
+   * the field name will map the property name in a record.
+   *
+   * @param fieldName A field name in the JSON schema in a catalog.
+   * @return The unescaped field name.
+   */
+  private String replaceEscapeCharacter(final String fieldName) {
+    return StringUtils.isNotEmpty(fieldName) ? fieldName.replaceAll("\\$", "") : fieldName;
   }
 
 }

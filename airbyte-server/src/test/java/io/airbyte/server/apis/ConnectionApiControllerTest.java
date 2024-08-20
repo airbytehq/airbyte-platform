@@ -50,7 +50,7 @@ class ConnectionApiControllerTest {
   RouterService routerService;
 
   @Test
-  void testConnectionStreamReset() throws IOException {
+  void testConnectionStreamReset() throws IOException, ConfigNotFoundException {
     final UUID connectionId = UUID.randomUUID();
     final String streamName = "tableA";
     final String streamNamespace = "schemaA";

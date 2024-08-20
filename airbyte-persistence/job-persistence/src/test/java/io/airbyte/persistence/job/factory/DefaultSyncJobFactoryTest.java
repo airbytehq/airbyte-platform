@@ -5,6 +5,8 @@
 package io.airbyte.persistence.job.factory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -80,11 +82,13 @@ class DefaultSyncJobFactoryTest {
     final String srcDockerRepo = "srcrepo";
     final String srcDockerTag = "tag";
     final String srcDockerImage = srcDockerRepo + ":" + srcDockerTag;
+    final Boolean srcDockerImageIsDefault = true;
     final Version srcProtocolVersion = new Version("0.3.1");
 
     final String dstDockerRepo = "dstrepo";
     final String dstDockerTag = "tag";
     final String dstDockerImage = dstDockerRepo + ":" + dstDockerTag;
+    final Boolean dstDockerImageIsDefault = true;
     final Version dstProtocolVersion = new Version("0.3.2");
     final StandardSourceDefinition standardSourceDefinition =
         new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId);
@@ -97,11 +101,15 @@ class DefaultSyncJobFactoryTest {
         .withProtocolVersion(srcProtocolVersion.serialize());
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId))
         .thenReturn(sourceVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId))
+        .thenReturn(sourceVersion);
     final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
         .withDockerRepository(dstDockerRepo)
         .withDockerImageTag(dstDockerTag)
         .withProtocolVersion(dstProtocolVersion.serialize());
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId))
+        .thenReturn(destinationVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId))
         .thenReturn(destinationVersion);
 
     when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
@@ -110,8 +118,9 @@ class DefaultSyncJobFactoryTest {
     when(configRepository.getDestinationConnection(destinationId)).thenReturn(destinationConnection);
     when(configRepository.getStandardSyncOperation(operationId)).thenReturn(operation);
     when(
-        jobCreator.createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcProtocolVersion, dstDockerImage,
-            dstProtocolVersion, operations,
+        jobCreator.createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcDockerImageIsDefault, srcProtocolVersion,
+            dstDockerImage,
+            dstDockerImageIsDefault, dstProtocolVersion, operations,
             persistedWebhookConfigs, standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId))
                 .thenReturn(Optional.of(jobId));
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId))
@@ -138,7 +147,8 @@ class DefaultSyncJobFactoryTest {
     assertEquals(jobId, actualJobId);
 
     verify(jobCreator)
-        .createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcProtocolVersion, dstDockerImage, dstProtocolVersion,
+        .createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcDockerImageIsDefault, srcProtocolVersion,
+            dstDockerImage, dstDockerImageIsDefault, dstProtocolVersion,
             operations, persistedWebhookConfigs,
             standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId);
 
@@ -147,6 +157,32 @@ class DefaultSyncJobFactoryTest {
     verify(configInjector).injectConfig(destinationConfig, destinationDefinitionId);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, workspaceId, sourceId);
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId);
+  }
+
+  @Test
+  void testImageIsDefault() {
+    final DefaultJobCreator jobCreator = mock(DefaultJobCreator.class);
+    final ConfigRepository configRepository = mock(ConfigRepository.class);
+    final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    final ConfigInjector configInjector = mock(ConfigInjector.class);
+    final WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
+    final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    final DefaultSyncJobFactory jobFactory = new DefaultSyncJobFactory(true, jobCreator, configRepository, oAuthConfigSupplier, configInjector,
+        workspaceHelper, actorDefinitionVersionHelper);
+    ActorDefinitionVersion version = new ActorDefinitionVersion();
+    version.setDockerRepository("repo");
+    version.setDockerImageTag("tag");
+    // null input image
+    assertTrue(jobFactory.imageIsDefault(null, version));
+    // Same versions
+    assertTrue(jobFactory.imageIsDefault("repo:tag", version));
+    // Different versions
+    assertFalse(jobFactory.imageIsDefault("repo:latest", version));
+    // ActorDefinitionVersion is null
+    assertTrue(jobFactory.imageIsDefault("repo:tag", null));
+    // null repo & tag
+    version = new ActorDefinitionVersion();
+    assertTrue(jobFactory.imageIsDefault("repo:tag", version));
   }
 
 }

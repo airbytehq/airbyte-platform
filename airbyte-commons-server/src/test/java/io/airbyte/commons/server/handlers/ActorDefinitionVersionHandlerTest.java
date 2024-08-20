@@ -19,14 +19,12 @@ import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.NotFoundException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -88,6 +86,7 @@ class ActorDefinitionVersionHandlerTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withVersionId(UUID.randomUUID())
         .withSupportLevel(SupportLevel.NONE)
+        .withInternalSupportLevel(100L)
         .withReleaseStage(ReleaseStage.BETA)
         .withSupportState(SupportState.SUPPORTED)
         .withDockerRepository("airbyte/source-faker")
@@ -96,12 +95,7 @@ class ActorDefinitionVersionHandlerTest {
   }
 
   private ActorDefinitionVersion createActorDefinitionVersionWithNormalization() {
-    return createActorDefinitionVersion()
-        .withSupportsDbt(true)
-        .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
-            .withNormalizationRepository("repository")
-            .withNormalizationTag("dev")
-            .withNormalizationIntegrationType("integration-type"));
+    return createActorDefinitionVersion();
   }
 
   @ParameterizedTest
@@ -130,8 +124,7 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsDbt(false)
-        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
+        .supportsRefreshes(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mSourceService).getSourceConnection(sourceId);
@@ -170,8 +163,7 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsDbt(false)
-        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
+        .supportsRefreshes(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -209,8 +201,7 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsDbt(actorDefinitionVersion.getSupportsDbt())
-        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()));
+        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes());
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -241,8 +232,7 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.DEPRECATED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsDbt(false)
-        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null))
+        .supportsRefreshes(false)
         .breakingChanges(breakingChanges);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
@@ -260,7 +250,8 @@ class ActorDefinitionVersionHandlerTest {
     final ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse()
         .versionId(actorDefinitionVersion.getVersionId())
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportRefreshes(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

@@ -2,8 +2,8 @@
 @use "scss/variables";
 @use "scss/mixins";
 
-.linkText {
-  @include mixins.link-text;
+.container {
+  height: 100%;
 }
 
 .nextLink {
@@ -22,4 +22,9 @@
   &:active {
     background-color: colors.$blue-600;
   }
+}
+
+.fixedBottomNav {
+  background-color: colors.$foreground;
+  border-top: variables.$border-thin solid colors.$grey-100;
 }

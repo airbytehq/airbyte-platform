@@ -4,6 +4,8 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +20,7 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -26,9 +29,6 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -59,12 +59,8 @@ import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.SyncMode;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -135,6 +131,8 @@ public class MockData {
   static final UUID DUP_EMAIL_USER_ID_1 = UUID.randomUUID();
   static final UUID DUP_EMAIL_USER_ID_2 = UUID.randomUUID();
   static final String DUP_EMAIL = "dup-email@airbyte.io";
+  static final String EMAIL_1 = "user-1@whatever.com";
+  static final String EMAIL_2 = "user-2@whatever.com";
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -145,6 +143,7 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -234,6 +233,12 @@ public class MockData {
       .withOrganizationId(ORGANIZATION_ID_2)
       .withPermissionType(PermissionType.ORGANIZATION_READER);
 
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_1)
+      .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
   public static List<User> users() {
     final User user1 = new User()
         .withUserId(CREATOR_USER_ID_1)
@@ -243,7 +248,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_1)
         .withStatus(User.Status.DISABLED)
         .withCompanyName("company-1")
-        .withEmail("user-1@whatever.com")
+        .withEmail(EMAIL_1)
         .withNews(true)
         .withUiMetadata(null);
 
@@ -255,7 +260,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_2)
         .withStatus(User.Status.INVITED)
         .withCompanyName("company-2")
-        .withEmail("user-2@whatever.com")
+        .withEmail(EMAIL_2)
         .withNews(false)
         .withUiMetadata(null);
 
@@ -298,36 +303,8 @@ public class MockData {
     return Arrays.asList(user1, user2, user3, user4, user5);
   }
 
-  public static List<User> dupEmailUsers() {
-    final User dupEmailUser1 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_1)
-        .withName("dup-email-user-1")
-        .withAuthUserId(DUP_EMAIL_USER_ID_1.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    final User dupEmailUser2 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_2)
-        .withName("dup-email-user-2")
-        .withAuthUserId(DUP_EMAIL_USER_ID_2.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    return Arrays.asList(dupEmailUser1, dupEmailUser2);
-  }
-
   public static List<Permission> permissions() {
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
 
   public static List<Organization> organizations() {
@@ -379,7 +356,8 @@ public class MockData {
         .withFeedbackDone(true)
         .withDefaultGeography(Geography.US)
         .withWebhookOperationConfigs(Jsons.jsonNode(
-            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))));
+            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))))
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace2 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_2)
@@ -387,7 +365,8 @@ public class MockData {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace3 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_3)
@@ -395,7 +374,8 @@ public class MockData {
         .withSlug("tombstoned")
         .withInitialSetupComplete(true)
         .withTombstone(true)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     return Arrays.asList(workspace1, workspace2, workspace3);
   }
@@ -459,6 +439,7 @@ public class MockData {
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withProtocolVersion("0.2.0");
   }
 
@@ -484,7 +465,8 @@ public class MockData {
         .withDocumentationUrl(URI.create("whatever"))
         .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0))
         .withChangelogUrl(URI.create("whatever"))
-        .withSupportedDestinationSyncModes(Arrays.asList(DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND_DEDUP))
+        .withSupportedDestinationSyncModes(Arrays.asList(io.airbyte.protocol.models.DestinationSyncMode.APPEND,
+            io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE, io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP))
         .withSupportsDBT(true)
         .withSupportsIncremental(true)
         .withSupportsNormalization(true);
@@ -548,7 +530,6 @@ public class MockData {
         .withName("source-1")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_1);
@@ -556,7 +537,6 @@ public class MockData {
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_2);
@@ -564,7 +544,6 @@ public class MockData {
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withSourceId(SOURCE_ID_3);
@@ -576,7 +555,6 @@ public class MockData {
         .withName("destination-1")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_1);
@@ -584,7 +562,6 @@ public class MockData {
         .withName("destination-2")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_2);
@@ -592,7 +569,6 @@ public class MockData {
         .withName("destination-3")
         .withTombstone(true)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withDestinationId(DESTINATION_ID_3);
@@ -628,43 +604,45 @@ public class MockData {
   }
 
   public static List<StandardSyncOperation> standardSyncOperations() {
-    final OperatorDbt operatorDbt = new OperatorDbt()
-        .withDbtArguments("dbt-arguments")
-        .withDockerImage("image-tag")
-        .withGitRepoBranch("git-repo-branch")
-        .withGitRepoUrl("git-repo-url");
     final StandardSyncOperation standardSyncOperation1 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
-        .withOperatorDbt(operatorDbt)
-        .withOperatorNormalization(null)
-        .withOperatorType(OperatorType.DBT);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation2 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorType(OperatorType.NORMALIZATION);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation3 = new StandardSyncOperation()
         .withName("operation-3")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_3)
         .withWorkspaceId(WORKSPACE_ID_2)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorType(OperatorType.NORMALIZATION);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation4 = new StandardSyncOperation()
         .withName("webhook-operation")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_4)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withOperatorType(OperatorType.WEBHOOK)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(null)
         .withOperatorWebhook(
             new OperatorWebhook()
                 .withWebhookConfigId(WEBHOOK_CONFIG_ID)
@@ -812,28 +790,34 @@ public class MockData {
 
   private static ConfiguredAirbyteCatalog getConfiguredCatalog() {
     final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        CatalogHelpers.createAirbyteStream(
+        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
             io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING))
-            .withSupportedSyncModes(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
+            .withSupportedSyncModes(
+                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return CatalogHelpers.toDefaultConfiguredCatalog(catalog);
+    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
   }
 
   public static ConfiguredAirbyteCatalog getConfiguredCatalogWithV1DataTypes() {
     final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        CatalogHelpers.createAirbyteStream(
+        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
             io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER_V1),
             io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER_V1),
             io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING_V1))
-            .withSupportedSyncModes(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
+            .withSupportedSyncModes(
+                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return CatalogHelpers.toDefaultConfiguredCatalog(catalog);
+    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
+  }
+
+  private static ConfiguredAirbyteCatalog convertToInternal(final io.airbyte.protocol.models.ConfiguredAirbyteCatalog catalog) {
+    return Jsons.convertValue(catalog, ConfiguredAirbyteCatalog.class);
   }
 
   public static List<StandardSyncState> standardSyncStates() {
@@ -898,6 +882,16 @@ public class MockData {
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION);
     return Arrays.asList(actorCatalogFetchEvent1, actorCatalogFetchEvent2);
+  }
+
+  public static Organization defaultOrganization() {
+    return new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("default org")
+        .withEmail("test@test.com")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+
   }
 
   @Data

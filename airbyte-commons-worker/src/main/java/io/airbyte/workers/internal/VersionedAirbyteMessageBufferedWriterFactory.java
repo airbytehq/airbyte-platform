@@ -7,7 +7,7 @@ package io.airbyte.workers.internal;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.version.Version;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import java.io.BufferedWriter;
 import java.util.Optional;
 import org.slf4j.Logger;

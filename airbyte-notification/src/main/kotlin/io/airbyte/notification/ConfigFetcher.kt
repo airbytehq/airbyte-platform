@@ -1,6 +1,6 @@
 package io.airbyte.notification
 
-import io.airbyte.api.client.generated.WorkspaceApi
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import jakarta.inject.Singleton
@@ -16,15 +16,15 @@ interface ConfigFetcher<T> {
 data class WebhookConfig(val webhookUrl: String)
 
 @Singleton
-class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : ConfigFetcher<WebhookConfig> {
+class WebhookConfigFetcher(private val airbyteApiClient: AirbyteApiClient) : ConfigFetcher<WebhookConfig> {
   override fun fetchConfig(connectionId: UUID): WebhookConfig? {
-    val workspaceRead: WorkspaceRead? =
-      ConnectionIdRequestBody().connectionId(connectionId).let {
-        workspaceApiClient.getWorkspaceByConnectionId(it)
+    val workspaceRead: WorkspaceRead =
+      ConnectionIdRequestBody(connectionId = connectionId).let {
+        airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(it)
       }
 
     return workspaceRead
-      ?.notifications
+      .notifications
       ?.firstOrNull { it.notificationType == ApiNotificationType.SLACK }
       ?.slackConfiguration
       ?.let { WebhookConfig(it.webhook) }

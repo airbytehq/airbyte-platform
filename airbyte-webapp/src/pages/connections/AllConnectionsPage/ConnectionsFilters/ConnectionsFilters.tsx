@@ -9,11 +9,17 @@ import { SearchInput } from "components/ui/SearchInput";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
 import styles from "./ConnectionsFilters.module.scss";
-import { getAvailableDestinationOptions, getAvailableSourceOptions, statusFilterOptions } from "./filterOptions";
+import {
+  getAvailableDestinationOptions,
+  getAvailableSourceOptions,
+  stateFilterOptions,
+  statusFilterOptions,
+} from "./filterOptions";
 
 export interface FilterValues {
   search: string;
   status: string | null;
+  state: string | null;
   source: string | null;
   destination: string | null;
 }
@@ -24,7 +30,7 @@ interface ConnectionsTableFiltersProps {
   setSearchFilter: (value: string) => void;
   filterValues: FilterValues;
   setFilterValue: (key: keyof FilterValues, value: string | null) => void;
-  setFilters: (filters: FilterValues) => void;
+  resetFilters: () => void;
 }
 
 export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
@@ -33,7 +39,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   setSearchFilter,
   filterValues,
   setFilterValue,
-  setFilters,
+  resetFilters,
 }) => {
   const availableSourceOptions = useMemo(
     () => getAvailableSourceOptions(connections, filterValues.destination),
@@ -45,7 +51,11 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   );
 
   const hasAnyFilterSelected =
-    !!filterValues.status || !!filterValues.source || !!filterValues.destination || searchFilter;
+    !!filterValues.status ||
+    !!filterValues.source ||
+    !!filterValues.state ||
+    !!filterValues.destination ||
+    searchFilter;
 
   return (
     <Box p="lg">
@@ -54,6 +64,16 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
           <SearchInput value={searchFilter} onChange={({ target: { value } }) => setSearchFilter(value)} />
         </FlexItem>
         <FlexContainer gap="sm" alignItems="center">
+          <FlexItem>
+            <ListBox
+              buttonClassName={styles.filterButton}
+              optionClassName={styles.filterOption}
+              optionTextAs="span"
+              options={stateFilterOptions}
+              selectedValue={filterValues.state}
+              onSelect={(value) => setFilterValue("state", value)}
+            />
+          </FlexItem>
           <FlexItem>
             <ListBox
               buttonClassName={styles.filterButton}
@@ -87,16 +107,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
           </FlexItem>
           {hasAnyFilterSelected && (
             <FlexItem>
-              <ClearFiltersButton
-                onClick={() => {
-                  setFilters({
-                    search: "",
-                    status: null,
-                    source: null,
-                    destination: null,
-                  });
-                }}
-              />
+              <ClearFiltersButton onClick={resetFilters} />
             </FlexItem>
           )}
         </FlexContainer>

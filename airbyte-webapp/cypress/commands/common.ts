@@ -22,7 +22,7 @@ const setInputValue = (name: string, value: string) => {
 export const selectFromDropdown = (dropdownContainer: string, value: string) => {
   cy.get(dropdownContainer).within(() => {
     cy.get("button").click();
-    cy.get(`li[role="option"]`).contains(value).click();
+    cy.get(`li[role="option"]`).contains(value).click({ force: true });
   });
 };
 
@@ -41,7 +41,6 @@ export const deleteEntity = () => {
 };
 
 export const clearApp = () => {
-  indexedDB.deleteDatabase("firebaseLocalStorageDb");
   cy.clearLocalStorage();
   cy.clearCookies();
 };

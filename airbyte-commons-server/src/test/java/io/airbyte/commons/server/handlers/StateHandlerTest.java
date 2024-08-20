@@ -19,7 +19,6 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.GlobalState;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.StreamState;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.SyncIsRunningException;
@@ -97,8 +96,8 @@ class StateHandlerTest {
         .stateType(ConnectionStateType.GLOBAL)
         .streamState(null)
         .globalState(new GlobalState().sharedState(JSON_BLOB).streamStates(List.of(
-            new StreamState().streamDescriptor(ProtocolConverters.streamDescriptorToApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
-            new StreamState().streamDescriptor(ProtocolConverters.streamDescriptorToApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB))));
+            new StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
+            new StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB))));
     final ConnectionState actual = stateHandler.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
     assertEquals(expected, actual);
   }
@@ -120,8 +119,8 @@ class StateHandlerTest {
         .connectionId(CONNECTION_ID)
         .stateType(ConnectionStateType.STREAM)
         .streamState(List.of(
-            new StreamState().streamDescriptor(ProtocolConverters.streamDescriptorToApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
-            new StreamState().streamDescriptor(ProtocolConverters.streamDescriptorToApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB)));
+            new StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
+            new StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB)));
     final ConnectionState actual = stateHandler.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
     assertEquals(expected, actual);
   }
@@ -169,6 +168,11 @@ class StateHandlerTest {
         .connectionState(new ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB));
     when(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.of(new JobRead()));
     assertThrows(SyncIsRunningException.class, () -> stateHandler.createOrUpdateStateSafe(input));
+  }
+
+  private static io.airbyte.api.model.generated.StreamDescriptor toApi(final StreamDescriptor protocolStreamDescriptor) {
+    return new io.airbyte.api.model.generated.StreamDescriptor().name(protocolStreamDescriptor.getName())
+        .namespace(protocolStreamDescriptor.getNamespace());
   }
 
 }

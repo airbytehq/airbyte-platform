@@ -8,11 +8,11 @@ import { Button } from "components/ui/Button";
 
 import { useSuggestedSources } from "area/connector/utils";
 import { useCreateSource, useSourceDefinitionList } from "core/api";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
 
-import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./SelectSource";
+import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./DefineSource";
 
 export const SOURCE_DEFINITION_PARAM = "sourceDefinitionId";
 
@@ -21,7 +21,6 @@ export const CreateNewSource: React.FC = () => {
   const selectedSourceDefinitionId = searchParams.get(SOURCE_DEFINITION_PARAM);
   const suggestedSourceDefinitionIds = useSuggestedSources();
   const { sourceDefinitions } = useSourceDefinitionList();
-  const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createSource } = useCreateSource();
 
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -56,20 +55,18 @@ export const CreateNewSource: React.FC = () => {
 
   if (selectedSourceDefinitionId) {
     return (
-      <Box px="md">
-        <PageContainer centered>
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-          <SourceForm
-            selectedSourceDefinitionId={selectedSourceDefinitionId}
-            sourceDefinitions={sourceDefinitions}
-            onSubmit={onCreateSource}
-          />
-        </PageContainer>
-      </Box>
+      <PageContainer centered>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
+        <SourceForm
+          selectedSourceDefinitionId={selectedSourceDefinitionId}
+          sourceDefinitions={sourceDefinitions}
+          onSubmit={onCreateSource}
+        />
+      </PageContainer>
     );
   }
 

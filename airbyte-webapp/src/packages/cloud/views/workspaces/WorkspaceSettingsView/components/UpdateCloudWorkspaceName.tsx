@@ -8,8 +8,8 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useInvalidateWorkspace } from "core/api";
 import { useUpdateCloudWorkspace } from "core/api/cloud";
+import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
 interface WorkspaceFormValues {
@@ -24,10 +24,9 @@ export const UpdateCloudWorkspaceName: React.FC = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: updateCloudWorkspace } = useUpdateCloudWorkspace();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
-  const { workspaceId, name, email } = useCurrentWorkspace();
+  const { workspaceId, organizationId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async ({ name }: WorkspaceFormValues) => {
     await updateCloudWorkspace({

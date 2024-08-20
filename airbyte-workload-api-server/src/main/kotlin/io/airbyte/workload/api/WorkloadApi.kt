@@ -23,13 +23,13 @@ import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.handler.DefaultDeadlineValues
 import io.airbyte.workload.handler.WorkloadHandler
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.GEOGRAPHY_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.MUTEX_KEY_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_REASON_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_SOURCE_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.DATA_PLANE_ID_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.GEOGRAPHY_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.MUTEX_KEY_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_CANCEL_REASON_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_CANCEL_SOURCE_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_TYPE_TAG
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -88,12 +88,12 @@ open class WorkloadApi(
     ) @Body workloadCreateRequest: WorkloadCreateRequest,
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf(
+      mutableMapOf<String, Any?>(
         GEOGRAPHY_TAG to workloadCreateRequest.geography,
         MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
         WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
         WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
-      ) as Map<String, Any>?,
+      ),
     )
     if (workloadHandler.workloadAlreadyExists(workloadCreateRequest.workloadId)) {
       return HttpResponse.status(HttpStatus.OK)

@@ -8,15 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -32,52 +35,44 @@ import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.DetachedTestCase"})
 class ApplicationServiceKeycloakImplTests {
 
-  public static final String TEST_1 = "test1";
-  public static final String TEST_2 = "test2";
-  @Mock
-  private Keycloak keycloakClient;
+  private static final String TEST_1 = "test1";
+  private static final String TEST_2 = "test2";
+  private static final String REALM_NAME = "testRealm";
+
   private AirbyteKeycloakConfiguration keycloakConfiguration;
-  @Mock
-  private RealmResource realmResource;
-  @Mock
-  ClientsResource clientsResource;
-  @Mock
-  ClientResource clientResource;
-  @Mock
-  UsersResource usersResource;
-  @Mock
-  UserResource userResource;
+
+  private final Keycloak keycloakClient = mock(Keycloak.class);
+  private final RealmResource realmResource = mock(RealmResource.class);
+  private final ClientsResource clientsResource = mock(ClientsResource.class);
+  private final ClientResource clientResource = mock(ClientResource.class);
+  private final UsersResource usersResource = mock(UsersResource.class);
+  private final UserResource userResource = mock(UserResource.class);
+  private final ClientScopeConfigurator clientScopeConfigurator = mock(ClientScopeConfigurator.class);
 
   private ApplicationServiceKeycloakImpl apiKeyServiceKeycloakImpl;
 
   @BeforeEach
   void setUp() {
     keycloakConfiguration = new AirbyteKeycloakConfiguration();
-    keycloakConfiguration.setClientRealm("airbyte-client-realm");
     keycloakConfiguration.setProtocol("http");
     keycloakConfiguration.setHost("localhost:8080");
 
-    MockitoAnnotations.openMocks(this);
+    when(keycloakClient.realm(REALM_NAME)).thenReturn(realmResource);
+    when(realmResource.clients()).thenReturn(clientsResource);
+    when(realmResource.users()).thenReturn(usersResource);
+
+    when(clientsResource.create(any(ClientRepresentation.class)))
+        .thenReturn(Response.created(URI.create("https://company.example")).build());
 
     apiKeyServiceKeycloakImpl = spy(new ApplicationServiceKeycloakImpl(
         keycloakClient,
-        keycloakConfiguration));
-
-    when(keycloakClient.realm(keycloakConfiguration.getClientRealm())).thenReturn(realmResource);
-    when(keycloakClient.realm(keycloakConfiguration.getClientRealm()).clients()).thenReturn(clientsResource);
-    when(keycloakClient.realm(keycloakConfiguration.getClientRealm()).users()).thenReturn(usersResource);
-
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .create(any(ClientRepresentation.class))).thenReturn(Response.created(URI.create("https://company.example")).build());
+        keycloakConfiguration,
+        clientScopeConfigurator,
+        Duration.ofMinutes(30)));
   }
 
   // TODO: Add this test back in, got tired of fighting mocks.
@@ -89,37 +84,19 @@ class ApplicationServiceKeycloakImplTests {
         .when(apiKeyServiceKeycloakImpl)
         .listApplicationsByUser(user);
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(any()))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
+    when(clientsResource.findByClientId(any()))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .get(any())).thenReturn(clientResource);
+    when(clientsResource.get(any())).thenReturn(clientResource);
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .get(any())
-            .getServiceAccountUser()).thenReturn(new UserRepresentation());
+    when(clientsResource.get(any()).getServiceAccountUser())
+        .thenReturn(new UserRepresentation());
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .users()
-            .get(any())).thenReturn(userResource);
+    when(usersResource.get(any()))
+        .thenReturn(userResource);
 
-    doNothing().when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .users()
-            .get(any()))
+    doNothing()
+        .when(usersResource.get(any()))
         .update(any(UserRepresentation.class));
 
     final var apiKey1 = apiKeyServiceKeycloakImpl.createApplication(
@@ -129,12 +106,8 @@ class ApplicationServiceKeycloakImplTests {
     assert TEST_1.equals(apiKey1.getName());
     assert apiKey1.getClientId().equals(user.getUserId() + "-0");
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(buildClientId("bf0cc898-4a99-4dc1-834d-26b2ba57fdeb", "1")))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_2, 1)));
+    when(clientsResource.findByClientId(buildClientId("bf0cc898-4a99-4dc1-834d-26b2ba57fdeb", "1")))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_2, 1)));
 
     doReturn(List.of(buildClientRepresentation(user, TEST_1, 0)))
         .when(apiKeyServiceKeycloakImpl)
@@ -184,12 +157,8 @@ class ApplicationServiceKeycloakImplTests {
         .when(apiKeyServiceKeycloakImpl)
         .listApplicationsByUser(user);
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(buildClientId("4bb2a760-a0b6-4936-aea0-a13fada349f4", "0")))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
+    when(clientsResource.findByClientId(buildClientId("4bb2a760-a0b6-4936-aea0-a13fada349f4", "0")))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
 
     assertThrows(
         BadRequestException.class,
@@ -199,22 +168,15 @@ class ApplicationServiceKeycloakImplTests {
   @Test
   void testBadKeycloakCreateResponse() {
     final var user = new User().withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"));
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .create(any(ClientRepresentation.class))).thenReturn(Response.status(500).build());
+    when(clientsResource.create(any(ClientRepresentation.class)))
+        .thenReturn(Response.status(500).build());
 
     doReturn(Collections.emptyList())
         .when(apiKeyServiceKeycloakImpl)
         .listApplicationsByUser(user);
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(buildClientId("b3600891-e7c7-4278-8a94-8b838985de2a", "0")))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
+    when(clientsResource.findByClientId(buildClientId("b3600891-e7c7-4278-8a94-8b838985de2a", "0")))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
 
     assertThrows(
         BadRequestException.class,
@@ -294,12 +256,8 @@ class ApplicationServiceKeycloakImplTests {
         user,
         TEST_2);
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(buildClientId("f81780ef-148e-413d-8e00-6e755e4e2256", "0")))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
+    when(clientsResource.findByClientId(buildClientId("f81780ef-148e-413d-8e00-6e755e4e2256", "0")))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_1, 0)));
     apiKeyServiceKeycloakImpl.deleteApplication(user, apiKey1.getId());
 
     doReturn(List.of(
@@ -312,12 +270,8 @@ class ApplicationServiceKeycloakImplTests {
     assert apiKeys.size() == 1;
     assert "f81780ef-148e-413d-8e00-6e755e4e2256-0".equals(apiKeys.get(0).getId());
 
-    when(
-        keycloakClient
-            .realm(keycloakConfiguration.getClientRealm())
-            .clients()
-            .findByClientId(buildClientId("f81780ef-148e-413d-8e00-6e755e4e2256", "0")))
-                .thenReturn(List.of(buildClientRepresentation(user, TEST_2, 0)));
+    when(clientsResource.findByClientId(buildClientId("f81780ef-148e-413d-8e00-6e755e4e2256", "0")))
+        .thenReturn(List.of(buildClientRepresentation(user, TEST_2, 0)));
     apiKeyServiceKeycloakImpl.deleteApplication(user, "f81780ef-148e-413d-8e00-6e755e4e2256-0");
 
     doReturn(Collections.emptyList())

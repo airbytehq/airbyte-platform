@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -19,7 +18,6 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
@@ -27,7 +25,9 @@ import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -47,9 +47,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
@@ -65,6 +63,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test the JobInputHandler.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class JobInputHandlerTest {
 
   private static JobPersistence jobPersistence;
@@ -92,7 +91,6 @@ class JobInputHandlerTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
-  private FeatureFlags featureFlags;
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
@@ -104,13 +102,10 @@ class JobInputHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
-    oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
-    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     job = mock(Job.class);
     featureFlagClient = new TestClient(new HashMap<>());
-    featureFlags = mock(FeatureFlags.class);
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -118,7 +113,6 @@ class JobInputHandlerTest {
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         configRepository,
-        featureFlags,
         featureFlagClient,
         oAuthConfigSupplier,
         configInjector,
@@ -150,7 +144,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
+  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -191,8 +185,6 @@ class JobInputHandlerTest {
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
         .withIsReset(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
@@ -238,7 +230,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetResetSyncWorkflowInput() throws IOException, ApiException, JsonValidationException, ConfigNotFoundException {
+  void testGetResetSyncWorkflowInput() throws IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     when(stateHandler.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
@@ -266,8 +258,6 @@ class JobInputHandlerTest {
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(Jsons.emptyObject())
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true);
 

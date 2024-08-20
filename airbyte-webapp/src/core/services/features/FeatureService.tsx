@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
-import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
+import { AuthConfigurationMode, InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -17,7 +17,7 @@ const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
 
 const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
   return {
-    [FeatureItem.KeycloakAuthentication]: !!instanceConfig.auth,
+    [FeatureItem.APITokenManagement]: instanceConfig.auth.mode !== AuthConfigurationMode.none,
   };
 };
 

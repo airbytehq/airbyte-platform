@@ -10,12 +10,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class KubePortManagerSingletonTest {
 
-  static final HashSet<Integer> PORTS = new HashSet<>(List.of(1, 2, 3, 4));
-  static final HashSet<Integer> DIFFERENT_PORTS = new HashSet<>(List.of(5, 6, 7, 8));
+  static final Set<Integer> PORTS = new HashSet<>(List.of(1, 2, 3, 4));
+  static final Set<Integer> DIFFERENT_PORTS = new HashSet<>(List.of(5, 6, 7, 8));
 
   @Test
   void testInitialization() throws InterruptedException {

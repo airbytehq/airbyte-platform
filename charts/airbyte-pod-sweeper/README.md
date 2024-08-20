@@ -1,6 +1,6 @@
 # pod-sweeper
 
-![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.67.17](https://img.shields.io/badge/Version-0.67.17-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte-pod-sweeper
 
@@ -30,9 +30,6 @@ Helm chart to deploy airbyte-pod-sweeper
 | global.logs.accessKey.existingSecret | string | `""` |  |
 | global.logs.accessKey.existingSecretKey | string | `""` |  |
 | global.logs.accessKey.password | string | `"minio"` |  |
-| global.logs.externalMinio.enabled | bool | `false` |  |
-| global.logs.externalMinio.host | string | `"localhost"` |  |
-| global.logs.externalMinio.port | int | `9000` |  |
 | global.logs.gcs.bucket | string | `""` |  |
 | global.logs.gcs.credentials | string | `""` |  |
 | global.logs.gcs.credentialsJson | string | `""` |  |

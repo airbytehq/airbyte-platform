@@ -11,7 +11,9 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -20,7 +22,6 @@ import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -135,7 +136,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
-      final StreamDescriptor s = streamsToReset.poll();
+      final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
       perStreamMessages.add(buildNullStreamStateMessage(s));
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
@@ -175,7 +176,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started' and one 'complete' message.
       // The single null state message is to be emitted by the caller.
-      final StreamDescriptor s = streamsToReset.poll();
+      final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
     }
@@ -194,7 +195,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     return streamsToResetDescriptors.containsAll(catalogStreamDescriptors);
   }
 
-  private AirbyteMessage buildNullStreamStateMessage(final StreamDescriptor stream) {
+  private AirbyteMessage buildNullStreamStateMessage(final io.airbyte.protocol.models.StreamDescriptor stream) {
     return new AirbyteMessage()
         .withType(Type.STATE)
         .withState(
@@ -202,9 +203,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
                 .withType(AirbyteStateType.STREAM)
                 .withStream(
                     new AirbyteStreamState()
-                        .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor()
-                            .withName(stream.getName())
-                            .withNamespace(stream.getNamespace()))
+                        .withStreamDescriptor(stream)
                         .withStreamState(null)));
   }
 
@@ -239,7 +238,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
       final io.airbyte.protocol.models.StreamDescriptor streamDescriptor = new io.airbyte.protocol.models.StreamDescriptor()
           .withName(configStreamDescriptor.getName())
           .withNamespace(configStreamDescriptor.getNamespace());
-      if (!currentState.getGlobal().getStreamStates().stream().map(streamState -> streamState.getStreamDescriptor()).toList()
+      if (!currentState.getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor).toList()
           .contains(streamDescriptor)) {
         globalState.getStreamStates().add(new AirbyteStreamState()
             .withStreamDescriptor(streamDescriptor)

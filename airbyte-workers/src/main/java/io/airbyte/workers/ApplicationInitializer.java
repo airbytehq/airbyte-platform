@@ -6,21 +6,20 @@ package io.airbyte.workers;
 
 import datadog.trace.api.GlobalTracer;
 import datadog.trace.api.Tracer;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.TemporalInitializationUtils;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.MaxWorkersConfig;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
-import io.airbyte.workers.temporal.scheduling.NotificationWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
+import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
 import io.airbyte.workers.tracing.TemporalSdkInterceptor;
 import io.micronaut.context.annotation.Requires;
@@ -71,17 +70,10 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Inject
   @Named("discoverActivities")
   private Optional<List<Object>> discoverActivities;
-
-  @Inject
-  @Named("notificationActivities")
-  private Optional<List<Object>> notificationActivities;
-
   @Inject
   @Named(TaskExecutors.IO)
   private ExecutorService executorService;
 
-  @Inject
-  private Optional<LogConfigs> logConfigs;
   @Value("${airbyte.worker.check.max-workers}")
   private Integer maxCheckWorkers;
   @Value("${airbyte.worker.notify.max-workers}")
@@ -102,8 +94,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private boolean shouldRunGetSpecWorkflows;
   @Value("${airbyte.worker.sync.enabled}")
   private boolean shouldRunSyncWorkflows;
-  @Value("${airbyte.worker.notify.enabled}")
-  private boolean shouldRunNotifyWorkflows;
 
   @Inject
   @Named("specActivities")
@@ -137,6 +127,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private String discoverTaskQueue;
   @Inject
   private Environment environment;
+  @Inject
+  private LogClientManager logClientManager;
 
   @Override
   public void onApplicationEvent(final ServiceReadyEvent event) {
@@ -169,8 +161,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     log.info("Initializing common worker dependencies.");
 
     // Configure logging client
-    LogClientSingleton.getInstance().setWorkspaceMdc(workerEnvironment, logConfigs.orElseThrow(),
-        Path.of(workspaceRoot, SCHEDULER_LOGS));
+    logClientManager.setWorkspaceMdc(Path.of(workspaceRoot, SCHEDULER_LOGS));
 
     if (environment.getActiveNames().contains(Environment.KUBERNETES)) {
       KubePortManagerSingleton.init(temporalWorkerPorts);
@@ -201,19 +192,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     if (shouldRunConnectionManagerWorkflows) {
       registerConnectionManager(workerFactory, maxWorkersConfiguration);
     }
-
-    if (shouldRunNotifyWorkflows) {
-      registerNotification(workerFactory, maxWorkersConfiguration);
-    }
-  }
-
-  private void registerNotification(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfig) {
-    log.info("registering new notification workflow");
-    final Worker notificationWorker = factory.newWorker(TemporalJobType.NOTIFY.name(), getWorkerOptions(maxWorkersConfig.getMaxNotifyWorkers()));
-    final WorkflowImplementationOptions options =
-        WorkflowImplementationOptions.newBuilder().setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
-    notificationWorker.registerWorkflowImplementationTypes(options, temporalProxyHelper.proxyWorkflowClass(NotificationWorkflowImpl.class));
-    notificationWorker.registerActivitiesImplementations(notificationActivities.orElseThrow().toArray(new Object[] {}));
   }
 
   private void registerCheckConnection(final WorkerFactory factory,
@@ -260,7 +238,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       discoverWorker
           .registerWorkflowImplementationTypes(options,
-              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogWorkflowImpl.class));
+              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogWorkflowImpl.class),
+              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogAndAutoPropagateWorkflowImpl.class));
       discoverWorker.registerActivitiesImplementations(
           discoverActivities.orElseThrow().toArray(new Object[] {}));
       log.info("Discover Workflow registered.");

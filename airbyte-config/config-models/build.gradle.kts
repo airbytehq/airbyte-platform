@@ -5,8 +5,6 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   id("com.github.eirnym.js2p")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -14,23 +12,20 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
 
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
+  implementation(libs.bundles.datadog)
   implementation(libs.bundles.jackson)
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
   implementation(libs.micronaut.kotlin.extension.functions)
-  implementation(libs.google.cloud.storage)
-  implementation(libs.aws.java.sdk.s3)
-  implementation(libs.aws.java.sdk.sts)
-  implementation(libs.s3)
-  implementation(libs.sts)
   implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
   implementation(libs.commons.io)
@@ -46,7 +41,7 @@ dependencies {
 jsonSchema2Pojo {
   setSourceType(SourceType.YAMLSCHEMA.name)
   setSource(files("${sourceSets["main"].output.resourcesDir}/types"))
-  targetDirectory = file("$buildDir/generated/src/gen/java/")
+  targetDirectory = file("${project.layout.buildDirectory.get()}/generated/src/gen/java/")
 
   targetPackage = "io.airbyte.config"
   useLongIntegers = true
@@ -84,11 +79,5 @@ tasks.register<Test>("logClientsIntegrationTest") {
   }
   testLogging {
     events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
-}
-
-afterEvaluate {
-  tasks.named("kaptGenerateStubsKotlin") {
-    dependsOn(tasks.named("generateJsonSchema2Pojo"))
   }
 }

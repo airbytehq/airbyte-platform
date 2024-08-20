@@ -16,7 +16,6 @@ import { defaultOssFeatures, defaultEnterpriseFeatures, FeatureService } from "c
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
 import { isDevelopment } from "core/utils/isDevelopment";
-import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
@@ -24,7 +23,6 @@ import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 
 import LoadingPage from "./components/LoadingPage";
-import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
@@ -38,21 +36,19 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
     <AnalyticsProvider
       disableSegment={instanceConfig.trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment}
     >
-      <AppMonitoringServiceProvider>
-        <FeatureService features={instanceFeatures} instanceConfig={instanceConfig}>
-          <NotificationService>
-            <OSSAuthService>
-              <ConfirmationModalService>
-                <ModalServiceProvider>
-                  <FormChangeTrackerService>
-                    <HelmetProvider>{children}</HelmetProvider>
-                  </FormChangeTrackerService>
-                </ModalServiceProvider>
-              </ConfirmationModalService>
-            </OSSAuthService>
-          </NotificationService>
-        </FeatureService>
-      </AppMonitoringServiceProvider>
+      <FeatureService features={instanceFeatures} instanceConfig={instanceConfig}>
+        <NotificationService>
+          <OSSAuthService>
+            <ConfirmationModalService>
+              <ModalServiceProvider>
+                <FormChangeTrackerService>
+                  <HelmetProvider>{children}</HelmetProvider>
+                </FormChangeTrackerService>
+              </ModalServiceProvider>
+            </ConfirmationModalService>
+          </OSSAuthService>
+        </NotificationService>
+      </FeatureService>
     </AnalyticsProvider>
   );
 };
@@ -61,7 +57,7 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <AirbyteThemeProvider>
-        <I18nProvider locale="en" messages={en}>
+        <I18nProvider>
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>

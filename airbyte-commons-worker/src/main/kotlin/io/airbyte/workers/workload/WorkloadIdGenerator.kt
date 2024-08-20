@@ -35,6 +35,23 @@ class WorkloadIdGenerator {
     return "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
   }
 
+  fun generateDiscoverWorkloadIdV2(
+    actorId: UUID,
+    timestampMs: Long,
+  ): String {
+    return "${actorId}_${timestampMs}_discover"
+  }
+
+  fun generateDiscoverWorkloadIdV2WithSnap(
+    actorId: UUID,
+    timestampMs: Long,
+    windowWidthMs: Long,
+  ): String {
+    val snapped = timestampMs - (timestampMs % windowWidthMs)
+
+    return generateDiscoverWorkloadIdV2(actorId, snapped)
+  }
+
   fun generateSpecWorkloadId(differentiator: String): String {
     return "${differentiator}_spec"
   }

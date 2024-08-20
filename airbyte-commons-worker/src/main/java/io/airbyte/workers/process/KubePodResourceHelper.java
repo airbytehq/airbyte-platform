@@ -27,7 +27,7 @@ public class KubePodResourceHelper {
       final List<ContainerStatus> mainContainerStatuses = pod.getStatus()
           .getContainerStatuses()
           .stream()
-          .filter(containerStatus -> containerStatus.getName().equals(KubePodProcess.MAIN_CONTAINER_NAME))
+          .filter(containerStatus -> (KubePodProcess.MAIN_CONTAINER_NAME).equals(containerStatus.getName()))
           .collect(Collectors.toList());
 
       return mainContainerStatuses.size() == 1 && mainContainerStatuses.get(0).getState() != null

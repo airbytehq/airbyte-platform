@@ -84,7 +84,7 @@ class KubePodLauncherTest {
     val pod: Pod = mockk()
 
     assertThrows<IllegalStateException> {
-      kubePodLauncher.waitForPodInit(
+      kubePodLauncher.waitForPodInitStartup(
         pod,
         Duration.ZERO,
       )
@@ -107,7 +107,7 @@ class KubePodLauncherTest {
 
   @Test
   fun `test fail to check if pod exist`() {
-    assertFalse(kubePodLauncher.podsExist(mapOf()))
+    assertFalse(kubePodLauncher.podsRunning(mapOf()))
 
     checkMetricSend("list")
   }

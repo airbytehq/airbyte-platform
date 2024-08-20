@@ -1,0 +1,10 @@
+@use "scss/variables";
+
+.content {
+  white-space: pre-line;
+  font-size: variables.$font-size-lg;
+
+  strong {
+    font-weight: 700;
+  }
+}

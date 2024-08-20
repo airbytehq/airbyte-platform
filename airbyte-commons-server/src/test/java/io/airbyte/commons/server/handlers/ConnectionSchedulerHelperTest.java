@@ -15,6 +15,10 @@ import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule;
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
 import io.airbyte.api.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.model.generated.ConnectionScheduleType;
+import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.config.BasicSchedule.TimeUnit;
 import io.airbyte.config.Schedule;
@@ -77,15 +81,15 @@ class ConnectionSchedulerHelperTest {
         ConnectionScheduleType.CRON, null));
     assertThrows(JsonValidationException.class,
         () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.BASIC, new ConnectionScheduleData()));
-    assertThrows(JsonValidationException.class,
+    assertThrows(CronValidationMissingCronProblem.class,
         () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()));
-    assertThrows(JsonValidationException.class,
+    assertThrows(CronValidationMissingComponentProblem.class,
         () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron())));
-    assertThrows(JsonValidationException.class,
+    assertThrows(CronValidationInvalidTimezoneProblem.class,
         () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron().cronExpression(EXPECTED_CRON_EXPRESSION).cronTimeZone("Etc/foo"))));
-    assertThrows(JsonValidationException.class,
+    assertThrows(CronValidationInvalidExpressionProblem.class,
         () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron().cronExpression("bad cron").cronTimeZone(EXPECTED_CRON_TIMEZONE))));
   }
@@ -95,10 +99,11 @@ class ConnectionSchedulerHelperTest {
     /*
      * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of
      * supported timezones is copied from
-     * oss/airbyte-webapp/src/components/connection/ConnectionForm/availableCronTimeZones.json. If this
-     * test fails, then THAT file must be updated with the new timezones.
+     * oss/airbyte-webapp/src/components/connection/ConnectionForm/ScheduleFormField/
+     * availableCronTimeZones.json. If this test fails, then THAT file must be updated with the new
+     * timezones.
      */
-    String[] timezoneStrings = {
+    final String[] timezoneStrings = {
       "Africa/Abidjan",
       "Africa/Accra",
       "Africa/Addis_Ababa",
@@ -657,7 +662,7 @@ class ConnectionSchedulerHelperTest {
       "WET",
       "Zulu"
     };
-    for (String expectedTimezone : timezoneStrings) {
+    for (final String expectedTimezone : timezoneStrings) {
       try {
         final StandardSync actual = new StandardSync();
         // NOTE: this method call is the one that parses the given timezone string
@@ -671,7 +676,7 @@ class ConnectionSchedulerHelperTest {
         assertEquals(ScheduleType.CRON, actual.getScheduleType());
         assertEquals(expectedTimezone, actual.getScheduleData().getCron().getCronTimeZone());
         assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().getCron().getCronExpression());
-      } catch (IllegalArgumentException | JsonValidationException e) {
+      } catch (final IllegalArgumentException | JsonValidationException e) {
         throw (RuntimeException) new RuntimeException(
             "One of the timezones is not supported - update oss/airbyte-webapp/src/components/connection/ConnectionForm/availableCronTimeZones.json!")
                 .initCause(e);

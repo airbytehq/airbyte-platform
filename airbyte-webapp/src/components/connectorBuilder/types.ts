@@ -5,8 +5,6 @@ import merge from "lodash/merge";
 import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import { match } from "ts-pattern";
-import * as yup from "yup";
-import { MixedSchema } from "yup/lib/mixed";
 
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import {
@@ -39,7 +37,6 @@ import {
   BasicHttpAuthenticatorType,
   DefaultErrorHandler,
   CompositeErrorHandler,
-  DefaultErrorHandlerBackoffStrategiesItem,
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
@@ -47,15 +44,21 @@ import {
   SessionTokenAuthenticatorType,
   SessionTokenRequestApiKeyAuthenticatorType,
   SessionTokenRequestBearerAuthenticatorType,
-  RequestOptionInjectInto,
   NoAuthType,
   HttpRequester,
   OAuthAuthenticatorRefreshTokenUpdater,
+  RecordSelector,
+  SimpleRetrieverPartitionRouter,
+  SimpleRetrieverPartitionRouterAnyOfItem,
+  CustomPartitionRouterType,
+  ConstantBackoffStrategy,
+  ExponentialBackoffStrategy,
+  WaitUntilTimeFromHeader,
+  WaitTimeFromHeader,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
-import { formatJson } from "./utils";
-import { FORM_PATTERN_ERROR } from "../../core/form/types";
+import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export interface BuilderState {
@@ -118,13 +121,25 @@ export type BuilderFormOAuthAuthenticator = Omit<
 export interface BuilderFormValues {
   global: {
     urlBase: string;
-    authenticator: BuilderFormAuthenticator;
+    authenticator: BuilderFormAuthenticator | YamlString;
   };
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
+  description?: string;
 }
+
+export interface StreamTestResults {
+  streamHash: string;
+  hasResponse: boolean;
+  responsesAreSuccessful: boolean;
+  hasRecords: boolean;
+  primaryKeysArePresent: boolean;
+  primaryKeysAreUnique: boolean;
+}
+
+type TestedStreams = Record<string, StreamTestResults>;
 
 export type RequestOptionOrPathInject = Omit<RequestOption, "type"> | { inject_into: "path" };
 
@@ -150,6 +165,7 @@ export interface BuilderParentStream {
   partition_field: string;
   parentStreamReference: string;
   request_option?: RequestOption;
+  incremental_dependency?: boolean;
 }
 
 export interface BuilderParameterizedRequests extends Omit<ListPartitionRouter, "values"> {
@@ -173,7 +189,11 @@ interface BuilderResponseFilter extends Omit<HttpResponseFilter, "http_codes"> {
 }
 
 export interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
-  backoff_strategy?: DefaultErrorHandlerBackoffStrategiesItem;
+  backoff_strategy?:
+    | (Omit<ConstantBackoffStrategy, "backoff_time_in_seconds"> & { backoff_time_in_seconds: number })
+    | (Omit<ExponentialBackoffStrategy, "factor"> & { factor?: number })
+    | (Omit<WaitUntilTimeFromHeader, "min_wait"> & { min_wait?: number })
+    | WaitTimeFromHeader;
   response_filter?: BuilderResponseFilter;
 }
 
@@ -221,6 +241,12 @@ export type BuilderRequestBody =
       value: string;
     };
 
+export interface BuilderRecordSelector {
+  fieldPath: string[];
+  filterCondition?: string;
+  normalizeToSchema: boolean;
+}
+
 export type YamlString = string;
 export const isYamlString = (value: unknown): value is YamlString => isString(value);
 
@@ -228,61 +254,44 @@ export interface BuilderStream {
   id: string;
   name: string;
   urlPath: string;
-  fieldPointer: string[];
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
   requestOptions: BuilderRequestOptions;
+  recordSelector?: BuilderRecordSelector | YamlString;
   paginator?: BuilderPaginator | YamlString;
   transformations?: BuilderTransformation[] | YamlString;
   incrementalSync?: BuilderIncrementalSync | YamlString;
-  parentStreams?: BuilderParentStream[];
-  parameterizedRequests?: BuilderParameterizedRequests[];
+  parentStreams?: BuilderParentStream[] | YamlString;
+  parameterizedRequests?: BuilderParameterizedRequests[] | YamlString;
   errorHandler?: BuilderErrorHandler[] | YamlString;
   schema?: string;
-  unsupportedFields?: Record<string, object>;
   autoImportSchema: boolean;
+  unknownFields?: YamlString;
+  testResults?: StreamTestResults;
 }
 
 type StreamName = string;
-// todo: add more component names to this type as more components support in YAML
-export type YamlSupportedComponentName = "paginator" | "errorHandler" | "transformations" | "incrementalSync";
+
+export interface YamlSupportedComponentName {
+  stream:
+    | "paginator"
+    | "errorHandler"
+    | "transformations"
+    | "incrementalSync"
+    | "recordSelector"
+    | "parameterizedRequests"
+    | "parentStreams";
+  global: "authenticator";
+}
 
 export interface BuilderMetadata {
   autoImportSchema: Record<StreamName, boolean>;
   yamlComponents?: {
-    streams: Record<StreamName, YamlSupportedComponentName[]>;
+    streams?: Record<StreamName, Array<YamlSupportedComponentName["stream"]>>;
+    global?: Array<YamlSupportedComponentName["global"]>;
   };
+  testedStreams?: TestedStreams;
 }
-
-export type ManifestValuePerComponentPerStream = Record<StreamName, Record<YamlSupportedComponentName, unknown>>;
-export const getManifestValuePerComponentPerStream = (
-  manifest: ConnectorManifest
-): ManifestValuePerComponentPerStream => {
-  if (manifest.metadata === undefined) {
-    return {};
-  }
-  const metadata = manifest.metadata as BuilderMetadata;
-  if (metadata?.yamlComponents?.streams === undefined) {
-    return {};
-  }
-  return Object.fromEntries(
-    Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
-      // this method is only called in UI mode, so we can assume full streams are found in definitions
-      const stream = manifest.definitions?.streams?.[streamName];
-      const manifestValuePerComponent = Object.fromEntries(
-        yamlComponentNames.map((yamlComponentName) =>
-          match(yamlComponentName)
-            .with("paginator", (name) => [name, stream?.retriever?.paginator])
-            .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
-            .with("transformations", (name) => [name, stream?.transformations])
-            .with("incrementalSync", (name) => [name, stream?.incremental_sync])
-            .otherwise(() => [])
-        )
-      );
-      return [streamName, manifestValuePerComponent];
-    })
-  );
-};
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
 export const OLDEST_SUPPORTED_CDK_VERSION = "0.29.0";
@@ -351,7 +360,6 @@ export const isEmptyOrDefault = (schema?: string) => {
 export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   name: "",
   urlPath: "",
-  fieldPointer: [],
   primaryKey: [],
   httpMethod: "GET",
   schema: DEFAULT_SCHEMA,
@@ -364,10 +372,12 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
     },
   },
   autoImportSchema: true,
+  unknownFields: undefined,
 };
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
+export const CUSTOM_PARTITION_ROUTER: CustomPartitionRouterType = "CustomPartitionRouter";
 
 export const NO_AUTH: NoAuthType = "NoAuth";
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
@@ -434,394 +444,6 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
   return regexBracketResult[2];
 }
 
-const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
-
-export type InjectIntoValue = RequestOptionInjectInto | "path";
-export const injectIntoOptions: Array<{ label: string; value: InjectIntoValue; fieldLabel?: string }> = [
-  { label: "Query Parameter", value: "request_parameter", fieldLabel: "Parameter Name" },
-  { label: "Header", value: "header", fieldLabel: "Header Name" },
-  { label: "Path", value: "path" },
-  { label: "Body data (urlencoded form)", value: "body_data", fieldLabel: "Key Name" },
-  { label: "Body JSON payload", value: "body_json", fieldLabel: "Key Name" },
-];
-
-const REQUIRED_ERROR = "form.empty.error";
-const strip = (schema: MixedSchema) => schema.strip();
-
-const nonPathRequestOptionSchema = yup
-  .object()
-  .shape({
-    inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required(REQUIRED_ERROR),
-  })
-  .notRequired()
-  .default(undefined);
-
-const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required(REQUIRED_ERROR)));
-
-const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
-
-const schemaIfNotDataFeed = (schema: yup.AnySchema) =>
-  yup.mixed().when("filter_mode", {
-    is: (val: string) => val !== "no_filter",
-    then: schema,
-  });
-
-const schemaIfRangeFilter = (schema: yup.AnySchema) =>
-  yup.mixed().when("filter_mode", {
-    is: (val: string) => val === "range",
-    then: schema,
-  });
-
-const jsonString = yup.string().test({
-  test: (val: string | undefined) => {
-    if (!val) {
-      return true;
-    }
-    try {
-      JSON.parse(val);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  message: "connectorBuilder.invalidJSON",
-});
-
-const errorHandlerSchema = yup
-  .array(
-    yup.object().shape({
-      max_retries: yupNumberOrEmptyString,
-      backoff_strategy: yup
-        .object()
-        .shape({
-          backoff_time_in_seconds: yup.mixed().when("type", {
-            is: (val: string) => val === "ConstantBackoffStrategy",
-            then: yupNumberOrEmptyString.required(REQUIRED_ERROR),
-            otherwise: strip,
-          }),
-          factor: yup.mixed().when("type", {
-            is: (val: string) => val === "ExponentialBackoffStrategy",
-            then: yupNumberOrEmptyString,
-            otherwise: strip,
-          }),
-          header: yup.mixed().when("type", {
-            is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
-            then: yup.string().required(REQUIRED_ERROR),
-            otherwise: strip,
-          }),
-          regex: yup.mixed().when("type", {
-            is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
-            then: yup.string(),
-            otherwise: strip,
-          }),
-          min_wait: yup.mixed().when("type", {
-            is: (val: string) => val === "WaitUntilTimeFromHeader",
-            then: yup.string(),
-            otherwise: strip,
-          }),
-        })
-        .notRequired()
-        .default(undefined),
-      response_filter: yup
-        .object()
-        .shape({
-          error_message_contains: yup.string(),
-          predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-          http_codes: yup.array(yup.string()).notRequired().default(undefined),
-          error_message: yup.string(),
-        })
-        .notRequired()
-        .default(undefined),
-    })
-  )
-  .notRequired()
-  .default(undefined);
-
-const apiKeyInjectIntoSchema = yup.mixed().when("type", {
-  is: API_KEY_AUTHENTICATOR,
-  then: nonPathRequestOptionSchema,
-  otherwise: strip,
-});
-
-const httpMethodSchema = yup.mixed().oneOf(["GET", "POST"]);
-
-const requestOptionsSchema = yup.object().shape({
-  requestParameters: keyValueListSchema,
-  requestHeaders: keyValueListSchema,
-  requestBody: yup.object().shape({
-    values: yup.mixed().when("type", {
-      is: (val: string) => val === "form_list" || val === "json_list",
-      then: keyValueListSchema,
-      otherwise: strip,
-    }),
-    value: yup
-      .mixed()
-      .when("type", {
-        is: (val: string) => val === "json_freeform",
-        then: jsonString,
-      })
-      .when("type", {
-        is: (val: string) => val === "string_freeform",
-        then: yup.string(),
-      }),
-  }),
-});
-
-export const authenticatorSchema = yup.object({
-  type: yup.string().required(REQUIRED_ERROR),
-  inject_into: apiKeyInjectIntoSchema,
-  token_refresh_endpoint: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup.string().required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  refresh_token_updater: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup
-      .object()
-      .shape({
-        refresh_token_name: yup.string(),
-      })
-      .default(undefined),
-    otherwise: strip,
-  }),
-  refresh_request_body: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: keyValueListSchema,
-    otherwise: strip,
-  }),
-  login_requester: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      url: yup.string().required(REQUIRED_ERROR),
-      authenticator: yup.object({
-        inject_into: apiKeyInjectIntoSchema,
-      }),
-      errorHandler: errorHandlerSchema,
-      httpMethod: httpMethodSchema,
-      requestOptions: requestOptionsSchema,
-    }),
-    otherwise: strip,
-  }),
-  session_token_path: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  expiration_duration: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.string(),
-    otherwise: strip,
-  }),
-  request_authentication: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      inject_into: yup.mixed().when("type", {
-        is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
-        then: nonPathRequestOptionSchema,
-        otherwise: strip,
-      }),
-    }),
-    otherwise: strip,
-  }),
-});
-
-export const globalSchema = yup.object().shape({
-  urlBase: yup.string().required(REQUIRED_ERROR),
-  authenticator: authenticatorSchema,
-});
-
-const maybeYamlSchema = (schema: yup.BaseSchema) => {
-  return yup.lazy((val) =>
-    isYamlString(val)
-      ? // eslint-disable-next-line no-template-curly-in-string
-        yup.string().test("is-valid-yaml", "${path} is not valid YAML", (value) => {
-          if (!value) {
-            return true;
-          }
-          try {
-            load(value);
-            return true;
-          } catch {
-            return false;
-          }
-        })
-      : schema
-  );
-};
-
-export const streamSchema = yup.object().shape({
-  name: yup.string().required(REQUIRED_ERROR),
-  urlPath: yup.string().required(REQUIRED_ERROR),
-  fieldPointer: yup.array().of(yup.string()),
-  primaryKey: yup.array().of(yup.string()),
-  httpMethod: httpMethodSchema,
-  requestOptions: requestOptionsSchema,
-  schema: jsonString,
-  paginator: maybeYamlSchema(
-    yup
-      .object()
-      .shape({
-        pageSizeOption: yup.mixed().when("strategy.page_size", {
-          is: (val: number) => Boolean(val),
-          then: nonPathRequestOptionSchema,
-          otherwise: strip,
-        }),
-        pageTokenOption: yup
-          .object()
-          .shape({
-            inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
-            field_name: yup.mixed().when("inject_into", {
-              is: "path",
-              then: strip,
-              otherwise: yup.string().required(REQUIRED_ERROR),
-            }),
-          })
-          .notRequired()
-          .default(undefined),
-        strategy: yup
-          .object({
-            page_size: yupNumberOrEmptyString,
-            cursor: yup.mixed().when("type", {
-              is: CURSOR_PAGINATION,
-              then: yup.object().shape({
-                cursor_value: yup.mixed().when("type", {
-                  is: "custom",
-                  then: yup.string().required(REQUIRED_ERROR),
-                  otherwise: strip,
-                }),
-                stop_condition: yup.mixed().when("type", {
-                  is: "custom",
-                  then: yup.string(),
-                  otherwise: strip,
-                }),
-                path: yup.mixed().when("type", {
-                  is: (val: string) => val !== "custom",
-                  then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                  otherwise: strip,
-                }),
-              }),
-              otherwise: strip,
-            }),
-            start_from_page: yup.mixed().when("type", {
-              is: PAGE_INCREMENT,
-              then: yupNumberOrEmptyString,
-              otherwise: strip,
-            }),
-          })
-          .notRequired()
-          .default(undefined),
-      })
-      .notRequired()
-      .default(undefined)
-  ),
-  parentStreams: yup
-    .array(
-      yup.object().shape({
-        parent_key: yup.string().required(REQUIRED_ERROR),
-        parentStreamReference: yup.string().required(REQUIRED_ERROR),
-        partition_field: yup.string().required(REQUIRED_ERROR),
-        request_option: nonPathRequestOptionSchema,
-      })
-    )
-    .notRequired()
-    .default(undefined),
-  parameterizedRequests: yup
-    .array(
-      yup.object().shape({
-        cursor_field: yup.string().required(REQUIRED_ERROR),
-        values: yup.object().shape({
-          value: yup.mixed().when("type", {
-            is: "list",
-            then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-            otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-          }),
-        }),
-        request_option: nonPathRequestOptionSchema,
-      })
-    )
-    .notRequired()
-    .default(undefined),
-  transformations: maybeYamlSchema(
-    yup
-      .array(
-        yup.object().shape({
-          path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
-          value: yup.mixed().when("type", {
-            is: (val: string) => val === "add",
-            then: yup.string().required(REQUIRED_ERROR),
-            otherwise: strip,
-          }),
-        })
-      )
-      .notRequired()
-      .default(undefined)
-  ),
-  errorHandler: maybeYamlSchema(errorHandlerSchema),
-  incrementalSync: maybeYamlSchema(
-    yup
-      .object()
-      .shape({
-        cursor_field: yup.string().required(REQUIRED_ERROR),
-        slicer: schemaIfNotDataFeed(
-          yup
-            .object()
-            .shape({
-              cursor_granularity: yup.string().required(REQUIRED_ERROR),
-              step: yup.string().required(REQUIRED_ERROR),
-            })
-            .default(undefined)
-        ),
-        start_datetime: yup.object().shape({
-          value: yup.mixed().when("type", {
-            is: (val: string) => val === "custom" || val === "user_input",
-            then: yup.string().required(REQUIRED_ERROR),
-            otherwise: strip,
-          }),
-        }),
-        end_datetime: schemaIfRangeFilter(
-          yup.object().shape({
-            value: yup.mixed().when("type", {
-              is: (val: string) => val === "custom" || val === "user_input",
-              then: yup.string().required(REQUIRED_ERROR),
-              otherwise: strip,
-            }),
-          })
-        ),
-        datetime_format: yup.string().notRequired().default(undefined),
-        cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-        start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
-        end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
-        stream_state_field_start: yup.string(),
-        stream_state_field_end: yup.string(),
-        lookback_window: yup.string(),
-      })
-      .notRequired()
-      .default(undefined)
-  ),
-});
-
-export const builderFormValidationSchema = yup.object().shape({
-  global: globalSchema,
-  streams: yup.array().min(1).of(streamSchema),
-});
-
-export const builderStateValidationSchema = yup.object().shape({
-  name: yup.string().required(REQUIRED_ERROR).max(256, "connectorBuilder.maxLength"),
-  mode: yup.mixed().oneOf(["ui", "yaml"]).required(REQUIRED_ERROR),
-  formValues: builderFormValidationSchema.required(REQUIRED_ERROR),
-  yaml: yup.string().required(REQUIRED_ERROR),
-  view: yup
-    .mixed()
-    .test(
-      "isValidView",
-      'Must be "global", "inputs", or a number',
-      (value) => typeof value === "number" || value === "global" || value === "inputs"
-    ),
-  testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
-});
-
 function splitUrl(url: string): { base: string; path: string } {
   const lastSlashIndex = url.lastIndexOf("/");
 
@@ -837,75 +459,67 @@ function splitUrl(url: string): { base: string; path: string } {
 }
 
 function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
-  builderValue: BuilderInput | YamlString | undefined,
-  convertFn: (builderValue: BuilderInput | undefined) => ManifestOutput | undefined
-) {
-  if (builderValue === undefined) {
-    return undefined;
-  }
+  builderValue: BuilderInput | YamlString,
+  convertFn: (builderValue: BuilderInput) => ManifestOutput
+): ManifestOutput {
   if (isYamlString(builderValue)) {
     return load(builderValue) as ManifestOutput;
   }
   return convertFn(builderValue);
 }
 
-function builderAuthenticatorToManifest(
-  globalSettings: BuilderFormValues["global"]
+export function builderAuthenticatorToManifest(
+  authenticator: BuilderFormAuthenticator
 ): HttpRequesterAuthenticator | undefined {
-  if (globalSettings.authenticator.type === "NoAuth") {
+  if (authenticator.type === "NoAuth") {
     return undefined;
   }
-  if (globalSettings.authenticator.type === "OAuthAuthenticator") {
-    const { access_token, token_expiry_date, ...refresh_token_updater } =
-      globalSettings.authenticator.refresh_token_updater ?? {};
+  if (authenticator.type === "OAuthAuthenticator") {
+    const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
     return {
-      ...globalSettings.authenticator,
-      refresh_token:
-        globalSettings.authenticator.grant_type === "client_credentials"
-          ? undefined
-          : globalSettings.authenticator.refresh_token,
+      ...authenticator,
+      refresh_token: authenticator.grant_type === "client_credentials" ? undefined : authenticator.refresh_token,
       refresh_token_updater:
-        globalSettings.authenticator.grant_type === "client_credentials" ||
-        !globalSettings.authenticator.refresh_token_updater
+        authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
           ? undefined
           : {
               ...refresh_token_updater,
               access_token_config_path: [
-                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.access_token),
+                extractInterpolatedConfigKey(authenticator.refresh_token_updater.access_token),
               ],
               token_expiry_date_config_path: [
-                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.token_expiry_date),
+                extractInterpolatedConfigKey(authenticator.refresh_token_updater.token_expiry_date),
               ],
-              refresh_token_config_path: [extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token!)],
+              refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
             },
-      refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
+      refresh_request_body: Object.fromEntries(authenticator.refresh_request_body),
     };
   }
-  if (globalSettings.authenticator.type === "ApiKeyAuthenticator") {
+  if (authenticator.type === "ApiKeyAuthenticator") {
     return {
-      ...globalSettings.authenticator,
+      ...authenticator,
       header: undefined,
-      api_token: globalSettings.authenticator.api_token,
+      api_token: authenticator.api_token,
     };
   }
-  if (globalSettings.authenticator.type === "BearerAuthenticator") {
+  if (authenticator.type === "BearerAuthenticator") {
     return {
-      ...globalSettings.authenticator,
-      api_token: globalSettings.authenticator.api_token,
+      ...authenticator,
+      api_token: authenticator.api_token,
     };
   }
-  if (globalSettings.authenticator.type === "BasicHttpAuthenticator") {
+  if (authenticator.type === "BasicHttpAuthenticator") {
     return {
-      ...globalSettings.authenticator,
-      username: globalSettings.authenticator.username,
-      password: globalSettings.authenticator.password,
+      ...authenticator,
+      username: authenticator.username,
+      password: authenticator.password,
     };
   }
-  if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
-    const builderLoginRequester = globalSettings.authenticator.login_requester;
+  if (authenticator.type === "SessionTokenAuthenticator") {
+    const builderLoginRequester = authenticator.login_requester;
     const { base, path } = splitUrl(builderLoginRequester.url ?? "");
     return {
-      ...globalSettings.authenticator,
+      ...authenticator,
       login_requester: {
         type: "HttpRequester",
         url_base: base,
@@ -919,7 +533,7 @@ function builderAuthenticatorToManifest(
       },
     };
   }
-  return globalSettings.authenticator as HttpRequesterAuthenticator;
+  return authenticator as HttpRequesterAuthenticator;
 }
 
 function pathToSafeJinjaAccess(path: string[]): string {
@@ -1047,28 +661,34 @@ export function builderIncrementalSyncToManifest(
   };
 }
 
-function builderStreamPartitionRouterToManifest(
-  values: BuilderFormValues,
-  parentStreams: BuilderStream["parentStreams"],
-  parameterizedRequests: BuilderStream["parameterizedRequests"],
-  visitedStreams: string[]
-): Array<ListPartitionRouter | SubstreamPartitionRouter> | undefined {
-  let substreamPartitionRouters: SubstreamPartitionRouter[] | undefined = undefined;
-  if (parentStreams && parentStreams.length > 0) {
-    substreamPartitionRouters = parentStreams.map((parentStreamConfiguration) => {
-      const parentStream = values.streams.find(({ id }) => id === parentStreamConfiguration.parentStreamReference);
+export function builderParameterizedRequestsToManifest(
+  parameterizedRequests: BuilderParameterizedRequests[] | undefined
+): ListPartitionRouter[] {
+  if (!parameterizedRequests || parameterizedRequests.length === 0) {
+    return [];
+  }
+
+  return parameterizedRequests.map((parameterizedRequest) => {
+    return {
+      ...parameterizedRequest,
+      values: parameterizedRequest.values.value,
+    };
+  });
+}
+
+export function builderParentStreamsToManifest(
+  parentStreams: BuilderParentStream[] | undefined,
+  builderStreams: BuilderStream[]
+): SubstreamPartitionRouter[] {
+  if (!parentStreams || parentStreams.length === 0) {
+    return [];
+  }
+
+  const substreamPartitionRouters: SubstreamPartitionRouter[] = parentStreams
+    .map((parentStreamConfiguration): SubstreamPartitionRouter | undefined => {
+      const parentStream = builderStreams.find(({ id }) => id === parentStreamConfiguration.parentStreamReference);
       if (!parentStream) {
-        return {
-          type: "SubstreamPartitionRouter",
-          parent_stream_configs: [],
-        };
-      }
-      if (visitedStreams.includes(parentStream.id)) {
-        // circular dependency
-        return {
-          type: "SubstreamPartitionRouter",
-          parent_stream_configs: [],
-        };
+        return undefined;
       }
       return {
         type: "SubstreamPartitionRouter",
@@ -1079,24 +699,35 @@ function builderStreamPartitionRouterToManifest(
             request_option: parentStreamConfiguration.request_option,
             partition_field: parentStreamConfiguration.partition_field,
             stream: streamRef(parentStream.name),
+            incremental_dependency: parentStreamConfiguration.incremental_dependency ? true : undefined,
           },
         ],
       };
-    });
-  }
+    })
+    .filter(
+      (substreamPartitionRouter): substreamPartitionRouter is SubstreamPartitionRouter =>
+        substreamPartitionRouter !== undefined
+    );
 
-  let listPartitionRouters: ListPartitionRouter[] | undefined = undefined;
-  if (parameterizedRequests && parameterizedRequests.length > 0) {
-    listPartitionRouters = parameterizedRequests.map((parameterizedRequest) => {
-      return {
-        ...parameterizedRequest,
-        values: parameterizedRequest.values.value,
-      };
-    });
-  }
+  return substreamPartitionRouters;
+}
 
-  const combinedPartitionRouters = [...(substreamPartitionRouters ?? []), ...(listPartitionRouters ?? [])];
-  return combinedPartitionRouters.length > 0 ? combinedPartitionRouters : undefined;
+function combinePartitionRouters(
+  ...partitionRouters: SimpleRetrieverPartitionRouterAnyOfItem[]
+): SimpleRetrieverPartitionRouter | undefined {
+  // filter out anything that doesn't have a supported type
+  const filteredPartitionRouters = filterPartitionRouterToType(partitionRouters, [
+    "ListPartitionRouter",
+    "SubstreamPartitionRouter",
+    "CustomPartitionRouter",
+  ]);
+  if (!filteredPartitionRouters || filteredPartitionRouters.length === 0) {
+    return undefined;
+  }
+  if (filteredPartitionRouters.length === 1) {
+    return filteredPartitionRouters[0];
+  }
+  return filteredPartitionRouters;
 }
 
 export function builderErrorHandlersToManifest(
@@ -1109,7 +740,30 @@ export function builderErrorHandlersToManifest(
     type: "CompositeErrorHandler",
     error_handlers: errorHandlers.map((handler) => ({
       ...handler,
-      backoff_strategies: handler.backoff_strategy ? [handler.backoff_strategy] : undefined,
+      max_retries: handler.max_retries ? Number(handler.max_retries) : undefined,
+      backoff_strategies: match(handler.backoff_strategy)
+        .with(undefined, () => undefined)
+        // must explicitly cast fields that have "number | string" type in the declarative schema
+        // to "number", or else they will end up as strings when dumping YAML
+        .with({ type: "ConstantBackoffStrategy" }, (strategy) => [
+          {
+            ...strategy,
+            backoff_time_in_seconds: Number(strategy.backoff_time_in_seconds),
+          },
+        ])
+        .with({ type: "ExponentialBackoffStrategy" }, (strategy) => [
+          {
+            ...strategy,
+            factor: strategy.factor ? Number(strategy.factor) : undefined,
+          },
+        ])
+        .with({ type: "WaitUntilTimeFromHeader" }, (strategy) => [
+          {
+            ...strategy,
+            min_wait: strategy.min_wait ? Number(strategy.min_wait) : undefined,
+          },
+        ])
+        .otherwise((strategy) => [strategy]),
       response_filters: handler.response_filter
         ? [{ ...handler.response_filter, http_codes: handler.response_filter.http_codes?.map(Number) }]
         : undefined,
@@ -1154,20 +808,26 @@ function fromEntriesOrUndefined(...args: Parameters<typeof Object.fromEntries>) 
 
 function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderRequestBody) {
   try {
+    const parsedJson = builderRequestBody.type === "json_freeform" ? JSON.parse(builderRequestBody.value) : undefined;
+
     const requestBody = {
       request_body_json:
         builderRequestBody.type === "json_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "json_freeform"
-          ? ((parsedJson) => (Object.keys(parsedJson).length > 0 ? parsedJson : undefined))(
-              JSON.parse(builderRequestBody.value)
-            )
+          ? isString(parsedJson)
+            ? undefined
+            : Object.keys(parsedJson).length > 0
+            ? parsedJson
+            : undefined
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "string_freeform"
           ? builderRequestBody.value
+          : builderRequestBody.type === "json_freeform" && isString(parsedJson)
+          ? parsedJson
           : undefined,
     };
     return Object.keys(requestBody).length > 0 ? requestBody : undefined;
@@ -1176,19 +836,43 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
   }
 }
 
+export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSelector | undefined): RecordSelector {
+  const defaultRecordSelector: RecordSelector = {
+    type: "RecordSelector",
+    extractor: {
+      type: "DpathExtractor",
+      field_path: [],
+    },
+  };
+  if (!recordSelector) {
+    return defaultRecordSelector;
+  }
+  return merge(defaultRecordSelector, {
+    extractor: {
+      field_path: recordSelector.fieldPath,
+    },
+    record_filter: recordSelector.filterCondition
+      ? {
+          type: "RecordFilter",
+          condition: recordSelector.filterCondition,
+        }
+      : undefined,
+    schema_normalization: recordSelector.normalizeToSchema ? "Default" : undefined,
+  });
+}
+
 type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
 
-function builderStreamToDeclarativeSteam(
-  values: BuilderFormValues,
-  stream: BuilderStream,
-  visitedStreams: string[]
-): DeclarativeStream {
+function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: BuilderStream[]): DeclarativeStream {
   // cast to tell typescript which properties will be present after resolving the ref
   const requesterRef = {
     $ref: "#/definitions/base_requester",
   } as unknown as BaseRequester;
 
-  const declarativeStream: DeclarativeStream = {
+  const parentStreamsToManifest = (parentStreams: BuilderParentStream[] | undefined) =>
+    builderParentStreamsToManifest(parentStreams, allStreams);
+
+  return merge({} as DeclarativeStream, stream.unknownFields ? load(stream.unknownFields) : {}, {
     type: "DeclarativeStream",
     name: stream.name,
     primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
@@ -1203,55 +887,65 @@ function builderStreamToDeclarativeSteam(
         ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
         error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
       },
-      record_selector: {
-        type: "RecordSelector",
-        extractor: {
-          type: "DpathExtractor",
-          field_path: stream.fieldPointer,
-        },
-      },
+      record_selector: convertOrLoadYamlString(stream.recordSelector, builderRecordSelectorToManifest),
       paginator: convertOrLoadYamlString(stream.paginator, builderPaginatorToManifest),
-      partition_router: builderStreamPartitionRouterToManifest(
-        values,
-        stream.parentStreams,
-        stream.parameterizedRequests,
-        [...visitedStreams, stream.id]
+      partition_router: combinePartitionRouters(
+        ...convertOrLoadYamlString(stream.parameterizedRequests, builderParameterizedRequestsToManifest),
+        ...convertOrLoadYamlString(stream.parentStreams, parentStreamsToManifest)
       ),
     },
     incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
     transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
     schema_loader: { type: "InlineSchemaLoader", schema: schemaRef(stream.name) },
-  };
-
-  return merge({}, declarativeStream, stream.unsupportedFields);
+  });
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
-  const componentNameIfString = (componentName: YamlSupportedComponentName, value: unknown) =>
-    isYamlString(value) ? [componentName] : [];
+  const componentNameIfString = <
+    ComponentName extends YamlSupportedComponentName["stream"] | YamlSupportedComponentName["global"],
+  >(
+    componentName: ComponentName,
+    value: unknown
+  ) => (isYamlString(value) ? [componentName] : []);
 
-  const yamlComponentsPerStream = {} as Record<string, YamlSupportedComponentName[]>;
+  const yamlComponentsPerStream = {} as Record<string, Array<YamlSupportedComponentName["stream"]>>;
+  const testedStreams = {} as TestedStreams;
   values.streams.forEach((stream) => {
     const yamlComponents = [
       ...componentNameIfString("paginator", stream.paginator),
       ...componentNameIfString("errorHandler", stream.errorHandler),
       ...componentNameIfString("transformations", stream.transformations),
       ...componentNameIfString("incrementalSync", stream.incrementalSync),
+      ...componentNameIfString("recordSelector", stream.recordSelector),
+      ...componentNameIfString("parameterizedRequests", stream.parameterizedRequests),
+      ...componentNameIfString("parentStreams", stream.parentStreams),
     ];
     if (yamlComponents.length > 0) {
       yamlComponentsPerStream[stream.name] = yamlComponents;
     }
-  });
 
-  const hasYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
+    if (stream.testResults) {
+      testedStreams[stream.name] = stream.testResults;
+    }
+  });
+  const hasStreamYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
+
+  const globalYamlComponents = [...componentNameIfString("authenticator", values.global.authenticator)];
+  const hasGlobalYamlComponents = globalYamlComponents.length > 0;
 
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
-    ...(hasYamlComponents && {
+    ...((hasStreamYamlComponents || hasGlobalYamlComponents) && {
       yamlComponents: {
-        streams: yamlComponentsPerStream,
+        ...(hasStreamYamlComponents && {
+          streams: yamlComponentsPerStream,
+        }),
+        ...(hasGlobalYamlComponents && {
+          global: globalYamlComponents,
+        }),
       },
     }),
+    testedStreams,
   };
 };
 
@@ -1272,7 +966,7 @@ export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
 
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
-    builderStreamToDeclarativeSteam(values, stream, [])
+    builderStreamToDeclarativeSteam(stream, values.streams)
   );
 
   const streamNames = values.streams.map((s) => s.name);
@@ -1285,7 +979,16 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
 
   const streamNameToSchema = Object.fromEntries(
     values.streams.map((stream) => {
-      const schema = stream.schema ? JSON.parse(stream.schema) : DEFAULT_SCHEMA;
+      let schema;
+      if (stream.schema) {
+        try {
+          schema = JSON.parse(stream.schema);
+        } catch (e) {
+          schema = JSON.parse(DEFAULT_SCHEMA);
+        }
+      } else {
+        schema = JSON.parse(DEFAULT_SCHEMA);
+      }
       schema.additionalProperties = true;
       return [stream.name, schema];
     })
@@ -1294,7 +997,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const baseRequester: BaseRequester = {
     type: "HttpRequester",
     url_base: values.global?.urlBase?.trim(),
-    authenticator: builderAuthenticatorToManifest(values.global),
+    authenticator: convertOrLoadYamlString(values.global.authenticator, builderAuthenticatorToManifest),
   };
 
   return {
@@ -1312,13 +1015,9 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     schemas: streamNameToSchema,
     spec: builderInputsToSpec(values.inputs),
     metadata: builderFormValuesToMetadata(values),
+    description: values.description,
   };
 };
-
-function streamRef(streamName: string) {
-  // force cast to DeclarativeStream so that this still validates against the types
-  return { $ref: `#/definitions/streams/${streamName}` } as unknown as DeclarativeStream;
-}
 
 function schemaRef(streamName: string) {
   return { $ref: `#/schemas/${streamName}` };

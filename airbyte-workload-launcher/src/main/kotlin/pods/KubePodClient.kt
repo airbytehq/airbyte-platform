@@ -3,28 +3,34 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.setDestinationLabels
+import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SOURCE_OPERATION_NAME
-import io.airbyte.workload.launcher.model.setDestinationLabels
-import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.Pod
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.env.Environment
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.TimeoutException
 import kotlin.time.TimeSource
 
 /**
@@ -32,23 +38,23 @@ import kotlin.time.TimeSource
  * Composes raw Kube layer atomic operations to perform business operations.
  */
 @Singleton
-@Requires(env = [Environment.KUBERNETES])
 class KubePodClient(
   private val kubePodLauncher: KubePodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
-  private val featureFlagClient: FeatureFlagClient,
   private val orchestratorPodFactory: OrchestratorPodFactory,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
-) : PodClient {
-  override fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))
+  private val featureFlagClient: FeatureFlagClient,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
+) {
+  fun podsExistForAutoId(autoId: UUID): Boolean {
+    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
   }
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
-  override fun launchReplication(
+  fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
@@ -61,6 +67,13 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
+    // Whether we should kube cp init files over or let the init container fetch itself
+    // if true the init container will fetch, if false we copy over the files
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
+    // so we check the value here and pass it down.
+    val ffContext = Multi(listOf(Connection(replicationInput.connectionId), Workspace(replicationInput.workspaceId)))
+    val useFetchingInit = featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)
+
     var pod =
       orchestratorPodFactory.create(
         replicationInput.connectionId,
@@ -69,7 +82,8 @@ class KubePodClient(
         kubeInput.nodeSelectors,
         kubeInput.kubePodInfo,
         kubeInput.annotations,
-        mapOf(),
+        kubeInput.extraEnv,
+        useFetchingInit,
       )
     try {
       pod =
@@ -84,9 +98,13 @@ class KubePodClient(
       )
     }
 
-    waitOrchestratorPodInit(pod)
+    if (!useFetchingInit) {
+      waitOrchestratorPodInit(pod)
 
-    copyFileToOrchestrator(kubeInput, pod)
+      copyFileToOrchestrator(kubeInput, pod)
+    } else {
+      waitForPodInitComplete(pod, "orchestrator")
+    }
 
     waitForOrchestratorStart(pod)
 
@@ -101,7 +119,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
   fun waitOrchestratorPodInit(orchestratorPod: Pod) {
     try {
-      kubePodLauncher.waitForPodInit(orchestratorPod, POD_INIT_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodInitStartup(orchestratorPod, POD_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubeClientException(
@@ -178,7 +196,7 @@ class KubePodClient(
     }
   }
 
-  override fun launchCheck(
+  fun launchCheck(
     checkInput: CheckConnectionInput,
     launcherInput: LauncherInput,
   ) {
@@ -191,12 +209,12 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
   }
 
-  override fun launchDiscover(
+  fun launchDiscover(
     discoverCatalogInput: DiscoverCatalogInput,
     launcherInput: LauncherInput,
   ) {
@@ -209,12 +227,12 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, discoverPodFactory, launcherInput.workloadType.toOperationName())
   }
 
-  override fun launchSpec(
+  fun launchSpec(
     specInput: SpecInput,
     launcherInput: LauncherInput,
   ) {
@@ -227,7 +245,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, specPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -240,6 +258,19 @@ class KubePodClient(
   ) {
     val start = TimeSource.Monotonic.markNow()
 
+    // Whether we should kube cp init files over or let the init container fetch itself
+    // if true the init container will fetch, if false we copy over the files
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
+    // so we check the value here and pass it down.
+    val ffContext =
+      Multi(
+        buildList {
+          add(Workspace(kubeInput.workspaceId))
+          addAll(contexts)
+        },
+      )
+    val useFetchingInit = featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)
+
     var pod =
       factory.create(
         kubeInput.connectorLabels,
@@ -247,6 +278,7 @@ class KubePodClient(
         kubeInput.kubePodInfo,
         kubeInput.annotations,
         kubeInput.extraEnv,
+        useFetchingInit,
       )
     try {
       pod = kubePodLauncher.create(pod)
@@ -259,26 +291,30 @@ class KubePodClient(
       )
     }
 
-    try {
-      kubePodLauncher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "$podLogLabel pod failed to init within allotted timeout.",
-        e,
-        KubeCommandType.WAIT_INIT,
-      )
-    }
+    if (!useFetchingInit) {
+      try {
+        kubePodLauncher.waitForPodInitStartup(pod, POD_INIT_TIMEOUT_VALUE)
+      } catch (e: RuntimeException) {
+        ApmTraceUtils.addExceptionToTrace(e)
+        throw KubeClientException(
+          "$podLogLabel pod failed to init within allotted timeout.",
+          e,
+          KubeCommandType.WAIT_INIT,
+        )
+      }
 
-    try {
-      kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Failed to copy files to $podLogLabel pod ${kubeInput.kubePodInfo.name}.",
-        e,
-        KubeCommandType.COPY,
-      )
+      try {
+        kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
+      } catch (e: RuntimeException) {
+        ApmTraceUtils.addExceptionToTrace(e)
+        throw KubeClientException(
+          "Failed to copy files to $podLogLabel pod ${kubeInput.kubePodInfo.name}.",
+          e,
+          KubeCommandType.COPY,
+        )
+      }
+    } else {
+      waitForPodInitComplete(pod, podLogLabel)
     }
 
     try {
@@ -295,7 +331,7 @@ class KubePodClient(
     println("ELAPSED TIME (SIDECAR): ${start.elapsedNow()}")
   }
 
-  override fun deleteMutexPods(mutexKey: String): Boolean {
+  fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
 
     try {
@@ -307,6 +343,23 @@ class KubePodClient(
         "Failed to delete pods for mutex key: $mutexKey.",
         e,
         KubeCommandType.DELETE,
+      )
+    }
+  }
+
+  @VisibleForTesting
+  fun waitForPodInitComplete(
+    pod: Pod,
+    podLogLabel: String,
+  ) {
+    try {
+      kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
+    } catch (e: TimeoutException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubeClientException(
+        "$podLogLabel pod failed to init within allotted timeout.",
+        e,
+        KubeCommandType.WAIT_INIT,
       )
     }
   }

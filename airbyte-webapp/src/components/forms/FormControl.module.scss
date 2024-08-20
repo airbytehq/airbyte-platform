@@ -12,6 +12,11 @@
     font-weight: 500;
     margin: 0;
     padding-bottom: variables.$spacing-sm;
+
+    &__text {
+      display: flex;
+      align-items: center;
+    }
   }
 
   &__description {
@@ -20,20 +25,26 @@
     margin: 0;
   }
 
-  &__errorMessage {
+  &__footerMessage {
     position: absolute;
     width: 100%;
     top: variables.$spacing-sm;
     font-size: variables.$font-size-sm;
-    color: colors.$red;
+    color: colors.$grey-400;
     margin: 0;
-    transition: transform variables.$transition ease-in, opacity variables.$transition ease-in-out;
+    transition:
+      transform variables.$transition ease-in,
+      opacity variables.$transition ease-in-out;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &.control__errorMessage {
+      color: colors.$red;
+    }
   }
 
-  &__errorWrapper {
+  &__footerWrapper {
     position: absolute;
     width: 100%;
     height: var(--space-below);

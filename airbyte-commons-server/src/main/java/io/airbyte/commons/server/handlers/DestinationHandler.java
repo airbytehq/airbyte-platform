@@ -5,12 +5,12 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationCloneConfiguration;
 import io.airbyte.api.model.generated.DestinationCloneRequestBody;
@@ -41,8 +41,6 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -146,24 +144,18 @@ public class DestinationHandler {
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
 
-    final JsonNode fullConfig;
-    try {
-      fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
     final ConnectorSpecification spec =
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
-    // persist
-    persistDestinationConnection(
-        destination.getName(),
-        destination.getDestinationDefinitionId(),
-        destination.getWorkspaceId(),
-        destination.getDestinationId(),
-        fullConfig,
-        true,
-        spec);
+    // Delete secrets and config in this destination and mark it tombstoned.
+    try {
+      destinationService.tombstoneDestination(
+          destination.getName(),
+          destination.getWorkspaceId(),
+          destination.getDestinationId(), spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
@@ -278,10 +270,22 @@ public class DestinationHandler {
     final List<DestinationConnection> destinationConnections =
         configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      destinationReads.add(buildDestinationRead(destinationConnection));
+      destinationReads.add(buildDestinationReadWithStatus(destinationConnection));
     }
 
     return new DestinationReadList().destinations(destinationReads);
+  }
+
+  private DestinationRead buildDestinationReadWithStatus(final DestinationConnection destinationConnection)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final DestinationRead destinationRead = buildDestinationRead(destinationConnection);
+    // add destination status into destinationRead
+    if (destinationService.isDestinationActive(destinationConnection.getDestinationId())) {
+      destinationRead.status(ActorStatus.ACTIVE);
+    } else {
+      destinationRead.status(ActorStatus.INACTIVE);
+    }
+    return destinationRead;
   }
 
   public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
@@ -295,7 +299,7 @@ public class DestinationHandler {
             listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
             listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      reads.add(buildDestinationRead(destinationConnection));
+      reads.add(buildDestinationReadWithStatus(destinationConnection));
     }
     return new DestinationReadList().destinations(reads);
   }
@@ -420,8 +424,6 @@ public class DestinationHandler {
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
             standardDestinationDefinition, destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
 
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
-
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion());
 
@@ -433,8 +435,7 @@ public class DestinationHandler {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .name(destinationConnection.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
-            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()))
+        .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
@@ -442,15 +443,13 @@ public class DestinationHandler {
 
   protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
                                                             final StandardDestinationDefinition standardDestinationDefinition) {
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
 
     return new DestinationSnippetRead()
         .destinationId(destinationConnection.getDestinationId())
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
-            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(standardDestinationDefinition.getIconUrl());
   }
 
 }

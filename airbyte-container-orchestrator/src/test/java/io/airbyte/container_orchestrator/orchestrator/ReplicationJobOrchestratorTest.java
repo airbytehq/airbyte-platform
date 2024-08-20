@@ -7,13 +7,10 @@ package io.airbyte.container_orchestrator.orchestrator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
@@ -26,12 +23,13 @@ import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +43,6 @@ class ReplicationJobOrchestratorTest {
   private ReplicationWorkerFactory replicationWorkerFactory;
   private WorkloadApi workloadApi;
   private WorkloadApiClient workloadApiClient;
-  private WorkloadIdGenerator workloadIdGenerator;
   private ReplicationWorker replicationWorker;
 
   @BeforeEach
@@ -53,7 +50,6 @@ class ReplicationJobOrchestratorTest {
     replicationWorkerFactory = mock(ReplicationWorkerFactory.class);
     workloadApi = mock(WorkloadApi.class);
     workloadApiClient = mock(WorkloadApiClient.class);
-    workloadIdGenerator = mock(WorkloadIdGenerator.class);
     replicationWorker = mock(ReplicationWorker.class);
 
     when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
@@ -64,7 +60,6 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.CANCELLED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -73,9 +68,8 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
-        workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
 
@@ -94,7 +88,6 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.COMPLETED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -103,9 +96,8 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
-        workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
 
@@ -123,7 +115,6 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -132,9 +123,8 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
-        workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
 
@@ -152,7 +142,6 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -161,9 +150,8 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
-        workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
 

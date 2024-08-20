@@ -1,0 +1,6 @@
+{{^isPrimitiveType}}{{^isDate}}{{^isDateTime}}{{^isString}}{{^isFile}}{{^isArray}}
+    @field:Valid
+{{/isArray}}{{/isFile}}{{/isString}}{{/isDateTime}}{{/isDate}}{{/isPrimitiveType}}
+{{#required}}
+    @field:NotNull
+{{/required}}

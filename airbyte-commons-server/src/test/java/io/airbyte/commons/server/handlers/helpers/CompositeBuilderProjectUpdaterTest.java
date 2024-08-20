@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import org.junit.Test;
@@ -23,7 +23,7 @@ public class CompositeBuilderProjectUpdaterTest {
     final ExistingConnectorBuilderProjectWithWorkspaceId update = mock(ExistingConnectorBuilderProjectWithWorkspaceId.class);
     final BuilderProjectUpdater updaterA = mock(BuilderProjectUpdater.class);
     final BuilderProjectUpdater updaterB = mock(BuilderProjectUpdater.class);
-    CompositeBuilderProjectUpdater projectUpdater = new CompositeBuilderProjectUpdater(List.of(updaterA, updaterB));
+    final CompositeBuilderProjectUpdater projectUpdater = new CompositeBuilderProjectUpdater(List.of(updaterA, updaterB));
     projectUpdater.persistBuilderProjectUpdate(update);
 
     verify(updaterA, times(1))

@@ -27,7 +27,7 @@ public interface ActorDefinitionService {
 
   Map<UUID, ActorDefinitionVersion> getActorDefinitionIdsToDefaultVersionsMap() throws IOException;
 
-  int updateActorDefinitionsDockerImageTag(List<UUID> actorDefinitionIds, String targetImageTag) throws IOException;
+  int updateDeclarativeActorDefinitionVersions(String currentImageTag, String targetImageTag) throws IOException;
 
   void writeActorDefinitionWorkspaceGrant(UUID actorDefinitionId, UUID scopeId, io.airbyte.config.ScopeType scopeType) throws IOException;
 
@@ -48,12 +48,6 @@ public interface ActorDefinitionService {
   void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId) throws IOException;
 
   Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId) throws IOException;
-
-  void setActorDefaultVersion(UUID actorId, UUID actorDefinitionVersionId) throws IOException;
-
-  void setActorDefaultVersions(List<UUID> actorId, UUID actorDefinitionVersionId) throws IOException;
-
-  Set<UUID> getActorsWithDefaultVersionId(UUID defaultVersionId) throws IOException;
 
   List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(UUID actorDefinitionId) throws IOException;
 

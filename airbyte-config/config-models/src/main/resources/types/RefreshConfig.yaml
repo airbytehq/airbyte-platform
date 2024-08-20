@@ -1,6 +1,6 @@
 ---
 "$schema": http://json-schema.org/draft-07/schema#
-"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/JobSyncConfig.yaml
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/RefreshConfig.yaml
 title: RefreshConfig
 description: configuration of the refresh operation
 type: object
@@ -14,8 +14,7 @@ properties:
   streamsToRefresh:
     type: array
     items:
-      type: object
-      existingJavaType: io.airbyte.protocol.models.StreamDescriptor
+      $ref: RefreshStream.yaml
   namespaceDefinition:
     "$ref": NamespaceDefinitionType.yaml
   namespaceFormat:
@@ -28,7 +27,7 @@ properties:
   configuredAirbyteCatalog:
     description: the configured airbyte catalog
     type: object
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+    existingJavaType: io.airbyte.config.ConfiguredAirbyteCatalog
   sourceDockerImage:
     description: Image name of the source with tag.
     type: string

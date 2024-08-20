@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.AUTH_USER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
@@ -81,6 +82,27 @@ public class PermissionPersistence {
   }
 
   /**
+   * List permissions by User id in an organization.
+   *
+   * @param userId the user id
+   * @param organizationId the organization id
+   * @return list of permissions associate with the user in a given organization (including both
+   *         organization level and workspace level permissions)
+   * @throws IOException in case of a db error
+   */
+  public List<Permission> listPermissionsByUserInAnOrganization(final UUID userId, final UUID organizationId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(PERMISSION)
+        .leftJoin(WORKSPACE)
+        .on(PERMISSION.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .where(PERMISSION.USER_ID.eq(userId))
+        .and(PERMISSION.ORGANIZATION_ID.eq(organizationId).or(WORKSPACE.ORGANIZATION_ID.eq(organizationId)))
+        .fetch());
+    return result.stream().map(this::createPermissionFromRecord).collect(Collectors.toList());
+  }
+
+  /**
    * List permissions by workspace id.
    *
    * @param workspaceId the workspace id
@@ -120,7 +142,7 @@ public class PermissionPersistence {
   }
 
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
-    return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
+    return this.database.query(this::listInstanceAdminPermissions);
   }
 
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
@@ -135,7 +157,7 @@ public class PermissionPersistence {
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
@@ -146,6 +168,18 @@ public class PermissionPersistence {
     return ctx.fetchExists(select()
         .from(PERMISSION)
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .and(PERMISSION.USER_ID.eq(userId)));
+  }
+
+  public Boolean isUserOrganizationAdmin(final UUID userId, final UUID organizationId) throws IOException {
+    return this.database.query(ctx -> isUserOrganizationAdmin(ctx, userId, organizationId));
+  }
+
+  private Boolean isUserOrganizationAdmin(final DSLContext ctx, final UUID userId, final UUID organizationId) {
+    return ctx.fetchExists(select()
+        .from(PERMISSION)
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.organization_admin))
+        .and(PERMISSION.ORGANIZATION_ID.eq(organizationId))
         .and(PERMISSION.USER_ID.eq(userId)));
   }
 
@@ -224,7 +258,7 @@ public class PermissionPersistence {
         .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   /**
@@ -242,7 +276,7 @@ public class PermissionPersistence {
         .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   private UserPermission buildUserPermissionFromRecord(final Record record) {

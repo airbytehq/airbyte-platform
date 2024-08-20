@@ -63,7 +63,7 @@ import org.slf4j.MDC;
  * next replication can pick up where it left off instead of starting from the beginning)</li>
  * </ul>
  */
-@SuppressWarnings("PMD.AvoidPrintStackTrace")
+@SuppressWarnings({"PMD.AvoidPrintStackTrace", "PMD.ExceptionAsFlowControl"})
 public class DefaultReplicationWorker implements ReplicationWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultReplicationWorker.class);
@@ -145,7 +145,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
               replicationWorkerHelper.getDestinationDefinitionIdForDestinationId(replicationInput.getDestinationId()));
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
-      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog());
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog(), replicationInput.getState());
       replicate(jobRoot, replicationInput, flags);
 
       return replicationWorkerHelper.getReplicationOutput();
@@ -466,7 +466,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   private class CloseableWithTimeout implements AutoCloseable {
 
-    AutoCloseable autoCloseable;
+    final AutoCloseable autoCloseable;
     private final Map<String, String> mdc;
     private final ReplicationFeatureFlags flags;
 

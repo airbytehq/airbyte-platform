@@ -68,6 +68,30 @@ class WorkloadTokenValidatorTest {
       .verify()
   }
 
+  @Test
+  internal fun `test that a token with an underscore is successfully authenticated`() {
+    // This payload is specifically constructed so that it encodes to a value that contains an underscore.
+    // We used to have a bug in production where such tokens could not be decoded, so this test makes sure
+    // that the bug remains fixed.
+    val encodesToPayloadWithUnderscore = "{\"foo\":\"anoë\"}"
+
+    val encodedToken = Base64.getUrlEncoder().encodeToString(encodesToPayloadWithUnderscore.toByteArray())
+    assert(encodedToken.contains("_"))
+
+    val httpRequest: HttpRequest<*> = mockk()
+    val validator = WorkloadTokenValidator(encodesToPayloadWithUnderscore)
+
+    val responsePublisher: Publisher<Authentication> =
+      validator.validateToken(
+        encodedToken,
+        httpRequest,
+      )
+
+    StepVerifier.create(responsePublisher)
+      .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
+      .verifyComplete()
+  }
+
   private fun matchSuccessfulResponse(authentication: Authentication): Boolean {
     return authentication.name == WorkloadTokenValidator.WORKLOAD_API_USER
   }

@@ -9,16 +9,18 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.RetryStateClient;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Concrete implementation of RetryStatePersistenceActivity. Delegates to non-temporal business
@@ -27,13 +29,12 @@ import java.util.UUID;
 @Singleton
 public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceActivity {
 
-  final RetryStateClient client;
-  final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
+  private final RetryStateClient client;
 
-  public RetryStatePersistenceActivityImpl(final RetryStateClient client,
-                                           final WorkspaceApi workspaceApi) {
+  public RetryStatePersistenceActivityImpl(final AirbyteApiClient airbyteApiClient, final RetryStateClient client) {
+    this.airbyteApiClient = airbyteApiClient;
     this.client = client;
-    this.workspaceApi = workspaceApi;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -50,16 +51,30 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
 
   @Override
   public PersistOutput persistRetryState(final PersistInput input) {
-    final var success = client.persistRetryState(input.getJobId(), input.getConnectionId(), input.getManager());
-
-    return new PersistOutput(success);
+    try {
+      final var success = client.persistRetryState(input.getJobId(), input.getConnectionId(), input.getManager());
+      return new PersistOutput(success);
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
+      throw new RetryableException(e);
+    }
   }
 
   private UUID getWorkspaceId(final UUID connectionId) {
     try {
-      final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspace =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ApiException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

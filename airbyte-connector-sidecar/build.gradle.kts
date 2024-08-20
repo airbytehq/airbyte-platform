@@ -9,8 +9,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 buildscript {
@@ -26,15 +24,6 @@ buildscript {
 }
 
 val airbyteProtocol by configurations.creating
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid(updated version brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 
 configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
@@ -44,8 +33,8 @@ configurations.all {
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.log4j)
@@ -56,15 +45,17 @@ dependencies {
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-metrics:metrics-lib")) // necessary for doc store
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-logging"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib")) // necessary for doc store
+  implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.airbyte.protocol)
 
   runtimeOnly(libs.snakeyaml)
@@ -72,9 +63,9 @@ dependencies {
   runtimeOnly(libs.appender.log4j2)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.annotation.processor)
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
@@ -112,7 +103,7 @@ airbyte {
   }
 }
 
-// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol)
+// Duplicated from :oss:airbyte-worker, eventually, this should be handled in :oss:airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
@@ -132,20 +123,11 @@ val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   }
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)
 }
 
 fun yamlToJson(rawYaml: String): String {
   val mappedYaml: Any = YAMLMapper().registerKotlinModule().readValue(rawYaml)
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
-}
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
-  }
 }

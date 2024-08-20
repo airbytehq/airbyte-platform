@@ -4,8 +4,7 @@
 
 package io.airbyte.workers.config
 
-import io.airbyte.api.client.generated.DeploymentMetadataApi
-import io.airbyte.api.client.generated.WorkspaceApi
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
@@ -22,17 +21,22 @@ import java.util.function.Supplier
 class AnalyticsTrackingBeanFactory {
   @Singleton
   @Named("deploymentSupplier")
-  @Requires(bean = DeploymentMetadataApi::class)
+  @Requires(bean = AirbyteApiClient::class)
   @Replaces(named = "deploymentSupplier")
-  fun deploymentSupplier(deploymentMetadataApi: DeploymentMetadataApi): Supplier<DeploymentMetadataRead> {
-    return Supplier { deploymentMetadataApi.getDeploymentMetadata() }
+  fun deploymentSupplier(airbyteApiClient: AirbyteApiClient): Supplier<DeploymentMetadataRead> {
+    return Supplier { airbyteApiClient.deploymentMetadataApi.getDeploymentMetadata() }
   }
 
   @Singleton
   @Named("workspaceFetcher")
-  @Requires(bean = WorkspaceApi::class)
+  @Requires(bean = AirbyteApiClient::class)
   @Replaces(named = "workspaceFetcher")
-  fun workspaceFetcher(workspaceApi: WorkspaceApi): Function<UUID, WorkspaceRead> {
-    return Function { workspaceId: UUID? -> workspaceApi.getWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true)) }
+  fun workspaceFetcher(airbyteApiClient: AirbyteApiClient): Function<UUID, WorkspaceRead> {
+    return Function {
+        workspaceId: UUID? ->
+      workspaceId.let { wid ->
+        airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId = wid!!, includeTombstone = true))
+      }
+    }
   }
 }

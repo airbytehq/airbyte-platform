@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.StreamStatsRecord;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.protocol.models.SyncMode;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -42,6 +42,22 @@ class StatsAggregationHelperTest {
           .withRecordsCommitted(2000L)
           .withBytesCommitted(1000L));
 
+  private static final StreamSyncStats STREAM_SYNC_STATS_4_RESUMED = new StreamSyncStats()
+      .withStats(new SyncStats()
+          .withRecordsEmitted(40000L)
+          .withBytesEmitted(30000L)
+          .withRecordsCommitted(20000L)
+          .withBytesCommitted(10000L))
+      .withWasResumed(true);
+
+  private static final StreamSyncStats STREAM_SYNC_STATS_5_RESUMED = new StreamSyncStats()
+      .withStats(new SyncStats()
+          .withRecordsEmitted(400000L)
+          .withBytesEmitted(300000L)
+          .withRecordsCommitted(200000L)
+          .withBytesCommitted(100000L))
+      .withWasResumed(true);
+
   private static final StreamSyncStats STREAM_SYNC_STATS_WITH_NULL_FIELDS = new StreamSyncStats()
       .withStats(new SyncStats()
           .withRecordsEmitted(null)
@@ -64,6 +80,53 @@ class StatsAggregationHelperTest {
   }
 
   @Test
+  void testAggregatedStatsResumedFullRefresh() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.FULL_REFRESH,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_4_RESUMED,
+            STREAM_SYNC_STATS_5_RESUMED));
+
+    assertEquals(440040L, aggregatedStats.recordsEmitted());
+    assertEquals(330030L, aggregatedStats.bytesEmitted());
+    assertEquals(220020L, aggregatedStats.recordsCommitted());
+    assertEquals(110010L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
+  void testAggregatedStatsResumedFullRefreshEdgeCaseWithNonResumedStatsMixed() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.FULL_REFRESH,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_2,
+            STREAM_SYNC_STATS_4_RESUMED,
+            STREAM_SYNC_STATS_5_RESUMED));
+
+    assertEquals(440400L, aggregatedStats.recordsEmitted());
+    assertEquals(330300L, aggregatedStats.bytesEmitted());
+    assertEquals(220200L, aggregatedStats.recordsCommitted());
+    assertEquals(110100L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
+  void testAggregatedStatsResumedFullRefreshEdgeCaseWithNonResumedStatsMixedEndingWithNonResumed() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.FULL_REFRESH,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_4_RESUMED,
+            STREAM_SYNC_STATS_5_RESUMED,
+            STREAM_SYNC_STATS_2));
+
+    assertEquals(400L, aggregatedStats.recordsEmitted());
+    assertEquals(300L, aggregatedStats.bytesEmitted());
+    assertEquals(200L, aggregatedStats.recordsCommitted());
+    assertEquals(100L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
   void testIncremental() {
     StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
         SyncMode.INCREMENTAL,
@@ -75,6 +138,22 @@ class StatsAggregationHelperTest {
     assertEquals(330L, aggregatedStats.bytesEmitted());
     assertEquals(220L, aggregatedStats.recordsCommitted());
     assertEquals(110L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
+  void testIncrementalIgnoresWasResumed() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.INCREMENTAL,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_2,
+            STREAM_SYNC_STATS_4_RESUMED,
+            STREAM_SYNC_STATS_5_RESUMED));
+
+    assertEquals(440440L, aggregatedStats.recordsEmitted());
+    assertEquals(330330L, aggregatedStats.bytesEmitted());
+    assertEquals(220220L, aggregatedStats.recordsCommitted());
+    assertEquals(110110L, aggregatedStats.bytesCommitted());
   }
 
   @Test

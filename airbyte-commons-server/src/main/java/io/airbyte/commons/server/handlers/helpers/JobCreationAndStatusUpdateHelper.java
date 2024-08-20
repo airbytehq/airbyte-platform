@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.config.JobConfig.ConfigType.REFRESH;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
@@ -15,10 +16,12 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.ReleaseStage;
@@ -30,8 +33,6 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.micronaut.core.util.CollectionUtils;
@@ -67,21 +68,24 @@ public class JobCreationAndStatusUpdateHelper {
       ReleaseStage.BETA, 3,
       ReleaseStage.GENERALLY_AVAILABLE, 4);
   private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
-  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC);
+  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC, REFRESH);
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
+  private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   public JobCreationAndStatusUpdateHelper(final JobPersistence jobPersistence,
                                           final ConfigRepository configRepository,
                                           final JobNotifier jobNotifier,
-                                          final JobTracker jobTracker) {
+                                          final JobTracker jobTracker,
+                                          final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
+    this.connectionTimelineEventHelper = connectionTimelineEventHelper;
   }
 
   @VisibleForTesting
@@ -124,14 +128,14 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   public boolean didJobSucceed(final Job job) {
-    return job.getStatus().equals(io.airbyte.persistence.job.models.JobStatus.SUCCEEDED);
+    return job.getStatus().equals(io.airbyte.config.JobStatus.SUCCEEDED);
   }
 
   public void failNonTerminalJobs(final UUID connectionId) throws IOException {
     final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
         Job.REPLICATION_TYPES,
-        io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
+        io.airbyte.config.JobStatus.NON_TERMINAL_STATUSES);
 
     for (final Job job : jobs) {
       final long jobId = job.getId();
@@ -157,6 +161,8 @@ public class JobCreationAndStatusUpdateHelper {
       }
       final Job failedJob = jobPersistence.getJob(jobId);
       jobNotifier.failJob(failedJob, attemptStats);
+      // log failure events in connection timeline
+      connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(failedJob, connectionId, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }
@@ -270,11 +276,17 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var refresh = job.getConfig().getRefresh();
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
@@ -283,11 +295,20 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+      job.getLastAttempt().flatMap(Attempt::getFailureSummary)
+          .ifPresent(attemptFailureSummary -> {
+            for (FailureReason failureReason : attemptFailureSummary.getFailures()) {
+              String metricTag = MetricTags.getFailureType(failureReason.getFailureType());
+              String failureOriginName = failureReason.getFailureOrigin().name();
+              additionalAttributes.add(new MetricAttribute(String.join("-", failureOriginName, metricTag).toLowerCase(), "true"));
+            }
+          });
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
@@ -392,10 +413,10 @@ public class JobCreationAndStatusUpdateHelper {
   private AttemptFailureSummary failureSummaryForTemporalCleaningJobState(final Long jobId, final Integer attemptNumber) {
     final FailureReason failureReason = new FailureReason()
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
-        .withFailureType(FailureType.SYSTEM_ERROR)
+        .withFailureType(FailureType.TRANSIENT_ERROR)
         .withInternalMessage(
-            "Setting attempt to FAILED because the temporal workflow for this connection was restarted, and existing job state was cleaned.")
-        .withExternalMessage("An internal Airbyte error has occurred. This sync will need to be retried.")
+            "Setting attempt to FAILED because the workflow for this connection was restarted, and existing job state was cleaned.")
+        .withExternalMessage("An internal transient Airbyte error has occurred. The sync should work fine on the next retry.")
         .withTimestamp(System.currentTimeMillis())
         .withMetadata(jobAndAttemptMetadata(jobId, attemptNumber));
     return new AttemptFailureSummary().withFailures(List.of(failureReason));

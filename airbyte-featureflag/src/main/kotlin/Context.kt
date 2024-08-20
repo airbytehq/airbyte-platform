@@ -24,10 +24,37 @@ val ANONYMOUS = UUID(0, 0)
  * @property [kind] determines the kind of context the implementation is,
  * must be consistent for each type and should not be set by the caller of a context
  * @property [key] is the unique identifier for the specific context, e.g. a user-id or workspace-id
+ * @property [attrs] is a list of attributes that can be optionally added to a context
  */
 sealed interface Context {
   val kind: String
   val key: String
+  val attrs: List<Attribute>
+    get() = emptyList()
+}
+
+/**
+ * Additional context attributes that can be added to a context.
+ *
+ * @property [key] the key of the attribute
+ * @property [value] the value of the attribute
+ * @property [private] whether the attribute contains sensitive or PII data
+ */
+sealed interface Attribute {
+  val key: String
+  val value: String
+  val private: Boolean
+}
+
+/**
+ * Email context attribute
+ *
+ * @param [email] the email address
+ */
+data class EmailAttribute(val email: String) : Attribute {
+  override val key = "email"
+  override val value = email
+  override val private = true
 }
 
 /**
@@ -70,7 +97,7 @@ data class Multi(val contexts: List<Context>) : Context {
  *
  * @param [key] the unique identifying value of this organization
  */
-data class Organization constructor(override val key: String) : Context {
+data class Organization(override val key: String) : Context {
   override val kind = "organization"
 
   /**
@@ -86,7 +113,7 @@ data class Organization constructor(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this workspace
  */
-data class Workspace constructor(override val key: String) : Context {
+data class Workspace(override val key: String) : Context {
   override val kind = "workspace"
 
   /**
@@ -102,7 +129,7 @@ data class Workspace constructor(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this user
  */
-data class User(override val key: String) : Context {
+data class User(override val key: String, override val attrs: List<Attribute> = emptyList()) : Context {
   override val kind = "user"
 
   /**
@@ -110,7 +137,15 @@ data class User(override val key: String) : Context {
    *
    * @param [key] user UUID
    */
-  constructor(key: UUID) : this(key = key.toString())
+  constructor(key: UUID) : this(key = key.toString(), attrs = emptyList())
+
+  /**
+   * User constructor with email attribute
+   *
+   * @param [key] user UUID
+   * @param [email] user email attribute
+   */
+  constructor(key: UUID, email: EmailAttribute) : this(key = key.toString(), attrs = listOf(email))
 }
 
 /**
@@ -229,6 +264,12 @@ data class Priority(override val key: String) : Context {
   override val kind: String = "priority"
 
   companion object {
-    val HIGH_PRIORITY = "high"
+    const val HIGH_PRIORITY = "high"
   }
+}
+
+// This is aimed to be used with the EnvFeatureFlag
+data object Empty : Context {
+  override val kind: String = "empty"
+  override val key: String = ""
 }

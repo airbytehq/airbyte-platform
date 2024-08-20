@@ -18,7 +18,6 @@ export const ResetStreamsDetails: React.FC<ResetStreamsDetailsProps> = ({ names 
   const [isExpanded, setIsExpanded] = useToggle(false);
   const [isExpandButtonVisible, setIsExpandButtonVisible] = useState<boolean>(false);
   const onIconClick = () => setIsExpanded();
-
   useEffect(() => {
     const textCurrent = textRef.current;
     // detect text overflow

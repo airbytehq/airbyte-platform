@@ -6,17 +6,16 @@ import { getTestId } from "utils/selectors";
 
 const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
-const resetModalResetCheckbox = "[data-testid='resetModal-reset-checkbox']";
-const saveStreamChangesButton = "button[data-testid='resetModal-save']";
+const resetModalResetRadio = "[data-testid='radio-button-tile-shouldRefresh-saveWithoutRefresh']";
+const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
-export const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference-listbox-button']";
-const nonBreakingChangesPreferenceValue = (value: string) => `[data-testid='${value}-option']`;
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
 const saveButton = getTestId("save-edit-button", "button");
 export const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
+export const nextButtonOrLink = getTestId("next-creation-page");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
@@ -59,7 +58,7 @@ export const checkSuccessResult = () => cy.get(successResult).should("exist");
 
 export const confirmStreamConfigurationChangedPopup = ({ reset = false } = {}) => {
   if (!reset) {
-    cy.get(resetModalResetCheckbox).click({ force: true });
+    cy.get(resetModalResetRadio).click({ force: true });
   }
   cy.get(saveStreamChangesButton).click();
 };
@@ -76,11 +75,6 @@ export const checkNoDiffToast = () => {
 export const clickSchemaChangesReviewButton = () => {
   cy.get(schemaChangesReviewButton).click();
   cy.get(schemaChangesReviewButton).should("not.exist");
-};
-
-export const selectNonBreakingChangesPreference = (preference: "ignore" | "disable") => {
-  cy.get(nonBreakingChangesPreference).click();
-  cy.get(nonBreakingChangesPreferenceValue(preference)).click();
 };
 
 export const resetModalSaveBtnClick = () => cy.get(resetModalSaveButton).click();

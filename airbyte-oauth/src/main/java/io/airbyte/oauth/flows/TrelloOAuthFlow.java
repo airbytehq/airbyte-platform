@@ -13,7 +13,6 @@ import com.google.api.client.auth.oauth.OAuthHmacSigner;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -26,6 +25,7 @@ import java.util.UUID;
  * Following docs from
  * https://developer.atlassian.com/cloud/trello/guides/rest-api/authorization/#using-basic-oauth.
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public class TrelloOAuthFlow extends BaseOAuthFlow {
 
   private static final String REQUEST_TOKEN_URL = "https://trello.com/1/OAuthGetRequestToken";
@@ -57,7 +57,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                     final JsonNode inputOAuthConfiguration,
                                     final OAuthConfigSpecification oauthConfigSpecification,
                                     JsonNode sourceOAuthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     return getConsentUrl(sourceOAuthParamConfig, redirectUrl);
   }
 
@@ -98,7 +98,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), getDefaultOAuthOutputPath());
   }
 
@@ -110,7 +110,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                  final JsonNode inputOAuthConfiguration,
                                                  final OAuthConfigSpecification oauthConfigSpecification,
                                                  final JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), oauthConfigSpecification);
   }
 
@@ -121,7 +121,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                       final Map<String, Object> queryParams,
                                                       final String redirectUrl,
                                                       JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), getDefaultOAuthOutputPath());
   }
 
@@ -133,7 +133,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                       final JsonNode inputOAuthConfiguration,
                                                       final OAuthConfigSpecification oauthConfigSpecification,
                                                       JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), oauthConfigSpecification);
   }
 

@@ -7,7 +7,6 @@ package io.airbyte.server.apis;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
-import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserEmailRequestBody;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
@@ -33,16 +32,6 @@ import org.mockito.Mockito;
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class UserApiControllerTest extends BaseControllerTest {
-
-  @Test
-  void testCreateUser() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(userHandler.createUser(Mockito.any()))
-        .thenReturn(new UserRead());
-    final String path = "/api/v1/users/create";
-    testEndpointStatus(
-        HttpRequest.POST(path, new UserCreate()),
-        HttpStatus.OK);
-  }
 
   @Test
   void testGetUser() throws JsonValidationException, ConfigNotFoundException, IOException {

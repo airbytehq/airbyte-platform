@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
@@ -245,10 +246,10 @@ public abstract class BaseOAuthFlowTest {
   void testGetConsentUrlEmptyOAuthParameters() throws JsonValidationException, IOException {
     when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
     when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
-    assertThrows(ConfigNotFoundException.class,
+    assertThrows(ResourceNotFoundProblem.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
             null));
-    assertThrows(ConfigNotFoundException.class,
+    assertThrows(ResourceNotFoundProblem.class,
         () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(),
             getoAuthConfigSpecification(), null));
   }

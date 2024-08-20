@@ -54,7 +54,7 @@ class EnvVarConfigBeanFactoryTest {
   fun `orchestrator aws assumed role secret creation`() {
     val factory = EnvVarConfigBeanFactory()
     val envMap =
-      factory.orchestratorAwsAssumedRoleSecretEnv(
+      factory.awsAssumedRoleSecretEnv(
         AWS_ASSUMED_ROLE_ACCESS_KEY,
         AWS_ASSUMED_ROLE_SECRET_KEY,
         AWS_ASSUMED_ROLE_SECRET_NAME,
@@ -87,7 +87,7 @@ class EnvVarConfigBeanFactoryTest {
   fun `orchestrator aws assumed role secret creation with blank names`() {
     val factory = EnvVarConfigBeanFactory()
     val envMap =
-      factory.orchestratorAwsAssumedRoleSecretEnv(
+      factory.awsAssumedRoleSecretEnv(
         AWS_ASSUMED_ROLE_ACCESS_KEY,
         AWS_ASSUMED_ROLE_SECRET_KEY,
         "",

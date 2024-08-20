@@ -23,10 +23,7 @@ export const mockSourceDefinition: SourceDefinitionRead = {
 export const mockSourceDefinitionVersion: ActorDefinitionVersionRead = {
   dockerRepository: "airbyte/source-postgres",
   dockerImageTag: "1.0.39",
-  supportsDbt: false,
-  normalizationConfig: {
-    supported: false,
-  },
+  supportsRefreshes: false,
   isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",

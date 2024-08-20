@@ -24,7 +24,8 @@ public class V0_50_33_009__DropKeycloakTablesTest extends AbstractConfigsDatabas
 
     final List<String> tablesToDelete = Arrays.asList(
         "admin_event_entity", "associated_policy", "authentication_execution", "authentication_flow", "authenticator_config",
-        "authenticator_config_entry", "broker_link", "client", "client_attributes", "client_auth_flow_bindings", "client_initial_access",
+        "authenticator_config_entry", "broker_link", "io/airbyte/api/client", "client_attributes", "client_auth_flow_bindings",
+        "client_initial_access",
         "client_node_registrations", "client_scope", "client_scope_attributes", "client_scope_client", "client_scope_role_mapping", "client_session",
         "client_session_auth_status", "client_session_note", "client_session_prot_mapper", "client_session_role", "client_user_session_note",
         "component", "component_config", "composite_role", "credential", "databasechangelog", "databasechangeloglock", "default_client_scope",

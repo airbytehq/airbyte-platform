@@ -23,10 +23,13 @@ import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.connector_builder.exceptions.CdkUnknownException;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.MockAirbyteFileWriterImpl;
+import io.airbyte.connector_builder.handlers.AssistProxyHandler;
+import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
+import io.airbyte.connector_builder.templates.ContributionTemplates;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import java.io.ByteArrayInputStream;
@@ -64,12 +67,16 @@ class ConnectorBuilderControllerIntegrationTest {
   static JsonNode validManifest;
   private MockAirbyteFileWriterImpl writer;
   private AirbyteStreamFactory streamFactory;
+  private ContributionTemplates contributionTemplates;
+  private AssistProxyHandler assistProxyHandler;
 
   @BeforeEach
   void setup() {
     this.healthHandler = mock(HealthHandler.class);
     this.writer = new MockAirbyteFileWriterImpl();
     this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    this.contributionTemplates = new ContributionTemplates();
+    this.assistProxyHandler = mock(AssistProxyHandler.class);
   }
 
   @BeforeAll
@@ -96,15 +103,16 @@ class ConnectorBuilderControllerIntegrationTest {
     final SynchronousCdkCommandRunner commandRunner = new MockSynchronousPythonCdkCommandRunner(
         this.writer, this.streamFactory, shouldThrow, exitCode, inputStream, errorStream, outputStream);
     final AirbyteCdkRequesterImpl requester = new AirbyteCdkRequesterImpl(commandRunner);
-    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester));
+    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester),
+        new ConnectorContributionHandler(contributionTemplates, null), this.assistProxyHandler);
   }
 
   @Test
   void testStreamRead() {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamRead);
     final StreamRead streamRead = controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM));
-    assertTrue(streamRead.getLogs().size() > 0);
-    assertTrue(streamRead.getSlices().size() > 0);
+    assertFalse(streamRead.getLogs().isEmpty());
+    assertFalse(streamRead.getSlices().isEmpty());
     assertNotNull(streamRead.getInferredSchema());
     assertFalse(streamRead.getTestReadLimitReached());
   }
@@ -114,8 +122,8 @@ class ConnectorBuilderControllerIntegrationTest {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamRead);
     final StreamRead streamRead =
         controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM).formGeneratedManifest(true));
-    assertTrue(streamRead.getLogs().size() > 0);
-    assertTrue(streamRead.getSlices().size() > 0);
+    assertFalse(streamRead.getLogs().isEmpty());
+    assertFalse(streamRead.getSlices().isEmpty());
     assertNotNull(streamRead.getInferredSchema());
     assertFalse(streamRead.getTestReadLimitReached());
   }

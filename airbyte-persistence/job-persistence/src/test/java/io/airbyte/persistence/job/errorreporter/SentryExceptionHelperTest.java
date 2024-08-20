@@ -15,7 +15,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"LineLength", "FileTabCharacter"})
+@SuppressWarnings({"LineLength", "FileTabCharacter", "PMD.AvoidDuplicateLiterals"})
 class SentryExceptionHelperTest {
 
   private static final String ERROR_PATH = "/airbyte/connector-errors/error.py";
@@ -305,6 +305,68 @@ class SentryExceptionHelperTest {
                 LINE_NO, 397,
                 MODULE, "io.airbyte.workers.DefaultReplicationWorker",
                 FUNCTION, "lambda$getDestinationOutputRunnable$7")));
+  }
+
+  @Test
+  void testBuildSentryExceptionsKotlin() {
+    final String stacktrace =
+        """
+        io.airbyte.commons.exceptions.ConfigErrorException: Some error message
+        	at io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory$Companion.streamDescToWriteConfig(StagingConsumerFactory.kt:226)
+        	at io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory$Companion.access$streamDescToWriteConfig(StagingConsumerFactory.kt:159)
+        	at io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory.createAsync(StagingConsumerFactory.kt:124)
+        	at io.airbyte.integrations.destination.snowflake.SnowflakeDestination.getSerializedMessageConsumer(SnowflakeDestination.kt:194)
+        	at io.airbyte.cdk.integrations.base.IntegrationRunner.run(IntegrationRunner.kt:116)
+        	at io.airbyte.cdk.integrations.base.adaptive.AdaptiveDestinationRunner$Runner.run(AdaptiveDestinationRunner.kt:68)
+        	at io.airbyte.integrations.destination.snowflake.SnowflakeDestinationKt.main(SnowflakeDestination.kt:279)
+        """;
+
+    final Optional<SentryParsedException> optionalSentryExceptions = exceptionHelper.buildSentryExceptions(stacktrace);
+    Assertions.assertTrue(optionalSentryExceptions.isPresent());
+
+    final SentryParsedException parsedException = optionalSentryExceptions.get();
+    final List<SentryException> exceptionList = parsedException.exceptions();
+    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform());
+    Assertions.assertEquals(1, exceptionList.size());
+
+    assertExceptionContent(exceptionList.get(0), "io.airbyte.commons.exceptions.ConfigErrorException", "Some error message",
+        List.of(
+            Map.of(
+                FILENAME, "SnowflakeDestination.kt",
+                LINE_NO, 279,
+                MODULE, "io.airbyte.integrations.destination.snowflake.SnowflakeDestinationKt",
+                FUNCTION, "main"),
+            Map.of(
+                FILENAME, "AdaptiveDestinationRunner.kt",
+                LINE_NO, 68,
+                MODULE, "io.airbyte.cdk.integrations.base.adaptive.AdaptiveDestinationRunner$Runner",
+                FUNCTION, "run"),
+            Map.of(
+                FILENAME, "IntegrationRunner.kt",
+                LINE_NO, 116,
+                MODULE, "io.airbyte.cdk.integrations.base.IntegrationRunner",
+                FUNCTION, "run"),
+            Map.of(
+                FILENAME, "SnowflakeDestination.kt",
+                LINE_NO, 194,
+                MODULE, "io.airbyte.integrations.destination.snowflake.SnowflakeDestination",
+                FUNCTION, "getSerializedMessageConsumer"),
+            Map.of(
+                FILENAME, "StagingConsumerFactory.kt",
+                LINE_NO, 124,
+                MODULE, "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory",
+                FUNCTION, "createAsync"),
+            Map.of(
+                FILENAME, "StagingConsumerFactory.kt",
+                LINE_NO, 159,
+                MODULE, "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory$Companion",
+                FUNCTION, "access$streamDescToWriteConfig"),
+            Map.of(
+                FILENAME, "StagingConsumerFactory.kt",
+                LINE_NO, 226,
+                MODULE, "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory$Companion",
+                FUNCTION, "streamDescToWriteConfig")));
+
   }
 
   @Test

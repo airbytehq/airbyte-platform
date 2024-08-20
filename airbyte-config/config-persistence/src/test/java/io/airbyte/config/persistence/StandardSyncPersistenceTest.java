@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
@@ -19,7 +20,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReleaseStage;
@@ -33,13 +38,16 @@ import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -49,6 +57,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
@@ -57,11 +66,7 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.Notification
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -137,6 +142,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService));
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test
@@ -191,10 +198,10 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testGetAllStreamsForConnection() throws Exception {
     createBaseObjects();
-    final AirbyteStream airbyteStream = new AirbyteStream().withName("stream1").withNamespace("namespace1");
-    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream().withStream(airbyteStream);
-    final AirbyteStream airbyteStream2 = new AirbyteStream().withName("stream2");
-    final ConfiguredAirbyteStream configuredStream2 = new ConfiguredAirbyteStream().withStream(airbyteStream2);
+    final AirbyteStream airbyteStream = new AirbyteStream("stream1", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("namespace1");
+    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream(airbyteStream, SyncMode.INCREMENTAL, DestinationSyncMode.APPEND);
+    final AirbyteStream airbyteStream2 = new AirbyteStream("stream2", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL));
+    final ConfiguredAirbyteStream configuredStream2 = new ConfiguredAirbyteStream(airbyteStream2, SyncMode.INCREMENTAL, DestinationSyncMode.APPEND);
     final ConfiguredAirbyteCatalog configuredCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(configuredStream, configuredStream2));
     final StandardSync sync = createStandardSync(source1, destination1).withCatalog(configuredCatalog);
 
@@ -324,9 +331,9 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(2, notificationConfigurations.size());
     assertEquals(NotificationType.email,
         notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
-            .equals(syncGa.getConnectionId())).map(record -> record.getNotificationType()).findFirst().get());
+            .equals(syncGa.getConnectionId())).map(NotificationConfigurationRecord::getNotificationType).findFirst().get());
     assertFalse(notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
-        .equals(syncGa.getConnectionId())).map(record -> record.getEnabled()).findFirst().get());
+        .equals(syncGa.getConnectionId())).map(NotificationConfigurationRecord::getEnabled).findFirst().get());
   }
 
   private List<NotificationConfigurationRecord> getNotificationConfigurations() throws SQLException {
@@ -433,7 +440,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
 
     sourceDef1 = createStandardSourceDefinition("0.2.2", ReleaseStage.GENERALLY_AVAILABLE);
@@ -475,7 +483,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
         .withReleaseStage(releaseStage)
-        .withSupportLevel(SupportLevel.COMMUNITY);
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L);
     configRepository.writeConnectorMetadata(sourceDef, sourceDefVersion);
     return sourceDef;
   }
@@ -499,7 +508,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
         .withReleaseStage(releaseStage)
-        .withSupportLevel(SupportLevel.COMMUNITY);
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L);
 
     configRepository.writeConnectorMetadata(destDef, destDefVersion);
     return destDef;
@@ -570,7 +580,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withOperationId(standardSyncOperationId)
         .withName("name")
         .withWorkspaceId(workspaceId)
-        .withOperatorType(StandardSyncOperation.OperatorType.DBT));
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK));
 
     database.transaction(ctx -> ctx.insertInto(CONNECTION_OPERATION)
         .set(CONNECTION_OPERATION.ID, operationId)

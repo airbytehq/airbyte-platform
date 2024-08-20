@@ -50,8 +50,6 @@ public class ReplicationActivityInput {
   private UUID workspaceId;
   // The id of the connection associated with this sync.
   private UUID connectionId;
-  // Whether normalization should be run in the destination container.
-  private Boolean normalizeInDestinationContainer;
   // The task queue that replication will use.
   private String taskQueue;
   // Whether this 'sync' is performing a logical reset.

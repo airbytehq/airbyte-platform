@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Organization;
@@ -87,6 +88,8 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryWriter,
             secretPersistenceConfigService));
 
+    organizationPersistence.createOrganization(MockData.defaultOrganization());
+
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -136,7 +139,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void listPermissionByUserTest() throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionsByUser(MockData.CREATOR_USER_ID_1);
-    Assertions.assertEquals(2, permissions.size());
+    Assertions.assertEquals(3, permissions.size());
   }
 
   @Test
@@ -218,6 +221,17 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
     Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
     Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));
+  }
+
+  @Test
+  void isUserOrganizationAdmin() throws IOException {
+    // In MockData we have a user with userId(CREATOR_USER_ID_1), default workspace (WORKSPACE_ID_1)
+    // which is in organization(DEFAULT_ORGANIZATION_ID)
+    // also we have a permission(CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID, ORGANIZATION_ADMIN)
+    Assertions.assertTrue(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID));
+
+    // In MockData, user(CREATOR_USER_ID_2) does not have an org_admin permission, so should be false
+    Assertions.assertFalse(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_2, DEFAULT_ORGANIZATION_ID));
   }
 
 }

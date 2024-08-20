@@ -14,42 +14,38 @@ interface GroupControlsProps {
   error?: string;
 }
 
-const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
-  label,
-  control,
-  children,
-  name,
-  controlClassName,
-  error,
-}) => {
-  const hasTitle = Boolean(label || control);
+const GroupControls = React.forwardRef<HTMLDivElement, React.PropsWithChildren<GroupControlsProps>>(
+  ({ label, control, children, name, controlClassName, error }, ref) => {
+    const hasTitle = Boolean(label || control);
 
-  return (
-    // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
-    <div>
-      <div className={classNames(styles.container, { [styles["container--title"]]: hasTitle })} data-testid={name}>
-        {hasTitle && (
-          <div className={styles.title}>
-            <div className={styles.label}>{label}</div>
-            <div className={classNames(styles.control, controlClassName)}>{control}</div>
+    return (
+      // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
+      <div ref={ref}>
+        <div className={classNames(styles.container, { [styles["container--title"]]: hasTitle })} data-testid={name}>
+          {hasTitle && (
+            <div className={styles.title}>
+              <div className={styles.label}>{label}</div>
+              <div className={classNames(styles.control, controlClassName)}>{control}</div>
+            </div>
+          )}
+          <div
+            className={classNames(styles.content, {
+              [styles["content--error"]]: error,
+              [styles["content--title"]]: hasTitle,
+            })}
+          >
+            {children}
           </div>
-        )}
-        <div
-          className={classNames(styles.content, {
-            [styles["content--error"]]: error,
-            [styles["content--title"]]: hasTitle,
-          })}
-        >
-          {children}
         </div>
+        {error && (
+          <PropertyError>
+            <FormattedMessage id={error} />
+          </PropertyError>
+        )}
       </div>
-      {error && (
-        <PropertyError>
-          <FormattedMessage id={error} />
-        </PropertyError>
-      )}
-    </div>
-  );
-};
+    );
+  }
+);
+GroupControls.displayName = "GroupControls";
 
 export default GroupControls;

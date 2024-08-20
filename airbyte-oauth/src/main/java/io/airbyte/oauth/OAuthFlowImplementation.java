@@ -5,7 +5,6 @@
 package io.airbyte.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -23,7 +22,7 @@ public interface OAuthFlowImplementation {
                              JsonNode inputOAuthConfiguration,
                              OAuthConfigSpecification oauthConfigSpecification,
                              JsonNode sourceOAuthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException;
+      throws IOException, JsonValidationException;
 
   String getDestinationConsentUrl(UUID workspaceId,
                                   UUID destinationDefinitionId,
@@ -31,7 +30,7 @@ public interface OAuthFlowImplementation {
                                   JsonNode inputOAuthConfiguration,
                                   OAuthConfigSpecification oauthConfigSpecification,
                                   JsonNode destinationOAuthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException;
+      throws IOException, JsonValidationException;
 
   @Deprecated
   Map<String, Object> completeSourceOAuth(UUID workspaceId,
@@ -39,7 +38,7 @@ public interface OAuthFlowImplementation {
                                           Map<String, Object> queryParams,
                                           String redirectUrl,
                                           JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException;
+      throws IOException;
 
   Map<String, Object> completeSourceOAuth(UUID workspaceId,
                                           UUID sourceDefinitionId,
@@ -48,7 +47,7 @@ public interface OAuthFlowImplementation {
                                           JsonNode inputOAuthConfiguration,
                                           OAuthConfigSpecification oauthConfigSpecification,
                                           JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException;
+      throws IOException, JsonValidationException;
 
   @Deprecated
   Map<String, Object> completeDestinationOAuth(UUID workspaceId,
@@ -56,7 +55,7 @@ public interface OAuthFlowImplementation {
                                                Map<String, Object> queryParams,
                                                String redirectUrl,
                                                JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException;
+      throws IOException;
 
   Map<String, Object> completeDestinationOAuth(UUID workspaceId,
                                                UUID destinationDefinitionId,
@@ -65,12 +64,12 @@ public interface OAuthFlowImplementation {
                                                JsonNode inputOAuthConfiguration,
                                                OAuthConfigSpecification oauthConfigSpecification,
                                                JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException;
+      throws IOException, JsonValidationException;
 
   default void revokeSourceOauth(UUID workspaceId,
                                  UUID sourceDefinitionId,
                                  JsonNode hydratedSourceConnectionConfiguration,
                                  JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {}
+      throws IOException {}
 
 }

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
@@ -19,8 +17,9 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
@@ -33,7 +32,10 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
@@ -41,7 +43,6 @@ import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -50,10 +51,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -70,10 +71,12 @@ public class DestinationDefinitionsHandler {
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final DestinationHandler destinationHandler;
   private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
+  private final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
@@ -82,7 +85,9 @@ public class DestinationDefinitionsHandler {
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,
                                        final SupportStateUpdater supportStateUpdater,
-                                       final FeatureFlagClient featureFlagClient) {
+                                       final FeatureFlagClient featureFlagClient,
+                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                       final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -90,28 +95,29 @@ public class DestinationDefinitionsHandler {
     this.destinationHandler = destinationHandler;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
   @VisibleForTesting
   DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
                                                            final ActorDefinitionVersion destinationVersion) {
     try {
-      final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
       return new DestinationDefinitionRead()
           .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
           .name(standardDestinationDefinition.getName())
           .dockerRepository(destinationVersion.getDockerRepository())
           .dockerImageTag(destinationVersion.getDockerImageTag())
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
-          .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl() : loadIcon(standardDestinationDefinition.getIcon()))
+          .icon(standardDestinationDefinition.getIconUrl())
           .protocolVersion(destinationVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationVersion.getLastPublished()))
+          .cdkVersion(destinationVersion.getCdkVersion())
+          .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .supportsDbt(Objects.requireNonNullElse(destinationVersion.getSupportsDbt(), false))
-          .normalizationConfig(
-              ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(destinationVersion.getNormalizationConfig()))
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()));
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
@@ -163,7 +169,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
         configRepository.listPublicDestinationDefinitions(false).stream(),
         configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
@@ -176,7 +182,11 @@ public class DestinationDefinitionsHandler {
                 new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = getVersionsForDestinationDefinitions(shownDestinationDefs);
+    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = new HashMap<>();
+    for (var definition : shownDestinationDefs) {
+      destinationDefVersionMap.put(definition.getDestinationDefinitionId(),
+          actorDefinitionVersionHelper.getDestinationVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
+    }
     return toDestinationDefinitionReadList(shownDestinationDefs, destinationDefVersionMap);
   }
 
@@ -264,6 +274,18 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
+        airbyteCompatibleConnectorsValidator.validate(destinationDefinitionUpdate.getDestinationDefinitionId().toString(),
+            destinationDefinitionUpdate.getDockerImageTag());
+    if (!isNewConnectorVersionSupported.isValid()) {
+      final String message = isNewConnectorVersionSupported.getMessage() != null ? isNewConnectorVersionSupported.getMessage()
+          : String.format("Destination %s can't be updated to version %s cause the version "
+              + "is not supported by current platform version",
+              destinationDefinitionUpdate.getDestinationDefinitionId().toString(),
+              destinationDefinitionUpdate.getDockerImageTag());
+      throw new BadRequestProblem(message, new ProblemMessageData().message(message));
+    }
+
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
@@ -280,6 +302,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
+        .withMetrics(currentDestination.getMetrics())
         .withResourceRequirements(updatedResourceReqs);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
@@ -311,14 +334,6 @@ public class DestinationDefinitionsHandler {
 
     persistedDestinationDefinition.withTombstone(true);
     configRepository.updateStandardDestinationDefinition(persistedDestinationDefinition);
-  }
-
-  public static String loadIcon(final String name) {
-    try {
-      return name == null ? null : MoreResources.readResource("icons/" + name);
-    } catch (final Exception e) {
-      return null;
-    }
   }
 
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)

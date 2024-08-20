@@ -9,6 +9,7 @@ global:
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
+    type: internal
     secretName: ""
     secretValue: ""
 
@@ -22,7 +23,7 @@ replicaCount: 1
 image:
   repository: temporalio/auto-setup
   pullPolicy: IfNotPresent
-  tag: "1.20.1"
+  tag: "1.23.0"
 
 ##  temporal.service.type The Kubernetes Service Type
 ##  temporal.service.port The temporal port and exposed kubernetes port
@@ -50,7 +51,7 @@ containerSecurityContext: {}
 ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
 ## extraInitContainers:
 ##   - name: config-loader
-##     image: temporalio/auto-setup:1.20.1
+##     image: temporalio/auto-setup:1.23
 ##     command:
 ##       - /bin/sh
 ##       - -c

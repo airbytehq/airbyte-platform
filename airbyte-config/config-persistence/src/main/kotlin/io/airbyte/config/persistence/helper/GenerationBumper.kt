@@ -1,15 +1,15 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamGeneration
 import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.protocol.models.StreamDescriptor
 import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class GenerationBumper(val streamGenerationRepository: StreamGenerationRepository) {
+class GenerationBumper(private val streamGenerationRepository: StreamGenerationRepository) {
   /**
    * This is increasing the generation of the stream being refreshed.
    * For each stream being refreshed, it fetches the current generation and then create a new entry in the generation
@@ -22,10 +22,11 @@ class GenerationBumper(val streamGenerationRepository: StreamGenerationRepositor
     connectionId: UUID,
     jobId: Long,
     streamRefreshes: List<StreamRefresh>,
+    fullRefreshStream: Set<StreamDescriptor>,
   ) {
     val streamDescriptors: Set<StreamDescriptor> =
       streamRefreshes
-        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }.toHashSet()
+        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }.toHashSet() + fullRefreshStream
 
     val currentMaxGeneration: List<Generation> = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId)
 

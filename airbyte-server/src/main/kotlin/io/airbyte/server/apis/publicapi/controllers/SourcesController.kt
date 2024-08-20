@@ -6,17 +6,20 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.model.generated.ProblemValueData
+import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicSourcesApi
-import io.airbyte.public_api.model.generated.InitiateOauthRequest
-import io.airbyte.public_api.model.generated.SourceCreateRequest
-import io.airbyte.public_api.model.generated.SourcePatchRequest
-import io.airbyte.public_api.model.generated.SourcePutRequest
+import io.airbyte.publicApi.server.generated.apis.PublicSourcesApi
+import io.airbyte.publicApi.server.generated.models.InitiateOauthRequest
+import io.airbyte.publicApi.server.generated.models.SourceCreateRequest
+import io.airbyte.publicApi.server.generated.models.SourcePatchRequest
+import io.airbyte.publicApi.server.generated.models.SourcePutRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.PATCH
@@ -25,7 +28,6 @@ import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.constants.SOURCES_PATH
 import io.airbyte.server.apis.publicapi.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
-import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.server.apis.publicapi.helpers.removeSourceTypeNode
 import io.airbyte.server.apis.publicapi.mappers.SOURCE_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.services.SourceService
@@ -39,7 +41,7 @@ import jakarta.ws.rs.core.Response
 import java.util.UUID
 
 // Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
-@Controller(SOURCES_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class SourcesController(
   private val sourceService: SourceService,
@@ -47,20 +49,20 @@ open class SourcesController(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicSourcesApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest): Response {
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceCreateRequest.workspaceId.toString()),
+      sourceCreateRequest?.let { listOf(it.workspaceId.toString()) } ?: emptyList(),
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
     )
 
     val sourceDefinitionId: UUID =
-      sourceCreateRequest.definitionId
+      sourceCreateRequest?.definitionId
         ?: run {
-          val configurationJsonNode = sourceCreateRequest.configuration as ObjectNode
+          val configurationJsonNode = sourceCreateRequest?.configuration as ObjectNode
           if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {
             val unprocessableEntityProblem = UnprocessableEntityProblem()
             trackingHelper.trackFailuresIfAny(
@@ -72,41 +74,48 @@ open class SourcesController(
             throw unprocessableEntityProblem
           }
           val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-          getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+          SOURCE_NAME_TO_DEFINITION_ID[sourceName] ?: throw UnknownValueProblem(
+            ProblemValueData().value(sourceName),
+          )
         }
 
-    removeSourceTypeNode(sourceCreateRequest)
-
-    val sourceResponse: Any? =
-      trackingHelper.callWithTracker(
-        {
-          sourceService.createSource(
-            sourceCreateRequest,
-            sourceDefinitionId,
+    val sourceResponse =
+      sourceCreateRequest?.let { request ->
+        removeSourceTypeNode(request)
+        val response =
+          trackingHelper.callWithTracker(
+            {
+              sourceService.createSource(
+                request,
+                sourceDefinitionId,
+              )
+            },
+            SOURCES_PATH,
+            POST,
+            userId,
           )
-        },
-        SOURCES_PATH,
-        POST,
-        userId,
-      )
 
-    trackingHelper.trackSuccess(
-      SOURCES_PATH,
-      POST,
-      userId,
-      sourceCreateRequest.workspaceId,
-    )
+        trackingHelper.trackSuccess(
+          SOURCES_PATH,
+          POST,
+          userId,
+          request.workspaceId,
+        )
+
+        response
+      }
+
     return Response
       .status(Response.Status.OK.statusCode)
       .entity(sourceResponse)
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun publicDeleteSource(sourceId: UUID): Response {
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun publicDeleteSource(sourceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId.toString()),
+      listOf(sourceId),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -116,7 +125,7 @@ open class SourcesController(
       trackingHelper.callWithTracker(
         {
           sourceService.deleteSource(
-            sourceId,
+            UUID.fromString(sourceId),
           )
         },
         SOURCES_WITH_ID_PATH,
@@ -135,11 +144,11 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun publicGetSource(sourceId: UUID): Response {
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun publicGetSource(sourceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId.toString()),
+      listOf(sourceId),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -149,7 +158,7 @@ open class SourcesController(
       trackingHelper.callWithTracker(
         {
           sourceService.getSource(
-            sourceId,
+            UUID.fromString(sourceId),
           )
         },
         SOURCES_WITH_ID_PATH,
@@ -168,7 +177,7 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -180,12 +189,12 @@ open class SourcesController(
     return sourceService.controllerInitiateOAuth(initiateOauthRequest)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listSources(
-    workspaceIds: MutableList<UUID>?,
-    includeDeleted: Boolean?,
-    limit: Int?,
-    offset: Int?,
+    workspaceIds: List<UUID>?,
+    includeDeleted: Boolean,
+    limit: Int,
+    offset: Int,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -200,9 +209,9 @@ open class SourcesController(
       trackingHelper.callWithTracker({
         sourceService.listSourcesForWorkspaces(
           safeWorkspaceIds,
-          includeDeleted!!,
-          limit!!,
-          offset!!,
+          includeDeleted,
+          limit,
+          offset,
         )
       }, SOURCES_PATH, GET, userId)
 
@@ -218,34 +227,36 @@ open class SourcesController(
   }
 
   @Patch
-  @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Path("$SOURCES_PATH/{sourceId}")
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchSource(
-    sourceId: UUID,
-    sourcePatchRequest: SourcePatchRequest,
+    sourceId: String,
+    sourcePatchRequest: SourcePatchRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId.toString()),
+      listOf(sourceId),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
     )
 
-    removeSourceTypeNode(sourcePatchRequest)
-
     val sourceResponse: Any? =
-      trackingHelper.callWithTracker(
-        {
-          sourceService.partialUpdateSource(
-            sourceId,
-            sourcePatchRequest,
-          )
-        },
-        SOURCES_WITH_ID_PATH,
-        PATCH,
-        userId,
-      )
+      sourcePatchRequest?.let { request ->
+        removeSourceTypeNode(request)
+
+        trackingHelper.callWithTracker(
+          {
+            sourceService.partialUpdateSource(
+              UUID.fromString(sourceId),
+              request,
+            )
+          },
+          SOURCES_WITH_ID_PATH,
+          PATCH,
+          userId,
+        )
+      }
 
     trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,
@@ -258,34 +269,36 @@ open class SourcesController(
       .build()
   }
 
-  @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Path("$SOURCES_PATH/{sourceId}")
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun putSource(
-    sourceId: UUID,
-    sourcePutRequest: SourcePutRequest,
+    sourceId: String,
+    sourcePutRequest: SourcePutRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId.toString()),
+      listOf(sourceId),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
     )
 
-    removeSourceTypeNode(sourcePutRequest)
-
     val sourceResponse: Any? =
-      trackingHelper.callWithTracker(
-        {
-          sourceService.updateSource(
-            sourceId,
-            sourcePutRequest,
-          )
-        },
-        SOURCES_WITH_ID_PATH,
-        PUT,
-        userId,
-      )
+      sourcePutRequest?.let { request ->
+        removeSourceTypeNode(request)
+
+        trackingHelper.callWithTracker(
+          {
+            sourceService.updateSource(
+              UUID.fromString(sourceId),
+              request,
+            )
+          },
+          SOURCES_WITH_ID_PATH,
+          PUT,
+          userId,
+        )
+      }
 
     trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,

@@ -1,4 +1,4 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classNames from "classnames";
 import React from "react";
 
@@ -8,6 +8,7 @@ import { Icon } from "components/ui/Icon";
 import styles from "./Collapsible.module.scss";
 import { FlexContainer } from "../Flex";
 import { Text } from "../Text";
+import { InfoTooltip } from "../Tooltip";
 
 interface CollapsibleProps {
   className?: string;
@@ -20,6 +21,7 @@ interface CollapsibleProps {
   initiallyOpen?: boolean;
   noBodyPadding?: boolean;
   onClick?: (newOpenState: boolean) => void;
+  infoTooltipContent?: React.ReactNode;
 }
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
@@ -34,6 +36,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   initiallyOpen = false,
   noBodyPadding = false,
   onClick,
+  infoTooltipContent,
 }) => {
   const childrenCount = React.Children.count(children);
 
@@ -46,7 +49,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
           className={classNames(className, styles.container, { [styles.footer]: type === "footer" })}
           gap="xl"
         >
-          <Disclosure.Button
+          <DisclosureButton
             data-testid={dataTestId}
             className={classNames(buttonClassName, styles.button, { [styles.buttonSection]: type === "section" })}
             onClick={() => onClick?.(!open)}
@@ -68,16 +71,19 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
               >
                 <Icon type="chevronRight" />
               </div>
-              <Text className={styles.label}>{label}</Text>
+              <FlexContainer direction="row" gap="none" alignItems="center" className={styles.labelContainer}>
+                <Text className={styles.label}>{label}</Text>
+                {infoTooltipContent && <InfoTooltip placement="top-start">{infoTooltipContent}</InfoTooltip>}
+              </FlexContainer>
               {showErrorIndicator && <Indicator className={styles.errorIndicator} />}
             </FlexContainer>
-          </Disclosure.Button>
-          <Disclosure.Panel
+          </DisclosureButton>
+          <DisclosurePanel
             className={classNames(styles.body, { [styles["body--noPadding"]]: noBodyPadding })}
             unmount={false}
           >
             {children}
-          </Disclosure.Panel>
+          </DisclosurePanel>
         </FlexContainer>
       )}
     </Disclosure>

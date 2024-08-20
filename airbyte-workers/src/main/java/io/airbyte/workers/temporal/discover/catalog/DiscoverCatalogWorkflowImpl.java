@@ -33,6 +33,8 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptions")
   private DiscoverCatalogActivity activity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private DiscoverCatalogHelperActivity reportActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -48,7 +50,7 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
         result = activity.runWithWorkload(new DiscoverCatalogInput(
             jobRunConfig, launcherConfig, config));
       } catch (WorkerException e) {
-        activity.reportFailure(true);
+        reportActivity.reportFailure(true);
         throw new RuntimeException(e);
       }
     } else {
@@ -56,9 +58,9 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
     }
 
     if (result.getDiscoverCatalogId() != null) {
-      activity.reportSuccess(shouldRunWithWorkload);
+      reportActivity.reportSuccess(shouldRunWithWorkload);
     } else {
-      activity.reportFailure(shouldRunWithWorkload);
+      reportActivity.reportFailure(shouldRunWithWorkload);
     }
 
     return result;
@@ -72,7 +74,7 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
       return false;
     }
 
-    return activity.shouldUseWorkload(workspaceId);
+    return reportActivity.shouldUseWorkload(workspaceId);
   }
 
 }

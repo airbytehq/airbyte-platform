@@ -4,6 +4,7 @@
 
 package io.airbyte.metrics.reporter;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
@@ -26,12 +27,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class MetricRepositoryTest {
 
   private static final String SRC = "src";
@@ -56,11 +57,6 @@ abstract class MetricRepositoryTest {
     ctx.truncate(JOBS).cascade().execute();
     ctx.truncate(ATTEMPTS).cascade().execute();
     ctx.truncate(WORKSPACE).cascade().execute();
-  }
-
-  @AfterEach
-  void tearDown() {
-
   }
 
   @Nested
@@ -269,17 +265,17 @@ abstract class MetricRepositoryTest {
     @Test
     void shouldReturnNumConnectionsBasic() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE)
-          .values(workspaceId, "test-0", false)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
+          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID)
           .execute();
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -297,17 +293,17 @@ abstract class MetricRepositoryTest {
     @DisplayName("should ignore deleted connections")
     void shouldIgnoreNonRunningConnections() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE)
-          .values(workspaceId, "test-0", false)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
+          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID)
           .execute();
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -327,17 +323,17 @@ abstract class MetricRepositoryTest {
     @DisplayName("should ignore deleted connections")
     void shouldIgnoreDeletedWorkspaces() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE)
-          .values(workspaceId, "test-0", true)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
+          .values(workspaceId, "test-0", true, DEFAULT_ORGANIZATION_ID)
           .execute();
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,

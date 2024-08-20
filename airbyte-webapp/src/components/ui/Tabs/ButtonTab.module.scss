@@ -3,6 +3,9 @@
 
 .tabContainer,
 button.tabContainer {
+  display: flex;
+  gap: variables.$spacing-sm;
+  align-items: center;
   border-radius: variables.$border-radius-xs variables.$border-radius-xs 0 0;
   border: none;
   background: none;

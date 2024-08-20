@@ -1,30 +1,24 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
-import io.airbyte.commons.features.EnvVariableFeatureFlags
-import io.airbyte.commons.features.FeatureFlags
+import io.airbyte.commons.logging.StorageConfig
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
-import io.airbyte.config.storage.StorageConfig
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AbEnvVar
 
-private val logger = KotlinLogging.logger {}
-
 @Singleton
 class OrchestratorEnvSingleton(
   private val featureFlagClient: FeatureFlagClient,
-  private val featureFlags: FeatureFlags,
   private val workerEnv: Configs.WorkerEnvironment,
   private val storageConfig: StorageConfig,
   @Named("workloadApiEnvMap") private val workloadApiEnvMap: Map<String, String>,
@@ -41,9 +35,6 @@ class OrchestratorEnvSingleton(
   fun orchestratorEnvMap(connectionId: UUID): Map<String, String> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA] = java.lang.Boolean.toString(featureFlags.autoDetectSchema())
-    envMap[EnvVariableFeatureFlags.APPLY_FIELD_SELECTION] = java.lang.Boolean.toString(featureFlags.applyFieldSelection())
-    envMap[EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES] = featureFlags.fieldSelectionWorkspaces()
     overrideOrchestratorJavaOpts(envMap, connectionId)
     val configs: Configs = EnvConfigs()
     envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = AbEnvVar.FEATURE_FLAG_CLIENT.fetch() ?: ""
@@ -70,16 +61,15 @@ class OrchestratorEnvSingleton(
     // Metrics configuration
     envMap.putAll(metricsEnvMap)
 
-    // Micronaut environment
-    envMap.putAll(micronautEnvMap)
-
     // TODO: Don't do this. Be explicit about what env vars we pass.
     // Copy over all local values
     val localEnvMap =
       System.getenv()
         .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
-
     envMap.putAll(localEnvMap)
+
+    // Micronaut environment -- this needs to be last to ensure that it is included.
+    envMap.putAll(micronautEnvMap)
 
     return envMap
   }
@@ -111,11 +101,6 @@ class OrchestratorEnvSingleton(
       orchestratorEnvMap(connectionId)
         .filterNot { env ->
           secretEnvMap().containsKey(env.key)
-            .also {
-              if (it) {
-                logger.info { "Skipping env-var ${env.key} as it was already defined as a secret. " }
-              }
-            }
         }
         .map { EnvVar(it.key, it.value, null) }
         .toList()

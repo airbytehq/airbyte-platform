@@ -5,8 +5,9 @@
 package io.airbyte.workload.launcher.pipeline
 
 import fixtures.RecordFixtures
-import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.config.Configs
+import io.airbyte.commons.logging.LocalLogMdcHelper
+import io.airbyte.workload.api.client.WorkloadApiClient
+import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.client.LogContextFactory
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
@@ -21,6 +22,7 @@ import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -72,6 +74,10 @@ class LogPathTest {
       mockk<WorkloadApiClient> {
         every { workloadApi } returns mockk()
       }
+    val claimProcessorTracker =
+      mockk<ClaimProcessorTracker> {
+        every { trackResumed() } returns Unit
+      }
 
     val processor =
       ClaimedProcessor(
@@ -80,6 +86,7 @@ class LogPathTest {
         metricPublisher,
         "dataplane_id",
         parallelism,
+        claimProcessorTracker,
       )
 
     val msgs = inputMsgs()
@@ -100,6 +107,8 @@ class LogPathTest {
         assert(logLines[5].endsWith("TEST: success. Id: ${msg.workloadId}."))
       }
     }
+
+    verify { claimProcessorTracker.trackResumed() }
   }
 
   companion object {
@@ -154,7 +163,7 @@ class LogPathTest {
         successHandler,
         failureHandler,
         metricPublisher,
-        LogContextFactory(Configs.WorkerEnvironment.DOCKER),
+        LogContextFactory(LocalLogMdcHelper()),
       )
 
     fun readTestLogs(logPath: String): List<String> = Files.readAllLines(Path(logPath)).filter { line -> line.contains(TEST_LOG_PREFIX) }

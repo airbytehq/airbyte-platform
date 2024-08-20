@@ -10,7 +10,7 @@ import com.google.common.collect.Lists;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ApplicationBeanFactoryTest {
+class ApplicationBeanFactoryTest {
 
   private static final String ROOT_PATH = "/path/to/root";
 

@@ -4,16 +4,20 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorStatus;
+import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DestinationCloneConfiguration;
 import io.airbyte.api.model.generated.DestinationCloneRequestBody;
 import io.airbyte.api.model.generated.DestinationCreate;
@@ -28,11 +32,13 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -41,13 +47,12 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,9 +101,6 @@ class DestinationHandlerTest {
     featureFlagClient = mock(TestClient.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
-
-    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
-        .thenReturn(true);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -307,7 +309,8 @@ class DestinationHandlerTest {
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE);
+        .supportState(SUPPORT_STATE)
+        .status(ActorStatus.INACTIVE);
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId());
 
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
@@ -329,6 +332,55 @@ class DestinationHandlerTest {
         destinationConnection.getDestinationId());
     verify(secretsProcessor)
         .prepareSecretsForOutput(destinationConnection.getConfiguration(), destinationDefinitionSpecificationRead.getConnectionSpecification());
+  }
+
+  @Test
+  void testDeleteDestinationAndDeleteSecrets()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final JsonNode newConfiguration = destinationConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+
+    final DestinationConnection expectedSourceConnection = Jsons.clone(destinationConnection).withTombstone(true);
+
+    final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId());
+    final StandardSync standardSync = ConnectionHelpers.generateSyncWithDestinationId(destinationConnection.getDestinationId());
+    standardSync.setBreakingChange(false);
+    final ConnectionRead connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(Collections.singletonList(connectionRead));
+    final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId());
+
+    when(configRepository.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(destinationConnection)
+        .thenReturn(expectedSourceConnection);
+    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId()))
+        .thenReturn(destinationConnection)
+        .thenReturn(expectedSourceConnection);
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
+        destinationConnection.getWorkspaceId(),
+        newConfiguration, destinationDefinitionVersion.getSpec())).thenReturn(newConfiguration);
+    when(configRepository.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
+    when(configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
+        .thenReturn(standardDestinationDefinition);
+    when(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)).thenReturn(connectionReadList);
+    when(
+        secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
+            destinationDefinitionSpecificationRead.getConnectionSpecification()))
+                .thenReturn(destinationConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
+    destinationHandler.deleteDestination(destinationIdRequestBody);
+
+    // We should not no longer get secrets or write secrets anymore (since we are deleting the
+    // destination).
+    verify(destinationService, times(0)).writeDestinationConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(destinationService, times(0)).getDestinationConnectionWithSecrets(any());
+    verify(destinationService).tombstoneDestination(any(), any(), any(), any());
+    verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
+    verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
   }
 
   @Test

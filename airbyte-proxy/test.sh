@@ -24,7 +24,7 @@ VERSION="${VERSION:-dev}" # defaults to "dev", otherwise it is set by environmen
 echo "testing with proxy container airbyte/proxy:$VERSION"
 
 function start_container () {
-  CMD="docker run -d -p $1:8000 --env BASIC_AUTH_USERNAME=$2 --env BASIC_AUTH_PASSWORD=$3 --env BASIC_AUTH_PROXY_TIMEOUT=$4 --env PROXY_PASS_WEB=http://localhost --env PROXY_PASS_API=http://localhost --env CONNECTOR_BUILDER_SERVER_API=http://localhost --env PROXY_PASS_AIRBYTE_API_SERVER=http://localhost --name $NAME-$1 airbyte/proxy:$VERSION"
+  CMD="docker run -d -p $1:8000 --env BASIC_AUTH_USERNAME=$2 --env BASIC_AUTH_PASSWORD=$3 --env BASIC_AUTH_PROXY_TIMEOUT=$4 --env PROXY_PASS_WEB=http://localhost --env PROXY_PASS_API=http://localhost --env CONNECTOR_BUILDER_SERVER_API=http://localhost  --name $NAME-$1 airbyte/proxy:$VERSION"
   echo $CMD
   eval $CMD
   wait_for_docker $NAME-$1;

@@ -10,15 +10,21 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   executors:
+    # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:
       type: fixed
-      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:3}
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+    public-api:
+      type: fixed
+      n-threads: ${PUBLIC_API_EXECUTOR_THREADS:5}
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
@@ -27,9 +33,9 @@ micronaut:
     binders:
       netty:
         bytebuf-allocators:
-          enabled: true
+          enabled: false
         channels:
-          enabled: true
+          enabled: false
         queues:
           enabled: true
     export:
@@ -48,15 +54,24 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowed-origins-regex:
-            - ^.*$
+          allowed-origins-regex: ${CORS_ALLOWED_ORIGINS_REGEX:}
+          allowed-methods:
+            - GET
+            - POST
+            - OPTIONS
+          allowed-headers:
+            - authorization
+            - content-type
+            - X-Airbyte-Analytic-Source
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
-      access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
+
   http:
     client:
       read-timeout: ${READ_TIMEOUT:10m}
@@ -69,12 +84,20 @@ micronaut:
         prefer-native-transport: true
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
+  license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
     delay_ms: 20000
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  auth:
+    initial-user:
+      email: ${INITIAL_USER_EMAIL:}
+      first-name: ${INITIAL_USER_FIRST_NAME:}
+      last-name: ${INITIAL_USER_LAST_NAME:}
+      password: ${INITIAL_USER_PASSWORD:}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -103,10 +126,14 @@ airbyte:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  support-email-domains:
+    oss: ""
+    cloud: "airbyte.io"
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -136,6 +163,7 @@ airbyte:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
+    kube-job-config-variant-override: ${JOB_RESOURCE_VARIANT_OVERRIDE:}
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
@@ -245,6 +273,106 @@ airbyte:
         memory-limit: 50Mi
         memory-request: 25Mi
 
+      # Generally low resource containers
+      lowresource--destination-stderr:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_MEM_REQUEST:0}
+      lowresource--destination-stdout:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_MEM_REQUEST:0}
+      lowresource--heartbeat:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_MEM_REQUEST:0}
+      lowresource--source-stderr:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_MEM_REQUEST:0}
+      # Default base sync values
+      lowresource--destination:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_MEM_REQUEST:0}
+      lowresource--orchestrator:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_MEM_REQUEST:0}
+      # API syncs
+      lowresource--source-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout-api:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_MEM_REQUEST:0}
+      lowresource--orchestrator-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin-api:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_MEM_REQUEST:0}
+      # Database syncs resource override
+      lowresource--source-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout-database:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_MEM_REQUEST:0}
+      lowresource--orchestrator-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin-database:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_MEM_REQUEST:0}
+
     job:
       error-reporting:
         sentry:
@@ -269,9 +397,10 @@ airbyte:
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
     connection:
-      disable:
+      limits:
         max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
         max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:20}
+        max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -396,6 +525,11 @@ flyway:
       enabled: false
       locations:
         - "classpath:io/airbyte/db/instance/jobs/migrations"
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization-inclusion: NON_ABSENT
 
 jooq:
   datasources:

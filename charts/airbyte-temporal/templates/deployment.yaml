@@ -55,29 +55,25 @@ spec:
             value: "true"
           - name: DB # The DB engine to use
             value: "postgresql"
-          - name: DB_PORT
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                key: DATABASE_PORT
-          - name: POSTGRES_USER
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-airbyte-secrets
-                key: DATABASE_USER
-          - name: POSTGRES_PWD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-          - name: POSTGRES_SEEDS
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                key: DATABASE_HOST
           - name: DYNAMIC_CONFIG_FILE_PATH
             value: "config/dynamicconfig/development.yaml"
+
+          {{- include "airbyte.temporal.database.envs" . | nindent 10 }}
+          
         {{- end }}
+
+        {{- if eq .Values.global.database.type "external" }}
+        # Assume an external database requires SSL.
+          - name: POSTGRES_TLS_ENABLED
+            value: "true"
+          - name: POSTGRES_TLS_DISABLE_HOST_VERIFICATION
+            value: "true"
+          - name: SQL_TLS_ENABLED
+            value: "true"
+          - name: SQL_TLS_DISABLE_HOST_VERIFICATION
+            value: "true"
+        {{- end }}
+
         {{- if .Values.extraEnv }}
         {{ .Values.extraEnv | toYaml | nindent 10 }}
         {{- end }}

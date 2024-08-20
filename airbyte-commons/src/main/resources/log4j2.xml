@@ -2,10 +2,20 @@
 <Configuration status="INFO">
     <Properties>
         <Property name="ci-mode">${sys:ciMode:-false}</Property>
+        <!--
+        date format is datadog friendly so that it can try to detect multilines logs
+        https://github.com/DataDog/datadog-agent/blob/a27c16c05da0cf7b09d5a5075ca568fdae1b4ee0/pkg/logs/internal/decoder/auto_multiline_handler.go#L208
+
+        trace_id and span_id are added to the logs so that datadog can correlate logs and traces https://docs.datadoghq.com/tracing/other_telemetry/connect_logs_and_traces/
+        https://app.datadoghq.com/logs/pipelines?search=env%3Aci
+         -->
+        <Property name="pattern-with-trace-id">%d{yyyy-MM-dd HH:mm:ss,SSS}{GMT+0} [dd.trace_id=%X{dd.trace_id} dd.span_id=%X{dd.span_id}] %p %C{1.}(%M):%L %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
         <!-- Mask the string apikey=<string> to apikey=***** to prevent secrets leaking. -->
         <Property name="default-pattern">%d{yyyy-MM-dd HH:mm:ss}{GMT+0} %highlight{%p} %C{1.}(%M):%L - %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
         <!--Logs the timestamp and log_source/application name in the beginning of the line if it exists with a > separator, and then always the rest of the line.-->
         <Property name="simple-pattern">%d{yyyy-MM-dd HH:mm:ss}{GMT+0}%replace{ %X{log_source}}{^ -}{} > %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
+
+        <Property name="route-ttl">${env:LOG_IDLE_ROUTE_TTL:-15}</Property>
 
         <!-- Always log INFO by default. -->
         <Property name="log-level">${sys:LOG_LEVEL:-${env:LOG_LEVEL:-INFO}}</Property>
@@ -21,8 +31,7 @@
         </Console>
 
         <Console name="CI" target="SYSTEM_OUT">
-            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="${default-pattern}"/>
+            <PatternLayout pattern="${pattern-with-trace-id}"/>
         </Console>
 
         <Console name="SimpleDefault" target="SYSTEM_OUT">
@@ -72,7 +81,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplit">
@@ -90,7 +99,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <!--
@@ -115,7 +124,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplitCloud">
@@ -134,7 +143,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="AppLogSplit">
@@ -157,7 +166,7 @@
                     </RollingFile>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
         <Routing name="AppLogSplitCloud">
             <Routes pattern="$${ctx:cloud_workspace_app_root}">
@@ -172,7 +181,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="ConsoleRouter">

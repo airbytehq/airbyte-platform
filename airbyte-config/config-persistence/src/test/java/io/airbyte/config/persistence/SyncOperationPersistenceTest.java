@@ -4,14 +4,12 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Geography;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -20,6 +18,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -27,6 +26,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -48,40 +48,18 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
 
-  private static final StandardSyncOperation DBT_OP = new StandardSyncOperation()
-      .withName("operation-1")
-      .withTombstone(false)
-      .withOperationId(UUID.randomUUID())
-      .withWorkspaceId(WORKSPACE_ID)
-      .withOperatorDbt(new OperatorDbt()
-          .withDbtArguments("dbt-arguments")
-          .withDockerImage("image-tag")
-          .withGitRepoBranch("git-repo-branch")
-          .withGitRepoUrl("git-repo-url"))
-      .withOperatorNormalization(null)
-      .withOperatorType(OperatorType.DBT);
-  private static final StandardSyncOperation NORMALIZATION_OP = new StandardSyncOperation()
-      .withName("operation-1")
-      .withTombstone(false)
-      .withOperationId(UUID.randomUUID())
-      .withWorkspaceId(WORKSPACE_ID)
-      .withOperatorDbt(null)
-      .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-      .withOperatorType(OperatorType.NORMALIZATION);
   private static final StandardSyncOperation WEBHOOK_OP = new StandardSyncOperation()
       .withName("webhook-operation")
       .withTombstone(false)
       .withOperationId(UUID.randomUUID())
       .withWorkspaceId(WORKSPACE_ID)
       .withOperatorType(OperatorType.WEBHOOK)
-      .withOperatorDbt(null)
-      .withOperatorNormalization(null)
       .withOperatorWebhook(
           new OperatorWebhook()
               .withWebhookConfigId(WEBHOOK_CONFIG_ID)
               .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
               .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
-  private static final List<StandardSyncOperation> OPS = List.of(DBT_OP, NORMALIZATION_OP, WEBHOOK_OP);
+  private static final List<StandardSyncOperation> OPS = List.of(WEBHOOK_OP);
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -123,6 +101,9 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService));
+
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
     createWorkspace();
 
     for (final StandardSyncOperation op : OPS) {
@@ -164,7 +145,8 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
   }
 

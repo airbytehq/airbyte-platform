@@ -38,7 +38,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidLiteralsInIfCondition"})
 class TemporalUtilsTest {
 
   private static final String TASK_QUEUE = "default";
@@ -242,8 +242,6 @@ class TemporalUtilsTest {
       private static final String ACTIVITY1 = "activity1";
 
       private final AtomicInteger timesReachedEnd;
-
-      private final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
 
       public Activity1Impl(final AtomicInteger timesReachedEnd) {
         this.timesReachedEnd = timesReachedEnd;

@@ -12,29 +12,30 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.BooleanRead;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberResponse;
+import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobFailureRequest;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.State;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
@@ -42,7 +43,9 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput;
+import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +66,9 @@ class JobCreationAndStatusUpdateActivityTest {
 
   public static final String REASON = "reason";
   private static final String EXCEPTION_MESSAGE = "bang";
+
+  @Mock
+  private AirbyteApiClient airbyteApiClient;
 
   @Mock
   private JobsApi jobsApi;
@@ -91,9 +97,7 @@ class JobCreationAndStatusUpdateActivityTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
       .withFailures(Collections.singletonList(
@@ -103,8 +107,7 @@ class JobCreationAndStatusUpdateActivityTest {
   @BeforeEach
   void beforeEach() {
     jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
-        jobsApi,
-        attemptApi,
+        airbyteApiClient,
         featureFlagClient,
         outputStateStorageClient,
         outputCatalogStorageClient);
@@ -115,8 +118,11 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test job creation")
-    void createJob() throws ApiException {
-      when(jobsApi.createJob(new JobCreate().connectionId(CONNECTION_ID))).thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+    void createJob() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+      when(jobsApi.createJob(new JobCreate(CONNECTION_ID)))
+          .thenReturn(new JobInfoRead(new JobRead(JOB_ID, JobConfigType.SYNC, CONNECTION_ID.toString(), System.currentTimeMillis(),
+              System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null, null), List.of()));
       final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
       assertEquals(JOB_ID, newJob.getJobId());
@@ -124,8 +130,9 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test job creation throws retryable exception")
-    void createJobThrows() throws ApiException {
-      when(jobsApi.createJob(Mockito.any())).thenThrow(new ApiException());
+    void createJobThrows() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+      when(jobsApi.createJob(Mockito.any())).thenThrow(new IOException());
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID)));
     }
 
@@ -143,14 +150,15 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(final boolean didSucceed) throws ApiException {
+    void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(final boolean didSucceed) throws IOException {
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
           JOB_ID,
           0,
           CONNECTION_ID);
 
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.didPreviousJobSucceed(any()))
-          .thenReturn(new BooleanRead().value(didSucceed));
+          .thenReturn(new BooleanRead(didSucceed));
 
       final boolean result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
 
@@ -158,23 +166,25 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() throws ApiException {
+    void isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() throws IOException {
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
           JOB_ID,
           0,
           CONNECTION_ID);
 
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.didPreviousJobSucceed(any()))
-          .thenThrow(new ApiException(EXCEPTION_MESSAGE));
+          .thenThrow(new IOException(EXCEPTION_MESSAGE));
 
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input));
     }
 
     @Test
     @DisplayName("Test attempt creation")
-    void createAttemptNumber() throws ApiException {
-      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
-          .thenReturn(new CreateNewAttemptNumberResponse().attemptNumber(ATTEMPT_NUMBER_1));
+    void createAttemptNumber() throws IOException {
+      when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
+      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest(JOB_ID)))
+          .thenReturn(new CreateNewAttemptNumberResponse(ATTEMPT_NUMBER_1));
 
       final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(JOB_ID));
       Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
@@ -182,14 +192,15 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test exception errors are properly wrapped")
-    void createAttemptNumberThrowException() throws ApiException {
-      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
-          .thenThrow(new ApiException());
+    void createAttemptNumberThrowException() throws IOException {
+      when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
+      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest(JOB_ID)))
+          .thenThrow(new IOException());
 
       Assertions.assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
           JOB_ID)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(ApiException.class);
+          .hasCauseInstanceOf(IOException.class);
     }
 
   }
@@ -198,20 +209,22 @@ class JobCreationAndStatusUpdateActivityTest {
   class Update {
 
     @Test
-    void setJobSuccess() throws ApiException {
+    void setJobSuccess() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       final var request =
           new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
       jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request);
-      verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest()
-          .attemptNumber(request.getAttemptNumber())
-          .jobId(request.getJobId())
-          .connectionId(request.getConnectionId())
-          .standardSyncOutput(request.getStandardSyncOutput()));
+      verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest(
+          request.getJobId(),
+          request.getAttemptNumber(),
+          request.getConnectionId(),
+          request.getStandardSyncOutput()));
     }
 
     @Test
-    void setJobSuccessWrapException() throws ApiException {
-      final ApiException exception = new ApiException(TEST_EXCEPTION_MESSAGE);
+    void setJobSuccessWrapException() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+      final IOException exception = new IOException(TEST_EXCEPTION_MESSAGE);
       Mockito.doThrow(exception)
           .when(jobsApi).jobSuccessWithAttemptNumber(any());
 
@@ -219,28 +232,31 @@ class JobCreationAndStatusUpdateActivityTest {
           .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
               new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(ApiException.class);
+          .hasCauseInstanceOf(IOException.class);
     }
 
     @Test
-    void setJobFailure() throws ApiException {
+    void setJobFailure() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON));
-      verify(jobsApi).jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(REASON));
+      verify(jobsApi).jobFailure(new JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON));
     }
 
     @Test
-    void setJobFailureWithNullJobSyncConfig() throws ApiException {
-      when(jobsApi.jobFailure(any())).thenThrow(new ApiException());
+    void setJobFailureWithNullJobSyncConfig() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+      when(jobsApi.jobFailure(any())).thenThrow(new IOException());
 
       Assertions
           .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(ApiException.class);
-      verify(jobsApi).jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(REASON));
+          .hasCauseInstanceOf(IOException.class);
+      verify(jobsApi).jobFailure(new JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON));
     }
 
     @Test
     void attemptFailureWithAttemptNumberHappyPath() {
+      when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
       final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
           JOB_ID,
           ATTEMPT_NUMBER,
@@ -253,7 +269,8 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void attemptFailureWithAttemptNumberThrowsRetryableOnApiFailure() throws ApiException {
+    void attemptFailureWithAttemptNumberThrowsRetryableOnApiFailure() throws IOException {
+      when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
       final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
           JOB_ID,
           ATTEMPT_NUMBER,
@@ -261,7 +278,7 @@ class JobCreationAndStatusUpdateActivityTest {
           standardSyncOutput,
           failureSummary);
 
-      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(attemptApi).failAttempt(any());
+      Mockito.doThrow(new IOException(EXCEPTION_MESSAGE)).when(attemptApi).failAttempt(any());
 
       assertThrows(
           RetryableException.class,
@@ -269,7 +286,8 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void cancelJobHappyPath() throws ApiException {
+    void cancelJobHappyPath() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       final var input = new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(
           JOB_ID,
           ATTEMPT_NUMBER,
@@ -288,14 +306,15 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void cancelJobThrowsRetryableOnJobsApiFailure() throws ApiException {
+    void cancelJobThrowsRetryableOnJobsApiFailure() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       final var input = new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(
           JOB_ID,
           ATTEMPT_NUMBER,
           CONNECTION_ID,
           failureSummary);
 
-      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(jobsApi).persistJobCancellation(any());
+      Mockito.doThrow(new IOException(EXCEPTION_MESSAGE)).when(jobsApi).persistJobCancellation(any());
 
       assertThrows(
           RetryableException.class,
@@ -304,13 +323,15 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void ensureCleanJobStateHappyPath() {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       assertDoesNotThrow(
           () -> jobCreationAndStatusUpdateActivity.ensureCleanJobState(new EnsureCleanJobStateInput(CONNECTION_ID)));
     }
 
     @Test
-    void ensureCleanJobStateThrowsRetryableOnApiFailure() throws ApiException {
-      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(jobsApi).failNonTerminalJobs(any());
+    void ensureCleanJobStateThrowsRetryableOnApiFailure() throws IOException {
+      when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+      Mockito.doThrow(new IOException(EXCEPTION_MESSAGE)).when(jobsApi).failNonTerminalJobs(any());
 
       assertThrows(
           RetryableException.class,

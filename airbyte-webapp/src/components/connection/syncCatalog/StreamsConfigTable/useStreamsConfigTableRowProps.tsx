@@ -2,6 +2,7 @@
 import classNames from "classnames";
 import { useMemo } from "react";
 
+import { useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
 import { PillButtonVariant } from "components/ui/PillListBox/PillButton";
 
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
@@ -14,11 +15,16 @@ import { compareObjectsByFields } from "../utils";
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
 export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfiguration) => {
-  const { initialValues } = useConnectionFormService();
+  const { connection, mode } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
 
   const isStreamEnabled = stream.config?.selected;
 
   const statusToDisplay = useMemo<StatusToDisplay>(() => {
+    if (mode !== "edit") {
+      return "unchanged";
+    }
+
     const rowStatusChanged =
       initialValues.syncCatalog.streams.find(
         (item) => item.stream?.name === stream.stream?.name && item.stream?.namespace === stream.stream?.namespace
@@ -40,7 +46,7 @@ export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfigurat
       return "changed";
     }
     return "unchanged";
-  }, [initialValues.syncCatalog.streams, isStreamEnabled, stream.config, stream.stream]);
+  }, [mode, initialValues.syncCatalog.streams, isStreamEnabled, stream.config, stream.stream]);
 
   const pillButtonVariant = useMemo<PillButtonVariant>(() => {
     if (statusToDisplay === "added") {

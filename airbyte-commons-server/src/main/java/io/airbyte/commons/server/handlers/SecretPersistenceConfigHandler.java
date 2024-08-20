@@ -36,7 +36,7 @@ public class SecretPersistenceConfigHandler {
   }
 
   public String writeToEnvironmentSecretPersistence(final SecretCoordinate secretCoordinate, final String payload) {
-    secretsRepositoryWriter.storeSecretToDefaultSecretPersistence(secretCoordinate, payload);
+    secretsRepositoryWriter.store(secretCoordinate, payload, null);
     return secretCoordinate.getFullCoordinate();
   }
 

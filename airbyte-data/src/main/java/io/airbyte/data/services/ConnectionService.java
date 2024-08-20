@@ -4,13 +4,13 @@
 
 package io.airbyte.data.services;
 
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;

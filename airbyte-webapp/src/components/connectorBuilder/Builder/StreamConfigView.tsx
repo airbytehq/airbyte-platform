@@ -30,9 +30,11 @@ import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
 import { ParentStreamsSection } from "./ParentStreamsSection";
+import { RecordSelectorSection } from "./RecordSelectorSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
+import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
@@ -53,6 +55,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     <T extends string>(fieldPath: T) => `${streamPath}.${fieldPath}` as const,
     [streamPath]
   );
+  const baseUrl = useBuilderWatch("formValues.global.urlBase");
 
   return (
     <BuilderConfigView
@@ -78,19 +81,13 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="string"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
+              preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
             />
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
               options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
-            />
-            <BuilderField
-              type="array"
-              path={streamFieldPath("fieldPointer")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
-              manifestPath="DpathExtractor.properties.field_path"
-              optional
             />
             <BuilderField
               type="array"
@@ -101,6 +98,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               optional
             />
           </BuilderCard>
+          <RecordSelectorSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <RequestOptionSection
             inline={false}
             basePath={streamFieldPath("requestOptions")}
@@ -116,6 +114,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             currentStreamIndex={streamNum}
           />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <UnknownFieldsSection streamFieldPath={streamFieldPath} />
         </fieldset>
       ) : (
         <BuilderCard className={styles.schemaEditor}>

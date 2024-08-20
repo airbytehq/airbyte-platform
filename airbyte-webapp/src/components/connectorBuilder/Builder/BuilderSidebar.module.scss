@@ -64,9 +64,13 @@
   align-items: center;
 }
 
-.errorIndicator {
+.indicator {
   flex: 0 0 auto;
   margin-right: variables.$spacing-xs;
+}
+
+.warningIndicator {
+  background-color: colors.$yellow;
 }
 
 .streamViewText {

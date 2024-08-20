@@ -4,10 +4,12 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import AIStarsIcon from "./icons/aiStarsIcon.svg?react";
 import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
 import BellIcon from "./icons/bellIcon.svg?react";
+import CactusIcon from "./icons/cactusIcon.svg?react";
 import CalendarCheckIcon from "./icons/calendarCheckIcon.svg?react";
 import CalendarIcon from "./icons/calendarIcon.svg?react";
 import CaretDownIcon from "./icons/caretDownIcon.svg?react";
@@ -23,6 +25,7 @@ import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CollapseAllIcon from "./icons/collapseAllIcon.svg?react";
 import CommentsIcon from "./icons/commentsIcon.svg?react";
 import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
@@ -30,6 +33,7 @@ import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
+import CursorIcon from "./icons/cursorIcon.svg?react";
 import DatabaseIcon from "./icons/databaseIcon.svg?react";
 import DayIcon from "./icons/dayIcon.svg?react";
 import DbtCloudIcon from "./icons/dbtCloudIcon.svg?react";
@@ -45,14 +49,18 @@ import EnvelopeIcon from "./icons/envelopeIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
+import ExpandAllIcon from "./icons/expandAllIcon.svg?react";
 import ExpandIcon from "./icons/expandIcon.svg?react";
+import ExportIcon from "./icons/exportIcon.svg?react";
 import EyeIcon from "./icons/eyeIcon.svg?react";
 import EyeSlashIcon from "./icons/eyeSlashIcon.svg?react";
 import FileIcon from "./icons/fileIcon.svg?react";
 import FilesIcon from "./icons/filesIcon.svg?react";
 import FlashIcon from "./icons/flashIcon.svg?react";
 import FolderIcon from "./icons/folderIcon.svg?react";
+import FolderOpenIcon from "./icons/folderOpenIcon.svg?react";
 import GearIcon from "./icons/gearIcon.svg?react";
+import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
@@ -72,6 +80,14 @@ import LoadingIcon from "./icons/loadingIcon.svg?react";
 import LocationIcon from "./icons/locationIcon.svg?react";
 import LockIcon from "./icons/lockIcon.svg?react";
 import MenuIcon from "./icons/menuIcon.svg?react";
+import MetricSuccessHighIcon from "./icons/metricSuccessHighIcon.svg?react";
+import MetricSuccessLowIcon from "./icons/metricSuccessLowIcon.svg?react";
+import MetricSuccessMedIcon from "./icons/metricSuccessMedIcon.svg?react";
+import MetricSuccessNoneIcon from "./icons/metricSuccessNoneIcon.svg?react";
+import MetricUsageHighIcon from "./icons/metricUsageHighIcon.svg?react";
+import MetricUsageLowIcon from "./icons/metricUsageLowIcon.svg?react";
+import MetricUsageMedIcon from "./icons/metricUsageMedIcon.svg?react";
+import MetricUsageNoneIcon from "./icons/metricUsageNoneIcon.svg?react";
 import MinusCircleIcon from "./icons/minusCircleIcon.svg?react";
 import MinusIcon from "./icons/minusIcon.svg?react";
 import ModificationIcon from "./icons/modificationIcon.svg?react";
@@ -111,6 +127,7 @@ import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
 import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
 import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
 import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusQueuedIcon from "./icons/statusQueuedIcon.svg?react";
 import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
 import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
 import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
@@ -139,6 +156,7 @@ const colorMap: Record<IconColor, string> = {
   error: styles[`icon--error`],
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
+  foreground: styles[`icon--foreground`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -151,10 +169,12 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   addCircle: AddCircleIcon,
+  aiStars: AIStarsIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   bell: BellIcon,
+  cactus: CactusIcon,
   calendar: CalendarIcon,
   calendarCheck: CalendarCheckIcon,
   caretDown: CaretDownIcon,
@@ -174,9 +194,11 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   community: CommunityIcon,
   connection: ConnectionIcon,
   contract: ContractIcon,
+  collapseAll: CollapseAllIcon,
   copy: CopyIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
+  cursor: CursorIcon,
   database: DatabaseIcon,
   day: DayIcon,
   dbtCloud: DbtCloudIcon,
@@ -193,13 +215,17 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  expandAll: ExpandAllIcon,
+  export: ExportIcon,
   eye: EyeIcon,
   eyeSlash: EyeSlashIcon,
   file: FileIcon,
   files: FilesIcon,
   flash: FlashIcon,
   folder: FolderIcon,
+  folderOpen: FolderOpenIcon,
   gear: GearIcon,
+  github: GithubIcon,
   globe: GlobeIcon,
   google: GoogleIcon,
   grid: GridIcon,
@@ -219,6 +245,14 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
+  metricSuccessHigh: MetricSuccessHighIcon,
+  metricSuccessLow: MetricSuccessLowIcon,
+  metricSuccessMed: MetricSuccessMedIcon,
+  metricSuccessNone: MetricSuccessNoneIcon,
+  metricUsageHigh: MetricUsageHighIcon,
+  metricUsageLow: MetricUsageLowIcon,
+  metricUsageMed: MetricUsageMedIcon,
+  metricUsageNone: MetricUsageNoneIcon,
   minus: MinusIcon,
   minusCircle: MinusCircleIcon,
   modification: ModificationIcon,
@@ -258,6 +292,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusError: StatusErrorIcon,
   statusInactive: StatusInactiveIcon,
   statusInProgress: StatusInProgressIcon,
+  statusQueued: StatusQueuedIcon,
   statusSleep: StatusSleepIcon,
   statusSuccess: StatusSuccessIcon,
   statusWarning: StatusWarningIcon,

@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
@@ -24,6 +25,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -67,7 +69,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private ConfigRepository configRepository;
 
   @BeforeAll
-  static void setUpAll() throws SQLException {
+  static void setUpAll() throws SQLException, IOException {
     // create actor_definition
     database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.ACTOR_TYPE)
         .values(SRC_DEF_ID, "srcDef", ActorType.source)
@@ -77,28 +79,32 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
     // create actor_definition_version
     database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION_VERSION, ACTOR_DEFINITION_VERSION.ID, ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID,
         ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC,
-        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL)
-        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community)
-        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL)
+        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community, 100L)
+        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community, 100L)
         .execute());
+
+    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
 
     // create workspace
     database.transaction(
-        ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE)
-            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false)
-            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false)
-            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true) // note that workspace 2 is tombstoned!
-            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true) // note that workspace 3 is tombstoned!
+        ctx -> ctx
+            .insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE,
+                WORKSPACE.ORGANIZATION_ID)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 3 is tombstoned!
             .execute());
     // create actors
     database.transaction(
         ctx -> ctx
-            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
                 ACTOR.ACTOR_TYPE)
-            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
             .execute());
     // create connections
     database.transaction(

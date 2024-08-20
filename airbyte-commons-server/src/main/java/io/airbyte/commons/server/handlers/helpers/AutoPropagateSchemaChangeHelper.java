@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
@@ -69,7 +70,7 @@ public class AutoPropagateSchemaChangeHelper {
         final List<String> removedFields = new ArrayList<>();
         final List<String> updatedFields = new ArrayList<>();
 
-        for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
+        for (final FieldTransform fieldTransform : transform.getUpdateStream().getFieldTransforms()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
             case ADD_FIELD -> addedFields.add(String.format("'%s'", fieldName));
@@ -180,7 +181,7 @@ public class AutoPropagateSchemaChangeHelper {
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
                                             final ConnectionRead connectionRead) {
-    if (diff.getTransforms().isEmpty()) {
+    if (!containsChanges(diff)) {
       // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
       // some other bit of metadata.
       // We want to acknowledge it and update to the latest source catalog id, but not bother the user
@@ -193,6 +194,10 @@ public class AutoPropagateSchemaChangeHelper {
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
     return nonBreakingChange && autoPropagationIsEnabledForConnection;
+  }
+
+  public static boolean containsChanges(final CatalogDiff diff) {
+    return !diff.getTransforms().isEmpty();
   }
 
   /**
@@ -208,8 +213,13 @@ public class AutoPropagateSchemaChangeHelper {
         continue;
       }
 
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
+      final boolean anyBreakingFieldTransforms =
+          streamTransform.getUpdateStream().getFieldTransforms().stream().anyMatch(FieldTransform::getBreaking);
+
+      final boolean anyBreakingStreamAttributeTransforms =
+          streamTransform.getUpdateStream().getStreamAttributeTransforms().stream().anyMatch(StreamAttributeTransform::getBreaking);
+
+      if (anyBreakingFieldTransforms || anyBreakingStreamAttributeTransforms) {
         return true;
       }
     }

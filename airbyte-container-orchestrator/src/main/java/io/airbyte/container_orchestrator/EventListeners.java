@@ -4,22 +4,16 @@
 
 package io.airbyte.container_orchestrator;
 
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.config.EnvConfigs;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.runtime.event.annotation.EventListener;
 import io.micronaut.runtime.server.event.ServerStartupEvent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
-import java.util.Map;
-import java.util.function.BiFunction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.LoggerContext;
+import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,52 +24,18 @@ import org.slf4j.LoggerFactory;
 public class EventListeners {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private final Map<String, String> envVars;
-  private final EnvConfigs configs;
   private final JobRunConfig jobRunConfig;
-  private final LogConfigs logConfigs;
-  private final BiFunction<String, String, Void> propertySetter;
+  private final LogClientManager logClientManager;
+  private final Path workspaceRoot;
 
   @Inject
-  EventListeners(@Named("envVars") final Map<String, String> envVars,
-                 final EnvConfigs configs,
+  EventListeners(
+                 @Named("workspaceRoot") final Path workspaceRoot,
                  final JobRunConfig jobRunConfig,
-                 final LogConfigs logConfigs) {
-    this(envVars, configs, jobRunConfig, logConfigs, (name, value) -> {
-      System.setProperty(name, value);
-      return null;
-    });
-  }
-
-  /**
-   * Exists only for overriding the default property setter for testing.
-   */
-  protected EventListeners(@Named("envVars") final Map<String, String> envVars,
-                           final EnvConfigs configs,
-                           final JobRunConfig jobRunConfig,
-                           final LogConfigs logConfigs,
-                           final BiFunction<String, String, Void> propertySetter) {
-    this.envVars = envVars;
-    this.configs = configs;
+                 final LogClientManager logClientManager) {
     this.jobRunConfig = jobRunConfig;
-    this.logConfigs = logConfigs;
-    this.propertySetter = propertySetter;
-  }
-
-  /**
-   * Configures the environment variables for this app.
-   * <p>
-   * Should this be replaced with env-vars set on the container itself?
-   *
-   * @param unused required so Micronaut knows when to run this event-listener, but not used
-   */
-  @EventListener
-  void setEnvVars(final ServerStartupEvent unused) {
-    log.debug("settings env vars");
-
-    OrchestratorConstants.ENV_VARS_TO_TRANSFER.stream()
-        .filter(envVars::containsKey)
-        .forEach(envVar -> propertySetter.apply(envVar, envVars.get(envVar)));
+    this.logClientManager = logClientManager;
+    this.workspaceRoot = workspaceRoot;
   }
 
   /**
@@ -86,15 +46,7 @@ public class EventListeners {
   @EventListener
   void setLogging(final ServerStartupEvent unused) {
     log.debug("started logging");
-
-    // make sure the new configuration is picked up
-    final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-    ctx.reconfigure();
-
-    LogClientSingleton.getInstance().setJobMdc(
-        configs.getWorkerEnvironment(),
-        logConfigs,
-        TemporalUtils.getJobRoot(configs.getWorkspaceRoot(), jobRunConfig.getJobId(), jobRunConfig.getAttemptId()));
+    logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId()));
   }
 
 }

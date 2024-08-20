@@ -9,8 +9,12 @@ export const intentToRbacQuery = {
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
 
   // workspace
+  UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
   DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
-  UpdateWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
+  UpdateWorkspace: [
+    { resourceType: "WORKSPACE", role: "ADMIN" },
+    { resourceType: "ORGANIZATION", role: "EDITOR" },
+  ],
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
   BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },

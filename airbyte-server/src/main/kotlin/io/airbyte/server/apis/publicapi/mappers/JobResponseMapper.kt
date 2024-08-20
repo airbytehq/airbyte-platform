@@ -9,15 +9,13 @@ import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobStatusEnum
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.server.apis.publicapi.mappers.JobsResponseMapper.ALLOWED_CONFIG_TYPES
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.util.UUID
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -49,31 +47,38 @@ object JobResponseMapper {
   /**
    * Converts a JobRead object from the config api to a JobResponse object.
    */
-  private fun fromJobRead(jobRead: JobRead?): JobResponse {
-    val jobResponse = JobResponse()
-    jobResponse.jobId = jobRead!!.id
-    jobResponse.status = JobStatusEnum.fromValue(jobRead.status.toString())
-    jobResponse.connectionId = UUID.fromString(jobRead.configId)
-    when (jobRead.configType) {
-      JobConfigType.SYNC -> jobResponse.jobType = JobTypeEnum.SYNC
-      JobConfigType.RESET_CONNECTION -> jobResponse.jobType = JobTypeEnum.RESET
-      else -> {
-        assert(ALLOWED_CONFIG_TYPES.contains(jobRead.configType))
-      }
-    }
-    // set to string for now since the jax-rs response entity turns offsetdatetime into epoch seconds
-    jobResponse.startTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC).toString()
-    if (TERMINAL_JOB_STATUS.contains(jobRead.status)) {
-      jobResponse.lastUpdatedAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC).toString()
-    }
-
-    // duration is ISO_8601 formatted https://en.wikipedia.org/wiki/ISO_8601#Durations
-    if (jobRead.status != JobStatus.PENDING) {
-      jobResponse.duration = Duration.ofSeconds(jobRead.updatedAt - jobRead.createdAt).toString()
-    }
-
-    jobResponse.bytesSynced = jobRead.aggregatedStats?.bytesCommitted
-    jobResponse.rowsSynced = jobRead.aggregatedStats?.recordsCommitted
-    return jobResponse
+  private fun fromJobRead(jobRead: JobRead): JobResponse {
+    return JobResponse(
+      jobId = jobRead.id,
+      status = JobStatusEnum.valueOf(jobRead.status.toString().uppercase()),
+      connectionId = jobRead.configId,
+      jobType =
+        when (jobRead.configType) {
+          JobConfigType.SYNC -> JobTypeEnum.SYNC
+          JobConfigType.RESET_CONNECTION -> JobTypeEnum.RESET
+          JobConfigType.CLEAR -> JobTypeEnum.CLEAR
+          JobConfigType.REFRESH -> JobTypeEnum.REFRESH
+          else -> {
+            throw IllegalArgumentException("Unknown job type ${jobRead.configType}")
+          }
+        },
+      // set to string for now since the jax-rs response entity turns offsetdatetime into epoch seconds
+      startTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC).toString(),
+      lastUpdatedAt =
+        if (TERMINAL_JOB_STATUS.contains(jobRead.status)) {
+          OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC).toString()
+        } else {
+          null
+        },
+      // duration is ISO_8601 formatted https://en.wikipedia.org/wiki/ISO_8601#Durations
+      duration =
+        if (jobRead.status != JobStatus.PENDING) {
+          Duration.ofSeconds(jobRead.updatedAt - jobRead.createdAt).toString()
+        } else {
+          null
+        },
+      bytesSynced = jobRead.aggregatedStats?.bytesCommitted,
+      rowsSynced = jobRead.aggregatedStats?.recordsCommitted,
+    )
   }
 }

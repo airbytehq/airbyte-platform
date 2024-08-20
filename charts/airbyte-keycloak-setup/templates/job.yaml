@@ -39,7 +39,11 @@ spec:
       {{- end }}
       initContainers:
         - name: keycloak-readiness-check
+          {{- if .Values.initContainers.keycloakReadinessCheck.image }}
+          image: {{ .Values.initContainers.keycloakReadinessCheck.image }}
+          {{- else }}
           image: curlimages/curl:8.1.1
+          {{- end }}
           command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
           env:
             - name: KEYCLOAK_INTERNAL_HOST
@@ -57,6 +61,11 @@ spec:
           image: {{ printf "%s:%s" .Values.image.repository (include "keycloak-setup.imageTag" .) }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
+            - name: AIRBYTE_URL 
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
+                  key: AIRBYTE_URL 
             - name: KEYCLOAK_ADMIN_USER
               valueFrom:
                 secretKeyRef:
@@ -72,21 +81,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
                   key: KEYCLOAK_INTERNAL_HOST
-            - name: DATABASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                  key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-            - name: DATABASE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: DATABASE_URL
-            - name: DATABASE_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-airbyte-secrets
-                  key: DATABASE_USER
+
+            {{- include "airbyte.database.envs" . | nindent 12 }}
+            {{- include "airbyte.enterprise.instanceAdmin" . | nindent 12 }} 
+            {{- include "airbyte.enterprise.identityProvider" . | nindent 12 }} 
+
             # Values from secret
             {{- if .Values.secrets }}
             {{- range $k, $v := .Values.secrets }}
@@ -115,10 +114,12 @@ spec:
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- if .Values.global.airbyteYml }}
             - name: airbyte-yml-volume
               mountPath: /app/configs/airbyte.yml
               subPath: fileContents
               readOnly: true
+            {{- end }}
           {{- if .Values.extraVolumeMounts }}
           {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
           {{- end }}
@@ -133,9 +134,11 @@ spec:
         {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 10 }}
       volumes:
+        {{- if .Values.global.airbyteYml }}
         - name: airbyte-yml-volume
           secret:
             secretName: {{ .Release.Name }}-airbyte-yml
+        {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

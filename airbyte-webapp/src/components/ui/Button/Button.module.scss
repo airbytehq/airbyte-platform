@@ -37,7 +37,14 @@
 
   &:disabled:not(.isLoading),
   &.disabled:not(.isLoading) {
-    opacity: 0.25;
+    opacity: 0.5;
+    transition: opacity 0.2 ease-in;
+  }
+
+  .childrenContainer {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .buttonIcon {
@@ -45,6 +52,7 @@
     justify-content: center;
     align-content: center;
     position: relative;
+    flex: 0 0 auto;
 
     &.positionLeft {
       &.withLabel {
@@ -249,7 +257,58 @@
 
     .buttonIcon {
       &.isRegularIcon {
-        color: colors.$transparentColor;
+        visibility: hidden;
+      }
+    }
+  }
+
+  &.typeHighlight {
+    background-color: colors.$yellow-50;
+    border: 1px solid colors.$yellow-300;
+    color: colors.$inverse;
+
+    & .buttonIcon {
+      &.isRegularIcon {
+        color: colors.$yellow-500;
+      }
+    }
+
+    &.isLoading {
+      color: colors.$yellow-500;
+    }
+
+    &:hover {
+      background-color: colors.$yellow-100;
+    }
+
+    &:active {
+      background-color: colors.$yellow-200;
+    }
+  }
+
+  &.typeClearDark {
+    background-color: colors.$transparentColor;
+    color: colors.$grey-500;
+    box-shadow: none;
+    padding: 0;
+
+    & .buttonIcon {
+      color: colors.$grey-400;
+    }
+
+    &:hover {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
+      }
+    }
+
+    &:active {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
       }
     }
   }

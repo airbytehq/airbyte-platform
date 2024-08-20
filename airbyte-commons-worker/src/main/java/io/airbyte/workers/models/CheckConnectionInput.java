@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SuppressWarnings("PMD.AvoidFieldNameMatchingTypeName")
 public class CheckConnectionInput {
 
   private JobRunConfig jobRunConfig;

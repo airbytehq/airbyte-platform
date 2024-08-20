@@ -59,10 +59,6 @@ dependencies:
     name: server
     repository: "file://../airbyte-server"
     version: "*"
-  - condition: airbyte-api-server.enabled
-    name: airbyte-api-server
-    repository: "file://../airbyte-api-server"
-    version: "*"
   - condition: worker.enabled
     name: worker
     repository: "file://../airbyte-worker"
@@ -99,4 +95,7 @@ dependencies:
     name: keycloak-setup
     repository: "file://../airbyte-keycloak-setup"
     version: "*"
-
+  - condition: featureflag-server.enabled
+    name: featureflag-server
+    repository: "file://../airbyte-featureflag-server"
+    version: "*"

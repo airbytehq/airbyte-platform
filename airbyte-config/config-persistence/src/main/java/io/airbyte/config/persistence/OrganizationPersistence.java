@@ -4,6 +4,8 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
@@ -42,6 +44,8 @@ public class OrganizationPersistence {
    * hardcoded to the 0 UUID so that it can be consistently retrieved.
    */
   public static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+  public static final String AIRBYTE_ORGANIZATION_EMAIL_DOMAIN = "airbyte.io";
 
   public OrganizationPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
@@ -84,6 +88,27 @@ public class OrganizationPersistence {
     return Optional.of(createOrganizationFromRecord(result.get(0)));
   }
 
+  public Optional<Organization> getOrganizationByConnectionId(final UUID connectionId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG)
+        .on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .join(WORKSPACE)
+        .on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+        .join(ACTOR)
+        .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .join(CONNECTION)
+        .on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(CONNECTION.ID.eq(connectionId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
   /**
    * Create a new organization and insert into the database.
    *
@@ -91,11 +116,11 @@ public class OrganizationPersistence {
    * @return created organization
    * @throws IOException when interaction with DB failed
    */
-  public Organization createOrganization(Organization organization) throws IOException {
+  public Organization createOrganization(final Organization organization) throws IOException {
     database.transaction(ctx -> {
       try {
         insertOrganizationIntoDB(ctx, organization);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -114,7 +139,7 @@ public class OrganizationPersistence {
     database.transaction(ctx -> {
       try {
         updateOrganizationInDB(ctx, organization);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -196,7 +221,7 @@ public class OrganizationPersistence {
     database.transaction(ctx -> {
       try {
         insertSsoConfigIntoDB(ctx, ssoConfig);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -251,7 +276,7 @@ public class OrganizationPersistence {
         .execute();
   }
 
-  private void insertOrganizationIntoDB(final DSLContext ctx, Organization organization) throws IOException {
+  private void insertOrganizationIntoDB(final DSLContext ctx, final Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -274,7 +299,7 @@ public class OrganizationPersistence {
 
   }
 
-  private void insertSsoConfigIntoDB(final DSLContext ctx, SsoConfig ssoConfig) throws IOException {
+  private void insertSsoConfigIntoDB(final DSLContext ctx, final SsoConfig ssoConfig) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()

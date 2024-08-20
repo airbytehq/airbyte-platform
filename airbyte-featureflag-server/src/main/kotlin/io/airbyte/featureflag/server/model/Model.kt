@@ -1,0 +1,11 @@
+package io.airbyte.featureflag.server.model
+
+data class Context(val kind: String, val value: String)
+
+data class Rule(val context: Context, val value: String)
+
+data class FeatureFlag(
+  val key: String,
+  val default: String,
+  val rules: List<Rule> = listOf(),
+)

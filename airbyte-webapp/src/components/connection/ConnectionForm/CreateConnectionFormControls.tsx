@@ -10,7 +10,6 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { FormConnectionFormValues } from "./formConfig";
 
@@ -23,7 +22,6 @@ export const CreateConnectionFormControls: React.FC = () => {
   const { trigger } = useFormContext<FormConnectionFormValues>();
   const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
   const willSyncAfterCreation = watchedScheduleType === ConnectionScheduleType.basic;
@@ -36,18 +34,14 @@ export const CreateConnectionFormControls: React.FC = () => {
   });
 
   return (
-    <Box mt={isSimplifiedCreation ? undefined : "md"}>
-      <FlexContainer justifyContent="space-between" alignItems="flex-start" gap="xl">
+    <Box>
+      <FlexContainer justifyContent="space-between" alignItems="center" gap="xl">
         <Text color="red" size="lg">
           {errorMessage}
         </Text>
         <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || !isValid}>
           <FormattedMessage
-            id={
-              isSimplifiedCreation && willSyncAfterCreation
-                ? "onboarding.setUpConnectionNext"
-                : "onboarding.setUpConnection"
-            }
+            id={willSyncAfterCreation ? "onboarding.setUpConnectionNext" : "onboarding.setUpConnection"}
           />
         </Button>
       </FlexContainer>

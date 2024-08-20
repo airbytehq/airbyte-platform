@@ -149,144 +149,144 @@ class TemporalSdkInterceptorTest {
   void testIsExitTraceErrorMsg() {
     final var interceptor = new TemporalSdkInterceptor();
 
-    assertEquals(false, interceptor.isExitTrace(null));
-    assertEquals(false, interceptor.isExitTrace(new DummySpan()));
+    assertFalse(interceptor.isExitTrace(null));
+    assertFalse(interceptor.isExitTrace(new DummySpan()));
 
     final var temporalTraceWithOperationName = new DummySpan();
     temporalTraceWithOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithOperationName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithOperationName));
 
     final var temporalTraceWithResourceName = new DummySpan();
     temporalTraceWithResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithResourceName));
 
     final var temporalTraceWithErrorAndOperationName = new DummySpan();
     temporalTraceWithErrorAndOperationName.setError(true);
     temporalTraceWithErrorAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndOperationName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndOperationName));
 
     final var temporalTraceWithErrorAndConnectionManagerResourceName = new DummySpan();
     temporalTraceWithErrorAndConnectionManagerResourceName.setError(true);
     temporalTraceWithErrorAndConnectionManagerResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndConnectionManagerResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndConnectionManagerResourceName));
 
     final var temporalTraceWithErrorAndSyncWorkflowResourceName = new DummySpan();
     temporalTraceWithErrorAndSyncWorkflowResourceName.setError(true);
     temporalTraceWithErrorAndSyncWorkflowResourceName.setResourceName(SYNC_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndSyncWorkflowResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndSyncWorkflowResourceName));
 
     final var temporalTraceWithExitErrorAndOperationName = new DummySpan();
     temporalTraceWithExitErrorAndOperationName.setError(true);
     temporalTraceWithExitErrorAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
     temporalTraceWithExitErrorAndOperationName.setTag(ERROR_MSG_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(true, interceptor.isExitTrace(temporalTraceWithExitErrorAndOperationName));
+    assertTrue(interceptor.isExitTrace(temporalTraceWithExitErrorAndOperationName));
 
     final var temporalTraceWithExitErrorAndResourceName = new DummySpan();
     temporalTraceWithExitErrorAndResourceName.setError(true);
     temporalTraceWithExitErrorAndResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
     temporalTraceWithExitErrorAndResourceName.setTag(ERROR_MSG_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(true, interceptor.isExitTrace(temporalTraceWithExitErrorAndResourceName));
+    assertTrue(interceptor.isExitTrace(temporalTraceWithExitErrorAndResourceName));
 
     final var otherTemporalTraceWithExitErrorAndOtherOperationName = new DummySpan();
     otherTemporalTraceWithExitErrorAndOtherOperationName.setError(true);
     otherTemporalTraceWithExitErrorAndOtherOperationName.setOperationName(OTHER_OPERATION);
     otherTemporalTraceWithExitErrorAndOtherOperationName.setTag(ERROR_MSG_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(false, interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherOperationName));
+    assertFalse(interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherOperationName));
 
     final var otherTemporalTraceWithExitErrorAndOtherResourceName = new DummySpan();
     otherTemporalTraceWithExitErrorAndOtherResourceName.setError(true);
     otherTemporalTraceWithExitErrorAndOtherResourceName.setResourceName(OTHER_RESOURCE);
     otherTemporalTraceWithExitErrorAndOtherResourceName.setTag(ERROR_MSG_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(false, interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherResourceName));
+    assertFalse(interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherResourceName));
   }
 
   @Test
   void testIsExitTraceErrorMessage() {
     final var interceptor = new TemporalSdkInterceptor();
 
-    assertEquals(false, interceptor.isExitTrace(null));
-    assertEquals(false, interceptor.isExitTrace(new DummySpan()));
+    assertFalse(interceptor.isExitTrace(null));
+    assertFalse(interceptor.isExitTrace(new DummySpan()));
 
     final var temporalTraceWithOperationName = new DummySpan();
     temporalTraceWithOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithOperationName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithOperationName));
 
     final var temporalTraceWithResourceName = new DummySpan();
     temporalTraceWithResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithResourceName));
 
     final var temporalTraceWithErrorAndOperationName = new DummySpan();
     temporalTraceWithErrorAndOperationName.setError(true);
     temporalTraceWithErrorAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndOperationName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndOperationName));
 
     final var temporalTraceWithErrorAndConnectionManagerResourceName = new DummySpan();
     temporalTraceWithErrorAndConnectionManagerResourceName.setError(true);
     temporalTraceWithErrorAndConnectionManagerResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndConnectionManagerResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndConnectionManagerResourceName));
 
     final var temporalTraceWithErrorAndSyncWorkflowResourceName = new DummySpan();
     temporalTraceWithErrorAndSyncWorkflowResourceName.setError(true);
     temporalTraceWithErrorAndSyncWorkflowResourceName.setResourceName(SYNC_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithErrorAndSyncWorkflowResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithErrorAndSyncWorkflowResourceName));
 
     final var temporalTraceWithExitErrorAndOperationName = new DummySpan();
     temporalTraceWithExitErrorAndOperationName.setError(true);
     temporalTraceWithExitErrorAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
     temporalTraceWithExitErrorAndOperationName.setTag(ERROR_MESSAGE_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(true, interceptor.isExitTrace(temporalTraceWithExitErrorAndOperationName));
+    assertTrue(interceptor.isExitTrace(temporalTraceWithExitErrorAndOperationName));
 
     final var temporalTraceWithExitErrorAndResourceName = new DummySpan();
     temporalTraceWithExitErrorAndResourceName.setError(true);
     temporalTraceWithExitErrorAndResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
     temporalTraceWithExitErrorAndResourceName.setTag(ERROR_MESSAGE_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(true, interceptor.isExitTrace(temporalTraceWithExitErrorAndResourceName));
+    assertTrue(interceptor.isExitTrace(temporalTraceWithExitErrorAndResourceName));
 
     final var otherTemporalTraceWithExitErrorAndOtherOperationName = new DummySpan();
     otherTemporalTraceWithExitErrorAndOtherOperationName.setError(true);
     otherTemporalTraceWithExitErrorAndOtherOperationName.setOperationName(OTHER_OPERATION);
     otherTemporalTraceWithExitErrorAndOtherOperationName.setTag(ERROR_MESSAGE_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(false, interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherOperationName));
+    assertFalse(interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherOperationName));
 
     final var otherTemporalTraceWithExitErrorAndOtherResourceName = new DummySpan();
     otherTemporalTraceWithExitErrorAndOtherResourceName.setError(true);
     otherTemporalTraceWithExitErrorAndOtherResourceName.setResourceName(OTHER_RESOURCE);
     otherTemporalTraceWithExitErrorAndOtherResourceName.setTag(ERROR_MESSAGE_TAG, EXIT_ERROR_MESSAGE);
-    assertEquals(false, interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherResourceName));
+    assertFalse(interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherResourceName));
   }
 
   @Test
   void testIsDestroyThreadTrace() {
     final var interceptor = new TemporalSdkInterceptor();
 
-    assertEquals(false, interceptor.isDestroyThreadTrace(null));
-    assertEquals(false, interceptor.isDestroyThreadTrace(new DummySpan()));
+    assertFalse(interceptor.isDestroyThreadTrace(null));
+    assertFalse(interceptor.isDestroyThreadTrace(new DummySpan()));
 
     final var temporalTraceWithOperationName = new DummySpan();
     temporalTraceWithOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithOperationName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithOperationName));
 
     final var temporalTraceWithResourceName = new DummySpan();
     temporalTraceWithResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
-    assertEquals(false, interceptor.isExitTrace(temporalTraceWithResourceName));
+    assertFalse(interceptor.isExitTrace(temporalTraceWithResourceName));
 
     final var temporalTraceWithErrorTypeAndOperationName = new DummySpan();
     temporalTraceWithErrorTypeAndOperationName.setError(true);
     temporalTraceWithErrorTypeAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
     temporalTraceWithErrorTypeAndOperationName.setTag(ERROR_TYPE_TAG, "io.temporal.internal.sync.DestroyWorkflowThreadError");
-    assertEquals(true, interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOperationName));
+    assertTrue(interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOperationName));
 
     final var temporalTraceWithOtherErrorTypeAndOperationName = new DummySpan();
     temporalTraceWithOtherErrorTypeAndOperationName.setError(true);
     temporalTraceWithOtherErrorTypeAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
     temporalTraceWithOtherErrorTypeAndOperationName.setTag(ERROR_TYPE_TAG, "DestroyThreadError");
-    assertEquals(false, interceptor.isDestroyThreadTrace(temporalTraceWithOtherErrorTypeAndOperationName));
+    assertFalse(interceptor.isDestroyThreadTrace(temporalTraceWithOtherErrorTypeAndOperationName));
 
     final var temporalTraceWithErrorTypeAndOtherOperationName = new DummySpan();
     temporalTraceWithErrorTypeAndOtherOperationName.setError(true);
     temporalTraceWithErrorTypeAndOtherOperationName.setOperationName(OTHER_OPERATION);
     temporalTraceWithErrorTypeAndOtherOperationName.setTag(ERROR_TYPE_TAG, "io.temporal.internal.sync.DestroyWorkflowThreadError");
-    assertEquals(false, interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOtherOperationName));
+    assertFalse(interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOtherOperationName));
   }
 
   @Test

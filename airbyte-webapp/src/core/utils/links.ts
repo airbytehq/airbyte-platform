@@ -39,6 +39,7 @@ export const links = {
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
   connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,
+  connectorBuilderRecordSelector: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#record-selection`,
   connectorBuilderPagination: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/pagination`,
   connectorBuilderIncrementalSync: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/incremental-sync`,
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
@@ -49,10 +50,12 @@ export const links = {
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
   autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
+  schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
 } as const;
 
 export type OutboundLinks = typeof links;

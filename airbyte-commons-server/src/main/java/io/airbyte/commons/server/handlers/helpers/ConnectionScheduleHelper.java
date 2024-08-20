@@ -6,6 +6,13 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ConnectionScheduleData;
 import io.airbyte.api.model.generated.ConnectionScheduleType;
+import io.airbyte.api.problems.model.generated.ProblemCronData;
+import io.airbyte.api.problems.model.generated.ProblemCronExpressionData;
+import io.airbyte.api.problems.model.generated.ProblemCronTimezoneData;
+import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.Cron;
@@ -23,6 +30,7 @@ import org.quartz.CronExpression;
  * Helper class to handle connection schedules, including validation and translating between API and
  * config.
  */
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class ConnectionScheduleHelper {
 
   /**
@@ -68,26 +76,36 @@ public class ConnectionScheduleHelper {
             .withSchedule(schedule);
       }
       case CRON -> {
+        final String connectionId = standardSync.getConnectionId() == null ? null : standardSync.getConnectionId().toString();
         if (scheduleData.getCron() == null) {
-          throw new JsonValidationException("if schedule type is cron, then scheduleData.cron must be populated");
+          throw new CronValidationMissingCronProblem();
         }
         // Validate that this is a valid cron expression and timezone.
         final String cronExpression = scheduleData.getCron().getCronExpression();
         final String cronTimeZone = scheduleData.getCron().getCronTimeZone();
         if (cronExpression == null || cronTimeZone == null) {
-          throw new JsonValidationException("Cron expression and timezone are required");
+          throw new CronValidationMissingComponentProblem(new ProblemCronData()
+              .connectionId(connectionId)
+              .cronExpression(cronExpression)
+              .cronTimezone(cronTimeZone));
         }
         if (cronTimeZone.toLowerCase().startsWith("etc")) {
-          throw new JsonValidationException("Etc/ timezones are unsupported");
+          throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
+              .connectionId(connectionId)
+              .cronTimezone(cronTimeZone));
         }
         try {
           final TimeZone timeZone = DateTimeZone.forID(cronTimeZone).toTimeZone();
           final CronExpression parsedCronExpression = new CronExpression(cronExpression);
           parsedCronExpression.setTimeZone(timeZone);
-        } catch (ParseException e) {
-          throw (JsonValidationException) new JsonValidationException("invalid cron expression").initCause(e);
-        } catch (IllegalArgumentException e) {
-          throw (JsonValidationException) new JsonValidationException("invalid cron timezone").initCause(e);
+        } catch (final ParseException e) {
+          throw new CronValidationInvalidExpressionProblem(new ProblemCronExpressionData()
+              .connectionId(connectionId)
+              .cronExpression(cronExpression));
+        } catch (final IllegalArgumentException e) {
+          throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
+              .connectionId(connectionId)
+              .cronTimezone(cronTimeZone));
         }
         standardSync
             .withScheduleType(ScheduleType.CRON)

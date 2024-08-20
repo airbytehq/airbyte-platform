@@ -9,6 +9,7 @@ metadata:
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
 spec:
+  minReadySeconds: 30
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -65,6 +66,12 @@ spec:
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
+        {{- else if and (eq .Values.global.deploymentMode "oss") .Values.global.auth.enabled }}
+        # Self-Managed Enterprise should always have API_AUTHORIZATION_ENABLED set to true, even
+        # if global.auth.enabled is not set to true. This can be simplified in the future, once
+        # globa.auth.enabled is changed to always default to true across all editions of Airbyte.
+        - name: API_AUTHORIZATION_ENABLED
+          value: "true"
         {{- end }}
         {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: AIRBYTE_API_HOST
@@ -82,31 +89,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_EDITION
-        - name: AUTO_DETECT_SCHEMA
+        - name: AIRBYTE_URL 
           valueFrom:
             configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AUTO_DETECT_SCHEMA
+              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
+              key: AIRBYTE_URL
         - name: CONFIG_ROOT
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONFIG_ROOT
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_URL
-        - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DATABASE_USER
         - name: LOG4J_CONFIGURATION_FILE
           valueFrom:
             configMapKeyRef:
@@ -122,6 +114,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: MICRONAUT_ENVIRONMENTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SERVER_MICRONAUT_ENVIRONMENTS
         - name: SEGMENT_WRITE_KEY
           valueFrom:
             configMapKeyRef:
@@ -220,6 +217,44 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
+        - name: WORKLOAD_LAUNCHER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_LAUNCHER_ENABLED
+        - name: WORKLOAD_API_SERVER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_SERVER_ENABLED
+
+        {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
+        # Values for Airbyte auth configurations, secrets, and credentials in Community edition
+        - name: AB_INSTANCE_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" | quote }}
+        - name: AB_INSTANCE_ADMIN_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" | quote }}
+        - name: AB_INSTANCE_ADMIN_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" | quote }}
+        - name: AB_JWT_SIGNATURE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
+        - name: AB_COOKIE_SECURE
+          value: {{ .Values.global.auth.cookieSecureSetting | default "true" | quote }}
+        - name: AB_COOKIE_SAME_SITE
+          value: {{ .Values.global.auth.cookieSameSiteSetting | default "Strict" | quote }}
+        {{- end }}
 
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE
@@ -377,7 +412,13 @@ spec:
               key: GOOGLE_APPLICATION_CREDENTIALS
         {{- end }}
 
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.enterprise.instanceAdmin" . | nindent 8 }} 
+        {{- include "airbyte.enterprise.identityProvider" . | nindent 8 }} 
+        {{- include "airbyte.enterprise.license" . | nindent 8 }}
+
         {{- end }}
+        
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}
@@ -440,17 +481,19 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if eq .Values.global.deploymentMode "oss" }}
-          {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+      {{- if eq .Values.global.deploymentMode "oss" }}
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
-          {{- end }}
+        {{- end }}
+        {{- if .Values.global.airbyteYml }}
         - name: airbyte-yml-volume
           mountPath: /app/configs/airbyte.yml
           subPath: fileContents
           readOnly: true
         {{- end }}
+      {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
           {{ toYaml .Values.extraVolumeMounts | nindent 8 }}
@@ -466,16 +509,19 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-      {{- if eq .Values.global.deploymentMode "oss" }}
-        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+    {{- if eq .Values.global.deploymentMode "oss" }}
+      {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
-        {{- end }}
+      {{- end }}
+
+      {{- if .Values.global.airbyteYml }}
       - name: airbyte-yml-volume
         secret:
           secretName: {{ .Release.Name }}-airbyte-yml
       {{- end }}
+    {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}
       {{- end }}
