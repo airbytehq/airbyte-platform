@@ -46,6 +46,7 @@ class ConnectorRegistryConvertersTest {
   private static final String DOCS_URL = "https://airbyte.com";
   private static final String RELEASE_DATE = "2021-01-01";
   private static final String PROTOCOL_VERSION = "1.0.0";
+  private static final String LANGUAGE = "manifest-only";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification().withConnectionSpecification(
       Jsons.jsonNode(ImmutableMap.of("key", "val"))).withProtocolVersion(PROTOCOL_VERSION);
   private static final AllowedHosts ALLOWED_HOSTS = new AllowedHosts().withHosts(List.of("host1", "host2"));
@@ -170,7 +171,8 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
+        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges))
+        .withLanguage(LANGUAGE);
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
@@ -191,7 +193,8 @@ class ConnectorRegistryConvertersTest {
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
-        .withAllowedHosts(ALLOWED_HOSTS);
+        .withAllowedHosts(ALLOWED_HOSTS)
+        .withLanguage(LANGUAGE);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));

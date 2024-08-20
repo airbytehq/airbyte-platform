@@ -518,7 +518,8 @@ public class DbConverter {
                 SuggestedStreams.class))
         .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
-        .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class));
+        .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
+        .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {
