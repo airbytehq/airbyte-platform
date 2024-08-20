@@ -99,11 +99,11 @@ class ClaimedProcessor(
             .withBackoff(Duration.ofSeconds(20), Duration.ofMinutes(10))
             .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
             .abortOn { exception ->
-                when (exception) {
-                  is ServerException -> exception.statusCode / 100 != 5
-                  is SocketException -> false
-                  else -> true
-                }
+              when (exception) {
+                is ServerException -> exception.statusCode / 100 != 5
+                is SocketException -> false
+                else -> true
+              }
             }
             .build()
         ).get { apiClient.workloadApi.workloadList(workloadListRequest) }
