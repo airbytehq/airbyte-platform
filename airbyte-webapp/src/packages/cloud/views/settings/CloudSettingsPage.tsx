@@ -27,6 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
+  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
 
   return (
     <SettingsLayout>
@@ -94,6 +95,14 @@ export const CloudSettingsPage: React.FC = () => {
             name={formatMessage({ id: "settings.notifications" })}
             to={CloudSettingsRoutePaths.Notifications}
           />
+
+          {isBillingInArrearsActive && (
+            <SettingsLink
+              iconType="chart"
+              name={formatMessage({ id: "settings.usage" })}
+              to={CloudSettingsRoutePaths.Usage}
+            />
+          )}
         </SettingsNavigationBlock>
         {canViewOrgSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
@@ -102,6 +111,13 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.general" })}
               to={CloudSettingsRoutePaths.Organization}
             />
+            {isBillingInArrearsActive && (
+              <SettingsLink
+                iconType="credits"
+                name={formatMessage({ id: "sidebar.billing" })}
+                to={CloudSettingsRoutePaths.Billing}
+              />
+            )}
           </SettingsNavigationBlock>
         )}
       </SettingsNavigation>

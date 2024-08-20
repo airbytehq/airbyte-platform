@@ -25,4 +25,5 @@ export interface Experiments {
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
   "connectorBuilder.contributeToMarketplace": boolean;
+  "billing.organizationBillingPage": boolean;
 }

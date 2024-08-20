@@ -31,12 +31,14 @@ import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
+import { OrganizationBillingPage } from "./views/billing/OrganizationBillingPage";
 import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
 import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
+import { WorkspaceUsagePage } from "./views/workspaces/WorkspaceUsagePage";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
@@ -69,6 +71,7 @@ const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
+  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -123,6 +126,12 @@ const MainRoutes: React.FC = () => {
           )}
           {canViewOrgSettings && (
             <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+          )}
+          {isBillingInArrearsActive && (
+            <>
+              <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+              <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
+            </>
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
