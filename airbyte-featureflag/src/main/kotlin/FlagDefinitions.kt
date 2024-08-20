@@ -195,3 +195,5 @@ object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connecto
 object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
 
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
+
+object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
