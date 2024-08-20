@@ -94,26 +94,29 @@ class ClaimedProcessor(
   private fun getWorkloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse {
     while (true) {
       try {
-        // TODO: consider tuning the retry policy here, since we currently get the default 2 retries.
         return Failsafe.with(
           RetryPolicy.builder<Any>()
-            .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
+            .withBackoff(Duration.ofSeconds(20), Duration.ofMinutes(10))
             .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
             .abortOn { exception ->
-              when (exception) {
-                // This makes us to retry only on 5XX errors
-                is ServerException -> exception.statusCode / 100 != 5
-                else -> true
-              }
+                when (exception) {
+                  is ServerException -> exception.statusCode / 100 != 5
+                  is SocketException -> false
+                  else -> true
+                }
             }
-            .build(),
-        )
-          .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
+            .build()
+        ).get { apiClient.workloadApi.workloadList(workloadListRequest) }
       } catch (e: FailsafeException) {
-        if (e.cause !is ConnectException && e.cause !is SocketTimeoutException) {
-          throw e; // Surface all other errors.
+        if (e.cause is SocketException) {
+          // Directly handle and propagate the SocketException
+          logger.error { "Operation not permitted: ${e.cause?.message}" }
+          throw e // Surface the SocketException immediately
         }
-        // On a ConnectionException or SocketTimeoutException, we'll retry indefinitely.
+        if (e.cause !is ConnectException && e.cause !is SocketTimeoutException) {
+          throw e // Surface all other errors
+        }
+        // Continue retrying for connection timeouts and connection exceptions
         logger.warn { "Failed to connect to workload API fetching workloads for dataplane $dataplaneId, retrying..." }
       }
     }
