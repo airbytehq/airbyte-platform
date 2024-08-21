@@ -1,4 +1,5 @@
 import isBoolean from "lodash/isBoolean";
+import pick from "lodash/pick";
 import React, { useCallback, useEffect, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -78,6 +79,13 @@ const SchemaChangeMessage: React.FC = () => {
   return null;
 };
 
+const relevantConnectionKeys = [
+  "syncCatalog" as const,
+  "namespaceDefinition" as const,
+  "namespaceFormat" as const,
+  "prefix" as const,
+];
+
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
@@ -97,13 +105,14 @@ export const ConnectionReplicationPage: React.FC = () => {
     connection.destination.destinationId
   );
 
-  const validationSchema = useConnectionValidationSchema().pick(["syncCatalog"]);
+  type RelevantConnectionValues = Pick<ConnectionValues, (typeof relevantConnectionKeys)[number]>;
+  const validationSchema = useConnectionValidationSchema().pick(relevantConnectionKeys);
 
   const saveConnection = useCallback(
     async (values: Partial<ConnectionValues>, skipReset: boolean) => {
       await updateConnection({
-        syncCatalog: values.syncCatalog,
         connectionId: connection.connectionId,
+        ...(pick(values, relevantConnectionKeys) as RelevantConnectionValues),
         // required to update the catalog if a schema change w/transforms exists
         sourceCatalogId: connection.catalogId,
         skipReset,
@@ -113,7 +122,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   );
 
   const onFormSubmit = useCallback(
-    async (values: Pick<FormConnectionFormValues, "syncCatalog">) => {
+    async (values: RelevantConnectionValues) => {
       setSubmitError(null);
 
       /**
@@ -131,8 +140,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       // handler for modal -- saves connection w/ modal result taken into account
       async function handleModalResult(
         result: ModalResult<boolean>,
-        values: Pick<FormConnectionFormValues, "syncCatalog">,
-        saveConnection: (values: Pick<ConnectionValues, "syncCatalog">, skipReset: boolean) => Promise<void>
+        values: RelevantConnectionValues,
+        saveConnection: (values: RelevantConnectionValues, skipReset: boolean) => Promise<void>
       ) {
         if (result.type === "completed" && isBoolean(result.reason)) {
           // Save the connection taking into account the correct skipReset value from the dialog choice.
@@ -215,7 +224,7 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const newSyncCatalogV2Form = connection && (
     <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
-      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+      <Form<RelevantConnectionValues>
         defaultValues={initialValues}
         reinitializeDefaultValues
         schema={validationSchema}
@@ -245,7 +254,7 @@ export const ConnectionReplicationPage: React.FC = () => {
         <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
       </ScrollableContainer>
     ) : !schemaRefreshing && connection ? (
-      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+      <Form<RelevantConnectionValues>
         defaultValues={initialValues}
         schema={validationSchema}
         onSubmit={onFormSubmit}
