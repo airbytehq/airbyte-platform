@@ -9,6 +9,7 @@ import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
+import dev.failsafe.function.CheckedSupplier
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.api.client.WorkloadApiClient
@@ -32,6 +33,7 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
 import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.time.Duration
 
@@ -105,8 +107,12 @@ class ClaimedProcessor(
                 else -> true
               }
             }
-            .build()
-        ).get { apiClient.workloadApi.workloadList(workloadListRequest) }
+            .build(),
+        ).get<WorkloadListResponse>(
+          CheckedSupplier {
+            apiClient.workloadApi.workloadList(workloadListRequest)
+          },
+        )
       } catch (e: FailsafeException) {
         if (e.cause is SocketException) {
           // Directly handle and propagate the SocketException
