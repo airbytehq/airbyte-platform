@@ -154,8 +154,6 @@ object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-str
 
 object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = false)
 
-object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
-
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
