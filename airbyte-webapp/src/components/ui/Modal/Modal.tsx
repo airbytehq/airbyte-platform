@@ -1,7 +1,8 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
 import classNames from "classnames";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
+import { useLocation } from "react-router-dom";
 
 import styles from "./Modal.module.scss";
 import { Box } from "../Box";
@@ -45,13 +46,22 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const { formatMessage } = useIntl();
+  const location = useLocation();
+  const originalLocation = useRef(location);
 
-  const onModalCancel = () => {
+  const onModalCancel = useCallback(() => {
     if (onCancel) {
       setIsOpen(false);
       onCancel();
     }
-  };
+  }, [onCancel]);
+
+  useEffect(() => {
+    if (location !== originalLocation.current) {
+      setIsOpen(false);
+      onModalCancel();
+    }
+  }, [location, onModalCancel]);
 
   const Wrapper = wrapIn || "div";
 

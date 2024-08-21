@@ -4,7 +4,7 @@ import { useMeasure } from "react-use";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Input } from "components/ui/Input";
+import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import styles from "./LogSearchInput.module.scss";
@@ -36,19 +36,20 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
   ) => {
     const [lineCountRef, { width }] = useMeasure<HTMLDivElement>();
     const { formatMessage } = useIntl();
+    const hasHighlightedMatch = highlightedMatchIndex !== undefined;
 
     return (
       <div className={styles.logSearchInput__inputWrapper}>
-        <Input
+        <SearchInput
           ref={ref}
           value={inputValue}
           onChange={(e) => onSearchTermChange(e.target.value)}
           onKeyDown={onSearchInputKeydown}
           placeholder={formatMessage({ id: "jobHistory.logs.searchPlaceholder" })}
-          style={{ paddingRight: width + 15 }}
+          style={{ paddingRight: (hasHighlightedMatch ? width : 0) + 15 }}
           light
         />
-        {highlightedMatchIndex !== undefined && (
+        {hasHighlightedMatch && (
           <div className={styles.logSearchInput__searchControls} ref={lineCountRef}>
             <Text align="center" size="xs" color={inputValue.length === 0 ? "grey" : "darkBlue"}>
               {`${highlightedMatchDisplay} / ${matches.length}`}
