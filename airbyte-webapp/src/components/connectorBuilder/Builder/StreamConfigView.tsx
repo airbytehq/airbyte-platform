@@ -19,6 +19,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
+import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
@@ -82,6 +83,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
+              labelAction={<AssistButton assistKey="metadata" streamNum={streamNum} />}
             />
             <BuilderField
               type="enum"

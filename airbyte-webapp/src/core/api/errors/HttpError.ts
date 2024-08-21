@@ -19,6 +19,10 @@ const defaultHttpMessage = (status: number) => {
       return "errors.http.gone";
     case 418:
       return "errors.http.teapot";
+    case 422:
+      return "errors.http.unprocessableEntity";
+    case 429:
+      return "errors.http.tooManyRequests";
     case 500:
       return "errors.http.internalServerError";
     case 502:

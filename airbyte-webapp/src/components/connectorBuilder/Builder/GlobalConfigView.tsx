@@ -1,8 +1,11 @@
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/AssistButton";
+
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { AssistSection } from "./AssistSection";
 import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
@@ -17,11 +20,13 @@ export const GlobalConfigView: React.FC = () => {
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>
       <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })}>
+        <AssistSection />
         <BuilderCard>
           <BuilderFieldWithInputs
             type="string"
             manifestPath="HttpRequester.properties.url_base"
             path="formValues.global.urlBase"
+            labelAction={<AssistButton assistKey="urlbase" />}
             onBlur={(value: string) => {
               if (value) {
                 analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.API_URL_CREATE, {

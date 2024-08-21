@@ -23,6 +23,7 @@ import {
 import styles from "./BuilderCard.module.scss";
 import { BuilderYamlField } from "./BuilderYamlField";
 import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
+import { useBuilderWatchWithPreview } from "../preview";
 import { BuilderState, BuilderStream, isYamlString, useBuilderWatch } from "../types";
 import { UiYamlToggleButton } from "../UiYamlToggleButton";
 import { useCopyValueIncludingArrays } from "../utils";
@@ -47,6 +48,8 @@ interface BuilderCardProps {
       getLockedInputKeys?(builderValue: unknown): string[];
     };
   };
+  labelAction?: React.ReactNode;
+  rightComponent?: React.ReactNode;
 }
 
 export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = ({
@@ -57,6 +60,8 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   label,
   tooltip,
   inputsConfig,
+  labelAction,
+  rightComponent,
 }) => {
   const { formatMessage } = useIntl();
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
@@ -85,21 +90,23 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
 
   return (
     <Card className={className} bodyClassName={classNames(styles.card)} ref={elementRef}>
-      {(inputsConfig?.toggleable || label || docLink) && (
+      {(inputsConfig?.toggleable || label || docLink || rightComponent) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>
-            <FlexContainer>
+            <FlexContainer alignItems="center">
               {inputsConfig?.toggleable && (
                 <CardToggle path={inputsConfig.path} defaultValue={inputsConfig.defaultValue} />
               )}
               <ControlLabels
                 className={classNames(styles.label, { [styles.toggleLabel]: inputsConfig?.toggleable })}
                 label={label}
+                labelAction={labelAction}
                 infoTooltipContent={tooltip}
                 htmlFor={inputsConfig ? String(inputsConfig.path) : undefined}
               />
             </FlexContainer>
           </FlexItem>
+          {rightComponent}
           {docLink && (
             <a
               href={docLink}
@@ -142,7 +149,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   const { resolveErrorMessage } = useConnectorBuilderFormState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, unregister } = useFormContext();
-  const formValue = useBuilderWatch(path);
+  const { fieldValue: formValue } = useBuilderWatchWithPreview(path);
   const pathString = path as string;
   const isYaml = isYamlString(formValue);
   const [previousUiValue, setPreviousUiValue] = useState(isYaml ? undefined : formValue);
@@ -283,7 +290,7 @@ interface ToggledChildrenProps {
 }
 
 const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> = ({ children, path }) => {
-  const value = useBuilderWatch(path);
+  const { fieldValue: value } = useBuilderWatchWithPreview(path);
 
   if (value !== undefined) {
     return <>{children}</>;
@@ -293,13 +300,13 @@ const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> =
 
 const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; defaultValue: unknown }) => {
   const { setValue, clearErrors } = useFormContext();
-  const value = useBuilderWatch(path);
-
+  const { fieldValue: value, isPreview } = useBuilderWatchWithPreview(path);
   return (
     <CheckBox
       id={path}
       data-testid={`toggle-${path}`}
       checked={value !== undefined}
+      disabled={isPreview}
       onChange={(event) => {
         if (event.target.checked) {
           setValue(path, defaultValue);

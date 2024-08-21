@@ -20,32 +20,36 @@ export interface ControlLabelsProps {
   optional?: boolean;
   htmlFor?: string;
   format?: React.ReactNode;
+  labelAction?: React.ReactNode;
 }
 
 const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlLabelsProps>>((props, ref) => (
   <div ref={ref} className={className(styles.controlContainer, props.className)}>
-    <Label
-      error={props.error}
-      success={props.success}
-      message={props.message}
-      nextLine={props.nextLine}
-      htmlFor={props.htmlFor}
-      endBlock={props.format}
-    >
-      <FlexContainer gap="none" alignItems="center">
-        {props.label}
-        {props.infoTooltipContent && (
-          <InfoTooltip containerClassName={styles.tooltipContainer} className={styles.tooltip} placement="top-start">
-            {props.infoTooltipContent}
-          </InfoTooltip>
-        )}
-        {props.optional && (
-          <Text size="sm" className={styles.optionalText}>
-            <FormattedMessage id="form.optional" />
-          </Text>
-        )}
-      </FlexContainer>
-    </Label>
+    <FlexContainer gap="sm" alignItems="center">
+      <Label
+        error={props.error}
+        success={props.success}
+        message={props.message}
+        nextLine={props.nextLine}
+        htmlFor={props.htmlFor}
+        endBlock={props.format}
+      >
+        <FlexContainer gap="none" alignItems="center">
+          {props.label}
+          {props.infoTooltipContent && (
+            <InfoTooltip containerClassName={styles.tooltipContainer} className={styles.tooltip} placement="top-start">
+              {props.infoTooltipContent}
+            </InfoTooltip>
+          )}
+          {props.optional && (
+            <Text size="sm" className={styles.optionalText}>
+              <FormattedMessage id="form.optional" />
+            </Text>
+          )}
+        </FlexContainer>
+      </Label>
+      {props.labelAction && <div className={styles.labelAction}>{props.labelAction}</div>}
+    </FlexContainer>
     {props.children}
   </div>
 ));

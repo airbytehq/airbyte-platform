@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { ReactNode, useEffect, useRef } from "react";
-import { useController, useWatch } from "react-hook-form";
+import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -20,12 +20,14 @@ import { useConnectorBuilderFormManagementState } from "services/connectorBuilde
 
 import styles from "./BuilderField.module.scss";
 import { getLabelAndTooltip } from "./manifestHelpers";
+import { useWatchWithPreview } from "../preview";
 
 interface EnumFieldProps {
   options: string[] | Array<{ label: string; value: string }>;
   value: string;
   setValue: (value: string) => void;
   error: boolean;
+  disabled?: boolean;
 }
 
 interface ArrayFieldProps {
@@ -36,6 +38,7 @@ interface ArrayFieldProps {
   itemType?: string;
   directionalStyle?: boolean;
   uniqueValues?: boolean;
+  disabled?: boolean;
 }
 
 interface BaseFieldProps {
@@ -49,8 +52,10 @@ interface BaseFieldProps {
   pattern?: string;
   adornment?: ReactNode;
   preview?: (arg0: string) => ReactNode;
+  labelAction?: ReactNode;
   className?: string;
   omitInterpolationContext?: boolean;
+  disabled?: boolean;
 }
 
 export type BuilderFieldProps = BaseFieldProps &
@@ -59,12 +64,11 @@ export type BuilderFieldProps = BaseFieldProps &
         type: "string" | "number" | "integer";
         onChange?: (newValue: string) => void;
         onBlur?: (value: string) => void;
-        disabled?: boolean;
         step?: number;
         min?: number;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
-    | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
+    | { type: "boolean"; onChange?: (newValue: boolean) => void; disabledTooltip?: string }
     | {
         type: "array";
         onChange?: (newValue: string[]) => void;
@@ -83,7 +87,7 @@ export type BuilderFieldProps = BaseFieldProps &
     | { type: "multicombobox"; onChange?: (newValue: string[]) => void; options: Option[] }
   );
 
-const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
+const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, disabled, ...props }) => {
   return (
     <ListBox
       {...props}
@@ -97,6 +101,7 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
       onSelect={(selected) => selected && setValue(selected)}
       selectedValue={value}
       hasError={error}
+      isDisabled={disabled}
     />
   );
 };
@@ -109,6 +114,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
   itemType,
   directionalStyle,
   uniqueValues,
+  disabled,
 }) => {
   return (
     <TagInput
@@ -119,6 +125,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
       error={error}
       directionalStyle={directionalStyle}
       uniqueValues={uniqueValues}
+      disabled={disabled}
     />
   );
 };
@@ -132,12 +139,14 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   preview,
   manifestPath,
   omitInterpolationContext,
+  labelAction,
   ...props
 }) => {
   const { field, fieldState } = useController({ name: path });
   // Must use useWatch instead of field.value from useController because the latter is not updated
   // when setValue is called on a parent path in a way that changes the value of this field.
-  const fieldValue = useWatch({ name: path });
+  const { fieldValue, isPreview } = useWatchWithPreview({ name: path });
+
   const hasError = !!fieldState.error;
 
   const { label, tooltip } = getLabelAndTooltip(
@@ -171,6 +180,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             infoTooltipContent={tooltip}
             optional={optional}
             htmlFor={switchId}
+            labelAction={labelAction}
           />
         }
         disabled={props.disabled}
@@ -192,10 +202,13 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     field.onChange(newValue);
   };
 
+  const isDisabled = props.disabled || isPreview;
+
   return (
     <ControlLabels
       className={styles.container}
       label={label}
+      labelAction={labelAction}
       infoTooltipContent={tooltip}
       optional={optional}
       ref={elementRef}
@@ -213,7 +226,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             error={hasError}
             readOnly={readOnly}
             adornment={adornment}
-            disabled={props.disabled}
+            disabled={isDisabled}
             step={props.step}
             min={props.min}
             onBlur={(e) => {
@@ -231,6 +244,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           onChange={setValue}
           value={(fieldValue as string) ?? ""}
           onBlur={field.onBlur}
+          disabled={isDisabled}
         />
       )}
       {props.type === "textarea" && (
@@ -244,6 +258,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           error={hasError}
           readOnly={readOnly}
           onBlur={field.onBlur}
+          disabled={isDisabled}
         />
       )}
       {props.type === "jsoneditor" && (
@@ -256,6 +271,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             onChange={(val: string | undefined) => {
               setValue(val);
             }}
+            disabled={isDisabled}
             bubbleUpUndoRedo
           />
         </div>
@@ -270,6 +286,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
             uniqueValues={props.uniqueValues}
+            disabled={isDisabled}
           />
         </div>
       )}
@@ -280,6 +297,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           setValue={setValue}
           error={hasError}
           data-testid={path}
+          disabled={isDisabled}
         />
       )}
       {props.type === "combobox" && (
@@ -298,6 +316,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             field.onBlur();
           }}
           filterOptions={false}
+          disabled={isDisabled}
         />
       )}
       {props.type === "multicombobox" && (
@@ -309,6 +328,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           error={hasError}
           data-testid={path}
           fieldInputProps={field}
+          disabled={isDisabled}
         />
       )}
       {hasError && (
