@@ -118,7 +118,8 @@ public class DestinationDefinitionsHandler {
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()));
+          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
+          .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }
@@ -183,7 +184,7 @@ public class DestinationDefinitionsHandler {
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = new HashMap<>();
-    for (var definition : shownDestinationDefs) {
+    for (final var definition : shownDestinationDefs) {
       destinationDefVersionMap.put(definition.getDestinationDefinitionId(),
           actorDefinitionVersionHelper.getDestinationVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
     }
