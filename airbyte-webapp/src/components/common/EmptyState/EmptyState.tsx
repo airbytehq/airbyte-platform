@@ -1,13 +1,13 @@
 import React from "react";
 
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
+import { Icon, IconProps } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./EmptyState.module.scss";
 
 interface EmptyStateProps {
-  icon?: "cactus" | "chart";
+  icon?: IconProps["type"];
   text: React.ReactNode;
   description?: React.ReactNode;
   button?: React.ReactNode;
