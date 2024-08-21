@@ -1,6 +1,7 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
 import classNames from "classnames";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 
@@ -65,13 +66,18 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
 
   const Wrapper = wrapIn || "div";
 
+  useHotkeys(["escape"], () => {
+    onModalCancel();
+  });
+
   return (
-    <Dialog open={isOpen} onClose={onModalCancel} data-testid={testId} className={styles.modalPageContainer}>
+    <Dialog open={isOpen} onClose={() => null} data-testid={testId} className={styles.modalPageContainer}>
       <Overlay />
       <Wrapper
         className={classNames(styles.modalContainer, {
           [styles["modalContainer--noSidebarOffset"]]: size === "full",
         })}
+        onClick={onModalCancel}
       >
         <DialogPanel className={styles.modalPanel}>
           {cardless ? (
