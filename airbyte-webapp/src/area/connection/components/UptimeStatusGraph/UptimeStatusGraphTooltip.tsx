@@ -97,10 +97,8 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
               {Object.entries(statusesByCount ?? []).map(([_status, streams]) => {
                 const status = _status as PresentingStatuses;
                 return streams.length === 0 ? null : (
-                  <FlexContainer key={status} gap="sm">
-                    <Box mt="xs">
-                      <StreamStatusIndicator size="xs" status={status} />
-                    </Box>
+                  <FlexContainer key={status} gap="sm" alignItems="baseline">
+                    <StreamStatusIndicator size="sm" status={status} />
                     <FlexContainer direction="column" gap="none">
                       <Text color="grey" size="sm" className={styles.alignText} as="span">
                         {formatMessage({ id: MESSAGE_BY_STATUS[status] }, { count: streams.length })}
