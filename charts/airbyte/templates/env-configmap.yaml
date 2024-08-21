@@ -151,9 +151,9 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator.image") | quote }}
-  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit.image") | quote }}
-  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar.image") | quote }}
+  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator" "image") | quote }}
+  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit" "image") | quote }}
+  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar" "image") | quote }}
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
