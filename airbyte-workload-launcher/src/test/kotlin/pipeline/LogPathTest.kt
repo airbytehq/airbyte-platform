@@ -33,7 +33,6 @@ import java.util.Optional
 import java.util.function.Function
 import java.util.stream.Stream
 import kotlin.io.path.Path
-import io.airbyte.workload.launcher.client.WorkloadApiClient as LauncherWorkloadApiClient
 
 class LogPathTest {
   @ParameterizedTest
@@ -127,13 +126,28 @@ class LogPathTest {
   }
 
   object Fixtures {
-    private val mockApiClient: LauncherWorkloadApiClient =
-      mockk {
-        every { reportFailure(any()) } returns Unit
-      }
-
-    private val successHandler = SuccessHandler(mockApiClient, mockk(relaxed = true), Optional.of(Function { id -> "TEST: success. Id: $id." }))
-    private val failureHandler = FailureHandler(mockApiClient, mockk(relaxed = true), Optional.of(Function { id -> "TEST: failure. Id: $id." }))
+    private val successHandler =
+      SuccessHandler(
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        Optional.of(
+          Function {
+              id ->
+            "TEST: success. Id: $id."
+          },
+        ),
+      )
+    private val failureHandler =
+      FailureHandler(
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        Optional.of(
+          Function {
+              id ->
+            "TEST: failure. Id: $id."
+          },
+        ),
+      )
 
     private const val TEST_LOG_PREFIX = "TEST"
 
