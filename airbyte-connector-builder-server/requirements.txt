@@ -4,13 +4,15 @@
 #
 #    pip-compile
 #
-airbyte-cdk==4.3.2
+airbyte-cdk==4.5.3
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-attrs==24.1.0
+anyio==4.4.0
+    # via httpx
+attrs==24.2.0
     # via
     #   cattrs
     #   jsonschema
@@ -19,16 +21,21 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.5
     # via wcmatch
-cachetools==5.4.0
+cachetools==5.5.0
     # via airbyte-cdk
 cattrs==23.2.3
     # via requests-cache
 certifi==2024.7.4
-    # via requests
-cffi==1.16.0
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
+cffi==1.17.0
     # via cryptography
 charset-normalizer==3.3.2
     # via requests
+click==8.1.7
+    # via nltk
 cryptography==42.0.8
     # via airbyte-cdk
 deprecated==1.2.14
@@ -36,15 +43,28 @@ deprecated==1.2.14
 dpath==2.2.0
     # via airbyte-cdk
 exceptiongroup==1.2.2
-    # via cattrs
+    # via
+    #   anyio
+    #   cattrs
 genson==1.2.2
     # via airbyte-cdk
+h11==0.14.0
+    # via httpcore
+httpcore==1.0.5
+    # via httpx
+httpx==0.27.0
+    # via langsmith
 idna==3.7
-    # via requests
+    # via
+    #   anyio
+    #   httpx
+    #   requests
 isodate==0.6.1
     # via airbyte-cdk
 jinja2==3.1.4
     # via airbyte-cdk
+joblib==1.4.2
+    # via nltk
 jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
@@ -55,11 +75,13 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.96
+langsmith==0.1.101
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
-orjson==3.10.6
+nltk==3.8.1
+    # via airbyte-cdk
+orjson==3.10.7
     # via langsmith
 packaging==23.2
     # via langchain-core
@@ -91,10 +113,12 @@ pytz==2024.1
     # via airbyte-cdk
 pytzdata==2020.1
     # via pendulum
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
+regex==2024.7.24
+    # via nltk
 requests==2.32.3
     # via
     #   airbyte-cdk
@@ -108,10 +132,17 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
+sniffio==1.3.1
+    # via
+    #   anyio
+    #   httpx
 tenacity==8.5.0
     # via langchain-core
+tqdm==4.66.5
+    # via nltk
 typing-extensions==4.12.2
     # via
+    #   anyio
     #   cattrs
     #   pydantic
     #   pydantic-core
