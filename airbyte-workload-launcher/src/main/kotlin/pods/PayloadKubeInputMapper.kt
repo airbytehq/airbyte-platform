@@ -24,13 +24,13 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.usesCustomConnector
@@ -280,7 +280,7 @@ class PayloadKubeInputMapper(
 
     return buildMap {
       if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)) {
-        put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
+        put(FileConstants.INIT_INPUT_FILE, serializer.serialize(input))
       }
     }
   }
@@ -295,8 +295,8 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             input.checkConnectionInput,
@@ -320,8 +320,8 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             null,
@@ -345,7 +345,7 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             null,

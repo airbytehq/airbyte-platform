@@ -5,6 +5,7 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
@@ -80,7 +81,7 @@ class OrchestratorPodFactory(
 
     val mainContainer =
       ContainerBuilder()
-        .withName(KubePodProcess.MAIN_CONTAINER_NAME)
+        .withName(ContainerConstants.MAIN_CONTAINER_NAME)
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(containerResources)

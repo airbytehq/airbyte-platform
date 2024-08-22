@@ -1,7 +1,8 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.workers.pod.ContainerConstants
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodProcess
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
@@ -27,9 +28,9 @@ class InitContainerFactory(
     volumeMounts: List<VolumeMount>,
   ): Container {
     return ContainerBuilder()
-      .withName(KubePodProcess.INIT_CONTAINER_NAME)
+      .withName(ContainerConstants.INIT_CONTAINER_NAME)
       .withImage(imageName)
-      .withWorkingDir(KubePodProcess.CONFIG_DIR)
+      .withWorkingDir(FileConstants.CONFIG_DIR)
       .withCommand(
         listOf(
           "sh",
@@ -53,8 +54,8 @@ class InitContainerFactory(
             # no upload-complete file was created in time, exit with error
             exit 1
             """.trimIndent(),
-            KubePodProcess.CONFIG_DIR,
-            KubePodProcess.SUCCESS_FILE_NAME,
+            FileConstants.CONFIG_DIR,
+            FileConstants.KUBE_CP_SUCCESS_MARKER_FILE,
           ),
         ),
       )
@@ -65,15 +66,15 @@ class InitContainerFactory(
   }
 
   fun createFetching(
-    resourceReqs: ResourceRequirements,
+    resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,
   ): Container {
     return ContainerBuilder()
-      .withName(KubePodProcess.INIT_CONTAINER_NAME)
+      .withName(ContainerConstants.INIT_CONTAINER_NAME)
       .withImage(initContainerInfo.image)
       .withImagePullPolicy(initContainerInfo.pullPolicy)
-      .withWorkingDir(KubePodProcess.CONFIG_DIR)
+      .withWorkingDir(FileConstants.CONFIG_DIR)
       .withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(containerSecurityContext())

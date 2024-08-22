@@ -2,8 +2,8 @@ package io.airbyte.workload.launcher.config
 
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.CHECK_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
@@ -49,7 +49,7 @@ class PodFactoryBeanFactory {
       volumeFactory,
       initContainerFactory,
       mapOf(
-        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+        "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
     )
   }
@@ -83,7 +83,7 @@ class PodFactoryBeanFactory {
       volumeFactory,
       initContainerFactory,
       mapOf(
-        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+        "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
     )
   }

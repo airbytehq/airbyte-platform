@@ -7,10 +7,10 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.input.setDestinationLabels
 import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
@@ -71,7 +71,7 @@ class ReplicationHydrationProcessorTest {
     every { replicationInputHydrator.getHydratedReplicationInput(activityInput) } returns hydrated
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns labels
     every { serializer.serialize(hydratedWithLabels) } returns serialized
-    every { fileClient.writeInputFile(OrchestratorConstants.INIT_FILE_INPUT, serialized) } returns Unit
+    every { fileClient.writeInputFile(FileConstants.INIT_INPUT_FILE, serialized) } returns Unit
 
     processor.process(input)
 
@@ -79,7 +79,7 @@ class ReplicationHydrationProcessorTest {
     verify { replicationInputHydrator.getHydratedReplicationInput(activityInput) }
     verify { labeler.getSharedLabels(any(), any(), any(), any()) }
     verify { serializer.serialize(hydratedWithLabels) }
-    verify { fileClient.writeInputFile(OrchestratorConstants.INIT_FILE_INPUT, serialized) }
+    verify { fileClient.writeInputFile(FileConstants.INIT_INPUT_FILE, serialized) }
   }
 
   object Fixtures {

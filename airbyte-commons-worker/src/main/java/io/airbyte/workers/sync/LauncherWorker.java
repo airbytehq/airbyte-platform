@@ -27,6 +27,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.pod.FileConstants;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.KubeContainerInfo;
@@ -147,7 +148,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
       final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
       fileMap.putAll(Map.of(
-          OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input)));
+          FileConstants.INIT_INPUT_FILE, Jsons.serialize(input)));
 
       final Map<Integer, Integer> portMap = Map.of(
           serverPort, serverPort,

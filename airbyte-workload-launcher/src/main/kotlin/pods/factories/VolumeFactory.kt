@@ -1,6 +1,6 @@
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.FileConstants
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeBuilder
@@ -30,7 +30,7 @@ class VolumeFactory(
     val mount =
       VolumeMountBuilder()
         .withName("airbyte-config")
-        .withMountPath(KubePodProcess.CONFIG_DIR)
+        .withMountPath(FileConstants.CONFIG_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)

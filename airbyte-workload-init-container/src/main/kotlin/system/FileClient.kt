@@ -1,6 +1,6 @@
 package io.airbyte.initContainer.system
 
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.FileConstants
 import jakarta.inject.Singleton
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -19,7 +19,7 @@ class FileClient {
     fileContents: String,
   ) {
     Files.writeString(
-      Path.of(KubePodProcess.CONFIG_DIR).resolve(fileName),
+      Path.of(FileConstants.CONFIG_DIR).resolve(fileName),
       fileContents,
       StandardCharsets.UTF_8,
     )

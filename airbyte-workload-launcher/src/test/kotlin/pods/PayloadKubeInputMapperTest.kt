@@ -24,13 +24,13 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -127,7 +127,7 @@ class PayloadKubeInputMapperTest {
     val expectedFileMap: Map<String, String> =
       buildMap {
         if (shouldKubeCpInput) {
-          put(OrchestratorConstants.INIT_FILE_INPUT, mockSerializedOutput)
+          put(FileConstants.INIT_INPUT_FILE, mockSerializedOutput)
         }
       }
 
@@ -255,8 +255,8 @@ class PayloadKubeInputMapperTest {
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.CONNECTION_CONFIGURATION_FILE, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
     Assertions.assertEquals(expectedFileMap, result.fileMap)
@@ -393,8 +393,8 @@ class PayloadKubeInputMapperTest {
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.CONNECTION_CONFIGURATION_FILE, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
     Assertions.assertEquals(expectedFileMap, result.fileMap)
@@ -512,7 +512,7 @@ class PayloadKubeInputMapperTest {
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
     Assertions.assertEquals(expectedFileMap, result.fileMap)

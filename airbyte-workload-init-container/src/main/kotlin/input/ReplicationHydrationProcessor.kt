@@ -6,10 +6,10 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.input.setDestinationLabels
 import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
@@ -46,7 +46,7 @@ class ReplicationHydrationProcessor(
         .setDestinationLabels(labels)
 
     fileClient.writeInputFile(
-      OrchestratorConstants.INIT_FILE_INPUT,
+      FileConstants.INIT_INPUT_FILE,
       serializer.serialize(inputWithLabels),
     )
   }

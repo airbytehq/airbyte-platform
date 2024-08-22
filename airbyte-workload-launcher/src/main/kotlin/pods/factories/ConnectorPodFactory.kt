@@ -4,6 +4,8 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.workers.pod.ContainerConstants
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
@@ -122,12 +124,12 @@ class ConnectorPodFactory(
     val mainCommand = ContainerCommandFactory.connectorOperation(operationCommand, configArgs)
 
     return ContainerBuilder()
-      .withName(KubePodProcess.MAIN_CONTAINER_NAME)
+      .withName(ContainerConstants.MAIN_CONTAINER_NAME)
       .withImage(containerInfo.image)
       .withImagePullPolicy(containerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
       .withEnv(connectorEnvVars + runtimeEnvVars)
-      .withWorkingDir(KubePodProcess.CONFIG_DIR)
+      .withWorkingDir(FileConstants.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
       .withResources(resourceReqs)
       .withSecurityContext(containerSecurityContext())
@@ -138,11 +140,11 @@ class ConnectorPodFactory(
     val mainCommand = ContainerCommandFactory.sidecar()
 
     return ContainerBuilder()
-      .withName(KubePodProcess.SIDECAR_CONTAINER_NAME)
+      .withName(ContainerConstants.SIDECAR_CONTAINER_NAME)
       .withImage(sidecarContainerInfo.image)
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withWorkingDir(KubePodProcess.CONFIG_DIR)
+      .withWorkingDir(FileConstants.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
