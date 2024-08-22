@@ -138,12 +138,12 @@ export interface BuilderFormValues {
 }
 
 export interface StreamTestResults {
-  streamHash: string;
-  hasResponse: boolean;
-  responsesAreSuccessful: boolean;
-  hasRecords: boolean;
-  primaryKeysArePresent: boolean;
-  primaryKeysAreUnique: boolean;
+  streamHash: string | null;
+  hasResponse?: boolean;
+  responsesAreSuccessful?: boolean;
+  hasRecords?: boolean;
+  primaryKeysArePresent?: boolean;
+  primaryKeysAreUnique?: boolean;
 }
 
 type TestedStreams = Record<string, StreamTestResults>;

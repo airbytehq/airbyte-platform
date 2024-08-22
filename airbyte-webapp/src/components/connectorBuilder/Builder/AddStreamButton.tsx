@@ -69,6 +69,10 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         urlPath: values.urlPath,
         schema: DEFAULT_SCHEMA,
         id,
+        testResults: {
+          // indicates that this stream was added by the Builder and needs to be tested
+          streamHash: null,
+        },
       }),
     ]);
     setIsOpen(false);
