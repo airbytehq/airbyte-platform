@@ -4,14 +4,11 @@
 
 .status {
   position: relative;
-  transform: scale(1.2);
 
   @each $name, $color, $bg-color in stream-status-colors.$by-stream-status {
     &--#{$name} {
       .icon {
         position: relative;
-        width: 24px;
-        height: 24px;
         color: $color;
       }
     }

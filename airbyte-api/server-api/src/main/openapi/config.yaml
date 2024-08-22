@@ -7615,6 +7615,9 @@ components:
         metrics:
           description: Public metrics for the connector
           type: object
+        language:
+          description: The language the connector is written in
+          type: string
     SourceDefinitionReadList:
       type: object
       required:
@@ -8145,6 +8148,9 @@ components:
         metrics:
           description: Public metrics for the connector
           type: object
+        language:
+          description: The language the connector is written in
+          type: string
     DestinationDefinitionReadList:
       type: object
       required:

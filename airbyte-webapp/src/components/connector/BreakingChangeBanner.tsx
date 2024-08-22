@@ -65,7 +65,6 @@ export const BreakingChangeBanner = ({
       iconOverride="warning"
       onAction={() => setConfirmUpdateOpen(true)}
       actionBtnText={<FormattedMessage id="connector.breakingChange.upgradeButton" />}
-      actionBtnProps={{ className: styles.upgradeButton }}
       text={
         <FlexContainer direction="column" gap="lg">
           <FlexContainer direction="column" gap="sm">

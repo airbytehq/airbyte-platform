@@ -26,12 +26,14 @@ export interface ComboBoxProps extends BaseProps {
   adornment?: ReactNode;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   filterOptions?: boolean;
+  disabled?: boolean;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
   name: string;
   value: string[] | undefined;
   onChange: (newValue: string[]) => void;
+  disabled?: boolean;
 }
 
 const Options = forwardRef<HTMLDivElement, { options: Option[] }>(({ options }, ref) => (
@@ -64,6 +66,7 @@ export const ComboBox = ({
   adornment,
   onBlur,
   fieldInputProps,
+  disabled,
   filterOptions = true,
 }: ComboBoxProps) => {
   const filteredOptions =
@@ -86,6 +89,7 @@ export const ComboBox = ({
           autoComplete="off"
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
+          disabled={disabled}
         />
       </ComboboxInput>
       <Options options={displayOptions} />
@@ -93,7 +97,15 @@ export const ComboBox = ({
   );
 };
 
-export const MultiComboBox = ({ name, options, value, onChange, error, fieldInputProps }: MultiComboBoxProps) => {
+export const MultiComboBox = ({
+  name,
+  options,
+  value,
+  onChange,
+  error,
+  fieldInputProps,
+  disabled,
+}: MultiComboBoxProps) => {
   return (
     <Combobox value={value} onChange={onChange} multiple immediate>
       <ComboboxInput as={React.Fragment}>
@@ -103,6 +115,7 @@ export const MultiComboBox = ({ name, options, value, onChange, error, fieldInpu
           onChange={onChange}
           onBlur={fieldInputProps?.onBlur}
           error={error}
+          disabled={disabled}
         />
       </ComboboxInput>
       <Options options={options} />

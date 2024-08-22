@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import React, { cloneElement } from "react";
 
-import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
@@ -56,9 +55,7 @@ interface StreamStatusIndicatorProps {
 export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, size }) => {
   return (
     <div className={classNames(styles.status, STYLE_BY_STATUS[status])}>
-      <FlexContainer justifyContent="center" alignItems="flex-start" className={styles.icon}>
-        {cloneElement(ICON_BY_STATUS[status], { [size ? "size" : ""]: size })}
-      </FlexContainer>
+      <div className={styles.icon}>{cloneElement(ICON_BY_STATUS[status], { [size ? "size" : ""]: size })}</div>
     </div>
   );
 };

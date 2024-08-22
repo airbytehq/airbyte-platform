@@ -122,7 +122,8 @@ public class SourceDefinitionsHandler {
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
-          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
+          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
+          .language(sourceVersion.getLanguage());
 
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest source definitions list", e);
@@ -192,7 +193,7 @@ public class SourceDefinitionsHandler {
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = new HashMap<>();
-    for (var definition : shownSourceDefs) {
+    for (final var definition : shownSourceDefs) {
       sourceDefVersionMap.put(definition.getSourceDefinitionId(),
           actorDefinitionVersionHelper.getSourceVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
     }

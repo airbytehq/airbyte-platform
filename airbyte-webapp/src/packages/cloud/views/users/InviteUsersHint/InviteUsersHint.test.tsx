@@ -41,9 +41,7 @@ describe("InviteUsersHint", () => {
 
   it("opens modal when clicking on CTA by default", () => {
     const mockOpenModal = jest.fn();
-    jest
-      .spyOn(ModalService, "useModalService")
-      .mockImplementationOnce(() => ({ openModal: mockOpenModal, closeModal: jest.fn() }));
+    jest.spyOn(ModalService, "useModalService").mockImplementationOnce(() => ({ openModal: mockOpenModal }));
     jest.spyOn(FeatureService, "useFeature").mockImplementation(createUseFeatureMock({ visible: true }));
 
     const { getByTestId } = render(<InviteUsersHint connectorType="source" />, { wrapper: TestWrapper });

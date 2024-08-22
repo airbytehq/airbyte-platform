@@ -121,6 +121,8 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     )
   );
 
+  builderFormValues.assist = builderMetadata?.assist ?? {};
+
   builderFormValues.global.authenticator = convertOrDumpAsString(
     streams[0].retriever.requester.authenticator,
     (authenticator: HttpRequesterAuthenticator | undefined, _streamName?: string, spec?: Spec) =>

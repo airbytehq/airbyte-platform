@@ -112,6 +112,8 @@ interface FormStateContext {
   setFormValuesDirty: (value: boolean) => void;
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
+  assistEnabled: boolean;
+  setAssistEnabled: (enabled: boolean) => void;
 }
 
 interface TestReadLimits {
@@ -232,7 +234,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
-  const { setStoredMode } = useConnectorBuilderLocalStorage();
+  const { setStoredMode, checkAssistEnabled, setAssistEnabledById } = useConnectorBuilderLocalStorage();
+
+  const assistEnabled = checkAssistEnabled(projectId);
+  const setAssistEnabled = setAssistEnabledById(projectId);
+
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
 
@@ -561,6 +567,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setFormValuesDirty,
     updateTestingValues,
     updateYamlCdkVersion,
+    setAssistEnabled,
+    assistEnabled,
   };
 
   return (
