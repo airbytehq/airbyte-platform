@@ -71,10 +71,34 @@ describe(`${updateStreamSyncMode.name}`, () => {
       );
     });
 
-    it("automatically selects the composite primary key fields", () => {
+    it("automatically selects the composite primary key fields (append)", () => {
       const syncModes: SyncModeValue = {
         syncMode: "incremental",
         destinationSyncMode: "append_dedup",
+      };
+
+      const updatedConfig = updateStreamSyncMode(
+        { ...mockAirbyteStream, sourceDefinedPrimaryKey: DEFAULT_PRIMARY_KEY },
+        {
+          ...mockStreamConfiguration,
+          fieldSelectionEnabled: true,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }],
+        },
+        syncModes
+      );
+
+      expect(updatedConfig).toEqual(
+        expect.objectContaining({
+          ...syncModes,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }, { fieldPath: PK_PART_ONE }, { fieldPath: PK_PART_TWO }],
+        })
+      );
+    });
+
+    it("automatically selects the composite primary key fields (overwrite)", () => {
+      const syncModes: SyncModeValue = {
+        syncMode: "incremental",
+        destinationSyncMode: "overwrite_dedup",
       };
 
       const updatedConfig = updateStreamSyncMode(

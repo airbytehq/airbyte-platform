@@ -9,7 +9,7 @@ import styles from "./ScrollableContainer.module.scss";
  */
 export const ScrollableContainer = forwardRef<HTMLDivElement, PropsWithChildren & { className?: string }>(
   ({ children, className, ...restProps }, outerRef) => (
-    <div ref={outerRef} className={classNames(styles.container, className)} {...restProps}>
+    <div {...restProps} className={classNames(styles.container, className)} ref={outerRef}>
       {children}
     </div>
   )

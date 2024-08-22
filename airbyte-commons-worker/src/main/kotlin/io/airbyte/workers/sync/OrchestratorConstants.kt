@@ -6,15 +6,12 @@ import io.airbyte.analytics.DEPLOYMENT_MODE_ENV_VAR
 import io.airbyte.analytics.SEGMENT_WRITE_KEY_ENV_VAR
 import io.airbyte.analytics.TRACKING_STRATEGY_ENV_VAR
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.config.EnvConfigs
 
 private const val LOG_LEVEL = "LOG_LEVEL"
 
 // necessary for s3/minio logging. used in the log4j2 configuration.
 private const val S3_PATH_STYLE_ACCESS = "S3_PATH_STYLE_ACCESS"
-private const val FEATURE_FLAG_CLIENT = "FEATURE_FLAG_CLIENT"
-private const val FEATURE_FLAG_PATH = "FEATURE_FLAG_PATH"
 
 object OrchestratorConstants {
   const val JOB_OUTPUT_FILENAME = "jobOutput.json"
@@ -23,8 +20,8 @@ object OrchestratorConstants {
   const val INIT_FILE_INPUT = "input.json"
   const val INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json"
   const val INIT_FILE_APPLICATION = "application.txt"
+  const val APPLICATION = "application"
   const val SIDECAR_INPUT = "sidecarInput.json"
-  const val WORKLOAD_ID_FILE = "workload.txt"
 
   // See the application.yml of the container-orchestrator for value
   const val SERVER_PORT = 9000
@@ -47,22 +44,15 @@ object OrchestratorConstants {
       // add variables defined in this file
       addAll(
         setOf(
-          FEATURE_FLAG_CLIENT,
-          FEATURE_FLAG_PATH,
+          EnvVar.FEATURE_FLAG_BASEURL.toString(),
+          EnvVar.FEATURE_FLAG_CLIENT.toString(),
+          EnvVar.FEATURE_FLAG_PATH.toString(),
           LOG_LEVEL,
           S3_PATH_STYLE_ACCESS,
         ),
       )
       // add job shared envs
       addAll(EnvConfigs.JOB_SHARED_ENVS.keys)
-      // add EnvVariableFeatureFlags
-      addAll(
-        setOf(
-          EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA,
-          EnvVariableFeatureFlags.APPLY_FIELD_SELECTION,
-          EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES,
-        ),
-      )
       // add tracking client
       addAll(
         setOf(
@@ -85,6 +75,8 @@ object OrchestratorConstants {
           EnvVar.DOCKER_HOST,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS,
           EnvVar.JOB_DEFAULT_ENV_MAP,
+          EnvVar.JOB_ERROR_REPORTING_SENTRY_DSN,
+          EnvVar.JOB_ERROR_REPORTING_STRATEGY,
           EnvVar.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvVar.JOB_KUBE_ANNOTATIONS,
           EnvVar.JOB_KUBE_BUSYBOX_IMAGE,

@@ -18,4 +18,15 @@ class ExternalUserServiceLocalImpl : ExternalUserService {
   ) {
     logger.info { "LOCAL MODE (No-op): Would have deleted user by external id: $authUserId on $realm" }
   }
+
+  override fun deleteUserByEmailOnOtherRealms(
+    email: String,
+    realmToKeep: String,
+  ) {
+    logger.info { "LOCAL MODE (No-op): Would have deleted user by email on non $realmToKeep realms: $email" }
+  }
+
+  override fun getRealmByAuthUserId(authUserId: String): String? {
+    return null
+  }
 }

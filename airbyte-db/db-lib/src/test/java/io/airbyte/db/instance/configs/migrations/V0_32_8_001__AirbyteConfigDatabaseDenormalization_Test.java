@@ -41,7 +41,6 @@ import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatab
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardDestinationDefinition;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardSourceDefinition;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StatusType;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -401,7 +400,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
           .withSourceId(record.get(sourceId))
           .withDestinationId(record.get(destinationId))
           .withName(record.get(name))
-          .withCatalog(Jsons.deserialize(record.get(catalog).data(), ConfiguredAirbyteCatalog.class))
+          .withCatalog(Jsons.deserialize(record.get(catalog).data(), io.airbyte.config.ConfiguredAirbyteCatalog.class))
           .withStatus(Enums.toEnum(record.get(status, String.class), StandardSync.Status.class).orElseThrow())
           .withSchedule(Jsons.deserialize(record.get(schedule).data(), Schedule.class))
           .withManual(record.get(manual))

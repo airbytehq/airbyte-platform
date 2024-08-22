@@ -25,11 +25,8 @@ import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWor
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
@@ -68,8 +65,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private WebhookOperationActivity webhookOperationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "refreshSchemaActivityOptions")
   private RefreshSchemaActivity refreshSchemaActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -82,6 +77,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private InvokeOperationsActivity invokeOperationsActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -141,38 +138,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    StandardSyncOutput syncOutput = replicationActivity
+    final StandardSyncOutput syncOutput = replicationActivity
         .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
             refreshSchemaOutput, useWorkloadApi, useWorkloadOutputDocStore));
 
-    if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
-      for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
-        if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
-          LOGGER.info("running webhook operation");
-          LOGGER.debug("webhook operation input: {}", standardSyncOperation);
-          final boolean success = webhookOperationActivity
-              .invokeWebhook(new OperatorWebhookInput()
-                  .withExecutionUrl(standardSyncOperation.getOperatorWebhook().getExecutionUrl())
-                  .withExecutionBody(standardSyncOperation.getOperatorWebhook().getExecutionBody())
-                  .withWebhookConfigId(standardSyncOperation.getOperatorWebhook().getWebhookConfigId())
-                  .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs())
-                  .withConnectionContext(syncInput.getConnectionContext()));
-          LOGGER.info("webhook {} completed {}", standardSyncOperation.getOperatorWebhook().getWebhookConfigId(),
-              success ? "successfully" : "unsuccessfully");
-          // TODO(mfsiega-airbyte): clean up this logic to be returned from the webhook invocation.
-          if (syncOutput.getWebhookOperationSummary() == null) {
-            syncOutput.withWebhookOperationSummary(new WebhookOperationSummary());
-          }
-          if (success) {
-            syncOutput.getWebhookOperationSummary().getSuccesses().add(standardSyncOperation.getOperatorWebhook().getWebhookConfigId());
-          } else {
-            syncOutput.getWebhookOperationSummary().getFailures().add(standardSyncOperation.getOperatorWebhook().getWebhookConfigId());
-          }
-        } else {
-          LOGGER.warn("Unsupported operation type '{}' found.  Skipping operation...", standardSyncOperation.getOperatorType());
-        }
-      }
-    }
+    final WebhookOperationSummary webhookOperationSummary = invokeOperationsActivity.invokeOperations(
+        syncInput.getOperationSequence(), syncInput, jobRunConfig);
+    syncOutput.setWebhookOperationSummary(webhookOperationSummary);
 
     final long replicationEndTime = Workflow.currentTimeMillis();
 

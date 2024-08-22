@@ -1,0 +1,3374 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "demographic_city_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "The city from which the user activity originated."
+            },
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["city"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["city"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_sources",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "bounceRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of sessions that were not engaged ((Sessions Minus Engaged sessions) divided by Sessions). This metric is returned as a fraction; for example, 0.2761 means 27.61% of sessions were bounces."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "sessionMedium": {
+              "type": "string",
+              "description": "The medium that initiated a session on your website or app."
+            },
+            "sessionSource": {
+              "type": "string",
+              "description": "The source that initiated a session on your website or app."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "sessionsPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of sessions per user (Sessions divided by Active Users)."
+            },
+            "averageSessionDuration": {
+              "type": ["null", "number"],
+              "description": "The average duration (in seconds) of users` sessions."
+            },
+            "screenPageViewsPerSession": {
+              "type": ["null", "number"],
+              "description": "The number of app screens or web pages your users viewed per session. Repeated views of a single page or screen are counted. (screen_view + page_view events) / sessions."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionSource"],
+          ["sessionMedium"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["sessionSource"],
+        ["sessionMedium"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "publisher_ads_ad_unit_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "adUnitName": {
+              "type": "string",
+              "description": "The name you chose to describe this Ad unit. Ad units are containers you place in your apps to show ads to users."
+            },
+            "property_id": { "type": ["string"] },
+            "adUnitExposure": {
+              "type": ["null", "number"],
+              "description": "The time that an ad unit was exposed to a user, in milliseconds."
+            },
+            "totalAdRevenue": {
+              "type": ["null", "number"],
+              "description": "The total advertising revenue from both Admob and third-party sources."
+            },
+            "publisherAdClicks": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_click events."
+            },
+            "publisherAdImpressions": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_impression events."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["adUnitName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["adUnitName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_id_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemId": {
+              "type": "string",
+              "description": "The ID of the item."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["itemId"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemId"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_source_medium_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "firstUserMedium": {
+              "type": "string",
+              "description": "The medium that first acquired the user to your website or app."
+            },
+            "firstUserSource": {
+              "type": "string",
+              "description": "The source that first acquired the user to your website or app."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserSource"],
+          ["firstUserMedium"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["firstUserSource"],
+        ["firstUserMedium"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "publisher_ads_ad_source_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "property_id": { "type": ["string"] },
+            "adSourceName": {
+              "type": "string",
+              "description": "The source network that served the ad. Typical sources include `AdMob Network`, `Liftoff`, `Facebook Audience Network`, and `Mediated house ads`."
+            },
+            "adUnitExposure": {
+              "type": ["null", "number"],
+              "description": "The time that an ad unit was exposed to a user, in milliseconds."
+            },
+            "totalAdRevenue": {
+              "type": ["null", "number"],
+              "description": "The total advertising revenue from both Admob and third-party sources."
+            },
+            "publisherAdClicks": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_click events."
+            },
+            "publisherAdImpressions": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_impression events."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["adSourceName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["adSourceName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "devices",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "browser": {
+              "type": "string",
+              "description": "The browsers used to view your website."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "bounceRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of sessions that were not engaged ((Sessions Minus Engaged sessions) divided by Sessions). This metric is returned as a fraction; for example, 0.2761 means 27.61% of sessions were bounces."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "deviceCategory": {
+              "type": "string",
+              "description": "The type of device: Desktop, Tablet, or Mobile."
+            },
+            "operatingSystem": {
+              "type": "string",
+              "description": "The operating systems used by visitors to your app or website. Includes desktop and mobile operating systems such as Windows and Android."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "sessionsPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of sessions per user (Sessions divided by Active Users)."
+            },
+            "averageSessionDuration": {
+              "type": ["null", "number"],
+              "description": "The average duration (in seconds) of users` sessions."
+            },
+            "screenPageViewsPerSession": {
+              "type": ["null", "number"],
+              "description": "The number of app screens or web pages your users viewed per session. Repeated views of a single page or screen are counted. (screen_view + page_view events) / sessions."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["deviceCategory"],
+          ["operatingSystem"],
+          ["browser"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["deviceCategory"],
+        ["operatingSystem"],
+        ["browser"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "website_overview",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "bounceRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of sessions that were not engaged ((Sessions Minus Engaged sessions) divided by Sessions). This metric is returned as a fraction; for example, 0.2761 means 27.61% of sessions were bounces."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "sessionsPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of sessions per user (Sessions divided by Active Users)."
+            },
+            "averageSessionDuration": {
+              "type": ["null", "number"],
+              "description": "The average duration (in seconds) of users` sessions."
+            },
+            "screenPageViewsPerSession": {
+              "type": ["null", "number"],
+              "description": "The number of app screens or web pages your users viewed per session. Repeated views of a single page or screen are counted. (screen_view + page_view events) / sessions."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_2_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory2": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Mens is the item category 2."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory2"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemCategory2"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_medium_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "sessionMedium": {
+              "type": "string",
+              "description": "The medium that initiated a session on your website or app."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionMedium"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["sessionMedium"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_platform_device_category_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "platform": {
+              "type": "string",
+              "description": "The platform on which your app or website ran; for example, web, iOS, or Android. To determine a stream's type in a report, use both platform and streamId."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "deviceCategory": {
+              "type": "string",
+              "description": "The type of device: Desktop, Tablet, or Mobile."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["platform"],
+          ["deviceCategory"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["platform"],
+        ["deviceCategory"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_operating_system_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "operatingSystem": {
+              "type": "string",
+              "description": "The operating systems used by visitors to your app or website. Includes desktop and mobile operating systems such as Windows and Android."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["operatingSystem"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["operatingSystem"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_medium_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "firstUserMedium": {
+              "type": "string",
+              "description": "The medium that first acquired the user to your website or app."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserMedium"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["firstUserMedium"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "publisher_ads_page_path_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "pagePath": {
+              "type": "string",
+              "description": "The portion of the URL between the hostname and query string for web pages visited; for example, the pagePath portion of `https://www.example.com/store/contact-us?query_string=true` is `/store/contact-us`."
+            },
+            "property_id": { "type": ["string"] },
+            "adUnitExposure": {
+              "type": ["null", "number"],
+              "description": "The time that an ad unit was exposed to a user, in milliseconds."
+            },
+            "totalAdRevenue": {
+              "type": ["null", "number"],
+              "description": "The total advertising revenue from both Admob and third-party sources."
+            },
+            "publisherAdClicks": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_click events."
+            },
+            "publisherAdImpressions": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_impression events."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["pagePath"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["pagePath"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "weekly_events_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "endDate": { "type": ["null", "string"], "format": "date" },
+            "yearWeek": {
+              "type": "string",
+              "description": "The combined values of year and week. Example values include 202253 or 202301."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "The name of the event."
+            },
+            "startDate": { "type": ["null", "string"], "format": "date" },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "eventCountPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of events per user (Event count divided by Active users)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["yearWeek"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["yearWeek"],
+          ["eventName"],
+          ["startDate"],
+          ["endDate"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["yearWeek"],
+        ["eventName"],
+        ["startDate"],
+        ["endDate"]
+      ],
+      "cursor_field": ["yearWeek"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_screen_resolution_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "screenResolution": {
+              "type": "string",
+              "description": "The screen resolution of the user's monitor. For example, 1920x1080."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["screenResolution"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["screenResolution"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_3_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory3": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Summer is the item category 3."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory3"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemCategory3"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_5_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory5": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, T-shirts is the item category 5."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory5"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemCategory5"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_os_with_version_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "operatingSystemWithVersion": {
+              "type": "string",
+              "description": "The operating system and version. For example, Android 10 or Windows 7."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["operatingSystemWithVersion"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["operatingSystemWithVersion"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_interest_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "brandingInterest": {
+              "type": "string",
+              "description": "Interests demonstrated by users who are higher in the shopping funnel. Users can be counted in multiple interest categories. For example, `Shoppers`, `Lifestyles & Hobbies/Pet Lovers`, or `Travel/Travel Buffs/Beachbound Travelers`."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["brandingInterest"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["brandingInterest"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_device_category_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "deviceCategory": {
+              "type": "string",
+              "description": "The type of device: Desktop, Tablet, or Mobile."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["deviceCategory"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["deviceCategory"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_source_platform_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "sessionSourcePlatform": {
+              "type": "string",
+              "description": "The source platform of the session's campaign. Don't depend on this field returning `Manual` for traffic that uses UTMs; this field will update from returning `Manual` to returning `(not set)` for an upcoming feature launch."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionSourcePlatform"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["sessionSourcePlatform"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "pages_title_and_screen_class_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "unifiedScreenClass": {
+              "type": "string",
+              "description": "The page title (web) or screen class (app) on which the event was logged."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["unifiedScreenClass"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["unifiedScreenClass"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "conversions_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "The name of the event."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["eventName"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["eventName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "locations",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "The city from which the user activity originated."
+            },
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "region": {
+              "type": "string",
+              "description": "The geographic region from which the user activity originated, derived from their IP address."
+            },
+            "country": {
+              "type": "string",
+              "description": "The country from which the user activity originated."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "bounceRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of sessions that were not engaged ((Sessions Minus Engaged sessions) divided by Sessions). This metric is returned as a fraction; for example, 0.2761 means 27.61% of sessions were bounces."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "sessionsPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of sessions per user (Sessions divided by Active Users)."
+            },
+            "averageSessionDuration": {
+              "type": ["null", "number"],
+              "description": "The average duration (in seconds) of users` sessions."
+            },
+            "screenPageViewsPerSession": {
+              "type": ["null", "number"],
+              "description": "The number of app screens or web pages your users viewed per session. Repeated views of a single page or screen are counted. (screen_view + page_view events) / sessions."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["region"],
+          ["country"],
+          ["city"],
+          ["date"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["region"],
+        ["country"],
+        ["city"],
+        ["date"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_source_platform_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            },
+            "firstUserSourcePlatform": {
+              "type": "string",
+              "description": "The source platform that first acquired the user. Don't depend on this field returning `Manual` for traffic that uses UTMs; this field will update from returning `Manual` to returning `(not set)` for an upcoming feature launch."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserSourcePlatform"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["firstUserSourcePlatform"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_campaign_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "firstUserCampaignName": {
+              "type": "string",
+              "description": "Name of the marketing campaign that first acquired the user. Includes Google Ads Campaigns, Manual Campaigns, & other Campaigns."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserCampaignName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["firstUserCampaignName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_report_combined",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Apparel is the item category."
+            },
+            "itemCategory2": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Mens is the item category 2."
+            },
+            "itemCategory3": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Summer is the item category 3."
+            },
+            "itemCategory4": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Shirts is the item category 4."
+            },
+            "itemCategory5": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, T-shirts is the item category 5."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory"],
+          ["itemCategory2"],
+          ["itemCategory3"],
+          ["itemCategory4"],
+          ["itemCategory5"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["itemCategory"],
+        ["itemCategory2"],
+        ["itemCategory3"],
+        ["itemCategory4"],
+        ["itemCategory5"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "four_weekly_active_users",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "property_id": { "type": ["string"] },
+            "active28DayUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct active users on your site or app within a 28 day period. The 28 day period includes the last day in the report's date range."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_google_ads_ad_network_type_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            },
+            "firstUserGoogleAdsAdNetworkType": {
+              "type": "string",
+              "description": "The advertising network that first acquired the user. An enumeration which includes `Google search`, `Search partners`, `Google Display Network`, `Youtube Search`, `Youtube Videos`, `Cross-network`, `Social`, and `(universal campaign)`."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserGoogleAdsAdNetworkType"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["firstUserGoogleAdsAdNetworkType"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "publisher_ads_ad_format_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "adFormat": {
+              "type": "string",
+              "description": "Describes the way ads looked and where they were located. Typical formats include `Interstitial`, `Banner`, `Rewarded`, and `Native advanced`."
+            },
+            "property_id": { "type": ["string"] },
+            "adUnitExposure": {
+              "type": ["null", "number"],
+              "description": "The time that an ad unit was exposed to a user, in milliseconds."
+            },
+            "totalAdRevenue": {
+              "type": ["null", "number"],
+              "description": "The total advertising revenue from both Admob and third-party sources."
+            },
+            "publisherAdClicks": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_click events."
+            },
+            "publisherAdImpressions": {
+              "type": ["null", "integer"],
+              "description": "The number of ad_impression events."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["adFormat"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["adFormat"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_country_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "country": {
+              "type": "string",
+              "description": "The country from which the user activity originated."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["country"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["country"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "daily_active_users",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "property_id": { "type": ["string"] },
+            "active1DayUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct active users on your site or app within a 1 day period. The 1 day period includes the last day in the report's date range. Note: this is the same as Active Users."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_source_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "sessionSource": {
+              "type": "string",
+              "description": "The source that initiated a session on your website or app."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionSource"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["sessionSource"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_default_channel_grouping_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            },
+            "sessionDefaultChannelGrouping": {
+              "type": "string",
+              "description": "sessionDefaultChannelGrouping"
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionDefaultChannelGrouping"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["sessionDefaultChannelGrouping"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_source_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "firstUserSource": {
+              "type": "string",
+              "description": "The source that first acquired the user to your website or app."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserSource"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["firstUserSource"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "pages_title_and_screen_name_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "unifiedScreenName": {
+              "type": "string",
+              "description": "The page title (web) or screen name (app) on which the event was logged."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["unifiedScreenName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["unifiedScreenName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "user_acquisition_first_user_google_ads_ad_group_name_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            },
+            "firstUserGoogleAdsAdGroupName": {
+              "type": "string",
+              "description": "The Ad Group Name in Google Ads that first acquired the user."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["firstUserGoogleAdsAdGroupName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["firstUserGoogleAdsAdGroupName"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "pages",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "hostName": {
+              "type": "string",
+              "description": "Includes the subdomain and domain names of a URL; for example, the Host Name of www.example.com/contact.html is www.example.com."
+            },
+            "bounceRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of sessions that were not engaged ((Sessions Minus Engaged sessions) divided by Sessions). This metric is returned as a fraction; for example, 0.2761 means 27.61% of sessions were bounces."
+            },
+            "property_id": { "type": ["string"] },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "pagePathPlusQueryString": {
+              "type": "string",
+              "description": "The portion of the URL following the hostname for web pages visited; for example, the `pagePathPlusQueryString` portion of `https://www.example.com/store/contact-us?query_string=true` is `/store/contact-us?query_string=true`."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["hostName"],
+          ["pagePathPlusQueryString"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["hostName"],
+        ["pagePathPlusQueryString"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "content_group_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "contentGroup": {
+              "type": "string",
+              "description": "A category that applies to items of published content. Populated by the event parameter `content_group`."
+            },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["contentGroup"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["contentGroup"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Apparel is the item category."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemCategory"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_language_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "language": {
+              "type": "string",
+              "description": "The language setting of the user's browser or device. For example, `English`."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["language"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["language"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_device_model_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "deviceModel": {
+              "type": "string",
+              "description": "The mobile device model (example: iPhone 10,6)."
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["deviceModel"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["deviceModel"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_brand_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemBrand": {
+              "type": "string",
+              "description": "Brand name of the item."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["itemBrand"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemBrand"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_age_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "userAgeBracket": {
+              "type": "string",
+              "description": "User age brackets."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["userAgeBracket"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["userAgeBracket"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_name_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemName": {
+              "type": "string",
+              "description": "The name of the item."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["itemName"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_region_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "region": {
+              "type": "string",
+              "description": "The geographic region from which the user activity originated, derived from their IP address."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["region"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["region"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "demographic_gender_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "userGender": { "type": "string", "description": "User gender." },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["userGender"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["userGender"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_source_medium_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "sessionMedium": {
+              "type": "string",
+              "description": "The medium that initiated a session on your website or app."
+            },
+            "sessionSource": {
+              "type": "string",
+              "description": "The source that initiated a session on your website or app."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionSource"],
+          ["sessionMedium"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [
+        ["property_id"],
+        ["date"],
+        ["sessionSource"],
+        ["sessionMedium"]
+      ],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "ecommerce_purchases_item_category_4_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "itemRevenue": {
+              "type": ["null", "number"],
+              "description": "The total revenue from purchases minus refunded transaction revenue from items only. Item revenue is the product of its price and quantity. Item revenue excludes tax and shipping values; tax & shipping values are specified at the event and not item level."
+            },
+            "itemsViewed": {
+              "type": ["null", "integer"],
+              "description": "The number of units viewed for a single item. This metric counts the quantity of items in `view_item` events."
+            },
+            "property_id": { "type": ["string"] },
+            "itemCategory4": {
+              "type": "string",
+              "description": "The hierarchical category in which the item is classified. For example, in Apparel/Mens/Summer/Shirts/T-shirts, Shirts is the item category 4."
+            },
+            "cartToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who added a product(s) to their cart divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.1132 means 11.32% of users who viewed a product also added the same product to their cart."
+            },
+            "itemsPurchased": {
+              "type": ["null", "integer"],
+              "description": "The number of units for a single item included in purchase events. This metric counts the quantity of items in purchase events."
+            },
+            "itemsAddedToCart": {
+              "type": ["null", "integer"],
+              "description": "The number of units added to cart for a single item. This metric counts the quantity of items in `add_to_cart` events."
+            },
+            "purchaseToViewRate": {
+              "type": ["null", "number"],
+              "description": "The number of users who purchased a product(s) divided by the number of users who viewed the same product(s). This metric is returned as a fraction; for example, 0.128 means 12.8% of users that viewed a product(s) also purchased the same product(s)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["itemCategory4"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["itemCategory4"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_platform_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "platform": {
+              "type": "string",
+              "description": "The platform on which your app or website ran; for example, web, iOS, or Android. To determine a stream's type in a report, use both platform and streamId."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["platform"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["platform"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_browser_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "browser": {
+              "type": "string",
+              "description": "The browsers used to view your website."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["browser"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["browser"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "events_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "The name of the event."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "eventCountPerUser": {
+              "type": ["null", "number"],
+              "description": "The average number of events per user (Event count divided by Active users)."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["eventName"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["eventName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "weekly_active_users",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "property_id": { "type": ["string"] },
+            "active7DayUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct active users on your site or app within a 7 day period. The 7 day period includes the last day in the report's date range."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "tech_app_version_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "appVersion": {
+              "type": "string",
+              "description": "The app's versionName (Android) or short bundle version (iOS)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["appVersion"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["appVersion"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "pages_path_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "newUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of users who interacted with your site or launched your app for the first time (event triggered: first_open or first_visit)."
+            },
+            "pagePath": {
+              "type": "string",
+              "description": "The portion of the URL between the hostname and query string for web pages visited; for example, the pagePath portion of `https://www.example.com/store/contact-us?query_string=true` is `/store/contact-us`."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "screenPageViews": {
+              "type": ["null", "integer"],
+              "description": "The number of app screens or web pages your users viewed. Repeated views of a single page or screen are counted. (screen_view + page_view events)."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["property_id"], ["date"], ["pagePath"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["pagePath"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "traffic_acquisition_session_campaign_report",
+        "json_schema": {
+          "type": ["null", "object"],
+          "$schema": "https://json-schema.org/draft-07/schema#",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the event, formatted as YYYYMMDD."
+            },
+            "sessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that began on your site or app (event triggered: session_start)."
+            },
+            "eventCount": {
+              "type": ["null", "integer"],
+              "description": "The count of events."
+            },
+            "totalUsers": {
+              "type": ["null", "integer"],
+              "description": "The number of distinct users who have logged at least one event, regardless of whether the site or app was in use when that event was logged."
+            },
+            "conversions": {
+              "type": ["null", "number"],
+              "description": "conversions"
+            },
+            "property_id": { "type": ["string"] },
+            "totalRevenue": {
+              "type": ["null", "number"],
+              "description": "The sum of revenue from purchases, subscriptions, and advertising (Purchase revenue plus Subscription revenue plus Ad revenue) minus refunded transaction revenue."
+            },
+            "engagementRate": {
+              "type": ["null", "number"],
+              "description": "The percentage of engaged sessions (Engaged sessions divided by Sessions). This metric is returned as a fraction; for example, 0.7239 means 72.39% of sessions were engaged sessions."
+            },
+            "engagedSessions": {
+              "type": ["null", "integer"],
+              "description": "The number of sessions that lasted longer than 10 seconds, or had a key event, or had 2 or more screen views."
+            },
+            "eventsPerSession": {
+              "type": ["null", "number"],
+              "description": "The average number of events per session (Event count divided by Sessions)."
+            },
+            "sessionCampaignName": {
+              "type": "string",
+              "description": "The marketing campaign name for a session. Includes Google Ads Campaigns, Manual Campaigns, & other Campaigns."
+            },
+            "userEngagementDuration": {
+              "type": ["null", "number"],
+              "description": "The total amount of time (in seconds) your website or app was in the foreground of users` devices."
+            }
+          },
+          "additionalProperties": true
+        },
+        "default_cursor_field": ["date"],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["property_id"],
+          ["date"],
+          ["sessionCampaignName"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["property_id"], ["date"], ["sessionCampaignName"]],
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append"
+    }
+  ]
+}

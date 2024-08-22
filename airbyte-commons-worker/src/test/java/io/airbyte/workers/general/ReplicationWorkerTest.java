@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_WORKSPACE_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
@@ -33,7 +35,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -44,9 +45,10 @@ import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LocalLogMdcHelper;
+import io.airbyte.commons.logging.LogMdcHelper;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -58,8 +60,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -105,6 +105,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -294,7 +295,8 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4, false));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(
+        new ReplicationFeatureFlags(false, 60, 4, false, false, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
@@ -658,7 +660,7 @@ abstract class ReplicationWorkerTest {
 
   /**
    * We want to ensure logs are tested, this is to avoid duplicating setups in specific implementation
-   * classes while keeping the actual checks specific as different implementiation will require
+   * classes while keeping the actual checks specific as different implementation will require
    * different checks.
    */
   abstract void verifyTestLoggingInThreads(final String logs);
@@ -668,13 +670,14 @@ abstract class ReplicationWorkerTest {
     // set up the mdc so that actually log to a file, so that we can verify that file logging captures
     // threads.
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, jobRoot);
+    final LogMdcHelper logMdcHelper = new LocalLogMdcHelper();
+    MDC.put(logMdcHelper.getJobLogPathMdcKey(), Path.of(jobRoot.toString(), DEFAULT_LOG_FILENAME).toString());
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
-    final Path logPath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final String logs = IOs.readFile(logPath);
     verifyTestLoggingInThreads(logs);
   }
@@ -682,12 +685,12 @@ abstract class ReplicationWorkerTest {
   @Test
   void testLogMaskRegex() throws IOException {
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    MDC.put(LogClientSingleton.WORKSPACE_MDC_KEY, jobRoot.toString());
+    MDC.put(DEFAULT_WORKSPACE_MDC_KEY, jobRoot.toString());
 
     LOGGER.info(
         "500 Server Error: Internal Server Error for url: https://api.hubapi.com/crm/v3/objects/contact?limit=100&archived=false&hapikey=secret-key_1&after=5315621");
 
-    final Path logPath = jobRoot.resolve("logs.log");
+    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final String logs = IOs.readFile(logPath);
     assertTrue(logs.contains("apikey"));
     assertFalse(logs.contains("secret-key_1"));
@@ -903,7 +906,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -951,7 +954,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -997,7 +1000,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),

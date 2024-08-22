@@ -1,6 +1,7 @@
 global:
   serviceAccountName: placeholderServiceAccount
   deploymentMode: oss
+  edition: community
   configMapName: ""
   secretName: ""
   credVolumeOverride: ""
@@ -12,6 +13,10 @@ global:
   database:
     secretName: ""
     secretValue: ""
+
+  enterprise:
+    workloadsOptIn: false
+
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret
@@ -52,7 +57,7 @@ global:
       # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
       credentialsJson: ""
 
-enabled: false
+enabled: true
 ##  replicaCount Number of server replicas
 replicaCount: 1
 

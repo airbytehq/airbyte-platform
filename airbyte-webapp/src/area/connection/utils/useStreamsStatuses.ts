@@ -1,10 +1,7 @@
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import {
-  StreamWithStatus,
-  useErrorMultiplierExperiment,
-  useLateMultiplierExperiment,
-} from "components/connection/StreamStatus/streamStatusUtils";
+import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
+import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
@@ -44,8 +41,6 @@ export const useStreamsStatuses = (
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-  const lateMultiplier = useLateMultiplierExperiment();
-  const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);
   const isConnectionDisabled = connection.status !== "active";
 
@@ -79,13 +74,13 @@ export const useStreamsStatuses = (
       const streamStatus: StreamWithStatus = {
         streamName: enabledStream.stream.name,
         streamNamespace: enabledStream.stream.namespace === "" ? undefined : enabledStream.stream.namespace,
-        status: isConnectionDisabled ? ConnectionStatusIndicatorStatus.Paused : ConnectionStatusIndicatorStatus.Pending,
+        status: isConnectionDisabled ? StreamStatusType.Paused : StreamStatusType.Pending,
         isRunning: false,
         relevantHistory: [],
       };
 
       if (!hasPerStreamStatuses) {
-        streamStatus.status = connectionStatus.status;
+        streamStatus.status = connectionStatus.status as unknown as StreamStatusType; // safe cast as the StreamStatusType is a superset of ConnectionStatusType, but enums cannot be extended so TS does not know this
         streamStatus.isRunning = !!syncProgressItem;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
@@ -115,16 +110,21 @@ export const useStreamsStatuses = (
 
           const detectedStatus = computeStreamStatus({
             statuses: mappedStreamStatus.relevantHistory,
-            scheduleType: connection.scheduleType,
-            scheduleData: connection.scheduleData,
             hasBreakingSchemaChange,
-            lateMultiplier,
-            errorMultiplier,
             isSyncing: !!syncProgressItem ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
             runningJobConfigType: syncProgressItem?.configType,
             isRateLimitedUiEnabled,
           });
+
+          // incomplete stream statuses have no knowledge of FailureType (e.g. config vs. system error)
+          // so any Incomplete stream status should be forced to Failed if the connection has a config error
+          if (
+            connectionStatus.status === ConnectionStatusType.Failed &&
+            detectedStatus.status === StreamStatusType.Incomplete
+          ) {
+            detectedStatus.status = StreamStatusType.Failed;
+          }
 
           if (detectedStatus.status != null) {
             mappedStreamStatus.status = detectedStatus.status;
@@ -132,8 +132,8 @@ export const useStreamsStatuses = (
 
           mappedStreamStatus.isRunning =
             detectedStatus.isRunning ||
-            detectedStatus.status === ConnectionStatusIndicatorStatus.Syncing ||
-            detectedStatus.status === ConnectionStatusIndicatorStatus.Queued;
+            detectedStatus.status === StreamStatusType.Syncing ||
+            detectedStatus.status === StreamStatusType.Queued;
 
           mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
         }
@@ -145,7 +145,7 @@ export const useStreamsStatuses = (
         const streamKey = getStreamKey(streamStatus);
         const mappedStreamStatus = streamStatuses.get(streamKey);
         if (mappedStreamStatus) {
-          mappedStreamStatus.status = ConnectionStatusIndicatorStatus.Paused;
+          mappedStreamStatus.status = StreamStatusType.Paused;
         }
       });
     }

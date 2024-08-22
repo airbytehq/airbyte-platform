@@ -5,7 +5,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { TrackErrorFn } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 const DbtCloudErrorCard: React.FC<{ displayMessage?: string | null }> = ({ displayMessage }) => {
   const { formatMessage } = useIntl();
@@ -26,7 +26,6 @@ const DbtCloudErrorCard: React.FC<{ displayMessage?: string | null }> = ({ displ
 };
 
 interface DbtCloudErrorBoundaryProps {
-  trackError: TrackErrorFn;
   workspaceId: string;
 }
 
@@ -51,7 +50,7 @@ export class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildr
   }
 
   componentDidCatch(error: Error) {
-    const { trackError, workspaceId } = this.props;
+    const { workspaceId } = this.props;
     trackError(error, { workspaceId, errorBoundary: this.constructor.name });
   }
 

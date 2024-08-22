@@ -9,12 +9,10 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KE
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.config.Configs.WorkerEnvironment;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
@@ -29,7 +27,6 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 /**
  * This class represents a single run of a worker. It handles making sure the correct inputs and
@@ -50,48 +47,49 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
   private final Optional<String> replicationTaskQueue;
+  private final LogClientManager logClientManager;
 
   public TemporalAttemptExecution(final Path workspaceRoot,
-                                  final WorkerEnvironment workerEnvironment,
-                                  final LogConfigs logConfigs,
-                                  final JobRunConfig jobRunConfig,
-                                  final Worker<INPUT, OUTPUT> worker,
-                                  final INPUT input,
-                                  final AirbyteApiClient airbyteApiClient,
-                                  final String airbyteVersion,
-                                  final Supplier<ActivityExecutionContext> activityContext) {
-    this(
-        workspaceRoot,
-        jobRunConfig,
-        worker,
-        input,
-        (path -> LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, path)),
-        airbyteApiClient,
-        () -> activityContext.get().getInfo().getWorkflowId(),
-        airbyteVersion,
-        Optional.empty());
-  }
-
-  public TemporalAttemptExecution(final Path workspaceRoot,
-                                  final WorkerEnvironment workerEnvironment,
-                                  final LogConfigs logConfigs,
                                   final JobRunConfig jobRunConfig,
                                   final Worker<INPUT, OUTPUT> worker,
                                   final INPUT input,
                                   final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
                                   final Supplier<ActivityExecutionContext> activityContext,
-                                  final Optional<String> replicationTaskQueue) {
+                                  final LogClientManager logClientManager) {
     this(
         workspaceRoot,
         jobRunConfig,
         worker,
         input,
-        (path -> LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, path)),
+        (logClientManager::setJobMdc),
         airbyteApiClient,
         () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        replicationTaskQueue);
+        Optional.empty(),
+        logClientManager);
+  }
+
+  public TemporalAttemptExecution(final Path workspaceRoot,
+                                  final JobRunConfig jobRunConfig,
+                                  final Worker<INPUT, OUTPUT> worker,
+                                  final INPUT input,
+                                  final AirbyteApiClient airbyteApiClient,
+                                  final String airbyteVersion,
+                                  final Supplier<ActivityExecutionContext> activityContext,
+                                  final Optional<String> replicationTaskQueue,
+                                  final LogClientManager logClientManager) {
+    this(
+        workspaceRoot,
+        jobRunConfig,
+        worker,
+        input,
+        (logClientManager::setJobMdc),
+        airbyteApiClient,
+        () -> activityContext.get().getInfo().getWorkflowId(),
+        airbyteVersion,
+        replicationTaskQueue,
+        logClientManager);
   }
 
   @VisibleForTesting
@@ -103,7 +101,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
                            final AirbyteApiClient airbyteApiClient,
                            final Supplier<String> workflowIdProvider,
                            final String airbyteVersion,
-                           final Optional<String> replicationTaskQueue) {
+                           final Optional<String> replicationTaskQueue,
+                           final LogClientManager logClientManager) {
     this.jobRunConfig = jobRunConfig;
 
     this.jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
@@ -115,6 +114,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
     this.airbyteApiClient = airbyteApiClient;
     this.airbyteVersion = airbyteVersion;
     this.replicationTaskQueue = replicationTaskQueue;
+    this.logClientManager = logClientManager;
   }
 
   @Override
@@ -127,12 +127,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
 
         mdcSetter.accept(jobRoot);
 
-        if (MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY) != null) {
-          LOGGER.info("Docker volume job log path: " + MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY));
-        } else if (MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY) != null) {
-          LOGGER.info("Cloud storage job log path: " + MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY));
-        }
-
+        LOGGER.info("Using job log path: {}", logClientManager.fullLogPath(jobRoot));
         LOGGER.info("Executing worker wrapper. Airbyte version: {}", airbyteVersion);
         saveWorkflowIdForCancellation(airbyteApiClient);
         return worker.run(input, jobRoot);

@@ -15,6 +15,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderMetadata, StreamTestResults, useBuilderWatch } from "./types";
+import { formatJson } from "./utils";
 
 type StreamTestMetadataStatus = {
   isStale: boolean;
@@ -26,7 +27,7 @@ interface TestWarning {
 }
 
 export const useStreamTestMetadata = () => {
-  const { resolvedManifest, jsonManifest, updateJsonManifest, isResolving } = useConnectorBuilderFormState();
+  const { resolvedManifest, jsonManifest, updateJsonManifest } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const { formatMessage } = useIntl();
@@ -68,7 +69,13 @@ export const useStreamTestMetadata = () => {
   );
 
   const getStreamTestMetadataStatus = useCallback(
-    (streamName: string): StreamTestMetadataStatus | undefined => {
+    (streamName: string): StreamTestMetadataStatus | undefined | null => {
+      const resolvedStream = resolvedManifest?.streams.find((stream) => stream.name === streamName);
+      if (!resolvedStream) {
+        // undefined indicates that the stream has not yet been resolved, so warnings should not be shown
+        return undefined;
+      }
+
       const metadata = jsonManifest.metadata as BuilderMetadata | undefined;
       if (
         !metadata ||
@@ -76,15 +83,11 @@ export const useStreamTestMetadata = () => {
         !metadata.testedStreams[streamName] ||
         !metadata.testedStreams[streamName].streamHash
       ) {
-        return undefined;
+        // null indicates that there is no test metadata for the stream, so it is untested
+        return null;
       }
 
-      const resolvedStream = resolvedManifest?.streams.find((stream) => stream.name === streamName);
-      if (!resolvedStream) {
-        return undefined;
-      }
-
-      const streamHash = sha1(resolvedStream);
+      const streamHash = sha1(formatJson(resolvedStream, true));
 
       const { streamHash: metadataStreamHash, ...testStatuses } = metadata.testedStreams[streamName];
 
@@ -99,11 +102,12 @@ export const useStreamTestMetadata = () => {
   const getStreamTestWarnings = useCallback(
     (streamName: string): TestWarning[] => {
       const streamTestMetadataStatus = getStreamTestMetadataStatus(streamName);
-      if (!streamTestMetadataStatus) {
-        if (isResolving) {
-          return [];
-        }
 
+      if (streamTestMetadataStatus === undefined) {
+        return [];
+      }
+
+      if (streamTestMetadataStatus === null) {
         return [
           {
             message: formatMessage({ id: "connectorBuilder.warnings.untestedStream" }),
@@ -113,9 +117,9 @@ export const useStreamTestMetadata = () => {
       }
 
       const warnings: TestWarning[] = [];
-      const isStale = !isResolving && streamTestMetadataStatus.isStale;
+      const isStale = streamTestMetadataStatus.isStale;
 
-      if (!isResolving && streamTestMetadataStatus.isStale) {
+      if (streamTestMetadataStatus.isStale) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.staleStreamTest" }),
           priority: "primary",
@@ -164,7 +168,7 @@ export const useStreamTestMetadata = () => {
 
       return warnings;
     },
-    [formatMessage, getStreamTestMetadataStatus, isResolving]
+    [formatMessage, getStreamTestMetadataStatus]
   );
 
   return {
@@ -179,7 +183,7 @@ const computeStreamTestResults = (
   streamRead: StreamReadTransformedSlices,
   resolvedTestStream: DeclarativeStream
 ): StreamTestResults => {
-  const streamHash = sha1(resolvedTestStream);
+  const streamHash = sha1(formatJson(resolvedTestStream, true));
 
   if (streamRead.slices.length === 0 || streamRead.slices.every((slice) => slice.pages.length === 0)) {
     return {

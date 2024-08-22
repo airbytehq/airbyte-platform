@@ -1,23 +1,28 @@
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
+import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
 import io.fabric8.kubernetes.api.model.SecurityContext
 import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 @Singleton
 class InitContainerFactory(
+  @Named("initEnvVars") private val envVars: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.images.busybox}") private val imageName: String,
+  @Named("initContainerInfo") private val initContainerInfo: KubeContainerInfo,
 ) {
-  fun create(
+  fun createWaiting(
     resourceReqs: ResourceRequirements,
     volumeMounts: List<VolumeMount>,
   ): Container {
@@ -58,10 +63,27 @@ class InitContainerFactory(
       .withSecurityContext(containerSecurityContext())
       .build()
   }
+
+  fun createFetching(
+    resourceReqs: ResourceRequirements,
+    volumeMounts: List<VolumeMount>,
+    runtimeEnvVars: List<EnvVar>,
+  ): Container {
+    return ContainerBuilder()
+      .withName(KubePodProcess.INIT_CONTAINER_NAME)
+      .withImage(initContainerInfo.image)
+      .withImagePullPolicy(initContainerInfo.pullPolicy)
+      .withWorkingDir(KubePodProcess.CONFIG_DIR)
+      .withResources(resourceReqs)
+      .withVolumeMounts(volumeMounts)
+      .withSecurityContext(containerSecurityContext())
+      .withEnv(envVars + runtimeEnvVars)
+      .build()
+  }
 }
 
 private fun containerSecurityContext(): SecurityContext? =
-  when (EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
+  when (AirbyteEnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
     true ->
       SecurityContextBuilder()
         .withAllowPrivilegeEscalation(false)

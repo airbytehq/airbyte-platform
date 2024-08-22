@@ -4,10 +4,7 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
@@ -32,6 +29,7 @@ import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -42,6 +40,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -55,11 +54,6 @@ class ContainerOrchestratorFactory {
   public MetricClient metricClient() {
     MetricClientFactory.initialize(MetricEmittingApps.ORCHESTRATOR);
     return MetricClientFactory.getMetricClient();
-  }
-
-  @Singleton
-  FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
   }
 
   @Singleton
@@ -105,12 +99,12 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
-                                     @Named("application") final String application,
+                                     @Value("${airbyte.application}") final String application,
                                      @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
-                                     final AsyncStateManager asyncStateManager,
+                                     final Optional<AsyncStateManager> asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {

@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,10 +44,17 @@ import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptStatus;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
@@ -60,8 +68,9 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
@@ -73,14 +82,6 @@ import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -256,14 +257,16 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -309,8 +312,9 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mResetConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.INCREMENTAL)));
+        new ConfiguredAirbyteStream(new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withIsResumable(true),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND)));
     when(mResetConfig.getResetSourceConfiguration()).thenReturn(new ResetSourceConfiguration().withStreamsToReset(
         List.of(new StreamDescriptor().withName("rfrStream"))));
 
@@ -318,7 +322,7 @@ class AttemptHandlerTest {
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -357,16 +361,18 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mRefreshConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("nonRfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream("nonRfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)),
+            SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND)));
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -414,10 +420,17 @@ class AttemptHandlerTest {
       when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+          new ConfiguredAirbyteStream(
+              new AirbyteStream("full", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(
+              new AirbyteStream("full", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withNamespace("name"),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("name"),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND)));
 
       final var streams = handler.getFullRefreshStreamsToClear(mCatalog, 1, enableResumableFullRefresh);
       final var exp = enableResumableFullRefresh ? Set.of(new StreamDescriptor().withName("full").withNamespace("name"))
@@ -462,16 +475,21 @@ class AttemptHandlerTest {
       when(ffClient.boolVariation(any(), any())).thenReturn(true);
       when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(enableResumableFullRefresh);
       final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+      final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
       final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
       when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+          new ConfiguredAirbyteStream(new AirbyteStream("full", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(true),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("full", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("name"),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("name"),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND)));
 
       when(jobPersistence.createAttempt(JOB_ID, expectedLogPath)).thenReturn(attemptNumber);
 

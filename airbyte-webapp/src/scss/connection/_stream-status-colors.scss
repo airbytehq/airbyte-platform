@@ -1,19 +1,16 @@
 @use "../colors";
 
-$action-required: colors.$dark-blue;
-$disabled: colors.$grey;
-$error: colors.$red;
-$late: colors.$blue-400;
+$failed: colors.$red;
+$incomplete: colors.$yellow;
 $pending: colors.$grey-400;
 $up-to-date: colors.$green;
 $cancelled: colors.$grey-400;
+$paused: colors.$grey;
 $syncing: colors.$blue-400;
 $queued: colors.$blue-50;
-
-$action-required-light: colors.$dark-blue-40;
-$disabled-light: colors.$grey-100;
-$error-light: colors.$red-40;
-$late-light: colors.$blue-40;
+$failed-light: colors.$red-40;
+$paused-light: colors.$grey-100;
+$incomplete-light: colors.$yellow-50;
 $pending-light: colors.$grey-100;
 $up-to-date-light: colors.$green-40;
 $cancelled-light: colors.$grey-100;
@@ -21,10 +18,9 @@ $syncing-light: colors.$blue-40;
 $queued-light: colors.$foreground;
 
 $by-stream-status:
-  "actionRequired" $action-required $action-required-light,
-  "disabled" $disabled $disabled-light,
-  "error" $error $error-light,
-  "late" $late $late-light,
+  "failed" $failed $failed-light,
+  "paused" $paused $paused-light,
+  "incomplete" $incomplete $incomplete-light,
   "pending" $pending $pending-light,
   "upToDate" $up-to-date $up-to-date-light,
   "cancelled" $cancelled $cancelled-light,

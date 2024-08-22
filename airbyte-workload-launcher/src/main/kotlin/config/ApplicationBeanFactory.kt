@@ -6,10 +6,11 @@ package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.commons.features.EnvVariableFeatureFlags
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Geography
+import io.airbyte.featureflag.PlaneName
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
@@ -20,24 +21,19 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
-import java.util.Optional
 
 /**
  * Micronaut bean factory for general application beans.
  */
 @Factory
 class ApplicationBeanFactory {
-  @Singleton
-  fun featureFlags(): FeatureFlags {
-    return EnvVariableFeatureFlags()
-  }
-
   @Singleton
   fun metricClient(): MetricClient {
     MetricClientFactory.initialize(MetricEmittingApps.SERVER)
@@ -92,15 +88,15 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
     @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
     @Named("kubeHttpErrorRetryPredicate") predicate: (Throwable) -> Boolean,
-    meterRegistry: Optional<MeterRegistry>,
+    meterRegistry: MeterRegistry?,
   ): RetryPolicy<Any> {
     val metricTags = arrayOf("max_retries", maxRetries.toString())
 
     return RetryPolicy.builder<Any>()
       .handleIf(predicate)
       .onRetry { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.retry",
             *metricTags,
             *arrayOf(
@@ -111,38 +107,47 @@ class ApplicationBeanFactory {
               "exception_type",
               l.lastException.javaClass.name,
             ),
-          ).increment()
-        }
+          )?.increment()
       }
       .onAbort { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.abort",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .onFailedAttempt { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.failed",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .onSuccess { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.success",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .withDelay(Duration.ofSeconds(retryDelaySeconds))
       .withMaxRetries(maxRetries)
       .build()
+  }
+
+  @Singleton
+  @Named("infraFlagContexts")
+  fun staticFlagContext(
+    @Property(name = "airbyte.workload-launcher.geography") geography: String,
+    @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
+  ): List<Context> {
+    return if (dataPlaneName.isNullOrBlank()) {
+      listOf(Geography(geography))
+    } else {
+      listOf(Geography(geography), PlaneName(dataPlaneName))
+    }
   }
 }

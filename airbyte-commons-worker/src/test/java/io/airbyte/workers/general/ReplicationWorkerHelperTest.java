@@ -17,21 +17,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
+import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
@@ -47,6 +47,7 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -57,6 +58,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class ReplicationWorkerHelperTest {
@@ -125,7 +127,7 @@ class ReplicationWorkerHelperTest {
   void testGetReplicationOutput(final boolean supportRefreshes) throws IOException {
     mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
-    final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
+    final ConfiguredAirbyteCatalog catalog = buildConfiguredAirbyteCatalog();
     replicationWorkerHelper.initialize(
         replicationContext,
         mock(ReplicationFeatureFlags.class),
@@ -252,6 +254,29 @@ class ReplicationWorkerHelperTest {
     verify(streamStatusTracker, times(1)).track(message);
   }
 
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testSupportRefreshesIsPassed(final boolean supportRefreshes) throws Exception {
+    mockSupportRefreshes(supportRefreshes);
+    // Need to pass in a replication context
+    final ConfiguredAirbyteCatalog catalog = buildConfiguredAirbyteCatalog();
+    replicationWorkerHelper.initialize(
+        replicationContext,
+        mock(ReplicationFeatureFlags.class),
+        mock(Path.class),
+        catalog,
+        mock(State.class));
+
+    final ArgumentCaptor<WorkerDestinationConfig> configCaptor = ArgumentCaptor.forClass(WorkerDestinationConfig.class);
+    final AirbyteDestination destination = mock(AirbyteDestination.class);
+
+    final ReplicationInput input = new ReplicationInput().withCatalog(new ConfiguredAirbyteCatalog());
+    replicationWorkerHelper.startDestination(destination, input, mock(Path.class));
+
+    verify(destination).start(configCaptor.capture(), any());
+    assertEquals(supportRefreshes, configCaptor.getValue().getSupportRefreshes());
+  }
+
   private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(
         new ResolveActorDefinitionVersionResponse(
@@ -259,6 +284,10 @@ class ReplicationWorkerHelperTest {
             "dockerRepository",
             "dockerImageTag",
             supportsRefreshes));
+  }
+
+  private ConfiguredAirbyteCatalog buildConfiguredAirbyteCatalog() {
+    return new ConfiguredAirbyteCatalog();
   }
 
 }

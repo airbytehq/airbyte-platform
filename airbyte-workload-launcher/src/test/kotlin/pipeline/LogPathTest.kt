@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.pipeline
 
 import fixtures.RecordFixtures
-import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.config.Configs
+import io.airbyte.commons.logging.LocalLogMdcHelper
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.client.LogContextFactory
@@ -163,7 +163,7 @@ class LogPathTest {
         successHandler,
         failureHandler,
         metricPublisher,
-        LogContextFactory(Configs.WorkerEnvironment.DOCKER),
+        LogContextFactory(LocalLogMdcHelper()),
       )
 
     fun readTestLogs(logPath: String): List<String> = Files.readAllLines(Path(logPath)).filter { line -> line.contains(TEST_LOG_PREFIX) }

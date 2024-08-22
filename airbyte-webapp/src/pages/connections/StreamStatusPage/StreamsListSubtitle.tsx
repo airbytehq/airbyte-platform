@@ -1,11 +1,11 @@
 import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { Text } from "components/ui/Text";
 
 interface StreamsListSubtitleProps {
-  connectionStatus: ConnectionStatusIndicatorStatus;
+  connectionStatus: ConnectionStatusType;
   nextSync?: number;
   recordsExtracted?: number;
 
@@ -19,16 +19,10 @@ export const StreamsListSubtitle: React.FC<StreamsListSubtitleProps> = ({
 }) => {
   return (
     <Text color="grey" bold size="sm" as="span" data-testid="streams-list-subtitle">
-      {connectionStatus === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
+      {connectionStatus === ConnectionStatusType.Synced && nextSync && (
         <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
       )}
-      {(connectionStatus === ConnectionStatusIndicatorStatus.Late ||
-        connectionStatus === ConnectionStatusIndicatorStatus.OnTrack) &&
-        nextSync && (
-          <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: dayjs(nextSync).fromNow() }} />
-        )}
-      {(connectionStatus === ConnectionStatusIndicatorStatus.Syncing ||
-        connectionStatus === ConnectionStatusIndicatorStatus.Queued) &&
+      {connectionStatus === ConnectionStatusType.Syncing &&
         (recordsLoaded ? (
           <FormattedMessage id="sources.countRecordsLoaded" values={{ count: recordsLoaded }} />
         ) : recordsExtracted ? (

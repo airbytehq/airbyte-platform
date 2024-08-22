@@ -10,6 +10,7 @@ import { Theme } from "hooks/theme/useAirbyteTheme";
 interface AirbyteLocalStorage {
   connectorBuilderEditorView: BuilderState["mode"];
   connectorBuilderInputsWarning: boolean;
+  connectorBuilderPublishWarning: boolean;
   connectorBuilderRecordView: "json" | "table";
   connectorBuilderLimitWarning: boolean;
   allowlistIpsOpen: boolean;
@@ -19,6 +20,7 @@ interface AirbyteLocalStorage {
   "airbyte_workspace-in-title": boolean;
   "airbyte_extended-attempts-stats": boolean;
   "airbyte_connection-additional-details": boolean;
+  "airbyte_ai-assist-enabled-projects": string[];
 }
 
 /*

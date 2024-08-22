@@ -12,19 +12,26 @@ import { Text } from "../Text";
 
 export interface RangeDatePickerProps {
   onChange: (dates: [string, string]) => void;
+  onClose?: () => void;
   value: [string, string];
   minDate?: string;
   maxDate?: string;
   disabled?: boolean;
   dateFormat?: string;
   buttonText?: string;
+  valueFormat?: string;
 }
+const parseDate = (value: string) => {
+  return /^\d+$/.test(value) ? dayjs.unix(Number(value)) : dayjs(value);
+};
 
 export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
   minDate,
   maxDate,
   onChange,
+  onClose,
   value,
+  valueFormat = "YYYY-MM-DD",
   dateFormat = MONTH_DAY,
   buttonText = "form.rangeDatePicker.selectDate",
 }: RangeDatePickerProps) => {
@@ -34,17 +41,26 @@ export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
     (value: [Date | null, Date | null]) => {
       const [dateFrom, dateTo] = value;
 
-      const dateFromStr = dateFrom ? dayjs(dateFrom).format("YYYY-MM-DD") : "";
-      const dateToStr = dateTo ? dayjs(dateTo).format("YYYY-MM-DD") : "";
+      const dateFromStr = dateFrom
+        ? valueFormat === "unix"
+          ? dayjs(dateFrom).unix().toString()
+          : dayjs(dateFrom).format(valueFormat)
+        : "";
+
+      const dateToStr = dateTo
+        ? valueFormat === "unix"
+          ? dayjs(dateTo).endOf("day").unix().toString()
+          : dayjs(dateTo).format(valueFormat)
+        : "";
 
       onChange([dateFromStr, dateToStr]);
     },
-    [onChange]
+    [onChange, valueFormat]
   );
 
   const CustomInput = forwardRef<HTMLButtonElement, ButtonProps>(({ onClick }, ref) => {
-    const dateFrom = value[0] ? dayjs(value[0]).format(dateFormat) : "";
-    const dateTo = value[1] ? dayjs(value[1]).format(dateFormat) : "";
+    const dateFrom = value[0] ? parseDate(value[0]).format(dateFormat) : "";
+    const dateTo = value[1] ? parseDate(value[1]).format(dateFormat) : "";
 
     return (
       <Button variant="clear" className={styles.button} icon="calendar" onClick={onClick} type="button" ref={ref}>
@@ -79,8 +95,9 @@ export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
         renderCustomHeader={(props) => <CustomHeader {...props} selectsRange />}
         locale={locale}
         onChange={handleDatepickerChange}
-        startDate={value[0] ? dayjs(value[0]).toDate() : null}
-        endDate={value[1] ? dayjs(value[1]).toDate() : null}
+        onCalendarClose={onClose}
+        startDate={value[0] ? parseDate(value[0]).toDate() : null}
+        endDate={value[1] ? parseDate(value[1]).toDate() : null}
         maxDate={maxDate ? dayjs(maxDate).toDate() : null}
         minDate={minDate ? dayjs(minDate).toDate() : null}
       />

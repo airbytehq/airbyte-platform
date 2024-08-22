@@ -24,8 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.Configs;
@@ -73,7 +71,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   private final ProcessFactory processFactory;
   private final ResourceRequirements resourceRequirement;
   private final SyncResourceRequirements syncResourceRequirements;
-  private final FeatureFlags featureFlags;
 
   private final Map<String, String> additionalEnvironmentVariables;
   private final Map<String, String> additionalLabels;
@@ -96,7 +93,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
                                     final SyncResourceRequirements syncResourceRequirements,
                                     final AllowedHosts allowedHosts,
                                     final boolean useIsolatedPool,
-                                    final FeatureFlags featureFlags,
                                     final Map<String, String> additionalEnvironmentVariables,
                                     final Map<String, String> additionalLabels) {
     this.jobId = jobId;
@@ -108,7 +104,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     this.resourceRequirement = resourceRequirement;
     this.syncResourceRequirements = syncResourceRequirements;
     this.allowedHosts = allowedHosts;
-    this.featureFlags = featureFlags;
     this.useIsolatedPool = useIsolatedPool;
     this.additionalEnvironmentVariables = additionalEnvironmentVariables;
     this.additionalLabels = additionalLabels;
@@ -130,7 +125,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         useIsolatedPool,
         false,
         Collections.emptyMap(),
-        null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, SPEC_JOB),
@@ -156,7 +150,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         useIsolatedPool,
         false,
         ImmutableMap.of(configFilename, configContents),
-        null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         getLabels(Map.of(JOB_TYPE_KEY, CHECK_JOB)),
@@ -183,7 +176,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         useIsolatedPool,
         false,
         ImmutableMap.of(configFilename, configContents),
-        null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
@@ -234,7 +226,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         useIsolatedPool,
         false,
         files,
-        null,
         buildSourceConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
         // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
@@ -272,7 +263,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         useIsolatedPool,
         true,
         files,
-        null,
         buildDestinationConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
         // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
@@ -303,9 +293,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, imageName)
             .put(WorkerEnvConstants.WORKER_JOB_ID, jobId)
             .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(attempt))
-            .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(featureFlags.autoDetectSchema()))
-            .put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, String.valueOf(featureFlags.applyFieldSelection()))
-            .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces())
             // The platform doesn't support this env-var anymore, however the connectors still depend on it,
             // defaulting to false if not supplied.
             .put("USE_STREAM_CAPABLE_STATE", "true")

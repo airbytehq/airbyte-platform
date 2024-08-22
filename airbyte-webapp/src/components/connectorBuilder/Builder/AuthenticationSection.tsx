@@ -12,6 +12,7 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
+import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
@@ -25,6 +26,7 @@ import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } fr
 import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
+import { useBuilderWatchWithPreview } from "../preview";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -68,6 +70,7 @@ export const AuthenticationSection: React.FC = () => {
     <BuilderCard
       docLink={links.connectorBuilderAuthentication}
       label={formatMessage({ id: "connectorBuilder.authentication.label" })}
+      labelAction={<AssistButton assistKey="auth" />}
       inputsConfig={{
         toggleable: false,
         path: AUTH_PATH,
@@ -213,7 +216,7 @@ export const AuthenticationSection: React.FC = () => {
 const OAuthForm = () => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
-  const grantType = useBuilderWatch(authPath("grant_type"));
+  const { fieldValue: grantType } = useBuilderWatchWithPreview(authPath("grant_type"));
   const getUniqueKey = useGetUniqueKey();
 
   return (

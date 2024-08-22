@@ -121,7 +121,11 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         // it's possible that primaryKey array is always present
         // however yup couldn't determine type correctly even with .required() call
 
-        if (DestinationSyncMode.append_dedup === value.destinationSyncMode && value.primaryKey?.length === 0) {
+        if (
+          (DestinationSyncMode.append_dedup === value.destinationSyncMode ||
+            DestinationSyncMode.overwrite_dedup === value.destinationSyncMode) &&
+          value.primaryKey?.length === 0
+        ) {
           errors.push(
             this.createError({
               message: "connectionForm.primaryKey.required",
@@ -135,7 +139,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         if (
           SyncMode.incremental === value.syncMode &&
           !this.parent.stream.sourceDefinedCursor &&
-          value.cursorField?.length === 0
+          value.cursorField?.filter(Boolean).length === 0 // filter out empty strings
         ) {
           errors.push(
             this.createError({

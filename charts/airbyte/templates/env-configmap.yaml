@@ -151,8 +151,9 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  AUTO_DETECT_SCHEMA: "true"
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ .Values.worker.containerOrchestrator.image | quote }}
+  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator.image") | quote }}
+  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit.image") | quote }}
+  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar.image") | quote }}
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
@@ -161,8 +162,13 @@ data:
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
-  WORKLOAD_LAUNCHER_ENABLED: {{ (index .Values "workload-launcher" "enabled") | default "false" | quote }}
-  WORKLOAD_API_SERVER_ENABLED: {{ (index .Values "workload-api-server" "enabled") | default "false" | quote }}
+  {{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.workloadsOptIn true)}}
+  WORKLOAD_LAUNCHER_ENABLED: "true"
+  WORKLOAD_API_SERVER_ENABLED: "true"
+  {{- else}}
+  WORKLOAD_LAUNCHER_ENABLED: "false"
+  WORKLOAD_API_SERVER_ENABLED: "false"
+  {{- end}}
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""

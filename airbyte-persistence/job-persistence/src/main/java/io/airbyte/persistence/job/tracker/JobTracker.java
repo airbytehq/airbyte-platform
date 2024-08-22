@@ -4,8 +4,8 @@
 
 package io.airbyte.persistence.job.tracker;
 
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
+import static io.airbyte.config.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
@@ -20,9 +20,13 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.RefreshStream;
@@ -44,10 +48,6 @@ import io.airbyte.featureflag.WorkloadLauncherEnabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

@@ -74,3 +74,6 @@ properties:
     "$ref": ConnectorPackageInfo.yaml
   ab_internal:
     "$ref": AbInternal.yaml
+  language:
+    description: The language that the connector is written in.
+    type: string

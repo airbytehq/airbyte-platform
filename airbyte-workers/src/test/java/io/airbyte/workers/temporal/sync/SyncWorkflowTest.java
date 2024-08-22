@@ -26,7 +26,6 @@ import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.OperatorWebhook;
-import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
@@ -35,6 +34,7 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.WebhookOperationSummary;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -84,7 +84,7 @@ class SyncWorkflowTest {
   private Worker syncWorker;
   private WorkflowClient client;
   private ReplicationActivityImpl replicationActivity;
-  private WebhookOperationActivityImpl webhookOperationActivity;
+  private InvokeOperationsActivity invokeOperationsActivity;
   private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
   private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
@@ -149,7 +149,7 @@ class SyncWorkflowTest {
     replicationSuccessOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
     replicationFailOutput = new StandardSyncOutput().withStandardSyncSummary(failedSyncSummary);
     replicationActivity = mock(ReplicationActivityImpl.class);
-    webhookOperationActivity = mock(WebhookOperationActivityImpl.class);
+    invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     workloadFeatureFlagActivity = mock(WorkloadFeatureFlagActivityImpl.class);
@@ -229,7 +229,7 @@ class SyncWorkflowTest {
   // bundle up all the temporal worker setup / execution into one method.
   private StandardSyncOutput execute(final boolean isReset) {
     syncWorker.registerActivitiesImplementations(replicationActivity,
-        webhookOperationActivity,
+        invokeOperationsActivity,
         refreshSchemaActivity,
         configFetchActivity,
         workloadFeatureFlagActivity,
@@ -364,14 +364,12 @@ class SyncWorkflowTest {
             .withExecutionBody(WEBHOOK_BODY)
             .withWebhookConfigId(WEBHOOK_CONFIG_ID));
     final JsonNode workspaceWebhookConfigs = Jsons.emptyObject();
+    final WebhookOperationSummary webhookOperationSummary = new WebhookOperationSummary();
+    webhookOperationSummary.setSuccesses(List.of(WEBHOOK_CONFIG_ID));
     syncInput.withOperationSequence(List.of(webhookOperation)).withWebhookOperationConfigs(workspaceWebhookConfigs);
-    when(webhookOperationActivity.invokeWebhook(
-        new OperatorWebhookInput().withWebhookConfigId(WEBHOOK_CONFIG_ID).withExecutionUrl(WEBHOOK_URL).withExecutionBody(WEBHOOK_BODY)
-            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs)
-            .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID))))
-                .thenReturn(true);
+    when(invokeOperationsActivity.invokeOperations(any(), any(), any())).thenReturn(webhookOperationSummary);
     final StandardSyncOutput actualOutput = execute();
-    assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().get(0), WEBHOOK_CONFIG_ID);
+    assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().getFirst(), WEBHOOK_CONFIG_ID);
   }
 
   @Test

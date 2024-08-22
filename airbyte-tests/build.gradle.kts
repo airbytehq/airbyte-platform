@@ -67,7 +67,8 @@ configurations.configureEach {
 }
 
 dependencies {
-  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-temporal"))
@@ -77,6 +78,7 @@ dependencies {
   implementation(project(":oss:airbyte-test-utils"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-container-orchestrator"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.platform.testcontainers)

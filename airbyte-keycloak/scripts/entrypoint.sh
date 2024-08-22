@@ -20,10 +20,17 @@ if [ -n "$KEYCLOAK_HOSTNAME_ADMIN_URL" ]; then
   export KC_HOSTNAME_ADMIN_URL=$KEYCLOAK_HOSTNAME_ADMIN_URL
 fi
 
-# cache-config is relative to conf directory
-bin/kc.sh build --cache=ispn --cache-stack=kubernetes --health-enabled=true --http-relative-path /auth --cache-config-file=cache-ispn-override.xml
-
-bin/kc.sh start --optimized --proxy edge --hostname-strict false --log-level=$LOG_LEVEL
-
-# Uncomment to disable caching, which is useful for theme development
-# bin/kc.sh start --optimized --proxy edge --hostname-strict false --spi-theme-static-max-age=-1 --spi-theme-cache-themes=false --spi-theme-cache-templates=false
+bin/kc.sh start \
+  --proxy edge \
+  --hostname-strict false \
+  --log-level=$LOG_LEVEL \
+  --cache=ispn \
+  --cache-stack=kubernetes \
+  --health-enabled=true \
+  --http-relative-path /auth \
+  --cache-config-file=cache-ispn-override.xml \
+  --legacy-observability-interface=true \
+  # --spi-theme-static-max-age=-1 \
+  # --spi-theme-cache-themes=false \
+  # --spi-theme-cache-templates=false
+  # Uncomment the --spi-theme options above to disable caching, which is useful for theme development

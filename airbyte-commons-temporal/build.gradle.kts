@@ -17,6 +17,7 @@ dependencies {
   implementation(libs.failsafe)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-logging"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
@@ -26,7 +27,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-worker-models"))
-  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-json-validation"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))

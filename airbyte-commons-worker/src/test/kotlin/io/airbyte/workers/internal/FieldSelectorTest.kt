@@ -5,11 +5,13 @@
 package io.airbyte.workers.internal
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
+import io.airbyte.config.SyncMode
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStream
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerUtils
 import io.mockk.mockk
@@ -81,10 +83,11 @@ internal class FieldSelectorTest {
       ConfiguredAirbyteCatalog()
         .withStreams(
           listOf(
-            ConfiguredAirbyteStream()
-              .withStream(
-                AirbyteStream().withName(STREAM_NAME).withJsonSchema(Jsons.deserialize(SCHEMA)),
-              ),
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(STREAM_NAME, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
           ),
         )
 
@@ -103,10 +106,16 @@ internal class FieldSelectorTest {
       ConfiguredAirbyteCatalog()
         .withStreams(
           listOf(
-            ConfiguredAirbyteStream()
-              .withStream(
-                AirbyteStream().withName(STREAM_NAME).withJsonSchema(Jsons.deserialize(SCHEMA_WITH_ESCAPE)),
-              ),
+            ConfiguredAirbyteStream(
+              stream =
+                AirbyteStream(
+                  name = STREAM_NAME,
+                  jsonSchema = Jsons.deserialize(SCHEMA_WITH_ESCAPE),
+                  supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+                ),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
           ),
         )
 

@@ -10,6 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
+import io.airbyte.config.Job;
+import io.airbyte.config.JobStatus;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;

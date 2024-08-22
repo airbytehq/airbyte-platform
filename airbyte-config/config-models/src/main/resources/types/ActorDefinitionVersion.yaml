@@ -60,3 +60,6 @@ properties:
   internalSupportLevel:
     description: Support level that we use for alerting
     type: integer
+  language:
+    description: The language that the connector is written in.
+    type: string

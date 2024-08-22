@@ -1,6 +1,12 @@
 import * as yup from "yup";
 
-import { ConnectionEventType, FailureOrigin, FailureType } from "core/api/types/AirbyteClient";
+import {
+  ConnectionEventType,
+  FailureOrigin,
+  FailureReason,
+  FailureType,
+  JobConfigType,
+} from "core/api/types/AirbyteClient";
 
 /**
  * add a new event type to the connection timeline:
@@ -20,13 +26,21 @@ const streamDescriptorSchema = yup.object({
   namespace: yup.string().optional(),
 });
 
+const jobRunningStreamSchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  configType: yup.mixed<JobConfigType>().oneOf(["sync", "refresh", "clear", "reset_connection"]).required(),
+});
+
+export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
+
 export const jobFailureReasonSchema = yup.object({
   failureType: yup.mixed<FailureType>().optional(),
   failureOrigin: yup.mixed<FailureOrigin>().optional(),
   externalMessage: yup.string().optional(),
   internalMessage: yup.string().optional(),
   retryable: yup.boolean().optional(),
-  timestamp: yup.number().required(),
+  timestamp: yup.number().optional(),
   stacktrace: yup.string().optional(),
 });
 
@@ -36,10 +50,17 @@ export const userInEventSchema = yup.object({
   name: yup.string().optional(),
 });
 
+// artificial job events
+export const jobRunningSummarySchema = yup.object({
+  jobId: yup.number().required(),
+  streams: yup.array().of(jobRunningStreamSchema).required(),
+  configType: yup.mixed<JobConfigType>().oneOf(["clear", "reset_connection", "sync", "refresh"]).required(),
+});
+
 // jobs
 export const syncEventSummarySchema = yup.object({
-  startTimeEpochSeconds: yup.number().optional(),
-  endTimeEpochSeconds: yup.number().optional(),
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
   attemptsCount: yup.number().optional(),
   bytesLoaded: yup.number().required(),
   recordsLoaded: yup.number().optional(),
@@ -47,32 +68,34 @@ export const syncEventSummarySchema = yup.object({
 });
 
 export const syncFailureEventSummarySchema = yup.object({
-  startTimeEpochSeconds: yup.number().optional(),
-  endTimeEpochSeconds: yup.number().optional(),
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
   attemptsCount: yup.number().optional(),
   bytesLoaded: yup.number().optional(),
   recordsLoaded: yup.number().optional(),
   jobId: yup.number().required(),
-  failureReason: jobFailureReasonSchema.required(),
+  failureReason: jobFailureReasonSchema.nullable(),
 });
 
 export const refreshEventSummarySchema = yup.object({
-  startTimeEpochSeconds: yup.number().optional(),
-  endTimeEpochSeconds: yup.number().optional(),
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
   attemptsCount: yup.number().optional(),
+  bytesLoaded: yup.number().required(),
   streams: yup.array().of(streamDescriptorSchema).required(),
   jobId: yup.number().required(),
 });
 
 export const clearEventSummarySchema = yup.object({
-  startTimeEpochSeconds: yup.number().optional(),
-  endTimeEpochSeconds: yup.number().optional(),
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
   attemptsCount: yup.number().optional(),
   streams: yup.array().of(streamDescriptorSchema).required(),
   jobId: yup.number().required(),
 });
 
 export const jobStartedSummarySchema = yup.object({
+  streams: yup.array().of(streamDescriptorSchema).optional(),
   startTimeEpochSeconds: yup.number().required(),
   jobId: yup.number().required(),
 });
@@ -82,7 +105,10 @@ export const generalEventSchema = yup.object({
   connectionId: yup.string().required(),
   user: userInEventSchema.optional(),
   createdAt: yup.number().required(),
-  eventType: yup.mixed<ConnectionEventType>().required(),
+  eventType: yup
+    .mixed<ConnectionEventType | "RUNNING_JOB">()
+    .oneOf([...Object.values(ConnectionEventType), "RUNNING_JOB"])
+    .required(),
   summary: yup.mixed().required(),
 });
 
@@ -134,4 +160,9 @@ export const jobStartedEventSchema = generalEventSchema.shape({
     .oneOf([ConnectionEventType.CLEAR_STARTED, ConnectionEventType.REFRESH_STARTED, ConnectionEventType.SYNC_STARTED])
     .required(),
   summary: jobStartedSummarySchema.required(),
+});
+
+export const jobRunningSchema = generalEventSchema.shape({
+  eventType: yup.string().oneOf(["RUNNING_JOB"]).required(),
+  summary: jobRunningSummarySchema.required(),
 });

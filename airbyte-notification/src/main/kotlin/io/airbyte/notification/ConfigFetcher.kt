@@ -18,13 +18,13 @@ data class WebhookConfig(val webhookUrl: String)
 @Singleton
 class WebhookConfigFetcher(private val airbyteApiClient: AirbyteApiClient) : ConfigFetcher<WebhookConfig> {
   override fun fetchConfig(connectionId: UUID): WebhookConfig? {
-    val workspaceRead: WorkspaceRead? =
+    val workspaceRead: WorkspaceRead =
       ConnectionIdRequestBody(connectionId = connectionId).let {
         airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(it)
       }
 
     return workspaceRead
-      ?.notifications
+      .notifications
       ?.firstOrNull { it.notificationType == ApiNotificationType.SLACK }
       ?.slackConfiguration
       ?.let { WebhookConfig(it.webhook) }

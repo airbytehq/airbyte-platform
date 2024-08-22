@@ -6,8 +6,8 @@ import { getTestId } from "utils/selectors";
 
 const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
-const resetModalResetCheckbox = "[data-testid='resetModal-reset-checkbox']";
-const saveStreamChangesButton = "button[data-testid='resetModal-save']";
+const resetModalResetRadio = "[data-testid='radio-button-tile-shouldRefresh-saveWithoutRefresh']";
+const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
@@ -58,7 +58,7 @@ export const checkSuccessResult = () => cy.get(successResult).should("exist");
 
 export const confirmStreamConfigurationChangedPopup = ({ reset = false } = {}) => {
   if (!reset) {
-    cy.get(resetModalResetCheckbox).click({ force: true });
+    cy.get(resetModalResetRadio).click({ force: true });
   }
   cy.get(saveStreamChangesButton).click();
 };

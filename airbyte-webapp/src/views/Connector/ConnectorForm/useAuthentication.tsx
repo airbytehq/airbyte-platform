@@ -5,7 +5,7 @@ import { FieldPath, useFormContext } from "react-hook-form";
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { ConnectorFormValues } from "./types";
@@ -53,7 +53,6 @@ interface AuthenticationHook {
 }
 
 export const useAuthentication = (): AuthenticationHook => {
-  const { trackError } = useAppMonitoringService();
   const {
     watch,
     getFieldState,
@@ -86,7 +85,7 @@ export const useAuthentication = (): AuthenticationHook => {
         return values;
       }
     },
-    [connectorSpec, getValues, trackError]
+    [connectorSpec, getValues]
   );
 
   const valuesWithDefaults = useMemo(() => getValuesSafe(values), [getValuesSafe, values]);

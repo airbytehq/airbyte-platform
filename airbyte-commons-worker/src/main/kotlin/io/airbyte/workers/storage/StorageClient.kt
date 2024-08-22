@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage
 
 import com.google.auth.oauth2.ServiceAccountCredentials
@@ -5,14 +9,14 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.io.IOs
-import io.airbyte.config.storage.GcsStorageConfig
-import io.airbyte.config.storage.LocalStorageConfig
-import io.airbyte.config.storage.MinioStorageConfig
-import io.airbyte.config.storage.S3StorageConfig
-import io.airbyte.config.storage.STORAGE_TYPE
-import io.airbyte.config.storage.StorageConfig
-import io.airbyte.config.storage.StorageType
+import io.airbyte.commons.logging.GcsStorageConfig
+import io.airbyte.commons.logging.LocalStorageConfig
+import io.airbyte.commons.logging.MinioStorageConfig
+import io.airbyte.commons.logging.S3StorageConfig
+import io.airbyte.commons.logging.STORAGE_TYPE
+import io.airbyte.commons.logging.StorageConfig
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
@@ -37,6 +41,7 @@ import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
+import io.airbyte.commons.logging.LogClientType as StorageType
 
 /**
  * Factory for creating a [StorageClient] based on the value of [STORAGE_TYPE] and a [DocumentType].
@@ -144,6 +149,7 @@ class GcsStorageClient(
 
   internal fun key(id: String): String = "${type.prefix}/$id"
 
+  @VisibleForTesting
   internal fun blobId(id: String): BlobId = BlobId.of(bucketName, key(id))
 }
 

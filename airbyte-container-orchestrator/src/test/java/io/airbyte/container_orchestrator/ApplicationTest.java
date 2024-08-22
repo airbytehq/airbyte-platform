@@ -19,12 +19,12 @@ class ApplicationTest {
 
   private String application;
   private JobOrchestrator<?> jobOrchestrator;
-  private AsyncStateManager asyncStateManager;
+  private Optional<AsyncStateManager> asyncStateManager;
 
   @BeforeEach
   void setup() {
     jobOrchestrator = mock(JobOrchestrator.class);
-    asyncStateManager = mock(AsyncStateManager.class);
+    asyncStateManager = Optional.of(mock(AsyncStateManager.class));
   }
 
   @Test
@@ -37,9 +37,9 @@ class ApplicationTest {
 
     assertEquals(0, code);
     verify(jobOrchestrator).runJob();
-    verify(asyncStateManager).write(AsyncKubePodStatus.INITIALIZING);
+    verify(asyncStateManager.get()).write(AsyncKubePodStatus.INITIALIZING);
     // NOTE: we don't expect it to write RUNNING, because the job orchestrator is responsible for that.
-    verify(asyncStateManager).write(AsyncKubePodStatus.SUCCEEDED, output);
+    verify(asyncStateManager.get()).write(AsyncKubePodStatus.SUCCEEDED, output);
   }
 
   @Test
@@ -50,9 +50,20 @@ class ApplicationTest {
 
     assertEquals(1, code);
     verify(jobOrchestrator).runJob();
-    verify(asyncStateManager).write(AsyncKubePodStatus.INITIALIZING);
+    verify(asyncStateManager.get()).write(AsyncKubePodStatus.INITIALIZING);
     // NOTE: we don't expect it to write RUNNING, because the job orchestrator is responsible for that.
-    verify(asyncStateManager).write(AsyncKubePodStatus.FAILED);
+    verify(asyncStateManager.get()).write(AsyncKubePodStatus.FAILED);
+  }
+
+  @Test
+  void testWorkerV2Path() throws Exception {
+    asyncStateManager = Optional.empty();
+
+    final var app = new Application(application, jobOrchestrator, asyncStateManager);
+    final var code = app.run();
+
+    assertEquals(0, code);
+    verify(jobOrchestrator).runJob();
   }
 
 }

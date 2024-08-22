@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React from "react";
+import React, { useState } from "react";
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Route, Routes } from "react-router-dom";
@@ -28,7 +28,8 @@ import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
-import { SyncCatalogCardNext } from "../../ConnectionForm/SyncCatalogCardNext";
+import { ScrollableContainer } from "../../../ScrollableContainer";
+import { SyncCatalogTable } from "../../ConnectionForm/SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
 export const SimplifiedConnectionConfiguration: React.FC = () => {
@@ -62,6 +63,14 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
+
+  const setScrollableContainerRef = (ref: HTMLDivElement | null) => {
+    if (ref === null) {
+      return;
+    }
+    setScrollElement(ref);
+  };
 
   // if the user is navigating back from the second step the form may be dirty
   useMount(() => {
@@ -69,15 +78,25 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <FlexContainer className={styles.bottomNavPaddingOffset} direction="column" gap="lg">
-      <Card
-        title={formatMessage({ id: "connectionForm.selectSyncMode" })}
-        helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
-      >
-        <SimplifiedSchemaQuestionnaire />
-      </Card>
-      {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-    </FlexContainer>
+    <ScrollableContainer ref={setScrollableContainerRef} className={styles.container}>
+      <FlexContainer direction="column" gap="lg">
+        <Card
+          title={formatMessage({ id: "connectionForm.selectSyncMode" })}
+          helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
+        >
+          <SimplifiedSchemaQuestionnaire />
+        </Card>
+        {isSyncCatalogV2Enabled ? (
+          <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+            <Box mb="xl" data-testid="catalog-tree-table-body">
+              <SyncCatalogTable scrollParentContainer={scrollElement} />
+            </Box>
+          </Card>
+        ) : (
+          <SyncCatalogCard scrollParentContainer={scrollElement} />
+        )}
+      </FlexContainer>
+    </ScrollableContainer>
   );
 };
 
@@ -96,14 +115,14 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   });
 
   return (
-    <div className={styles.bottomNavPaddingOffset}>
+    <ScrollableContainer className={styles.container}>
       <SimplifiedConnectionsSettingsCard
         title={formatMessage({ id: "connectionForm.configureConnection" })}
         source={source}
         destination={destination}
         isCreating
       />
-    </div>
+    </ScrollableContainer>
   );
 };
 

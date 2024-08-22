@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
@@ -119,7 +119,6 @@ export const useCreateSourceDefinition = () => {
 export const useUpdateSourceDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
-  const { trackError } = useAppMonitoringService();
 
   return useMutation<
     SourceDefinitionRead,

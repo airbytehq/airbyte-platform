@@ -4,9 +4,13 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.POD_READY_TIMEOUT;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
@@ -30,6 +34,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.SocketException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -112,16 +117,18 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
         WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
         Jsons.serialize(destinationConfig.getDestinationConnectionConfiguration()),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME,
-        protocolSerializer.serialize(destinationConfig.getCatalog()));
+        protocolSerializer.serialize(destinationConfig.getCatalog(), destinationConfig.getSupportRefreshes()));
     // stdout logs are logged elsewhere since stdout also contains data
     LineGobbler.gobble(destinationProcess.getErrorStream(), LOGGER::error, "airbyte-destination", CONTAINER_LOG_MDC_BUILDER);
 
     writer = messageWriterFactory.createWriter(new BufferedWriter(new OutputStreamWriter(destinationProcess.getOutputStream(), Charsets.UTF_8)));
 
     final List<Type> acceptedMessageTypes = List.of(Type.STATE, Type.TRACE, Type.CONTROL);
-    messageIterator = streamFactory.create(IOs.newBufferedReader(destinationProcess.getInputStream()))
-        .filter(message -> acceptedMessageTypes.contains(message.getType()))
-        .iterator();
+    Failsafe.with(RetryPolicy.builder().withBackoff(Duration.ofSeconds(10), POD_READY_TIMEOUT).build()).run(() -> {
+      messageIterator = streamFactory.create(IOs.newBufferedReader(destinationProcess.getInputStream()))
+          .filter(message -> acceptedMessageTypes.contains(message.getType()))
+          .iterator();
+    });
   }
 
   @Override

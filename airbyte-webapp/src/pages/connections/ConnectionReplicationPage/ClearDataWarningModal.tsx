@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
-import { LabeledSwitch } from "components";
+import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
@@ -15,44 +15,50 @@ interface ResetWarningModalProps {
   stateType: ConnectionStateType;
 }
 
-export const ClearDataWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onComplete, stateType }) => {
-  const { formatMessage } = useIntl();
-  const [withReset, setWithReset] = useState(true);
-  const requireFullReset = stateType === ConnectionStateType.legacy;
-
-  const checkboxLabel = requireFullReset ? "connection.saveWithFullDataClear" : "connection.saveWithDataClear";
+export const ClearDataWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onComplete }) => {
+  const [shouldClear, setShouldClear] = useState("true");
 
   return (
     <>
       <ModalBody>
-        <Text>
+        <Text size="lg">
           <FormattedMessage id="connection.clearDataHint" />
         </Text>
-        <Box pt="md">
-          <Text italicized>
-            <FormattedMessage id="connection.clearDataHint.emphasized" />
-          </Text>
-        </Box>
-
-        <p>
-          <LabeledSwitch
-            name="reset"
-            checked={withReset}
-            onChange={(ev) => setWithReset(ev.target.checked)}
-            label={formatMessage({
-              id: checkboxLabel,
-            })}
-            checkbox
+        <Box pt="lg">
+          <RadioButtonTiles
+            light
+            direction="column"
+            options={[
+              {
+                value: "saveWithClear",
+                label: <FormattedMessage id="connection.saveWithClear" />,
+                description: "",
+              },
+              {
+                value: "saveWithoutClear",
+                label: <FormattedMessage id="connection.saveWithoutClear" />,
+                description: (
+                  <Text color="grey400" italicized>
+                    <FormattedMessage id="connection.saveWithoutClear.description" />
+                  </Text>
+                ),
+              },
+            ]}
+            selectedValue={shouldClear}
+            onSelectRadioButton={(value) => {
+              setShouldClear(value);
+            }}
+            name="shouldClear"
             data-testid="resetModal-reset-checkbox"
           />
-        </p>
+        </Box>
       </ModalBody>
       <ModalFooter>
         <Button onClick={onCancel} variant="secondary" data-testid="resetModal-cancel">
           <FormattedMessage id="form.cancel" />
         </Button>
-        <Button onClick={() => onComplete(withReset)} data-testid="resetModal-save">
-          <FormattedMessage id="connection.save" />
+        <Button onClick={() => onComplete(shouldClear === "saveWithClear")} data-testid="resetModal-save">
+          <FormattedMessage id="form.submit" />
         </Button>
       </ModalFooter>
     </>

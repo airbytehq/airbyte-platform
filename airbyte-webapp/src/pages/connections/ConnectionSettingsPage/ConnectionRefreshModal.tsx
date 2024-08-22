@@ -221,7 +221,7 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
               <FormattedMessage
                 id="connection.actions.refreshStream.truncate.description"
                 values={{
-                  count: streamsSupportingTruncateRefresh.length,
+                  value: streamsSupportingTruncateRefresh.length,
                   bold: (children) => (
                     <Text as="span" bold color="grey400" size="sm">
                       {children}

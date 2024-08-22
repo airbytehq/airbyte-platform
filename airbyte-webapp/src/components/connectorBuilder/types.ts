@@ -65,10 +65,16 @@ export interface BuilderState {
   name: string;
   mode: "ui" | "yaml";
   formValues: BuilderFormValues;
+  previewValues?: BuilderFormValues;
   yaml: string;
   view: "global" | "inputs" | number;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
+}
+
+export interface AssistData {
+  docsUrl?: string;
+  openApiSpecUrl?: string;
 }
 
 export interface BuilderFormInput {
@@ -123,10 +129,12 @@ export interface BuilderFormValues {
     urlBase: string;
     authenticator: BuilderFormAuthenticator | YamlString;
   };
+  assist: AssistData;
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
+  description?: string;
 }
 
 export interface StreamTestResults {
@@ -290,6 +298,7 @@ export interface BuilderMetadata {
     global?: Array<YamlSupportedComponentName["global"]>;
   };
   testedStreams?: TestedStreams;
+  assist?: AssistData;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -335,6 +344,10 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
     urlBase: "",
     authenticator: { type: "NoAuth" },
+  },
+  assist: {
+    docsUrl: "",
+    openApiSpecUrl: "",
   },
   inputs: [],
   streams: [],
@@ -932,6 +945,8 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   const globalYamlComponents = [...componentNameIfString("authenticator", values.global.authenticator)];
   const hasGlobalYamlComponents = globalYamlComponents.length > 0;
 
+  const assistData = values.assist ?? {};
+
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
     ...((hasStreamYamlComponents || hasGlobalYamlComponents) && {
@@ -945,6 +960,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
       },
     }),
     testedStreams,
+    assist: assistData,
   };
 };
 
@@ -1014,6 +1030,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     schemas: streamNameToSchema,
     spec: builderInputsToSpec(values.inputs),
     metadata: builderFormValuesToMetadata(values),
+    description: values.description,
   };
 };
 

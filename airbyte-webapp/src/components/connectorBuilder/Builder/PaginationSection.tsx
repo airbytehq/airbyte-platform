@@ -7,6 +7,7 @@ import { LabelInfo } from "components/Label";
 import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 
+import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
@@ -42,6 +43,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       docLink={links.connectorBuilderPagination}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
+      labelAction={<AssistButton assistKey="paginator" streamNum={currentStreamIndex} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("paginator"),

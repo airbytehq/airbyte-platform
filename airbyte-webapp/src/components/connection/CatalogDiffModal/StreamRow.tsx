@@ -1,6 +1,8 @@
 import classnames from "classnames";
+import { FormattedMessage } from "react-intl";
 
 import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
 
 import { StreamTransform } from "core/api/types/AirbyteClient";
 
@@ -48,7 +50,11 @@ export const StreamRow: React.FC<StreamRowProps> = ({ streamTransform, syncMode,
             )}
           </div>
           <div title={namespace} className={styles.text}>
-            {namespace}
+            {namespace ?? (
+              <Text color="grey">
+                <FormattedMessage id="general.dash" />
+              </Text>
+            )}
           </div>
         </div>
       </td>

@@ -44,7 +44,7 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
-    ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+    final ConnectorRegistryEntryMetrics metrics = Optional.of(def)
         .map(ConnectorRegistrySourceDefinition::getGenerated)
         .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
         .orElse(null);
@@ -71,7 +71,7 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
-    ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+    final ConnectorRegistryEntryMetrics metrics = Optional.of(def)
         .map(ConnectorRegistryDestinationDefinition::getGenerated)
         .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
         .orElse(null);
@@ -97,13 +97,13 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
-    Date lastModified = Optional.of(def)
+    final Date lastModified = Optional.of(def)
         .map(ConnectorRegistrySourceDefinition::getGenerated)
         .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
         .map(SourceFileInfo::getMetadataLastModified)
         .orElse(null);
 
-    String cdkVersion = Optional.of(def)
+    final String cdkVersion = Optional.of(def)
         .map(ConnectorRegistrySourceDefinition::getPackageInfo)
         .map(ConnectorPackageInfo::getCdkVersion)
         .orElse(null);
@@ -123,7 +123,8 @@ public class ConnectorRegistryConverters {
         .withReleaseStage(def.getReleaseStage())
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
-        .withSuggestedStreams(def.getSuggestedStreams());
+        .withSuggestedStreams(def.getSuggestedStreams())
+        .withLanguage(def.getLanguage());
   }
 
   /**
@@ -135,13 +136,13 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
-    Date lastModified = Optional.of(def)
+    final Date lastModified = Optional.of(def)
         .map(ConnectorRegistryDestinationDefinition::getGenerated)
         .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
         .map(SourceFileInfo::getMetadataLastModified)
         .orElse(null);
 
-    String cdkVersion = Optional.of(def)
+    final String cdkVersion = Optional.of(def)
         .map(ConnectorRegistryDestinationDefinition::getPackageInfo)
         .map(ConnectorPackageInfo::getCdkVersion)
         .orElse(null);
@@ -161,7 +162,8 @@ public class ConnectorRegistryConverters {
         .withInternalSupportLevel(Optional.ofNullable(def.getAbInternal()).map(AbInternal::getSl).orElse(100L))
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
-        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());
+        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes())
+        .withLanguage(def.getLanguage());
   }
 
   /**

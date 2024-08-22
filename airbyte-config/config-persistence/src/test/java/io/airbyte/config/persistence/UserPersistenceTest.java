@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthUser;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -36,6 +37,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -134,14 +136,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     @Test
-    void getUserByAuthIdFromUserTableTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromUserTable(user.getAuthUserId());
-        Assertions.assertEquals(user, userFromDb.get());
-      }
-    }
-
-    @Test
     void getUserByAuthIdFromAuthUserTableTest() throws IOException {
       for (final User user : MockData.users()) {
         final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
@@ -159,13 +153,12 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
     @Test
     void getUsersByEmailTest() throws IOException {
-      for (final User user : MockData.dupEmailUsers()) {
-        userPersistence.writeUser(user);
+      for (final User user : MockData.users()) {
+        final List<UserInfo> usersFromDb = userPersistence.getUsersByEmail(user.getEmail());
+        Assertions.assertEquals(1, usersFromDb.size());
+        Assertions.assertEquals(user.getUserId(), usersFromDb.getFirst().getUserId());
+        Assertions.assertEquals(user.getEmail(), usersFromDb.getFirst().getEmail());
       }
-
-      final List<UserInfo> expectedUsers = MockData.dupEmailUsers().stream().map(UserInfoConverter::userInfoFromUser).toList();
-      final List<UserInfo> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
-      Assertions.assertEquals(new HashSet<>(expectedUsers), new HashSet<>(usersWithSameEmail));
     }
 
     @Test
@@ -183,6 +176,45 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
       Assertions.assertEquals(Set.of(expectedAuthUserId, user1.getAuthUserId()), actualAuthUserIds);
+    }
+
+    @Test
+    void listAuthUsersTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // add an extra auth user
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final List<AuthUser> expectedAuthUsers = Stream.of(
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(user1.getAuthUserId()).withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM),
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(newAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK))
+          .sorted(Comparator.comparing(AuthUser::getUserId))
+          .toList();
+
+      final List<AuthUser> authUsers = userPersistence.listAuthUsersForUser(user1.getUserId());
+      Assertions.assertEquals(expectedAuthUsers, authUsers.stream().sorted(Comparator.comparing(AuthUser::getUserId)).toList());
+    }
+
+    @Test
+    void replaceAuthUserTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // create auth users
+      final String oldAuthUserId = UUID.randomUUID().toString();
+      final String oldAuthUserId2 = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId2, AuthProvider.KEYCLOAK);
+
+      final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(oldAuthUserId, oldAuthUserId2, user1.getAuthUserId()), actualAuthUserIds);
+
+      // replace auth_user_id
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.replaceAuthUserForUserId(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final Set<String> newAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(newAuthUserId), newAuthUserIds);
     }
 
   }

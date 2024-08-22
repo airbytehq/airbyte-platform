@@ -24,6 +24,7 @@ import java.util.UUID;
 /**
  * Converters for state.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class StateConverter {
 
   /**
@@ -344,26 +345,50 @@ public class StateConverter {
 
   private static StreamState streamStateStructToApi(final AirbyteStreamState streamState) {
     return new StreamState()
-        .streamDescriptor(ProtocolConverters.streamDescriptorToApi(streamState.getStreamDescriptor()))
+        .streamDescriptor(streamDescriptorToApi(streamState.getStreamDescriptor()))
         .streamState(streamState.getStreamState());
   }
 
   private static io.airbyte.api.client.model.generated.StreamState streamStateStructToClient(final AirbyteStreamState streamState) {
     return new io.airbyte.api.client.model.generated.StreamState(
-        ProtocolConverters.streamDescriptorToClient(streamState.getStreamDescriptor()),
+        streamDescriptorToClient(streamState.getStreamDescriptor()),
         streamState.getStreamState());
   }
 
   private static AirbyteStreamState streamStateStructToInternal(final StreamState streamState) {
     return new AirbyteStreamState()
-        .withStreamDescriptor(ProtocolConverters.streamDescriptorToProtocol(streamState.getStreamDescriptor()))
+        .withStreamDescriptor(streamDescriptorToProtocol(streamState.getStreamDescriptor()))
         .withStreamState(streamState.getStreamState());
   }
 
   private static AirbyteStreamState clientStreamStateStructToInternal(final io.airbyte.api.client.model.generated.StreamState streamState) {
     return new AirbyteStreamState()
-        .withStreamDescriptor(ProtocolConverters.clientStreamDescriptorToProtocol(streamState.getStreamDescriptor()))
+        .withStreamDescriptor(clientStreamDescriptorToProtocol(streamState.getStreamDescriptor()))
         .withStreamState(streamState.getStreamState());
+  }
+
+  // The conversions methods below are internal to convert from protocol to API client.
+  // Eventually, we should be using config.StreamDescriptor internally and using ApiClientConverters
+  // instead.
+  // Keeping those private until this is fixed.
+  private static StreamDescriptor streamDescriptorToApi(final io.airbyte.protocol.models.StreamDescriptor protocolStreamDescriptor) {
+    return new StreamDescriptor().name(protocolStreamDescriptor.getName()).namespace(protocolStreamDescriptor.getNamespace());
+  }
+
+  @SuppressWarnings("LineLength")
+  private static io.airbyte.api.client.model.generated.StreamDescriptor streamDescriptorToClient(final io.airbyte.protocol.models.StreamDescriptor protocolStreamDescriptor) {
+    return new io.airbyte.api.client.model.generated.StreamDescriptor(protocolStreamDescriptor.getName(), protocolStreamDescriptor.getNamespace());
+  }
+
+  private static io.airbyte.protocol.models.StreamDescriptor streamDescriptorToProtocol(final StreamDescriptor apiStreamDescriptor) {
+    return new io.airbyte.protocol.models.StreamDescriptor().withName(apiStreamDescriptor.getName())
+        .withNamespace(apiStreamDescriptor.getNamespace());
+  }
+
+  @SuppressWarnings("LineLength")
+  private static io.airbyte.protocol.models.StreamDescriptor clientStreamDescriptorToProtocol(final io.airbyte.api.client.model.generated.StreamDescriptor clientStreamDescriptor) {
+    return new io.airbyte.protocol.models.StreamDescriptor().withName(clientStreamDescriptor.getName())
+        .withNamespace(clientStreamDescriptor.getNamespace());
   }
 
 }

@@ -5,7 +5,6 @@
 package io.airbyte.workload.launcher.client
 
 import com.amazonaws.internal.ExceptionUtils
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.MetricEmittingApps
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
@@ -22,7 +21,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class WorkloadApiClient(
-  private val workloadApiClient: WorkloadApiClient,
+  private val workloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
 ) {
   fun reportFailure(failure: StageError) {

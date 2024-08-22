@@ -1,4 +1,4 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -20,8 +20,8 @@ import { Spinner } from "components/ui/Spinner";
 import { useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -41,11 +41,9 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
 
   const { mode } = useConnectionFormService();
-  const { destDefinitionSpecification } = useConnectionFormService();
-  const simplifiedInitialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
+  const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });
@@ -108,7 +106,7 @@ export const ConnectionSettingsPage: React.FC = () => {
         <Disclosure>
           {({ open }) => (
             <>
-              <Disclosure.Button
+              <DisclosureButton
                 as={Button}
                 variant="clear"
                 icon={open ? "chevronDown" : "chevronRight"}
@@ -116,12 +114,12 @@ export const ConnectionSettingsPage: React.FC = () => {
                 className={classnames(styles.advancedButton, styles.alignStart)}
               >
                 <FormattedMessage id="connection.state.title" />
-              </Disclosure.Button>
-              <Disclosure.Panel className={styles.advancedPanel}>
+              </DisclosureButton>
+              <DisclosurePanel className={styles.advancedPanel}>
                 <React.Suspense fallback={<Spinner />}>
                   <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
                 </React.Suspense>
-              </Disclosure.Panel>
+              </DisclosurePanel>
             </>
           )}
         </Disclosure>

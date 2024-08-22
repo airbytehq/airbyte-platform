@@ -19,6 +19,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
+import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
@@ -55,6 +56,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     <T extends string>(fieldPath: T) => `${streamPath}.${fieldPath}` as const,
     [streamPath]
   );
+  const baseUrl = useBuilderWatch("formValues.global.urlBase");
 
   return (
     <BuilderConfigView
@@ -80,6 +82,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="string"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
+              preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
+              labelAction={<AssistButton assistKey="metadata" streamNum={streamNum} />}
             />
             <BuilderField
               type="enum"

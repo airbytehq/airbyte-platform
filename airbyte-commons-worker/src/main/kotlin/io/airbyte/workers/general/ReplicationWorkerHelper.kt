@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
@@ -17,6 +16,7 @@ import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
@@ -37,10 +37,10 @@ import io.airbyte.protocol.models.AirbyteMessage.Type
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
@@ -64,6 +64,7 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
@@ -76,6 +77,7 @@ import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.properties.Delegates
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
 
 private val logger = KotlinLogging.logger { }
@@ -115,6 +117,7 @@ class ReplicationWorkerHelper(
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
+  private var supportRefreshes by Delegates.notNull<Boolean>()
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -199,7 +202,7 @@ class ReplicationWorkerHelper(
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
 
-    val supportRefreshes =
+    supportRefreshes =
       airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
         ResolveActorDefinitionVersionRequestBody(
           actorDefinitionId = ctx.destinationDefinitionId,
@@ -233,12 +236,15 @@ class ReplicationWorkerHelper(
     timeTracker.trackDestinationWriteStartTime()
     destinationConfig =
       WorkerUtils.syncToWorkerDestinationConfig(replicationInput)
-        .apply { catalog = mapper.mapCatalog(catalog) }
+        .apply {
+          catalog = mapper.mapCatalog(catalog)
+          supportRefreshes = this@ReplicationWorkerHelper.supportRefreshes
+        }
 
     try {
       destination.start(destinationConfig, jobRoot)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the destination", e)
     }
   }
 
@@ -256,7 +262,7 @@ class ReplicationWorkerHelper(
     try {
       source.start(sourceConfig, jobRoot, ctx?.connectionId)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the source", e)
     }
   }
 

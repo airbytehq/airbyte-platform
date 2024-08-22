@@ -5,6 +5,10 @@
   width: 100%;
 }
 
+.labelAction {
+  margin: variables.$spacing-sm 0;
+}
+
 .optionalText {
   display: inline;
   color: colors.$grey-300;

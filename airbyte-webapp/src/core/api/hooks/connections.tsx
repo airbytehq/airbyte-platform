@@ -1,4 +1,4 @@
-import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -8,8 +8,8 @@ import { ExternalLink } from "components/ui/Link";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -41,7 +41,7 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
-  ConnectionEventWithDetails,
+  ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -77,7 +77,10 @@ export const connectionsKeys = {
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
   lastJobPerStream: (connectionId: string) => [...connectionsKeys.all, "lastSyncPerStream", connectionId] as const,
-  eventsList: (connectionId: string) => [...connectionsKeys.all, "eventsList", connectionId] as const,
+  eventsList: (
+    connectionId: string | undefined,
+    filters: string | Record<string, string | number | string[] | undefined> = {}
+  ) => [...connectionsKeys.all, "eventsList", connectionId, { filters }] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
 };
 
@@ -101,21 +104,48 @@ interface CreateConnectionProps {
   sourceCatalogId: string | undefined;
 }
 
-export const useListConnectionEvents = (connectionId: string) => {
+export const useListConnectionEventsInfinite = (
+  connectionEventsRequestBody: ConnectionEventsRequestBody,
+  enabled: boolean = true,
+  pageSize: number = 50
+) => {
   const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(connectionsKeys.eventsList(connectionId), async () => {
-    return await listConnectionEvents({ connectionId }, requestOptions);
+  const queryKey = connectionsKeys.eventsList(connectionEventsRequestBody.connectionId, {
+    eventTypes: connectionEventsRequestBody.eventTypes,
+    createdAtStart: connectionEventsRequestBody.createdAtStart,
+    createdAtEnd: connectionEventsRequestBody.createdAtEnd,
   });
+
+  return useInfiniteQuery(
+    queryKey,
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await listConnectionEvents(
+          {
+            ...connectionEventsRequestBody,
+            pagination: { pageSize, rowOffset: pageSize * pageParam },
+          },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      enabled,
+      keepPreviousData: true,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.events.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
 };
 
-export const useGetConnectionEvent = (connectionEventId: string | null): ConnectionEventWithDetails | undefined => {
+export const useGetConnectionEvent = (connectionEventId: string | null, connectionId: string) => {
   const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(
+  return useQuery(
     connectionsKeys.event(connectionEventId ?? ""),
     async () => {
-      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "", connectionId }, requestOptions);
     },
     {
       enabled: !!connectionEventId,
@@ -147,7 +177,6 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();
   const formatError = useFormatError();
-  const { trackError } = useAppMonitoringService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const { registerNotification } = useNotificationService();
@@ -538,7 +567,6 @@ export const useCreateOrUpdateState = () => {
   const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
   const { registerNotification } = useNotificationService();
 
   return useMutation(

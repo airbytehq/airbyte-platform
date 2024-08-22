@@ -1,0 +1,33 @@
+micronaut:
+  server:
+    port: -1
+
+datasources:
+  jobs:
+    url: jdbc:tc:postgresql:13:///postgres?currentSchema=public
+    driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: sa
+    password: ""
+  config:
+    url: jdbc:tc:postgresql:13:///postgres?currentSchema=public
+    driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: sa
+    password: ""
+
+flyway:
+  enabled: true
+  datasources:
+    config-wrapped-data:
+      enabled: false # disable automatic migrations because the app will run them manually
+      locations:
+        - "classpath:io/airbyte/cloud/db/instance/configs_wrapped/data_migrations"
+
+jooq:
+  datasources:
+    config:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+
+logger:
+  levels:
+    io.micronaut.context.condition: DEBUG

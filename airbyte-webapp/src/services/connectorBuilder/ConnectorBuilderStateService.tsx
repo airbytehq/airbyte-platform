@@ -112,6 +112,8 @@ interface FormStateContext {
   setFormValuesDirty: (value: boolean) => void;
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
+  assistEnabled: boolean;
+  setAssistEnabled: (enabled: boolean) => void;
 }
 
 interface TestReadLimits {
@@ -137,6 +139,8 @@ export interface TestReadContext {
     schemaDifferences: boolean;
     incompatibleSchemaErrors: string[] | undefined;
   };
+  queuedStreamRead: boolean;
+  queueStreamRead: () => void;
 }
 
 interface FormManagementStateContext {
@@ -176,6 +180,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
   "version",
   "type",
+  "description",
   "check",
   "definitions",
   "streams",
@@ -186,6 +191,7 @@ const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
 export function convertJsonToYaml(json: ConnectorManifest): string {
   const yamlString = dump(json, {
     noRefs: true,
+    quotingType: '"',
     sortKeys: (a: keyof ConnectorManifest, b: keyof ConnectorManifest) => {
       const orderA = MANIFEST_KEY_ORDER.indexOf(a);
       const orderB = MANIFEST_KEY_ORDER.indexOf(b);
@@ -228,7 +234,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
-  const { setStoredMode } = useConnectorBuilderLocalStorage();
+  const { setStoredMode, checkAssistEnabled, setAssistEnabledById } = useConnectorBuilderLocalStorage();
+
+  const assistEnabled = checkAssistEnabled(projectId);
+  const setAssistEnabled = setAssistEnabledById(projectId);
+
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
 
@@ -265,6 +275,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     // In UI mode, only call resolve if the form is valid, since an invalid form is expected to not resolve
     mode === "yaml" || (mode === "ui" && formValuesValid)
   );
+
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
     ? resolveError instanceof HttpError
@@ -556,6 +567,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setFormValuesDirty,
     updateTestingValues,
     updateYamlCdkVersion,
+    setAssistEnabled,
+    assistEnabled,
   };
 
   return (
@@ -717,7 +730,15 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const { projectId, resolvedManifest, jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
+  const {
+    projectId,
+    isResolving,
+    resolveError,
+    resolvedManifest,
+    jsonManifest,
+    formValuesDirty,
+    updateYamlCdkVersion,
+  } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
@@ -810,6 +831,27 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   );
 
+  const [queuedStreamRead, setQueuedStreamRead] = useState(false);
+  const { refetch } = streamRead;
+  // trigger a stream read if the a stream read is queued and form is in a ready state to be tested
+  useEffect(() => {
+    if (isResolving || formValuesDirty || !queuedStreamRead) {
+      return;
+    }
+
+    if (resolveError) {
+      setQueuedStreamRead(false);
+      return;
+    }
+
+    setQueuedStreamRead(false);
+    refetch();
+  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty]);
+
+  const queueStreamRead = useCallback(() => {
+    setQueuedStreamRead(true);
+  }, []);
+
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 
   const ctx = {
@@ -818,6 +860,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     schemaWarnings,
     testState,
     setTestState,
+    queuedStreamRead,
+    queueStreamRead,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

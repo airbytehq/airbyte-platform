@@ -1,12 +1,15 @@
 package io.airbyte.workers.helper
 
+import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.SyncMode
 import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.AirbyteMapper
 import io.mockk.every
@@ -27,8 +30,21 @@ internal class StreamStatusCompletionTrackerTest {
     ConfiguredAirbyteCatalog()
       .withStreams(
         listOf(
-          ConfiguredAirbyteStream().withStream(AirbyteStream().withName("name1")),
-          ConfiguredAirbyteStream().withStream(AirbyteStream().withName("name2").withNamespace("namespace2")),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "name1", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(
+              name = "name2",
+              namespace = "namespace2",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+            ),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
         ),
       )
 
@@ -143,7 +159,7 @@ internal class StreamStatusCompletionTrackerTest {
             AirbyteStreamStatusTraceMessage()
               .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
               .withStreamDescriptor(
-                StreamDescriptor()
+                io.airbyte.protocol.models.StreamDescriptor()
                   .withName(name)
                   .withNamespace(namespace),
               ),

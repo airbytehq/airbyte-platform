@@ -1,9 +1,9 @@
 package io.airbyte.workers.sync
 
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus

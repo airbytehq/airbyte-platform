@@ -22,16 +22,17 @@ import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
+import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.protocol.CatalogTransforms;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -42,7 +43,6 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -151,23 +151,31 @@ public class ReplicationInputHydrator {
       fullDestinationConfig =
           secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
     }
+    return mapActivityInputToReplInput(replicationActivityInput)
+        .withSourceConfiguration(fullSourceConfig)
+        .withDestinationConfiguration(fullDestinationConfig)
+        .withCatalog(catalog)
+        .withState(state);
+  }
+
+  /**
+   * Converts ReplicationActivityInput to ReplicationInput by mapping basic files. Does NOT perform
+   * any hydration. Does not copy unhydrated config.
+   */
+  public ReplicationInput mapActivityInputToReplInput(final ReplicationActivityInput replicationActivityInput) {
     return new ReplicationInput()
         .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
         .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
         .withPrefix(replicationActivityInput.getPrefix())
         .withSourceId(replicationActivityInput.getSourceId())
         .withDestinationId(replicationActivityInput.getDestinationId())
-        .withSourceConfiguration(fullSourceConfig)
-        .withDestinationConfiguration(fullDestinationConfig)
         .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
         .withWorkspaceId(replicationActivityInput.getWorkspaceId())
         .withConnectionId(replicationActivityInput.getConnectionId())
         .withIsReset(replicationActivityInput.getIsReset())
         .withJobRunConfig(replicationActivityInput.getJobRunConfig())
         .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
-        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
-        .withCatalog(catalog)
-        .withState(state);
+        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig());
   }
 
   @VisibleForTesting
@@ -223,7 +231,7 @@ public class ReplicationInputHydrator {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
-    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
+    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
     return catalog;
   }
 
@@ -252,7 +260,7 @@ public class ReplicationInputHydrator {
         && jobInfo.getJob().getResetConfig().getStreamsToReset() != null;
     if (hasStreamsToReset) {
       final var streamsToReset =
-          jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ProtocolConverters::clientStreamDescriptorToProtocol).toList();
+          jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ApiClientConverters::toInternal).toList();
       CatalogTransforms.updateCatalogForReset(streamsToReset, catalog);
     }
   }

@@ -4,12 +4,9 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
@@ -47,11 +44,6 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
-  }
-
-  @Singleton
   public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
                                                                  @Value("${airbyte.protocol.min-version}") final String minVersion,
                                                                  @Value("${airbyte.protocol.max-version}") final String maxVersion) {
@@ -79,11 +71,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory() {
     return new StateAggregatorFactory();
-  }
-
-  @Singleton
-  public LogClientSingleton logClientSingleton() {
-    return LogClientSingleton.getInstance();
   }
 
 }

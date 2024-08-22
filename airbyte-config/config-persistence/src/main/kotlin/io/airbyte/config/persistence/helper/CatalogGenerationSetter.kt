@@ -1,14 +1,13 @@
 package io.airbyte.config.persistence.helper
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.SyncMode
 import io.airbyte.config.persistence.domain.Generation
-import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.DestinationSyncMode
-import io.airbyte.protocol.models.StreamDescriptor
-import io.airbyte.protocol.models.SyncMode
 import jakarta.inject.Singleton
 
 @Singleton
@@ -33,7 +32,13 @@ class CatalogGenerationSetter {
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
       val shouldTruncate: Boolean =
         refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE ||
-          (configuredAirbyteStream.syncMode == SyncMode.FULL_REFRESH && configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE)
+          (
+            configuredAirbyteStream.syncMode == SyncMode.FULL_REFRESH &&
+              (
+                configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE ||
+                  configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE_DEDUP
+              )
+          )
 
       setGenerationInformation(configuredAirbyteStream, jobId, currentGeneration, if (shouldTruncate) currentGeneration else 0)
     }
@@ -81,13 +86,6 @@ class CatalogGenerationSetter {
   }
 
   private fun getCurrentGenerationByStreamDescriptor(generations: List<Generation>): Map<StreamDescriptor, Long> {
-    return generations
-      .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId }.toMap()
-  }
-
-  private fun getStreamRefreshesAsStreamDescriptors(streamRefreshes: List<StreamRefresh>): Set<StreamDescriptor> {
-    return streamRefreshes.map {
-      StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace)
-    }.toHashSet()
+    return generations.associate { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId }
   }
 }

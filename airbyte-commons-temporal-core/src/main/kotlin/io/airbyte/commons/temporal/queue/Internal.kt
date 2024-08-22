@@ -13,7 +13,7 @@ import io.temporal.workflow.WorkflowMethod
  * We wrap the actual message to be able to pass metadata around.
  */
 @JsonDeserialize(builder = Message.Builder::class)
-class Message<T : Any> constructor(data: T) {
+class Message<T : Any>(data: T) {
   // TODO this should be a data class, however, need to make the JsonTypeInfo annotation work
 
   // This enables passing T around
@@ -50,9 +50,7 @@ class Message<T : Any> constructor(data: T) {
 
     other as Message<*>
 
-    if (data != other.data) return false
-
-    return true
+    return data == other.data
   }
 
   override fun hashCode(): Int {

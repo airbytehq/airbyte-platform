@@ -455,4 +455,19 @@ describe(`${toggleAllFieldsSelected.name}`, () => {
       selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
     });
   });
+
+  it("keeps primary key fields selected if destinationSyncMode is overwrite_dedup", () => {
+    const newStreamConfiguration = toggleAllFieldsSelected({
+      ...mockStreamConfiguration,
+      fieldSelectionEnabled: false,
+      selectedFields: [],
+      destinationSyncMode: "overwrite_dedup",
+      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
+    });
+
+    expect(newStreamConfiguration).toEqual({
+      fieldSelectionEnabled: true,
+      selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
+    });
+  });
 });

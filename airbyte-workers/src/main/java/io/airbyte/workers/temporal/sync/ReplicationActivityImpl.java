@@ -14,20 +14,19 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.State;
-import io.airbyte.config.StreamDescriptor;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -37,10 +36,8 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ReplicationInputHydrator;
 import io.airbyte.workers.Worker;
-import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
@@ -50,6 +47,7 @@ import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -57,7 +55,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,8 +74,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
   private final ReplicationInputHydrator replicationInputHydrator;
   private final Path workspaceRoot;
-  private final WorkerEnvironment workerEnvironment;
-  private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final AirbyteApiClient airbyteApiClient;
   private final WorkloadApiClient workloadApiClient;
@@ -91,12 +86,10 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final PayloadChecker payloadChecker;
   private final OutputStorageClient<State> stateStorageClient;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
-  private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
+  private final LogClientManager logClientManager;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
-                                 final WorkerEnvironment workerEnvironment,
-                                 final LogConfigs logConfigs,
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteApiClient airbyteApiClient,
                                  final JobOutputDocStore jobOutputDocStore,
@@ -109,12 +102,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final PayloadChecker payloadChecker,
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
                                  @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
-                                 final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper) {
+                                 final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
+                                 final LogClientManager logClientManager) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
-    this.workerEnvironment = workerEnvironment;
-    this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
     this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
@@ -127,7 +119,40 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.payloadChecker = payloadChecker;
     this.stateStorageClient = stateStorageClient;
     this.catalogStorageClient = catalogStorageClient;
-    this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
+    this.logClientManager = logClientManager;
+  }
+
+  @VisibleForTesting
+  ReplicationActivityImpl(final ReplicationInputHydrator replicationInputHydrator,
+                          @Named("workspaceRoot") final Path workspaceRoot,
+                          @Value("${airbyte.version}") final String airbyteVersion,
+                          final AirbyteApiClient airbyteApiClient,
+                          final JobOutputDocStore jobOutputDocStore,
+                          final WorkloadApiClient workloadApiClient,
+                          final WorkloadClient workloadClient,
+                          final WorkloadIdGenerator workloadIdGenerator,
+                          final OrchestratorHandleFactory orchestratorHandleFactory,
+                          final MetricClient metricClient,
+                          final FeatureFlagClient featureFlagClient,
+                          final PayloadChecker payloadChecker,
+                          @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
+                          @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
+                          final LogClientManager logClientManager) {
+    this.replicationInputHydrator = replicationInputHydrator;
+    this.workspaceRoot = workspaceRoot;
+    this.airbyteVersion = airbyteVersion;
+    this.airbyteApiClient = airbyteApiClient;
+    this.jobOutputDocStore = jobOutputDocStore;
+    this.workloadApiClient = workloadApiClient;
+    this.workloadClient = workloadClient;
+    this.workloadIdGenerator = workloadIdGenerator;
+    this.orchestratorHandleFactory = orchestratorHandleFactory;
+    this.metricClient = metricClient;
+    this.featureFlagClient = featureFlagClient;
+    this.payloadChecker = payloadChecker;
+    this.stateStorageClient = stateStorageClient;
+    this.catalogStorageClient = catalogStorageClient;
+    this.logClientManager = logClientManager;
   }
 
   /**
@@ -174,35 +199,24 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
-          final ReplicationInput hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
-          LOGGER.info("connection {}, hydrated input: {}", replicationActivityInput.getConnectionId(), hydratedReplicationInput);
-          final Worker<ReplicationInput, ReplicationOutput> worker;
+          final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput, context);
+          final ReplicationInput hydratedReplicationInput = workerAndReplicationInput.replicationInput;
+          final Worker<ReplicationInput, ReplicationOutput> worker = workerAndReplicationInput.worker;
 
-          // TODO: remove this once migration to workloads complete
-          if (useWorkloadApi(replicationActivityInput)) {
-            worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-                workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient);
-          } else {
-            final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
-                orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
-                    hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
-                    () -> context);
-            worker = workerFactory.get();
-          }
+          LOGGER.info("connection {}, hydrated input: {}", replicationActivityInput.getConnectionId(), hydratedReplicationInput);
           cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution<ReplicationInput, ReplicationOutput> temporalAttempt =
               new TemporalAttemptExecution<>(
                   workspaceRoot,
-                  workerEnvironment,
-                  logConfigs,
                   hydratedReplicationInput.getJobRunConfig(),
                   worker,
                   hydratedReplicationInput,
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context,
-                  Optional.ofNullable(replicationActivityInput.getTaskQueue()));
+                  Optional.ofNullable(replicationActivityInput.getTaskQueue()),
+                  logClientManager);
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
@@ -215,14 +229,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-          List<StreamDescriptor> streamsToBackfill = List.of();
-          if (replicationActivityInput.getSchemaRefreshOutput() != null) {
-            streamsToBackfill = BackfillHelper
-                .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
-          }
-          BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
-          resumableFullRefreshStatsHelper.markResumedStreams(hydratedReplicationInput, standardSyncOutput);
-          LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
             final var uri = catalogStorageClient.persist(
@@ -240,6 +246,31 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           return standardSyncOutput;
         },
         context);
+  }
+
+  record WorkerAndReplicationInput(Worker<ReplicationInput, ReplicationOutput> worker, ReplicationInput replicationInput) {}
+
+  @VisibleForTesting
+  WorkerAndReplicationInput getWorkerAndReplicationInput(final ReplicationActivityInput replicationActivityInput,
+                                                         final ActivityExecutionContext context)
+      throws Exception {
+    final ReplicationInput hydratedReplicationInput;
+    final Worker<ReplicationInput, ReplicationOutput> worker;
+
+    if (useWorkloadApi(replicationActivityInput)) {
+      hydratedReplicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
+      worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
+          workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
+    } else {
+      hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
+      final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
+          orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
+              hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
+              () -> context);
+      worker = workerFactory.get();
+    }
+
+    return new WorkerAndReplicationInput(worker, hydratedReplicationInput);
   }
 
   private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final MetricAttribute[] metricAttributes) {
@@ -265,7 +296,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     return standardSyncOutput;
   }
 
-  private boolean useWorkloadApi(final ReplicationActivityInput input) {
+  @VisibleForTesting
+  boolean useWorkloadApi(final ReplicationActivityInput input) {
     // TODO: remove this once active workloads finish
     if (input.getUseWorkloadApi() == null) {
       return false;

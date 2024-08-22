@@ -1,7 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 
-import { StreamStatusIndicator } from "./StreamStatusIndicator";
-import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
+import { StreamStatusIndicator, StreamStatusType } from "./StreamStatusIndicator";
 
 export default {
   title: "connection/StreamStatusIndicator",
@@ -12,6 +11,6 @@ type Story = StoryObj<typeof StreamStatusIndicator>;
 
 export const Primary: Story = {
   args: {
-    status: ConnectionStatusIndicatorStatus.OnTime,
+    status: StreamStatusType.Synced,
   },
 };

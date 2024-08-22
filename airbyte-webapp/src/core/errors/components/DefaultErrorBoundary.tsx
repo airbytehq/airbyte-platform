@@ -5,7 +5,6 @@ import { LocationSensorState } from "react-use/lib/useLocation";
 
 import { HttpError } from "core/api";
 import { trackError } from "core/utils/datadog";
-import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
 import { ErrorDetails } from "./ErrorDetails";
 import { WaitForRetry } from "./WaitForRetry";
@@ -18,7 +17,6 @@ interface ErrorBoundaryState {
 interface ErrorBoundaryHookProps {
   location: LocationSensorState;
   navigate: NavigateFunction;
-  trackError: TrackErrorFn;
 }
 
 const SESSION_STORAGE_KEY = "airbyte-last-error-retry";
@@ -80,7 +78,7 @@ class ErrorBoundaryComponent extends React.Component<
       // Only track non HttpErrors here, since we already track HttpErrors in the apiCall
       // method, so that we catch them also in case they aren't handled by an error boundary,
       // but e.g. just will result in a toast notification
-      this.props.trackError(error);
+      trackError(error);
     }
   }
 
@@ -109,7 +107,7 @@ export const DefaultErrorBoundary: React.FC<React.PropsWithChildren> = ({ childr
   const navigate = useNavigate();
 
   return (
-    <ErrorBoundaryComponent location={location} navigate={navigate} trackError={trackError}>
+    <ErrorBoundaryComponent location={location} navigate={navigate}>
       {children}
     </ErrorBoundaryComponent>
   );

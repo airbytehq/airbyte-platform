@@ -1,27 +1,16 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.optionsContainer {
-  position: relative;
-}
-
 .optionsMenu {
   background-color: colors.$foreground;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-raised;
   padding: 0;
   margin-top: variables.$spacing-sm;
-  margin-bottom: 0;
-  position: absolute;
-  right: 0;
-  left: 0;
+  min-width: variables.$min-width-listbox-options-list;
+  max-height: variables.$height-long-listbox-options-list;
+  overflow: auto;
   width: 100%;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.option {
-  list-style-type: none;
 }
 
 .optionValue {
@@ -29,7 +18,7 @@
   cursor: pointer;
 }
 
-.active {
+.focus {
   background-color: colors.$grey-50;
   height: 100%;
   width: 100%;

@@ -1,9 +1,9 @@
 package io.airbyte.config.persistence
 
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
-import io.airbyte.protocol.models.StreamDescriptor
 import io.micronaut.context.env.Environment
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach

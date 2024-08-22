@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,25 +45,34 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -74,14 +83,6 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -115,14 +116,11 @@ class JobHistoryHandlerTest {
       .withCheckConnection(new JobCheckConnectionConfig())
       .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(
           new ConfiguredAirbyteCatalog().withStreams(List.of(
-              new ConfiguredAirbyteStream()
-                  .withSyncMode(SyncMode.FULL_REFRESH)
-                  .withStream(new AirbyteStream()
-                      .withNamespace("ns1")
-                      .withName("stream1")),
-              new ConfiguredAirbyteStream()
-                  .withSyncMode(SyncMode.INCREMENTAL)
-                  .withStream(new AirbyteStream().withName("stream2"))))));
+              new ConfiguredAirbyteStream(new AirbyteStream("stream1", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("ns1"),
+                  SyncMode.FULL_REFRESH,
+                  DestinationSyncMode.APPEND),
+              new ConfiguredAirbyteStream(new AirbyteStream("stream2", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                  DestinationSyncMode.APPEND)))));
   private static final Path LOG_PATH = Path.of("log_path");
   private static final LogRead EMPTY_LOG_READ = new LogRead().logLines(new ArrayList<>());
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;
@@ -273,8 +271,6 @@ class JobHistoryHandlerTest {
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
     jobHistoryHandler = new JobHistoryHandler(
         jobPersistence,
-        WorkerEnvironment.DOCKER,
-        LogConfigs.EMPTY,
         connectionService,
         sourceHandler,
         sourceDefinitionsHandler,
@@ -282,7 +278,8 @@ class JobHistoryHandlerTest {
         destinationDefinitionsHandler,
         airbyteVersion,
         temporalClient,
-        featureFlagClient);
+        featureFlagClient,
+        mock(LogClientManager.class));
   }
 
   @Nested

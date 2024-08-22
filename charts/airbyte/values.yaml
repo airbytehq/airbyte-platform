@@ -17,6 +17,7 @@ global:
     secretName: "airbyte-config-secrets"
     # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
     licenseKeySecretKey: "license-key"
+    workloadsOptIn: false
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
@@ -85,8 +86,28 @@ global:
     #passwordSecretKey: "" # e.g."database-password"
 
   storage:
+    # -- The storage backend type. Supports s3, gcs, minio (default)
     type: minio # default storage used
-    # TODO: Add full configuration here
+    # -- Secret name where storage provider credentials are stored
+    #storageSecretName: "airbyte-config-secrets"
+
+    # S3
+    #bucket: ## S3 bucket names that you've created. We recommend storing the following all in one bucket.
+    #  log: airbyte-bucket
+    #  state: airbyte-bucket
+    #  workloadOutput: airbyte-bucket
+    #s3:
+    #  region: "" ## e.g. us-east-1
+    #  authenticationType: credentials ## Use "credentials" or "instanceProfile"
+
+    # GCS
+    #bucket: ## GCS bucket names that you've created. We recommend storing the following all in one bucket.
+    #  log: airbyte-bucket
+    #  state: airbyte-bucket
+    #  workloadOutput: airbyte-bucket
+    #gcs:
+    #  projectId: <project-id>
+    #  credentialsJson: /secrets/gcs-log-creds/gcp.json
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"
@@ -830,7 +851,7 @@ worker:
 ## @section Workload Launcher Parameters
 
 workload-launcher:
-  enabled: false
+  enabled: true
   # -- Number of workload launcher replicas
   replicaCount: 1
 
@@ -960,6 +981,14 @@ workload-launcher:
     # -- Enable or disable Orchestrator
     enabled: true
     # -- Orchestrator image
+    image: ""
+
+  connectorSidecar:
+    # -- Connector Sidecar image
+    image: ""
+
+  # -- Workload init image
+  workloadInit:
     image: ""
 
   ## current no exist documentations
@@ -1722,6 +1751,10 @@ keycloak:
     # gid=0(root)
     fsGroup: 0
 
+  initContainers:
+    initDb:
+      image: {}
+
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1780,6 +1813,10 @@ keycloak-setup:
     seccompProfile:
       type: RuntimeDefault
 
+  initContainers:
+    keycloakReadinessCheck:
+      image: {}
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1804,7 +1841,7 @@ keycloak-setup:
   affinity: {}
 
 workload-api-server:
-  enabled: false
+  enabled: true
 
   bearerToken: token
 
@@ -1824,6 +1861,125 @@ workload-api-server:
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  livenessProbe:
+    # -- Enable livenessProbe on the server
+    enabled: true
+    # -- Initial delay seconds for livenessProbe
+    initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
+    periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
+    timeoutSeconds: 10
+    # -- Failure threshold for livenessProbe
+    failureThreshold: 3
+    # -- Success threshold for livenessProbe
+    successThreshold: 1
+
+  readinessProbe:
+    # -- Enable readinessProbe on the server
+    enabled: true
+    # -- Initial delay seconds for readinessProbe
+    initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
+    periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
+    timeoutSeconds: 10
+    # -- Failure threshold for readinessProbe
+    failureThreshold: 3
+    # -- Success threshold for readinessProbe
+    successThreshold: 1
+
+  ## airbyte-workload-api-server resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 200m
+    ##    memory: 1Gi
+    # -- The resources limits for the airbyte-workload-api-server container
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    memory: 256Mi
+    ##    cpu: 250m
+    # -- The requested resources for the airbyte-workload-api-server container
+    requests: {}
+
+  log:
+    # -- The log level at which to log
+    level: "INFO"
+
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
+
+  # -- Tolerations for webapp pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: []
+
+  # -- Affinity and anti-affinity for webapp pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+
+  env_vars: {}
+  service:
+    port: 8007
+
+  # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
+  ingress:
+    # -- Set to true to enable ingress record generation
+    enabled: false
+    # -- Specifies ingressClassName for clusters >= 1.18+
+    className: ""
+    # -- Ingress annotations done as key:value pairs
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # -- The list of hostnames to be covered with this ingress record
+    hosts: []
+    # - host: chart-example.local
+    #   paths:
+    #   - path: /
+    #     pathType: ImplementationSpecific
+    # -- Custom ingress TLS configuration
+    tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #   - chart-example.local
+
+featureflag-server:
+  enabled: false
+
+
+  # -- workload-api-server replicas
+  replicaCount: 1
+
+  image:
+    # -- The repository to use for the airbyte-workload-api-server image.
+    repository: airbyte/featureflag-server
+    # -- The pull policy to use for the airbyte-workload-api-server image
+    pullPolicy: IfNotPresent
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000

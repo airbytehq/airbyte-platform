@@ -1,39 +1,51 @@
 import { Suspense } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
-import { JobLogsModal } from "area/connection/components/JobLogsModal/JobLogsModal";
+import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { trackError } from "core/utils/datadog";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ModalOptions, ModalResult, useModalService } from "hooks/services/Modal";
-import { Notification, useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobEventMenu.module.scss";
+import { JobLogsModalContent } from "./JobLogsModalContent";
 
 enum JobMenuOptions {
   OpenLogsModal = "OpenLogsModal",
-  CopyLinkToJob = "CopyLinkToJob",
+  CopyLinkToEvent = "CopyLinkToEvent",
   DownloadLogs = "DownloadLogs",
 }
+
 export const openJobLogsModalFromTimeline = ({
   openModal,
   jobId,
-  formatMessage,
+  eventId,
   connectionName,
-  initialAttemptId,
+  attemptNumber,
+  connectionId,
 }: {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
-  jobId: number;
-  formatMessage: (arg0: { id: string }, arg1?: { connectionName: string } | undefined) => string;
+  jobId?: number;
+  eventId?: string;
   connectionName: string;
-  initialAttemptId?: number;
+  attemptNumber?: number;
+  connectionId: string;
 }) => {
+  if (!jobId && !eventId) {
+    return;
+  }
+
   openModal({
     size: "full",
-    title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName }),
+    title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName }} />,
     content: () => (
       <Suspense
         fallback={
@@ -42,53 +54,117 @@ export const openJobLogsModalFromTimeline = ({
           </div>
         }
       >
-        <JobLogsModal jobId={jobId} initialAttemptId={initialAttemptId} />
+        <JobLogsModalContent
+          jobId={jobId}
+          attemptNumber={attemptNumber}
+          eventId={eventId}
+          connectionId={connectionId}
+        />
       </Suspense>
     ),
   });
 };
 
-const handleClick = (
-  optionClicked: DropdownMenuOptionType,
-  connectionName: string,
-  formatMessage: (arg0: { id: string }, arg1?: { connectionName: string } | undefined) => string,
-  eventId: string,
-  jobId: number,
-  openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>,
-  registerNotification: (notification: Notification) => void
-) => {
-  switch (optionClicked.value) {
-    case JobMenuOptions.OpenLogsModal:
-      openJobLogsModalFromTimeline({ openModal, jobId, formatMessage, connectionName });
-      break;
-
-    case JobMenuOptions.CopyLinkToJob:
-      const url = new URL(window.location.href);
-      url.searchParams.set("eventId", eventId);
-      url.searchParams.set("openLogs", "true");
-
-      copyToClipboard(url.href);
-      registerNotification({
-        type: "success",
-        text: formatMessage({ id: "jobHistory.copyLinkToJob.success" }),
-        id: "jobHistory.copyLinkToJob.success",
-      });
-      break;
-  }
-};
-
-export const JobEventMenu: React.FC<{ eventId: string; jobId?: number }> = ({ eventId, jobId }) => {
+export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCount?: number }> = ({
+  eventId,
+  jobId,
+  attemptCount,
+}) => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionFormService();
+  const { connection } = useConnectionEditService();
   const { openModal } = useModalService();
-  const { registerNotification } = useNotificationService();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
 
-  if (!jobId) {
-    return null;
-  }
+  const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobId);
+  const { name: workspaceName, workspaceId } = useCurrentWorkspace();
 
   const onChangeHandler = (optionClicked: DropdownMenuOptionType) => {
-    handleClick(optionClicked, connection.name ?? "", formatMessage, eventId, jobId, openModal, registerNotification);
+    switch (optionClicked.value) {
+      case JobMenuOptions.OpenLogsModal:
+        openJobLogsModalFromTimeline({
+          openModal,
+          jobId,
+          eventId,
+          connectionName: connection.name,
+          connectionId: connection.connectionId,
+        });
+        break;
+
+      case JobMenuOptions.CopyLinkToEvent: {
+        const url = new URL(window.location.href);
+        if (eventId) {
+          url.searchParams.set("eventId", eventId);
+        } else {
+          url.searchParams.set("jobId", jobId.toString());
+        }
+        url.searchParams.set("openLogs", "true");
+
+        copyToClipboard(url.href);
+        registerNotification({
+          type: "success",
+          text: formatMessage({ id: "jobHistory.copyLinkToEvent.success" }),
+          id: "jobHistory.copyLinkToEvent.success",
+        });
+        break;
+      }
+
+      case JobMenuOptions.DownloadLogs:
+        const notificationId = `download-logs-${jobId}`;
+        registerNotification({
+          type: "info",
+          text: (
+            <FlexContainer alignItems="center">
+              <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId }} />
+              <div className={styles.spinnerContainer}>
+                <LoadingSpinner />
+              </div>
+            </FlexContainer>
+          ),
+          id: notificationId,
+          timeout: false,
+        });
+        // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
+        Promise.all([
+          fetchJobLogs()
+            .then(({ data }) => {
+              if (!data) {
+                throw new Error("No logs returned from server");
+              }
+              const file = new Blob(
+                [
+                  data.attempts
+                    .flatMap((info, index) => [
+                      `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
+                      ...info.logs.logLines,
+                      `\n\n\n`,
+                    ])
+                    .join("\n"),
+                ],
+                {
+                  type: FILE_TYPE_DOWNLOAD,
+                }
+              );
+              downloadFile(file, fileizeString(`${workspaceName}-logs-${jobId}.txt`));
+            })
+            .catch((e) => {
+              trackError(e, { workspaceId, jobId });
+              registerNotification({
+                type: "error",
+                text: formatMessage(
+                  {
+                    id: "jobHistory.logs.logDownloadFailed",
+                  },
+                  { connectionName: connection.name }
+                ),
+                id: `download-logs-error-${jobId}`,
+              });
+            }),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]).finally(() => {
+          unregisterNotificationById(notificationId);
+        });
+        break;
+    }
   };
 
   return (
@@ -96,12 +172,20 @@ export const JobEventMenu: React.FC<{ eventId: string; jobId?: number }> = ({ ev
       placement="bottom-end"
       options={[
         {
-          displayName: formatMessage({ id: "jobHistory.copyLinkToJob" }),
-          value: JobMenuOptions.CopyLinkToJob,
+          displayName: formatMessage({
+            id: "jobHistory.copyLinkToEvent",
+          }),
+          value: JobMenuOptions.CopyLinkToEvent,
         },
         {
           displayName: formatMessage({ id: "jobHistory.viewLogs" }),
           value: JobMenuOptions.OpenLogsModal,
+          disabled: attemptCount === 0,
+        },
+        {
+          displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
+          value: JobMenuOptions.DownloadLogs,
+          disabled: attemptCount === 0,
         },
       ]}
       onChange={onChangeHandler}

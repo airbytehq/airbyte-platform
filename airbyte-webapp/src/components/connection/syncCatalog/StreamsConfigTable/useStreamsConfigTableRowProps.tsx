@@ -2,6 +2,7 @@
 import classNames from "classnames";
 import { useMemo } from "react";
 
+import { useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
 import { PillButtonVariant } from "components/ui/PillListBox/PillButton";
 
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
@@ -14,7 +15,8 @@ import { compareObjectsByFields } from "../utils";
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
 export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfiguration) => {
-  const { initialValues, mode } = useConnectionFormService();
+  const { connection, mode } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
 
   const isStreamEnabled = stream.config?.selected;
 

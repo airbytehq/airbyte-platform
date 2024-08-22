@@ -38,6 +38,7 @@
   &:disabled:not(.isLoading),
   &.disabled:not(.isLoading) {
     opacity: 0.5;
+    transition: opacity 0.2 ease-in;
   }
 
   .childrenContainer {
@@ -256,8 +257,32 @@
 
     .buttonIcon {
       &.isRegularIcon {
-        color: colors.$transparentColor;
+        visibility: hidden;
       }
+    }
+  }
+
+  &.typeHighlight {
+    background-color: colors.$yellow-50;
+    border: 1px solid colors.$yellow-300;
+    color: colors.$inverse;
+
+    & .buttonIcon {
+      &.isRegularIcon {
+        color: colors.$yellow-500;
+      }
+    }
+
+    &.isLoading {
+      color: colors.$yellow-500;
+    }
+
+    &:hover {
+      background-color: colors.$yellow-100;
+    }
+
+    &:active {
+      background-color: colors.$yellow-200;
     }
   }
 

@@ -14,6 +14,7 @@ import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import { useAttemptCombinedStatsForJob, useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
+import { trackError } from "core/utils/datadog";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -23,18 +24,25 @@ import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
 interface JobLogsModalProps {
   jobId: number;
   initialAttemptId?: number;
+  eventId?: string;
+  openedFromTimeline?: boolean;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId }) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, openedFromTimeline }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
+  if (job.attempts.length === 0) {
+    trackError(new Error(`No attempts for job`), { jobId, eventId });
+  }
+
   const [selectedAttemptId, setSelectedAttemptId] = useState(
     initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
   );
+
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
   const aggregatedAttemptStats = useAttemptCombinedStatsForJob(jobId, selectedAttemptId, {
     refetchInterval() {
@@ -149,6 +157,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === firstMatchIndex ? lastMatchIndex : highlightedMatchIndex - 1);
     }
+    searchInputRef.current?.focus();
   };
 
   const scrollToNextMatch = () => {
@@ -160,19 +169,26 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === lastMatchIndex ? firstMatchIndex : highlightedMatchIndex + 1);
     }
+    searchInputRef.current?.focus();
   };
 
   // Focus the search input with cmd + f / ctrl + f
+  // Clear search input on `esc`, if search input is focused
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "f" && (navigator.platform.toLowerCase().includes("mac") ? e.metaKey : e.ctrlKey)) {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        if (inputValue.length > 0) {
+          e.preventDefault();
+          setInputValue("");
+        }
       }
     };
     document.body.addEventListener("keydown", handleKeyDown);
     return () => document.body.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [inputValue]);
 
   return (
     <FlexContainer direction="column" style={{ height: "100%" }}>
@@ -195,7 +211,12 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
             showFailureMessage={false}
           />
           <FlexContainer className={styles.downloadLogs}>
-            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} />
+            <LinkToAttemptButton
+              jobId={jobId}
+              attemptId={selectedAttemptId}
+              eventId={eventId}
+              openedFromTimeline={openedFromTimeline}
+            />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
         </FlexContainer>

@@ -1,0 +1,1 @@
+export { SyncCatalogTable } from "./SyncCatalogTable";

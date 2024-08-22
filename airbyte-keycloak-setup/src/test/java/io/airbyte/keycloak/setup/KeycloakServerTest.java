@@ -30,7 +30,7 @@ class KeycloakServerTest {
 
   private static final String REALM_NAME = "airbyte";
   private static final String WEBAPP_URL = "http://localhost:8000";
-  private static final String AUTH_PATH = "/auth";
+  private static final String AUTH_PATH = "/io/airbyte/api/client/auth";
   private static final String FRONTEND_URL_ATTRIBUTE = "frontendUrl";
 
   @Mock
@@ -60,7 +60,7 @@ class KeycloakServerTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
 
-    when(keycloakConfiguration.getBasePath()).thenReturn("/auth");
+    when(keycloakConfiguration.getBasePath()).thenReturn("/io/airbyte/api/client/auth");
     when(keycloakConfiguration.getProtocol()).thenReturn("http");
     when(keycloakConfiguration.getHost()).thenReturn("localhost");
     when(keycloakConfiguration.getAirbyteRealm()).thenReturn(REALM_NAME);

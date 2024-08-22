@@ -39,10 +39,6 @@ public final class Metadata {
   public static final String SYNC_STEP_KEY = "sync_step";
   public static final String READ_STEP = "read";
   public static final String WRITE_STEP = "write";
-  public static final String NORMALIZE_STEP = "normalize";
-  public static final String CUSTOM_STEP = "custom";
-  public static final String ORCHESTRATOR_NORMALIZATION_STEP = "orchestrator-normalization";
-  public static final String ORCHESTRATOR_DBT_NORMALIZATION_STEP = "orchestrator-dbt-normalization";
   public static final String ORCHESTRATOR_REPLICATION_STEP = "orchestrator-replication";
   public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
   public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";

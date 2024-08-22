@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.spec;
 
-import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
@@ -14,9 +13,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.HeartbeatUtils;
@@ -25,11 +24,9 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.JobGetSpecConfig;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseWorkloadApi;
@@ -90,49 +87,43 @@ public class SpecActivityImpl implements SpecActivity {
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final Path workspaceRoot;
-  private final WorkerEnvironment workerEnvironment;
-  private final LogConfigs logConfigs;
   private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final FeatureFlagClient featureFlagClient;
   private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final MetricClient metricClient;
+  private final LogClientManager logClientManager;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                           final ProcessFactory processFactory,
                           @Named("workspaceRoot") final Path workspaceRoot,
-                          final WorkerEnvironment workerEnvironment,
-                          final LogConfigs logConfigs,
                           final AirbyteApiClient airbyteApiClient,
                           @Value("${airbyte.version}") final String airbyteVersion,
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                          final FeatureFlags featureFlags,
                           final GsonPksExtractor gsonPksExtractor,
                           final FeatureFlagClient featureFlagClient,
                           final WorkloadClient workloadClient,
                           final WorkloadIdGenerator workloadIdGenerator,
-                          final MetricClient metricClient) {
+                          final MetricClient metricClient,
+                          final LogClientManager logClientManager) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
-    this.workerEnvironment = workerEnvironment;
-    this.logConfigs = logConfigs;
     this.airbyteApiClient = airbyteApiClient;
     this.airbyteVersion = airbyteVersion;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
     this.featureFlagClient = featureFlagClient;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.metricClient = metricClient;
+    this.logClientManager = logClientManager;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -156,14 +147,13 @@ public class SpecActivityImpl implements SpecActivity {
           cancellationCallback.set(worker::cancel);
           final TemporalAttemptExecution<JobGetSpecConfig, ConnectorJobOutput> temporalAttemptExecution = new TemporalAttemptExecution<>(
               workspaceRoot,
-              workerEnvironment,
-              logConfigs,
               jobRunConfig,
               worker,
               inputSupplier.get(),
               airbyteApiClient,
               airbyteVersion,
-              () -> context);
+              () -> context,
+              logClientManager);
 
           return temporalAttemptExecution.get();
         },
@@ -182,7 +172,7 @@ public class SpecActivityImpl implements SpecActivity {
         workloadId,
         List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId)),
         serializedInput,
-        fullLogPath(Path.of(workloadId)),
+        logClientManager.fullLogPath(Path.of(workloadId)),
         Geography.AUTO.getValue(),
         WorkloadType.SPEC,
         WorkloadPriority.HIGH,
@@ -238,7 +228,6 @@ public class SpecActivityImpl implements SpecActivity {
           null,
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags,
           Collections.emptyMap(),
           Collections.emptyMap());
 

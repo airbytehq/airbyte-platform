@@ -13,3 +13,10 @@ keycloak-setup:
 server:
   env_vars:
     API_AUTHORIZATION_ENABLED: "true"
+
+# Default in OSS deployments and opt-in for Pro.
+workload-launcher:
+  enabled: false
+
+workload-api-server:
+  enabled: false

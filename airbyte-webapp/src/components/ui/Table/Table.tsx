@@ -8,7 +8,7 @@ import {
   getCoreRowModel,
 } from "@tanstack/react-table";
 import classNames from "classnames";
-import React, { PropsWithChildren } from "react";
+import React, { PropsWithChildren, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { TableVirtuoso, TableComponents, ItemProps } from "react-virtuoso";
 
@@ -115,38 +115,43 @@ export const Table = <T,>({
   ));
   TableHead.displayName = "TableHead";
 
-  const TableRow: React.FC<{ row: Row<T>; restRowProps?: ItemProps<T> }> = ({ row, restRowProps }) => {
-    return (
-      <>
-        <tr
-          className={classNames(styles.tr, getRowClassName?.(row.original))}
-          data-testid={`table-row-${row.id}`}
-          {...(virtualized && { ...restRowProps })}
-        >
-          {row.getVisibleCells().map((cell) => {
-            const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
-            return (
-              <td
-                className={classNames(styles.td, meta?.tdClassName, {
-                  [styles["td--responsive"]]: meta?.responsive,
-                  [styles["td--noPadding"]]: meta?.noPadding,
-                })}
-                key={`table-cell-${row.id}-${cell.id}`}
-                data-testid={`table-cell-${row.id}-${cell.id}`}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </td>
-            );
-          })}
-        </tr>
-        {row.getIsExpanded() && expandedRow ? (
-          <tr>
-            <td colSpan={row.getVisibleCells().length}>{expandedRow({ row })}</td>
-          </tr>
-        ) : null}
-      </>
-    );
-  };
+  const TableRow: React.FC<{ row: Row<T>; restRowProps?: ItemProps<T> }> = useMemo(
+    () =>
+      // eslint-disable-next-line react/function-component-definition -- using function as it provides the component's DisplayName
+      function TableRow({ row, restRowProps }) {
+        return (
+          <>
+            <tr
+              className={classNames(styles.tr, getRowClassName?.(row.original))}
+              data-testid={`table-row-${row.id}`}
+              {...(virtualized && { ...restRowProps })}
+            >
+              {row.getVisibleCells().map((cell) => {
+                const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                return (
+                  <td
+                    className={classNames(styles.td, meta?.tdClassName, {
+                      [styles["td--responsive"]]: meta?.responsive,
+                      [styles["td--noPadding"]]: meta?.noPadding,
+                    })}
+                    key={`table-cell-${row.id}-${cell.id}`}
+                    data-testid={`table-cell-${row.id}-${cell.id}`}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                );
+              })}
+            </tr>
+            {row.getIsExpanded() && expandedRow ? (
+              <tr>
+                <td colSpan={row.getVisibleCells().length}>{expandedRow({ row })}</td>
+              </tr>
+            ) : null}
+          </>
+        );
+      },
+    [expandedRow, getRowClassName, virtualized]
+  );
 
   // virtuoso uses "data-index" to identify the row, hence we need additional wrapper specifically for virtuoso
   const TableRowVirtualized: React.FC<ItemProps<T>> = (props) => {

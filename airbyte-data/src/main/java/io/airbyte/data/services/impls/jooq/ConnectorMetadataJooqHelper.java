@@ -86,6 +86,7 @@ public class ConnectorMetadataJooqHelper {
               : actorDefinitionVersion.getLastPublished().toInstant().atOffset(ZoneOffset.UTC))
           .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
           .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
+          .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
           .execute();
     } else {
@@ -125,6 +126,7 @@ public class ConnectorMetadataJooqHelper {
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())
           .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
+          .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .execute();
     }
 

@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
@@ -23,7 +25,9 @@ import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelp
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
@@ -31,9 +35,10 @@ import io.airbyte.config.RefreshStream;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
@@ -47,10 +52,6 @@ import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -118,7 +119,7 @@ public class AttemptHandler {
     }
 
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
-    final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logFilePath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
 
     final UUID connectionId = UUID.fromString(job.getScope());
@@ -214,7 +215,7 @@ public class AttemptHandler {
         .filter(s -> {
           if (s.getSyncMode().equals(SyncMode.FULL_REFRESH)) {
             if (excludeResumableStreams) {
-              return s.getStream().getIsResumable() == null || !s.getStream().getIsResumable();
+              return s.getStream().isResumable() == null || !s.getStream().isResumable();
             } else {
               return true;
             }

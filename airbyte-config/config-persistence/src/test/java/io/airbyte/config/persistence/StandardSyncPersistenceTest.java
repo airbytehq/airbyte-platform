@@ -20,7 +20,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReleaseStage;
@@ -34,7 +38,9 @@ import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -60,11 +66,7 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.Notification
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -196,10 +198,10 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testGetAllStreamsForConnection() throws Exception {
     createBaseObjects();
-    final AirbyteStream airbyteStream = new AirbyteStream().withName("stream1").withNamespace("namespace1");
-    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream().withStream(airbyteStream);
-    final AirbyteStream airbyteStream2 = new AirbyteStream().withName("stream2");
-    final ConfiguredAirbyteStream configuredStream2 = new ConfiguredAirbyteStream().withStream(airbyteStream2);
+    final AirbyteStream airbyteStream = new AirbyteStream("stream1", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("namespace1");
+    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream(airbyteStream, SyncMode.INCREMENTAL, DestinationSyncMode.APPEND);
+    final AirbyteStream airbyteStream2 = new AirbyteStream("stream2", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL));
+    final ConfiguredAirbyteStream configuredStream2 = new ConfiguredAirbyteStream(airbyteStream2, SyncMode.INCREMENTAL, DestinationSyncMode.APPEND);
     final ConfiguredAirbyteCatalog configuredCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(configuredStream, configuredStream2));
     final StandardSync sync = createStandardSync(source1, destination1).withCatalog(configuredCatalog);
 

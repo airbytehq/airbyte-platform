@@ -1,0 +1,10 @@
+intents:
+  UploadCustomConnector:
+    name: Create Custom Docker Connector
+    description: Upload a custom docker connector to be used in the workspace
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
@@ -23,7 +21,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
@@ -47,7 +44,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -107,7 +103,6 @@ public class SourceDefinitionsHandler {
   @VisibleForTesting
   SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
                                                  final ActorDefinitionVersion sourceVersion) {
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
 
     try {
       return new SourceDefinitionRead()
@@ -117,7 +112,7 @@ public class SourceDefinitionsHandler {
           .dockerRepository(sourceVersion.getDockerRepository())
           .dockerImageTag(sourceVersion.getDockerImageTag())
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
-          .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : loadIcon(standardSourceDefinition.getIcon()))
+          .icon(standardSourceDefinition.getIconUrl())
           .protocolVersion(sourceVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
@@ -127,7 +122,8 @@ public class SourceDefinitionsHandler {
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
-          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
+          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
+          .language(sourceVersion.getLanguage());
 
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest source definitions list", e);
@@ -197,7 +193,7 @@ public class SourceDefinitionsHandler {
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = new HashMap<>();
-    for (var definition : shownSourceDefs) {
+    for (final var definition : shownSourceDefs) {
       sourceDefVersionMap.put(definition.getSourceDefinitionId(),
           actorDefinitionVersionHelper.getSourceVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
     }
@@ -343,14 +339,6 @@ public class SourceDefinitionsHandler {
 
     persistedSourceDefinition.withTombstone(true);
     configRepository.updateStandardSourceDefinition(persistedSourceDefinition);
-  }
-
-  public static String loadIcon(final String name) {
-    try {
-      return name == null ? null : MoreResources.readResource("icons/" + name);
-    } catch (final Exception e) {
-      return null;
-    }
   }
 
   public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)

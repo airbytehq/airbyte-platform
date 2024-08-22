@@ -224,49 +224,6 @@ internal class SecretsRepositoryWriterTest {
     }
 
     @Test
-    fun testUpdateSecretFeatureFlagFalseShouldNotDelete() {
-      val secret = "secret-1"
-      val oldCoordinate = "existing_coordinate_v1"
-      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), secret)
-
-      every { featureFlagClient.boolVariation(any(), any()) } returns false
-
-      val updatedFullConfigNoSecretChange =
-        Jsons.deserialize(
-          """
-          { "username": "airbyte1", "password": "$secret"}
-          """.trimIndent(),
-        )
-
-      val oldPartialConfig = injectCoordinate(oldCoordinate)
-      val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
-          WORKSPACE_ID,
-          oldPartialConfig,
-          updatedFullConfigNoSecretChange,
-          SPEC.connectionSpecification,
-          null,
-        )
-
-      val newCoordinate = "existing_coordinate_v2"
-      val expPartialConfig =
-        Jsons.deserialize(
-          """
-          {"username":"airbyte1","password":{"_secret":"$newCoordinate"}}
-          """.trimIndent(),
-        )
-      assertEquals(expPartialConfig, updatedPartialConfig)
-
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), secret) }
-      assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
-      verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
-
-      verify(exactly = 0) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
-      assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
-      verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
-    }
-
-    @Test
     fun testUpdateSecretDeleteErrorShouldNotPropagate() {
       secretPersistence = mockk()
       secretsRepositoryWriter =

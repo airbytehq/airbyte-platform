@@ -55,6 +55,8 @@ export const links = {
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
   autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
+  schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
+  apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
 } as const;
 
 export type OutboundLinks = typeof links;

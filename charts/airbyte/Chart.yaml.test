@@ -85,3 +85,7 @@ dependencies:
     name: keycloak-setup
     repository: "file://../airbyte-keycloak-setup"
     version: "*"
+  - condition: featureflag-server.enabled
+    name: featureflag-server
+    repository: "file://../airbyte-featureflag-server"
+    version: "*"

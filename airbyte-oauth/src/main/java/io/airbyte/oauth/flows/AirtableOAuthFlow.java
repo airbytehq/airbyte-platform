@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -147,7 +146,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
                                                  final JsonNode inputOAuthConfiguration,
                                                  final OAuthConfigSpecification oauthConfigSpecification,
                                                  final JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);

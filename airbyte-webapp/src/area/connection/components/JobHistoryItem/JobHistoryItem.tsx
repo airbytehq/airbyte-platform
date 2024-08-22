@@ -19,8 +19,8 @@ import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
+import { trackError } from "core/utils/datadog";
 import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -49,7 +49,6 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
   const { name: workspaceName } = useCurrentWorkspace();
-  const { trackError } = useAppMonitoringService();
   const { connection } = useConnectionEditService();
 
   useEffectOnce(() => {

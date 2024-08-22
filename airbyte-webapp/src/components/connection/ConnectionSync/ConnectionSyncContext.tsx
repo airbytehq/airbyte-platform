@@ -25,7 +25,6 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { CancelJobModalBody } from "./CancelJobModalBody";
 
@@ -59,11 +58,11 @@ export const jobStatusesIndicatingFinishedExecution: string[] = [
 const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): ConnectionSyncContext => {
   const { jobs } = useListJobsForConnectionStatus(connection.connectionId);
   const mostRecentJob = jobs?.[0]?.job;
+
   const connectionEnabled = connection.status === ConnectionStatus.active;
   const queryClient = useQueryClient();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
-  const showCancellationConfirmation = useExperiment("connection.jobCancellationModal", false);
   const { streamsSyncingForFirstTime, isConnectionInitialSync } = useInitialStreamSync(connection.connectionId);
 
   const { mutateAsync: doSyncConnection, isLoading: syncStarting } = useSyncConnection();
@@ -71,26 +70,8 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     doSyncConnection(connection);
   }, [connection, doSyncConnection]);
 
-  const { mutateAsync: doCancelJob, isLoading: cancelStarting } = useCancelJob();
-
-  const cancelJob = useMemo(() => {
-    const jobId = mostRecentJob?.id;
-    if (!jobId) {
-      return undefined;
-    }
-    return async () => {
-      await doCancelJob(jobId);
-      queryClient.setQueriesData<JobReadList>(
-        jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
-        (prevJobList) =>
-          prependArtificialJobToStatus(
-            { configType: mostRecentJob?.configType ?? "sync", status: JobStatus.cancelled },
-            prevJobList
-          )
-      );
-      queryClient.invalidateQueries(connectionsKeys.syncProgress(connection.connectionId));
-    };
-  }, [mostRecentJob, doCancelJob, connection.connectionId, queryClient]);
+  const { mutateAsync: doCancelJob, isLoading: isCancelLoading } = useCancelJob();
+  const cancelStarting = isCancelLoading || (mostRecentJob?.status !== "running" && mostRecentJob?.id === 999999999);
 
   const cancelJobWithConfirmationModal = useCallback(() => {
     const jobId = mostRecentJob?.id;
@@ -230,7 +211,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     connectionEnabled,
     syncStarting,
     jobSyncRunning,
-    cancelJob: showCancellationConfirmation ? cancelJobWithConfirmationModal : cancelJob,
+    cancelJob: cancelJobWithConfirmationModal,
     cancelStarting,
     refreshStreams,
     refreshStarting,

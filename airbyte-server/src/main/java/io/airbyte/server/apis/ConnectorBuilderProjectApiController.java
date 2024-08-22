@@ -19,6 +19,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBo
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
+import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
@@ -90,6 +92,14 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   public SourceDefinitionIdBody publishConnectorBuilderProject(@Body final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(connectorBuilderPublishRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/get_base_image")
+  @Status(HttpStatus.OK)
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  public DeclarativeManifestBaseImageRead getDeclarativeManifestBaseImage(@Body final DeclarativeManifestRequestBody requestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody));
   }
 
   @Override

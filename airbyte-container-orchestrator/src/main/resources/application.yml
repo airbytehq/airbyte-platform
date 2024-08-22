@@ -34,6 +34,9 @@ micronaut:
     enabled: false
 
 airbyte:
+  application: ${WORKER_APPLICATION:replication-orchestrator}
+  job-id: ${JOB_ID:}
+  attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
@@ -48,6 +51,10 @@ airbyte:
       request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
       message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
       publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
@@ -79,6 +86,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:config}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
@@ -139,6 +147,7 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload:
     enabled: false
+  workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
   beans:

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
@@ -22,7 +20,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
@@ -46,7 +43,6 @@ import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -107,14 +103,13 @@ public class DestinationDefinitionsHandler {
   DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
                                                            final ActorDefinitionVersion destinationVersion) {
     try {
-      final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
       return new DestinationDefinitionRead()
           .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
           .name(standardDestinationDefinition.getName())
           .dockerRepository(destinationVersion.getDockerRepository())
           .dockerImageTag(destinationVersion.getDockerImageTag())
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
-          .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl() : loadIcon(standardDestinationDefinition.getIcon()))
+          .icon(standardDestinationDefinition.getIconUrl())
           .protocolVersion(destinationVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
@@ -123,7 +118,8 @@ public class DestinationDefinitionsHandler {
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()));
+          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
+          .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }
@@ -188,7 +184,7 @@ public class DestinationDefinitionsHandler {
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = new HashMap<>();
-    for (var definition : shownDestinationDefs) {
+    for (final var definition : shownDestinationDefs) {
       destinationDefVersionMap.put(definition.getDestinationDefinitionId(),
           actorDefinitionVersionHelper.getDestinationVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
     }
@@ -339,14 +335,6 @@ public class DestinationDefinitionsHandler {
 
     persistedDestinationDefinition.withTombstone(true);
     configRepository.updateStandardDestinationDefinition(persistedDestinationDefinition);
-  }
-
-  public static String loadIcon(final String name) {
-    try {
-      return name == null ? null : MoreResources.readResource("icons/" + name);
-    } catch (final Exception e) {
-      return null;
-    }
   }
 
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)

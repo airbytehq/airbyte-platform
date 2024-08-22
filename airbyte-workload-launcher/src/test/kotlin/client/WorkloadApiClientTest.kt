@@ -27,7 +27,7 @@ import java.util.UUID
 internal class WorkloadApiClientTest {
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var workloadApi: WorkloadApi
-  private lateinit var internalWorkloadApiClient: io.airbyte.api.client.WorkloadApiClient
+  private lateinit var internalWorkloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient
 
   @BeforeEach
   internal fun setup() {

@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal;
 
 import static io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.NON_RUNNING_JOB_ID;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -23,6 +24,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
@@ -33,7 +35,6 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.temporal.api.common.v1.WorkflowType;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
@@ -398,11 +399,17 @@ public class TemporalClient {
                                                             final @Nullable UUID workspaceId,
                                                             final JobGetSpecConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
-
+    // Since SPEC happens before a connector is created, it is expected for a SPEC job to not have a
+    // workspace id unless it is a custom connector.
+    //
+    // This differs from CHECK/DISCOVER/REPLICATION which always have a workspace id thus requiring,
+    // downstream FF checks to null check the workspace before adding the context or failing. Thus, we
+    // default the workspace to simplify this process.
+    final var resolvedWorkspaceId = workspaceId == null ? ANONYMOUS : workspaceId;
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
-        .withWorkspaceId(workspaceId)
+        .withWorkspaceId(resolvedWorkspaceId)
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector());
     return execute(jobRunConfig,

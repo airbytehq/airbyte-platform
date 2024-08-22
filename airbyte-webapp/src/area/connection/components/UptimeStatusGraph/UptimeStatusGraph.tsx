@@ -10,7 +10,7 @@ import { generateCategoricalChart } from "recharts/es6/chart/generateCategorical
 import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { getStreamKey } from "area/connection/utils";
 import { useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
@@ -73,14 +73,11 @@ const generatePlaceholderHistory = (
 
 type SortableStream = Pick<ChartStream, "streamName"> & Partial<Pick<ChartStream, "streamNamespace" | "status">>;
 
-const statusOrder: ConnectionStatusIndicatorStatus[] = [
-  ConnectionStatusIndicatorStatus.Disabled,
-  ConnectionStatusIndicatorStatus.Pending,
-  ConnectionStatusIndicatorStatus.OnTime,
-  ConnectionStatusIndicatorStatus.OnTrack,
-  ConnectionStatusIndicatorStatus.Late,
-  ConnectionStatusIndicatorStatus.Error,
-  ConnectionStatusIndicatorStatus.ActionRequired,
+const statusOrder: StreamStatusType[] = [
+  StreamStatusType.Pending,
+  StreamStatusType.Synced,
+  StreamStatusType.Incomplete,
+  StreamStatusType.Failed,
 ];
 
 const sortStreams = (a: SortableStream, b: SortableStream) => {
@@ -99,7 +96,8 @@ const sortStreams = (a: SortableStream, b: SortableStream) => {
     return namespaceCompare;
   }
 
-  return nameA.localeCompare(nameB);
+  // streams that are in the job but don't emit a status are given null values
+  return (nameA ?? "").localeCompare(nameB ?? "");
 };
 
 interface RunBucket {
@@ -133,22 +131,22 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
       };
       entry.streamStatuses.reduce<{ bucket: RunBucket; allStreamIdentities: typeof allStreamIdentities }>(
         ({ bucket, allStreamIdentities }, streamStatus) => {
-          let status: ConnectionStatusIndicatorStatus = ConnectionStatusIndicatorStatus.Pending;
+          let status: StreamStatusType = StreamStatusType.Pending;
 
           switch (streamStatus.status) {
             case JobStatus.succeeded:
-              status = ConnectionStatusIndicatorStatus.OnTime;
+              status = StreamStatusType.Synced;
               break;
             case JobStatus.failed:
-              status = ConnectionStatusIndicatorStatus.Error;
+              status = StreamStatusType.Incomplete;
               break;
             case JobStatus.running:
-              status = ConnectionStatusIndicatorStatus.Syncing;
+              status = StreamStatusType.Syncing;
               break;
             case JobStatus.cancelled:
             case JobStatus.incomplete:
             case JobStatus.pending:
-              status = ConnectionStatusIndicatorStatus.Pending;
+              status = StreamStatusType.Pending;
               break;
             default:
               assertNever(streamStatus.status);
@@ -216,7 +214,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
       green: colorValues[styles.greenVar],
       darkBlue: colorValues[styles.darkBlueVar],
       red: colorValues[styles.redVar],
-      black: colorValues[styles.blackVar],
+      yellow: colorValues[styles.yellowVar],
       blue: colorValues[styles.blueVar],
       empty: colorValues[styles.emptyVar],
     };
@@ -319,7 +317,7 @@ export function ensureStreams(
         ...bucket,
         streams: foundStreams.streams.map((stream) => ({
           ...stream,
-          status: ConnectionStatusIndicatorStatus.Error,
+          status: StreamStatusType.Incomplete,
         })),
       };
     }

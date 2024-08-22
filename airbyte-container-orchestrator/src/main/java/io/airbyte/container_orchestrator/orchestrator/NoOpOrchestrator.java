@@ -4,7 +4,6 @@
 
 package io.airbyte.container_orchestrator.orchestrator;
 
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -16,11 +15,6 @@ import org.slf4j.LoggerFactory;
 public class NoOpOrchestrator implements JobOrchestrator<String> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
-  @Override
-  public String getOrchestratorName() {
-    return AsyncOrchestratorPodProcess.NO_OP;
-  }
 
   @Override
   public Class<String> getInputClass() {

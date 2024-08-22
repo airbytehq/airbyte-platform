@@ -8,9 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.featureflag.DeleteDanglingSecrets
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -51,7 +49,7 @@ open class SecretsRepositoryWriter(
    *
    * @param workspaceId workspace id for the config
    * @param fullConfig full config
-   * @param spec connector specification
+   * @param connSpec connector specification
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
@@ -136,11 +134,9 @@ open class SecretsRepositoryWriter(
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
         metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
       }
-    // Delete old secrets (controlled by a workspace level feature flag).
-    // TODO: remove this flag after testing so that by default we are always cleaning up old secrets
-    if (featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))) {
-      deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
-    }
+    // Delete old secrets.
+    deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
+
     return updatedSplitConfig.partialConfig
   }
 
@@ -153,7 +149,7 @@ open class SecretsRepositoryWriter(
    * Ephemeral secrets are intended to be expired after a certain duration for cost and security reasons.
    *
    * @param fullConfig full config
-   * @param spec connector specification
+   * @param connSpec connector specification
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */

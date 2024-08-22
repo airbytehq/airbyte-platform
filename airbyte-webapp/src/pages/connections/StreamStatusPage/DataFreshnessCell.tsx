@@ -23,7 +23,7 @@ export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined; s
 
   if (lastSyncDisplayText) {
     return (
-      <Text size="xs" color="grey300">
+      <Text size="xs" color="grey300" data-testid="streams-list-data-freshness-cell-content">
         {lastSyncDisplayText}
       </Text>
     );

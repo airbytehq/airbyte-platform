@@ -6,8 +6,9 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.api.problems.model.generated.ProblemResourceData;
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -109,11 +110,13 @@ public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
                                     final JsonNode inputOAuthConfiguration,
                                     final OAuthConfigSpecification oauthConfigSpecification,
                                     final JsonNode sourceOAuthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
 
     if (sourceOAuthParamConfig == null) {
-      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "Undefined OAuth Parameter.");
+      throw new ResourceNotFoundProblem(
+          "Undefined OAuth Parameter.",
+          new ProblemResourceData().resourceType(ConfigSchema.SOURCE_OAUTH_PARAM.name()));
     }
 
     try {

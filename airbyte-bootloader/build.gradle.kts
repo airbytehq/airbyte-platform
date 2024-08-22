@@ -8,15 +8,20 @@ plugins {
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.flyway)
+  implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
   implementation(libs.guava)
+  implementation(libs.apache.commons.lang)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -35,11 +40,13 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
@@ -48,13 +55,18 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  integrationTestCompileOnly(libs.lombok)
+  integrationTestAnnotationProcessor(libs.lombok)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
+val env =
+  Properties().apply {
+    load(rootProject.file(".env.dev").inputStream())
+  }
 
 airbyte {
   application {
@@ -67,11 +79,17 @@ airbyte {
         "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
         "AIRBYTE_VERSION" to env["VERSION"].toString(),
         "DATABASE_URL" to "jdbc:postgresql://localhost:5432/airbyte",
-      )
+      ),
     )
   }
 
   docker {
     imageName = "bootloader"
   }
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
+// Once lombok has been removed, this can also be removed.)
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

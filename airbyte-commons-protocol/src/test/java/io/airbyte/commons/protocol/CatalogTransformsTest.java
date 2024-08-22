@@ -9,11 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.DestinationSyncMode;
-import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
+import io.airbyte.config.helpers.CatalogTransforms;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Function;

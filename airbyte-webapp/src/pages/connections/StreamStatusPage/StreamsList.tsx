@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -45,7 +45,7 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
       }),
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
-        cell: (props) => <>{props.cell.getValue()}</>,
+        cell: (props) => <span data-testid="streams-list-name-cell-content">{props.cell.getValue()}</span>,
         meta: { responsive: true },
       }),
       columnHelper.accessor("recordsLoaded", {
@@ -93,7 +93,12 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
     [columnHelper, setShowRelativeTime, showRelativeTime]
   );
 
-  const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
+  const {
+    status: connectionStatus,
+    nextSync,
+    recordsExtracted,
+    recordsLoaded,
+  } = useConnectionStatus(connection.connectionId);
 
   const customScrollParent =
     typeof outerRef !== "function" && outerRef && outerRef.current ? outerRef.current : undefined;
@@ -102,12 +107,12 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
-          <FlexContainer alignItems="center">
+          <FlexContainer alignItems="flex-end">
             <Heading as="h5" size="sm">
               <FormattedMessage id="connection.stream.status.title" />
             </Heading>
             <StreamsListSubtitle
-              connectionStatus={status}
+              connectionStatus={connectionStatus}
               nextSync={nextSync}
               recordsLoaded={recordsLoaded}
               recordsExtracted={recordsExtracted}
@@ -124,10 +129,10 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
           variant="inBlock"
           className={styles.table}
           rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
-          getRowClassName={(data) =>
+          getRowClassName={(stream) =>
             classNames(styles.row, {
               [styles["syncing--next"]]:
-                activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
+                activeStatuses.includes(stream.status) && stream.status !== StreamStatusType.Queued,
             })
           }
           sorting={false}

@@ -12,15 +12,15 @@ import io.airbyte.commons.protocol.transform_models.StreamAttributeTransform;
 import io.airbyte.commons.protocol.transform_models.StreamTransform;
 import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
 import io.airbyte.commons.protocol.transform_models.UpdateStreamTransform;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.JsonSchemas;
 import io.airbyte.protocol.models.Jsons;
-import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -286,7 +286,7 @@ public class CatalogDiffHelpers {
     // Sets are used to compare the PKs in a way that ignores order
     final Set<List<String>> oldPKSet = Set.copyOf(streamConfig.getPrimaryKey());
     final Set<List<String>> newPKSet = Set.copyOf(newSourceDefinedPK);
-    return DestinationSyncMode.APPEND_DEDUP == destinationSyncMode && !oldPKSet.equals(newPKSet);
+    return isDedup(destinationSyncMode) && !oldPKSet.equals(newPKSet);
   }
 
   static boolean fieldTransformBreaksConnection(final Optional<ConfiguredAirbyteStream> configuredStream,
@@ -303,11 +303,15 @@ public class CatalogDiffHelpers {
     }
 
     final DestinationSyncMode destinationSyncMode = streamConfig.getDestinationSyncMode();
-    if (DestinationSyncMode.APPEND_DEDUP == destinationSyncMode && streamConfig.getPrimaryKey()
+    if (isDedup(destinationSyncMode) && streamConfig.getPrimaryKey()
         .contains(fieldName)) {
       return true;
     }
     return false;
+  }
+
+  public static boolean isDedup(final DestinationSyncMode syncMode) {
+    return DestinationSyncMode.APPEND_DEDUP == syncMode || DestinationSyncMode.OVERWRITE_DEDUP == syncMode;
   }
 
 }

@@ -11,8 +11,7 @@ import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.text.Names;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.Collections;
 import java.util.List;
@@ -57,12 +56,12 @@ public class CatalogClientConverters {
    * @return the protocol catalog
    */
   @SuppressWarnings("checkstyle:LineLength") // the auto-formatter produces a format that conflicts with checkstyle
-  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toConfiguredAirbyteProtocol(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
-    final io.airbyte.protocol.models.ConfiguredAirbyteCatalog protoCatalog =
-        new io.airbyte.protocol.models.ConfiguredAirbyteCatalog();
+  public static io.airbyte.config.ConfiguredAirbyteCatalog toConfiguredAirbyteInternal(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
+    final io.airbyte.config.ConfiguredAirbyteCatalog protoCatalog =
+        new io.airbyte.config.ConfiguredAirbyteCatalog();
     final var airbyteStream = catalog.getStreams().stream().map(stream -> {
       try {
-        return toConfiguredStreamProtocol(stream.getStream(), stream.getConfig());
+        return toConfiguredStreamInternal(stream.getStream(), stream.getConfig());
       } catch (final JsonValidationException e) {
         return null;
       }
@@ -131,18 +130,75 @@ public class CatalogClientConverters {
         .withIsResumable(stream.isResumable());
   }
 
-  private static ConfiguredAirbyteStream toConfiguredStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
+  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
+  private static io.airbyte.config.AirbyteStream toStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                                  final AirbyteStreamConfiguration config)
+      throws JsonValidationException {
+    if (config.getFieldSelectionEnabled() != null && config.getFieldSelectionEnabled()) {
+      // Validate the selected field paths.
+      if (config.getSelectedFields() == null) {
+        throw new JsonValidationException("Requested field selection but no selected fields provided");
+      }
+      final JsonNode properties = stream.getJsonSchema().findValue("properties");
+      if (properties == null || !properties.isObject()) {
+        throw new JsonValidationException("Requested field selection but no properties node found");
+      }
+      for (final var selectedFieldInfo : config.getSelectedFields()) {
+        if (selectedFieldInfo.getFieldPath() == null || selectedFieldInfo.getFieldPath().isEmpty()) {
+          throw new JsonValidationException("Selected field path cannot be empty");
+        }
+        if (selectedFieldInfo.getFieldPath().size() > 1) {
+          // TODO(mfsiega-airbyte): support nested fields.
+          throw new UnsupportedOperationException("Nested field selection not supported");
+        }
+      }
+      // Only include the selected fields.
+      // NOTE: we verified above that each selected field has at least one element in the field path.
+      final Set<String> selectedFieldNames =
+          config.getSelectedFields().stream().map((field) -> field.getFieldPath().get(0)).collect(Collectors.toSet());
+      // TODO(mfsiega-airbyte): we only check the top level of the cursor/primary key fields because we
+      // don't support filtering nested fields yet.
+      if (config.getSyncMode().equals(SyncMode.INCREMENTAL) // INCREMENTAL sync mode, AND
+          && !config.getCursorField().isEmpty() // There is a cursor configured, AND
+          && !selectedFieldNames.contains(config.getCursorField().get(0))) { // The cursor isn't in the selected fields.
+        throw new JsonValidationException("Cursor field cannot be de-selected in INCREMENTAL syncs");
+      }
+      if (config.getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)) {
+        for (final List<String> primaryKeyComponent : config.getPrimaryKey()) {
+          if (!selectedFieldNames.contains(primaryKeyComponent.get(0))) {
+            throw new JsonValidationException("Primary key field cannot be de-selected in DEDUP mode");
+          }
+        }
+      }
+      for (final String selectedFieldName : selectedFieldNames) {
+        if (!properties.has(selectedFieldName)) {
+          throw new JsonValidationException(String.format("Requested selected field %s not found in JSON schema", selectedFieldName));
+        }
+      }
+      ((ObjectNode) properties).retain(selectedFieldNames);
+    }
+    return new io.airbyte.config.AirbyteStream(stream.getName(), stream.getJsonSchema(),
+        Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.config.SyncMode.class))
+            .withSourceDefinedCursor(stream.getSourceDefinedCursor())
+            .withDefaultCursorField(stream.getDefaultCursorField())
+            .withSourceDefinedPrimaryKey(
+                Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
+            .withNamespace(stream.getNamespace())
+            .withIsResumable(stream.isResumable());
+  }
+
+  private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
                                                                     final AirbyteStreamConfiguration config)
       throws JsonValidationException {
-    return new ConfiguredAirbyteStream()
-        .withStream(toStreamProtocol(stream, config))
-        .withSyncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
-        .withDestinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.protocol.models.DestinationSyncMode.class))
-        .withPrimaryKey(config.getPrimaryKey())
-        .withCursorField(config.getCursorField())
-        .withGenerationId(config.getGenerationId())
-        .withMinimumGenerationId(config.getMinimumGenerationId())
-        .withSyncId(config.getSyncId());
+    return new ConfiguredAirbyteStream(
+        toStreamInternal(stream, config),
+        Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class),
+        Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
+            .withPrimaryKey(config.getPrimaryKey())
+            .withCursorField(config.getCursorField())
+            .withGenerationId(config.getGenerationId())
+            .withMinimumGenerationId(config.getMinimumGenerationId())
+            .withSyncId(config.getSyncId());
   }
 
   /**
@@ -177,7 +233,7 @@ public class CatalogClientConverters {
         null);
   }
 
-  private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(final AirbyteStream stream) {
+  private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(final io.airbyte.protocol.models.AirbyteStream stream) {
     return new io.airbyte.api.client.model.generated.AirbyteStream(
         stream.getName(),
         stream.getJsonSchema(),

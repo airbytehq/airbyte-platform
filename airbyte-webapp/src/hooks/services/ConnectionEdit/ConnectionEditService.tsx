@@ -176,12 +176,31 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
         continue;
       }
 
+      // overwrite_dedup streams support both
+      if (
+        stream?.config?.syncMode === SyncMode.full_refresh &&
+        stream?.config?.destinationSyncMode === DestinationSyncMode.overwrite_dedup &&
+        destinationSupportsRefreshes &&
+        stream.config.selected
+      ) {
+        streamsSupportingMergeRefresh.push({
+          streamName: stream.stream.name,
+          streamNamespace: stream.stream.namespace,
+        });
+        streamsSupportingTruncateRefresh.push({
+          streamName: stream.stream.name,
+          streamNamespace: stream.stream.namespace,
+        });
+      }
+
+      // incremental streams support merge refresh and maybe truncate
       if (stream?.config?.syncMode === SyncMode.incremental && destinationSupportsRefreshes && stream.config.selected) {
         streamsSupportingMergeRefresh.push({
           streamName: stream.stream.name,
           streamNamespace: stream.stream.namespace,
         });
 
+        // append_dedup streams support truncate refresh
         if (
           stream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup &&
           destinationSupportsRefreshes &&

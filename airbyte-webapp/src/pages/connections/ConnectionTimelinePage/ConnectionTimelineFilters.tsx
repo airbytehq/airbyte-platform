@@ -1,7 +1,10 @@
+import dayjs from "dayjs";
+import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
+import { RangeDatePicker } from "components/ui/DatePicker";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
@@ -11,10 +14,13 @@ import { eventTypeFilterOptions, statusFilterOptions, TimelineFilterValues } fro
 
 interface ConnectionTimelineFiltersProps {
   filterValues: TimelineFilterValues;
-  setFilterValue: (key: keyof TimelineFilterValues, value: string | null) => void;
+  setFilterValue: (key: keyof TimelineFilterValues, value: string) => void;
   resetFilters: () => void;
   filtersAreDefault: boolean;
 }
+
+const EARLIEST_TIMELINE_EVENTS_AVAILABLE = dayjs("2024-06-20").toISOString();
+const END_OF_TODAY = dayjs().endOf("day").toISOString();
 
 export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps> = ({
   filterValues,
@@ -22,6 +28,24 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
   resetFilters,
   filtersAreDefault,
 }) => {
+  const [tempRangeDateFilterValue, setTempRangeDateFilterValue] = useState<{ startDate: string; endDate: string }>({
+    startDate: filterValues.startDate,
+    endDate: filterValues.endDate,
+  });
+  const clearAllFilters = () => {
+    resetFilters();
+    setTempRangeDateFilterValue({ startDate: "", endDate: "" });
+  };
+
+  const setRangeDateFilterValue = () => {
+    setFilterValue("startDate", tempRangeDateFilterValue.startDate);
+    setFilterValue("endDate", tempRangeDateFilterValue.endDate);
+  };
+
+  const updateTempRangeDateFilter = (value: [string, string]) => {
+    setTempRangeDateFilterValue({ startDate: value[0], endDate: value[1] });
+  };
+
   return (
     <FlexContainer gap="sm" alignItems="center">
       {!!filterValues.eventId ? (
@@ -52,8 +76,19 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               optionClassName={styles.filterOption}
               optionTextAs="span"
               options={eventTypeFilterOptions}
-              selectedValue={filterValues.eventType}
-              onSelect={(value) => setFilterValue("eventType", value)}
+              selectedValue={filterValues.eventCategory}
+              onSelect={(value) => setFilterValue("eventCategory", value)}
+            />
+          </FlexItem>
+          <FlexItem>
+            <RangeDatePicker
+              value={[tempRangeDateFilterValue.startDate, tempRangeDateFilterValue.endDate]}
+              onChange={updateTempRangeDateFilter}
+              onClose={setRangeDateFilterValue}
+              minDate={EARLIEST_TIMELINE_EVENTS_AVAILABLE}
+              maxDate={END_OF_TODAY}
+              valueFormat="unix"
+              buttonText="connection.timeline.rangeDateFilter"
             />
           </FlexItem>
         </>
@@ -61,7 +96,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
 
       {!filtersAreDefault && (
         <FlexItem>
-          <ClearFiltersButton onClick={resetFilters} />
+          <ClearFiltersButton onClick={clearAllFilters} />
         </FlexItem>
       )}
     </FlexContainer>

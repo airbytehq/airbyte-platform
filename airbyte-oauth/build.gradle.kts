@@ -13,9 +13,9 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
 
+  implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
-  implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
 
@@ -23,4 +23,5 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(project(":oss:airbyte-config:config-persistence"))
 }

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
@@ -24,11 +23,13 @@ import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -95,7 +96,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -122,7 +123,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -149,7 +150,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));

@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.REPLICATION_TYPES;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -57,10 +58,10 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
-import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -72,6 +73,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -79,13 +81,19 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.JobWithStatusAndTimestamp;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.SourceConnection;
@@ -96,13 +104,13 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
-import io.airbyte.config.User;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
-import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
@@ -111,6 +119,7 @@ import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -120,16 +129,8 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -189,7 +190,8 @@ public class ConnectionsHandler {
   private final NotificationHelper notificationHelper;
   private final StreamStatusesService streamStatusesService;
   private final ConnectionTimelineEventService connectionTimelineEventService;
-  private final UserPersistence userPersistence;
+  private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private final StatePersistence statePersistence;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -212,7 +214,8 @@ public class ConnectionsHandler {
                             final NotificationHelper notificationHelper,
                             final StreamStatusesService streamStatusesService,
                             final ConnectionTimelineEventService connectionTimelineEventService,
-                            final UserPersistence userPersistence) {
+                            final ConnectionTimelineEventHelper connectionTimelineEventHelper,
+                            final StatePersistence statePersistence) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -233,7 +236,8 @@ public class ConnectionsHandler {
     this.notificationHelper = notificationHelper;
     this.streamStatusesService = streamStatusesService;
     this.connectionTimelineEventService = connectionTimelineEventService;
-    this.userPersistence = userPersistence;
+    this.connectionTimelineEventHelper = connectionTimelineEventHelper;
+    this.statePersistence = statePersistence;
   }
 
   /**
@@ -257,7 +261,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
-      sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
+      sync.setCatalog(CatalogConverter.toConfiguredInternal(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
@@ -277,7 +281,7 @@ public class ConnectionsHandler {
       sync.setPrefix(patch.getPrefix());
     }
 
-    if (CollectionUtils.isNotEmpty(patch.getOperationIds())) {
+    if (patch.getOperationIds() != null) {
       sync.setOperationIds(patch.getOperationIds());
     }
 
@@ -540,7 +544,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
-      standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
+      standardSync.withCatalog(CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
@@ -692,6 +696,20 @@ public class ConnectionsHandler {
     final ConnectionRead initialConnectionRead = ApiPojoConverters.internalToConnectionRead(sync);
     LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead);
 
+    if (connectionPatch.getSyncCatalog() != null
+        && featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled.INSTANCE, new Workspace(workspaceId))) {
+      final var newCatalogActiveStream = connectionPatch.getSyncCatalog().getStreams().stream().filter(s -> s.getConfig().getSelected())
+          .map(s -> new StreamDescriptor().namespace(s.getStream().getNamespace()).name(s.getStream().getName()))
+          .toList();
+      final var deactivatedStreams = sync.getCatalog().getStreams().stream()
+          .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace()))
+          .collect(Collectors.toSet());
+      newCatalogActiveStream.forEach(deactivatedStreams::remove);
+      LOGGER.debug("Wiping out the state of deactivated streams: [{}]",
+          String.join(", ", deactivatedStreams.stream().map(StreamDescriptorUtils::buildFullyQualifiedName).toList()));
+      statePersistence.bulkDelete(connectionId,
+          deactivatedStreams.stream().map(ApiConverters::toInternal).collect(Collectors.toSet()));
+    }
     applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);
@@ -813,7 +831,7 @@ public class ConnectionsHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
-    final var configuredCatalog = CatalogConverter.toConfiguredProtocol(catalogWithSelectedFieldsAnnotated);
+    final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
 
     final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
 
@@ -1050,22 +1068,9 @@ public class ConnectionsHandler {
     connectionEvent.connectionId(event.getConnectionId());
     connectionEvent.summary(Jsons.deserialize(event.getSummary()));
     if (event.getUserId() != null) {
-      connectionEvent.user(getUserRead(event.getUserId()));
+      connectionEvent.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.getUserId(), event.getConnectionId()));
     }
     return connectionEvent;
-  }
-
-  private UserReadInConnectionEvent getUserRead(final UUID userId) {
-    try {
-      final User user = userPersistence.getUser(userId).orElseThrow();
-      return new UserReadInConnectionEvent()
-          .id(user.getUserId())
-          .name(user.getName())
-          .email(user.getEmail());
-    } catch (final Exception e) {
-      LOGGER.error("Error while retrieving user information.", e);
-      return null;
-    }
   }
 
   private ConnectionEventList convertConnectionEventList(final List<ConnectionTimelineEvent> events) {
@@ -1109,7 +1114,7 @@ public class ConnectionsHandler {
     connectionEventWithDetails.details(null);
     connectionEventWithDetails.createdAt(event.getCreatedAt().toEpochSecond());
     if (event.getUserId() != null) {
-      connectionEventWithDetails.user(getUserRead(event.getUserId()));
+      connectionEventWithDetails.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.getUserId(), event.getConnectionId()));
     }
     return connectionEventWithDetails;
   }
@@ -1263,7 +1268,7 @@ public class ConnectionsHandler {
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
         catalog,
-        CatalogConverter.toConfiguredProtocol(currentCatalog));
+        CatalogConverter.toConfiguredInternal(currentCatalog));
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
     final UUID destinationDefinitionId =

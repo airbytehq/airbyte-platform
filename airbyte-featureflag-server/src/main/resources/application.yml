@@ -1,0 +1,57 @@
+micronaut:
+  application:
+    name: airbyte-featureflag-server
+  executors:
+    io:
+      type: fixed
+      n-threads: 10
+    metrics:
+      enabled: false
+  security:
+    enabled: false
+  server:
+    port: 8007
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+
+airbyte:
+  feature-flag:
+    path: ${FEATURE_FLAG_PATH:/flags}
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: true
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization-inclusion: always

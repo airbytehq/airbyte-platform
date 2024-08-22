@@ -1,6 +1,6 @@
-import { Combobox } from "@headlessui/react";
+import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
 import classNames from "classnames";
-import React, { PropsWithChildren, ReactNode } from "react";
+import React, { forwardRef, ReactNode } from "react";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import styles from "./ComboBox.module.scss";
@@ -26,13 +26,37 @@ export interface ComboBoxProps extends BaseProps {
   adornment?: ReactNode;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   filterOptions?: boolean;
+  disabled?: boolean;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
   name: string;
   value: string[] | undefined;
   onChange: (newValue: string[]) => void;
+  disabled?: boolean;
 }
+
+const Options = forwardRef<HTMLDivElement, { options: Option[] }>(({ options }, ref) => (
+  <ComboboxOptions ref={ref} as="ul" className={styles.optionsMenu} modal={false}>
+    {options.length > 0 &&
+      options.map(({ value, description }) => (
+        <ComboboxOption as="li" key={value} value={value}>
+          {({ focus, selected }) => (
+            <FlexContainer
+              className={classNames(styles.optionValue, { [styles.focus]: focus, [styles.selected]: selected })}
+              alignItems="baseline"
+            >
+              <Text size="md">{value}</Text>
+              <Text size="sm" className={styles.description}>
+                {description}
+              </Text>
+            </FlexContainer>
+          )}
+        </ComboboxOption>
+      ))}
+  </ComboboxOptions>
+));
+Options.displayName = "Options";
 
 export const ComboBox = ({
   options,
@@ -42,6 +66,7 @@ export const ComboBox = ({
   adornment,
   onBlur,
   fieldInputProps,
+  disabled,
   filterOptions = true,
 }: ComboBoxProps) => {
   const filteredOptions =
@@ -54,88 +79,46 @@ export const ComboBox = ({
   ];
 
   return (
-    <Combobox value={value} onChange={onChange}>
-      {({ open }) => (
-        <>
-          {/* wrapping the input in a button makes the options list always open when the input is focused */}
-          <Button open={open}>
-            <Combobox.Input as={React.Fragment} onChange={(event) => onChange(event.target.value)}>
-              <Input
-                {...fieldInputProps}
-                value={value}
-                error={error}
-                adornment={adornment}
-                autoComplete="off"
-                onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
-              />
-            </Combobox.Input>
-          </Button>
-          {/* wrap in div to make `position: absolute` on Combobox.Options result in correct vertical positioning */}
-          {displayOptions.length > 0 && <Options options={displayOptions} />}
-        </>
-      )}
+    <Combobox value={value} onChange={onChange} immediate>
+      <ComboboxInput as={React.Fragment}>
+        <Input
+          {...fieldInputProps}
+          value={value}
+          error={error}
+          adornment={adornment}
+          autoComplete="off"
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
+          disabled={disabled}
+        />
+      </ComboboxInput>
+      <Options options={displayOptions} />
     </Combobox>
   );
 };
 
-export const MultiComboBox = ({ name, options, value, onChange, error, fieldInputProps }: MultiComboBoxProps) => {
+export const MultiComboBox = ({
+  name,
+  options,
+  value,
+  onChange,
+  error,
+  fieldInputProps,
+  disabled,
+}: MultiComboBoxProps) => {
   return (
-    <Combobox value={value} onChange={onChange} multiple>
-      {({ open }) => (
-        <>
-          {/* wrapping the input in a button makes the options list always open when the input is focused */}
-          <Button open={open}>
-            <Combobox.Input as={React.Fragment}>
-              <TagInput
-                name={name}
-                fieldValue={value ?? []}
-                onChange={onChange}
-                onBlur={fieldInputProps?.onBlur}
-                error={error}
-              />
-            </Combobox.Input>
-          </Button>
-          {/* wrap in div to make `position: absolute` on Combobox.Options result in correct vertical positioning */}
-          {options.length > 0 && <Options options={options} />}
-        </>
-      )}
+    <Combobox value={value} onChange={onChange} multiple immediate>
+      <ComboboxInput as={React.Fragment}>
+        <TagInput
+          name={name}
+          fieldValue={value ?? []}
+          onChange={onChange}
+          onBlur={fieldInputProps?.onBlur}
+          error={error}
+          disabled={disabled}
+        />
+      </ComboboxInput>
+      <Options options={options} />
     </Combobox>
   );
 };
-
-const Button: React.FC<PropsWithChildren<{ open: boolean }>> = ({ children, open }) => (
-  <Combobox.Button
-    as="div"
-    onClick={(e) => {
-      if (open) {
-        e.preventDefault();
-      }
-    }}
-  >
-    {children}
-  </Combobox.Button>
-);
-
-const Options = ({ options }: { options: Option[] }) => (
-  <div className={styles.optionsContainer}>
-    <Combobox.Options className={styles.optionsMenu}>
-      {options.map(({ value, description }) => (
-        <Combobox.Option className={styles.option} key={value} value={value}>
-          {({ active, selected }) => (
-            <FlexContainer
-              className={classNames(styles.optionValue, { [styles.active]: active, [styles.selected]: selected })}
-              alignItems="baseline"
-            >
-              <Text size="md" className={styles.value}>
-                {value}
-              </Text>
-              <Text size="sm" className={styles.description}>
-                {description}
-              </Text>
-            </FlexContainer>
-          )}
-        </Combobox.Option>
-      ))}
-    </Combobox.Options>
-  </div>
-);

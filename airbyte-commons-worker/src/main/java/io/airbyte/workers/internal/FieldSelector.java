@@ -6,10 +6,11 @@ package io.airbyte.workers.internal;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.micronaut.core.util.StringUtils;
@@ -151,7 +152,7 @@ public class FieldSelector {
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
-      streamToSelectedFields.put(AirbyteStreamNameNamespacePair.fromConfiguredAirbyteSteam(s), selectedFields);
+      streamToSelectedFields.put(extractStream(s), selectedFields);
     }
   }
 
@@ -170,8 +171,12 @@ public class FieldSelector {
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
-      streamToAllFields.put(AirbyteStreamNameNamespacePair.fromConfiguredAirbyteSteam(s), fields);
+      streamToAllFields.put(extractStream(s), fields);
     }
+  }
+
+  private AirbyteStreamNameNamespacePair extractStream(final ConfiguredAirbyteStream stream) {
+    return new AirbyteStreamNameNamespacePair(stream.getStream().getName(), stream.getStream().getNamespace());
   }
 
   private void validateSchemaUncounted(final AirbyteMessage message) {

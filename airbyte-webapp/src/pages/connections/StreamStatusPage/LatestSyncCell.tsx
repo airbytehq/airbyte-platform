@@ -1,9 +1,10 @@
 import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 
@@ -11,7 +12,7 @@ interface LatestSyncCellProps {
   recordsLoaded?: number;
   recordsExtracted?: number;
   syncStartedAt?: number;
-  status: ConnectionStatusIndicatorStatus;
+  status: StreamStatusType;
   isLoadingHistoricalData: boolean;
 }
 
@@ -28,14 +29,23 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
   const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
 
   if (!activeStatuses.includes(status) && isLoadingHistoricalData) {
-    return <LoadingSpinner />;
+    return (
+      <span data-testid="streams-list-latest-sync-cell-content" data-loading="true">
+        <LoadingSpinner />
+      </span>
+    );
   }
   return (
-    <>
+    <span data-testid="streams-list-latest-sync-cell-content" data-loading="false">
       {!activeStatuses.includes(status) && (
         <Text color="grey" as="span">
           {recordsLoaded !== undefined ? (
-            <FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />
+            <Tooltip
+              placement="top"
+              control={<FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />}
+            >
+              <FormattedMessage id="sources.sumOverAttempts" />
+            </Tooltip>
           ) : (
             <>-</>
           )}
@@ -45,9 +55,19 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
         <>
           <Text color="grey" as="span">
             {!!recordsLoaded && recordsLoaded > 0 ? (
-              <FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />
+              <Tooltip
+                placement="top"
+                control={<FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />}
+              >
+                <FormattedMessage id="sources.sumOverAttempts" />
+              </Tooltip>
             ) : recordsExtracted ? (
-              <FormattedMessage id="sources.countExtracted" values={{ count: recordsExtracted }} />
+              <Tooltip
+                placement="top"
+                control={<FormattedMessage id="sources.countExtracted" values={{ count: recordsExtracted }} />}
+              >
+                <FormattedMessage id="sources.sumOverAttempts" />
+              </Tooltip>
             ) : (
               <FormattedMessage id="sources.starting" />
             )}
@@ -74,6 +94,6 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
           )}
         </>
       )}
-    </>
+    </span>
   );
 };

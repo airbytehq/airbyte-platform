@@ -15,9 +15,6 @@ import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
-import io.github.oshai.kotlinlogging.KotlinLogging
-
-private val logger = KotlinLogging.logger {}
 
 open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoPropagateWorkflow {
   @VisibleForTesting
@@ -26,7 +23,8 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
     this.reportActivity = reportActivity
   }
 
-  constructor() {}
+  @Suppress("unused") // Required by Temporal to create workflow proxy
+  constructor()
 
   @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptionsWithRetry")
   private lateinit var activity: DiscoverCatalogActivity

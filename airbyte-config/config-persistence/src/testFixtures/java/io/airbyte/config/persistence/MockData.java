@@ -20,6 +20,7 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -58,12 +59,8 @@ import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.SyncMode;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -306,34 +303,6 @@ public class MockData {
     return Arrays.asList(user1, user2, user3, user4, user5);
   }
 
-  public static List<User> dupEmailUsers() {
-    final User dupEmailUser1 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_1)
-        .withName("dup-email-user-1")
-        .withAuthUserId(DUP_EMAIL_USER_ID_1.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    final User dupEmailUser2 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_2)
-        .withName("dup-email-user-2")
-        .withAuthUserId(DUP_EMAIL_USER_ID_2.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    return Arrays.asList(dupEmailUser1, dupEmailUser2);
-  }
-
   public static List<Permission> permissions() {
     return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
@@ -496,7 +465,8 @@ public class MockData {
         .withDocumentationUrl(URI.create("whatever"))
         .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0))
         .withChangelogUrl(URI.create("whatever"))
-        .withSupportedDestinationSyncModes(Arrays.asList(DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND_DEDUP))
+        .withSupportedDestinationSyncModes(Arrays.asList(io.airbyte.protocol.models.DestinationSyncMode.APPEND,
+            io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE, io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP))
         .withSupportsDBT(true)
         .withSupportsIncremental(true)
         .withSupportsNormalization(true);
@@ -820,28 +790,34 @@ public class MockData {
 
   private static ConfiguredAirbyteCatalog getConfiguredCatalog() {
     final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        CatalogHelpers.createAirbyteStream(
+        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
             io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING))
-            .withSupportedSyncModes(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
+            .withSupportedSyncModes(
+                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return CatalogHelpers.toDefaultConfiguredCatalog(catalog);
+    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
   }
 
   public static ConfiguredAirbyteCatalog getConfiguredCatalogWithV1DataTypes() {
     final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        CatalogHelpers.createAirbyteStream(
+        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
             io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER_V1),
             io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER_V1),
             io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING_V1))
-            .withSupportedSyncModes(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
+            .withSupportedSyncModes(
+                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return CatalogHelpers.toDefaultConfiguredCatalog(catalog);
+    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
+  }
+
+  private static ConfiguredAirbyteCatalog convertToInternal(final io.airbyte.protocol.models.ConfiguredAirbyteCatalog catalog) {
+    return Jsons.convertValue(catalog, ConfiguredAirbyteCatalog.class);
   }
 
   public static List<StandardSyncState> standardSyncStates() {

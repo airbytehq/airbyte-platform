@@ -4,6 +4,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import AIStarsIcon from "./icons/aiStarsIcon.svg?react";
 import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
@@ -57,7 +58,9 @@ import FileIcon from "./icons/fileIcon.svg?react";
 import FilesIcon from "./icons/filesIcon.svg?react";
 import FlashIcon from "./icons/flashIcon.svg?react";
 import FolderIcon from "./icons/folderIcon.svg?react";
+import FolderOpenIcon from "./icons/folderOpenIcon.svg?react";
 import GearIcon from "./icons/gearIcon.svg?react";
+import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
@@ -166,6 +169,7 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   addCircle: AddCircleIcon,
+  aiStars: AIStarsIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
@@ -219,7 +223,9 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   files: FilesIcon,
   flash: FlashIcon,
   folder: FolderIcon,
+  folderOpen: FolderOpenIcon,
   gear: GearIcon,
+  github: GithubIcon,
   globe: GlobeIcon,
   google: GoogleIcon,
   grid: GridIcon,

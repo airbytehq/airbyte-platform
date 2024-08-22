@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -87,7 +87,7 @@ export const ConnectionStatusMessages: React.FC = () => {
   let rateLimitedQuota = Infinity;
   let rateLimitedStreamStatus: StreamStatusRead | undefined;
   streamStatuses.forEach((streamStatus) => {
-    if (streamStatus.status === ConnectionStatusIndicatorStatus.RateLimited) {
+    if (streamStatus.status === StreamStatusType.RateLimited) {
       rateLimitedStreamStatus = streamStatus.relevantHistory.at(0);
       const quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
       if (quotaReset && quotaReset >= Date.now()) {

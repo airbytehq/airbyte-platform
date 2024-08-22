@@ -1,18 +1,6 @@
 trap "touch TERMINATION_FILE_MAIN" EXIT
 trap "echo 'received ABRT'; exit 1;" ABRT
 
-ENTRYPOINT_OVERRIDE=ENTRYPOINT_OVERRIDE_VALUE
-
-if [ ! -z "$ENTRYPOINT_OVERRIDE" ]; then
-  echo "Overriding AIRBYTE_ENTRYPOINT to: $ENTRYPOINT_OVERRIDE"
-  AIRBYTE_ENTRYPOINT=$ENTRYPOINT_OVERRIDE
-elif [ -z "$AIRBYTE_ENTRYPOINT" ]; then
-  echo "Entrypoint was not set! AIRBYTE_ENTRYPOINT must be set in the container to run on Kubernetes." >> STDERR_PIPE_FILE
-  exit 127
-else
-  echo "Using existing AIRBYTE_ENTRYPOINT: $AIRBYTE_ENTRYPOINT"
-fi
-
 ((eval "$AIRBYTE_ENTRYPOINT ARGS" 2> STDERR_PIPE_FILE > STDOUT_PIPE_FILE) OPTIONAL_STDIN) &
 CHILD_PID=$!
 

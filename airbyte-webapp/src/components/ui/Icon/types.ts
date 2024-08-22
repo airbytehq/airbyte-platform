@@ -1,5 +1,6 @@
 export type IconType =
   | "addCircle"
+  | "aiStars"
   | "arrowLeft"
   | "arrowRight"
   | "article"
@@ -53,7 +54,9 @@ export type IconType =
   | "files"
   | "flash"
   | "folder"
+  | "folderOpen"
   | "gear"
+  | "github"
   | "globe"
   | "google"
   | "grid"

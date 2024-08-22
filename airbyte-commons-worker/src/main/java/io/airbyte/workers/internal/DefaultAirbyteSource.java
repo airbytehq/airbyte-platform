@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.POD_READY_TIMEOUT;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.protocol.models.AirbyteMessage.Type.RECORD;
 import static io.airbyte.protocol.models.AirbyteMessage.Type.STATE;
@@ -11,8 +12,9 @@ import static io.airbyte.protocol.models.AirbyteMessage.Type.STATE;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
@@ -72,13 +74,13 @@ public class DefaultAirbyteSource implements AirbyteSource {
                               final AirbyteStreamFactory streamFactory,
                               final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
-                              final FeatureFlags featureFlags,
+                              final boolean logConnectorMsgs,
                               final MetricClient metricClient) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.protocolSerializer = protocolSerializer;
     this.heartbeatMonitor = heartbeatMonitor;
-    this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
+    this.featureFlagLogConnectorMsgs = logConnectorMsgs;
     this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
   }
 
@@ -94,7 +96,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
         WorkerConstants.SOURCE_CONFIG_JSON_FILENAME,
         Jsons.serialize(sourceConfig.getSourceConnectionConfiguration()),
         WorkerConstants.SOURCE_CATALOG_JSON_FILENAME,
-        protocolSerializer.serialize(sourceConfig.getCatalog()),
+        protocolSerializer.serialize(sourceConfig.getCatalog(), false),
         sourceConfig.getState() == null ? null : WorkerConstants.INPUT_STATE_JSON_FILENAME,
         // TODO We should be passing a typed state here and use the protocolSerializer
         sourceConfig.getState() == null ? null : Jsons.serialize(sourceConfig.getState().getState()));
@@ -104,14 +106,17 @@ public class DefaultAirbyteSource implements AirbyteSource {
     logInitialStateAsJSON(sourceConfig);
 
     final List<Type> acceptedMessageTypes = List.of(Type.RECORD, STATE, Type.TRACE, Type.CONTROL);
-    messageIterator = streamFactory.create(IOs.newBufferedReader(sourceProcess.getInputStream()))
-        .peek(message -> {
-          if (shouldBeat(message.getType())) {
-            heartbeatMonitor.beat();
-          }
-        })
-        .filter(message -> acceptedMessageTypes.contains(message.getType()))
-        .iterator();
+    Failsafe.with(RetryPolicy.builder().withBackoff(Duration.ofSeconds(10), POD_READY_TIMEOUT).build()).run(() -> {
+      messageIterator = streamFactory.create(IOs.newBufferedReader(sourceProcess.getInputStream()))
+          .peek(message -> {
+            if (shouldBeat(message.getType())) {
+              heartbeatMonitor.beat();
+            }
+          })
+          .filter(message -> acceptedMessageTypes.contains(message.getType()))
+          .iterator();
+    });
+
   }
 
   @VisibleForTesting

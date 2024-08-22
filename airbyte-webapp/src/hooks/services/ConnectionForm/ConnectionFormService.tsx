@@ -2,26 +2,11 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { ExternalLink } from "components/ui/Link";
 
-import {
-  useSourceDefinitionVersion,
-  useDestinationDefinitionVersion,
-  useGetSourceDefinitionSpecification,
-  useGetDestinationDefinitionSpecification,
-  useSourceDefinition,
-  useDestinationDefinition,
-  HttpProblem,
-} from "core/api";
-import {
-  ActorDefinitionVersionRead,
-  DestinationDefinitionRead,
-  DestinationDefinitionSpecificationRead,
-  SourceDefinitionRead,
-  SourceDefinitionSpecificationRead,
-  WebBackendConnectionRead,
-} from "core/api/types/AirbyteClient";
+import { HttpProblem } from "core/api";
+import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { FormError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
@@ -42,13 +27,6 @@ interface ConnectionServiceProps {
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  sourceDefinition: SourceDefinitionRead;
-  sourceDefinitionVersion: ActorDefinitionVersionRead;
-  sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
-  destDefinition: DestinationDefinitionRead;
-  destDefinitionVersion: ActorDefinitionVersionRead;
-  destDefinitionSpecification: DestinationDefinitionSpecificationRead;
-  initialValues: FormConnectionFormValues;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
@@ -61,22 +39,7 @@ const useConnectionForm = ({
   schemaError,
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
-  const {
-    source: { sourceId, sourceDefinitionId },
-    destination: { destinationId, destinationDefinitionId },
-  } = connection;
-
   const formatError = useFormatError();
-
-  const sourceDefinition = useSourceDefinition(sourceDefinitionId);
-  const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(connection.source.sourceId);
-
-  const destDefinition = useDestinationDefinition(destinationDefinitionId);
-  const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
-
-  const initialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
 
@@ -110,13 +73,6 @@ const useConnectionForm = ({
   return {
     connection,
     mode,
-    sourceDefinition,
-    sourceDefinitionVersion,
-    sourceDefinitionSpecification,
-    destDefinition,
-    destDefinitionVersion,
-    destDefinitionSpecification,
-    initialValues,
     schemaError,
     refreshSchema,
     setSubmitError,

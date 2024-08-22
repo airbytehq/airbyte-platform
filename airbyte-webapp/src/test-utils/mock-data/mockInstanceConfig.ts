@@ -13,6 +13,7 @@ export const mockProInstanceConfig: InstanceConfigurationResponse = {
   initialSetupComplete: true,
   defaultUserId: "00000000-0000-0000-0000-000000000000",
   defaultOrganizationId: "00000000-0000-0000-0000-000000000000",
+  defaultOrganizationEmail: "test@airbyte.io",
   defaultWorkspaceId: "00000000-0000-0000-0000-000000000000",
   trackingStrategy: "logging",
 };

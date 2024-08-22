@@ -9,14 +9,17 @@ import io.airbyte.analytics.DeploymentFetcher
 import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.FailureReason
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.LogStreamNamesInSateMessage
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
+import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.exception.InvalidChecksumException
@@ -48,6 +51,7 @@ class StateCheckSumCountEventHandler(
   private val featureFlagClient: FeatureFlagClient,
   private val deploymentFetcher: DeploymentFetcher,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
+  private val stateCheckSumReporter: StateCheckSumErrorReporter,
   @param:Parameter private val connectionId: UUID,
   @param:Parameter private val workspaceId: UUID,
   @param:Parameter private val jobId: Long,
@@ -186,6 +190,7 @@ class StateCheckSumCountEventHandler(
     failOnInvalidChecksum: Boolean,
     checksumValidationEnabled: Boolean,
     includeStreamInLogs: Boolean = true,
+    streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long> = emptyMap(),
   ) {
     if (!isStateTypeSupported(stateMessage)) {
       return
@@ -210,35 +215,39 @@ class StateCheckSumCountEventHandler(
                   checksumValidationEnabled,
                 )
               } else {
-                checksumIsValid(origin, includeStreamInLogs, stateMessage, checksumValidationEnabled)
+                val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+                checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
               }
             }
           } else {
             if (platformRecordCount != stateRecordCount) {
               misMatchBetweenStateCountAndPlatformCount(
-                origin,
-                stateRecordCount,
-                platformRecordCount,
-                includeStreamInLogs,
-                stateMessage,
-                failOnInvalidChecksum,
-                checksumValidationEnabled,
+                origin = origin,
+                stateRecordCount = stateRecordCount,
+                platformRecordCount = platformRecordCount,
+                includeStreamInLogs = includeStreamInLogs,
+                stateMessage = stateMessage,
+                failOnInvalidChecksum = failOnInvalidChecksum,
+                validData = checksumValidationEnabled,
+                streamPlatformRecordCounts = streamPlatformRecordCounts,
               )
             }
             sourceIsMissingButDestinationIsPresent(stateRecordCount, platformRecordCount, stateMessage, checksumValidationEnabled)
           }
         } else if (stateRecordCount != platformRecordCount) {
           misMatchBetweenStateCountAndPlatformCount(
-            origin,
-            stateRecordCount,
-            platformRecordCount,
-            includeStreamInLogs,
-            stateMessage,
-            failOnInvalidChecksum,
-            checksumValidationEnabled,
+            origin = origin,
+            stateRecordCount = stateRecordCount,
+            platformRecordCount = platformRecordCount,
+            includeStreamInLogs = includeStreamInLogs,
+            stateMessage = stateMessage,
+            failOnInvalidChecksum = failOnInvalidChecksum,
+            validData = checksumValidationEnabled,
+            streamPlatformRecordCounts = streamPlatformRecordCounts,
           )
         } else {
-          checksumIsValid(origin, includeStreamInLogs, stateMessage, checksumValidationEnabled)
+          val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+          checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
         }
       }
     } else {
@@ -341,6 +350,8 @@ class StateCheckSumCountEventHandler(
       ),
       failOnInvalidChecksum,
       validData,
+      origin,
+      stateMessage,
     )
   }
 
@@ -352,12 +363,23 @@ class StateCheckSumCountEventHandler(
     stateMessage: AirbyteStateMessage,
     failOnInvalidChecksum: Boolean,
     validData: Boolean,
+    streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
   ) {
     noCheckSumError = false
     logAndFailIfRequired(
-      stateAndPlatformMismatchMessage(origin, stateRecordCount, platformRecordCount, includeStreamInLogs, stateMessage, validData),
+      stateAndPlatformMismatchMessage(
+        origin = origin,
+        stateRecordCount = stateRecordCount,
+        platformRecordCount = platformRecordCount,
+        includeStreamInLogs = includeStreamInLogs,
+        stateMessage = stateMessage,
+        validData = validData,
+        streamPlatformRecordCounts = streamPlatformRecordCounts,
+      ),
       failOnInvalidChecksum,
       validData,
+      origin,
+      stateMessage,
     )
   }
 
@@ -365,10 +387,31 @@ class StateCheckSumCountEventHandler(
     errorMessage: String,
     failOnInvalidChecksum: Boolean,
     validData: Boolean,
+    origin: AirbyteMessageOrigin,
+    stateMessage: AirbyteStateMessage,
   ) {
     logger.error { errorMessage }
+    logger.error { "Raw state message with bad count ${Jsons.serialize(stateMessage)}" }
     if (failOnInvalidChecksum && validData) {
       throw InvalidChecksumException(errorMessage)
+    } else if (validData) {
+      val failureOrigin =
+        when (origin) {
+          AirbyteMessageOrigin.SOURCE -> FailureReason.FailureOrigin.SOURCE
+          AirbyteMessageOrigin.DESTINATION -> FailureReason.FailureOrigin.DESTINATION
+          else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+        }
+      stateCheckSumReporter.reportError(
+        workspaceId,
+        connectionId,
+        jobId,
+        attemptNumber,
+        failureOrigin,
+        errorMessage,
+        "The sync appears to have dropped records",
+        InvalidChecksumException(errorMessage),
+        stateMessage,
+      )
     }
   }
 
@@ -398,6 +441,7 @@ class StateCheckSumCountEventHandler(
       includeStreamInLogs: Boolean,
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
+      streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
     ): String {
       return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
         "record count $stateRecordCount does not equal platform tracked record count $platformRecordCount" +
@@ -410,6 +454,14 @@ class StateCheckSumCountEventHandler(
           " No hash collisions were observed."
         } else {
           " Hash collisions were observed so count comparison result may be wrong."
+        } +
+        if (includeStreamInLogs) {
+          " Observed the following record counts per stream: \n" +
+            streamPlatformRecordCounts.forEach { (name, count) ->
+              " $name : $count\n"
+            }
+        } else {
+          ""
         }
     }
 

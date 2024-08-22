@@ -9,13 +9,11 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_
 
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -58,6 +56,7 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
@@ -87,7 +86,6 @@ public class ReplicationWorkerFactory {
   private final AirbyteApiClient airbyteApiClient;
   private final SyncPersistenceFactory syncPersistenceFactory;
   private final FeatureFlagClient featureFlagClient;
-  private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final TrackingClient trackingClient;
@@ -102,7 +100,6 @@ public class ReplicationWorkerFactory {
                                   final AirbyteApiClient airbyteApiClient,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
-                                  final FeatureFlags featureFlags,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                   final MetricClient metricClient,
                                   final WorkloadApiClient workloadApiClient,
@@ -117,7 +114,6 @@ public class ReplicationWorkerFactory {
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
 
     this.featureFlagClient = featureFlagClient;
-    this.featureFlags = featureFlags;
     this.metricClient = metricClient;
     this.workloadApiClient = workloadApiClient;
     this.workloadEnabled = workloadEnabled;
@@ -168,7 +164,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
-    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, replicationInput, featureFlagClient);
+    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, replicationInput, featureFlagClient);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
@@ -267,13 +263,15 @@ public class ReplicationWorkerFactory {
    * Create MessageTracker.
    */
   private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                            final FeatureFlags featureFlags,
                                                             final ReplicationInput replicationInput,
                                                             final FeatureFlagClient featureFlagClient) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final ReplicationFeatureFlagReader replicationFeatureFlagReader = new ReplicationFeatureFlagReader(featureFlagClient, flagContext);
-    syncPersistence.setReplicationFeatureFlags(replicationFeatureFlagReader.readReplicationFeatureFlags());
-    return new AirbyteMessageTracker(syncPersistence, featureFlags, replicationInput.getSourceLauncherConfig().getDockerImage(),
+    final var ffs = replicationFeatureFlagReader.readReplicationFeatureFlags();
+    syncPersistence.setReplicationFeatureFlags(ffs);
+
+    return new AirbyteMessageTracker(syncPersistence, ffs.logStateMsgs(), ffs.logConnectorMsgs(),
+        replicationInput.getSourceLauncherConfig().getDockerImage(),
         replicationInput.getDestinationLauncherConfig().getDockerImage());
   }
 

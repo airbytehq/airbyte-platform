@@ -45,7 +45,8 @@ class ConnectorPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
+    useFetchingInit: Boolean,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -68,10 +69,17 @@ class ConnectorPodFactory(
     }
 
     val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
+    val internalVolumeMounts = volumeMounts + secretVolumeMounts
 
-    val init: Container = initContainerFactory.create(connectorResourceReqs, volumeMounts)
-    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, extraEnvVars)
-    val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
+    val init: Container =
+      if (useFetchingInit) {
+        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars)
+      } else {
+        initContainerFactory.createWaiting(connectorResourceReqs, internalVolumeMounts)
+      }
+
+    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
+    val sidecar: Container = buildSidecarContainer(internalVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -103,7 +111,7 @@ class ConnectorPodFactory(
     resourceReqs: ResourceRequirements,
     volumeMounts: List<VolumeMount>,
     containerInfo: KubeContainerInfo,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
   ): Container {
     val configArgs =
       connectorArgs.map {
@@ -118,7 +126,7 @@ class ConnectorPodFactory(
       .withImage(containerInfo.image)
       .withImagePullPolicy(containerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(connectorEnvVars + extraEnvVars)
+      .withEnv(connectorEnvVars + runtimeEnvVars)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
       .withResources(resourceReqs)

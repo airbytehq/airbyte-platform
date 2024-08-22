@@ -37,6 +37,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   kubernetes:
     client:
       call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}
@@ -50,13 +51,6 @@ airbyte:
         delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
-  docker:
-    docker-socket: ${DOCKER_SOCKET:}
-    network: ${DOCKER_NETWORK:host}
-    workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
-    workspace-mount-path: ${WORKSPACE_ROOT}
-    local-mount-name: ${LOCAL_DOCKER_MOUNT:}
-    local-mount-path: ${LOCAL_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -82,22 +76,37 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        # injects the names/keys for secret reference
+        access-key-ref-name: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME:}
+        access-key-ref-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY:}
+        secret-key-ref-name: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME:}
+        secret-key-ref-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY:}
       gcp:
+        # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+        # injects the name/key for secret reference
+        credentials-ref-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        credentials-ref-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
         token: ${VAULT_AUTH_TOKEN:}
+        # injects the name/key for secret reference
+        token-ref-name: ${VAULT_AUTH_TOKEN_REF_NAME:}
+        token-ref-key: ${VAULT_AUTH_TOKEN_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
     data-plane-creds:
       secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
       secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
-    image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
     secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
     secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
@@ -114,8 +123,13 @@ airbyte:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
           socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        init:
+          container:
+            image: ${WORKLOAD_INIT_IMAGE:}
+            image-pull-policy: ${JOB_KUBE_INIT_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         main:
           container:
+            image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
@@ -123,6 +137,7 @@ airbyte:
         tolerations: ${JOB_KUBE_TOLERATIONS:}
         sidecar:
           container:
+            image: ${CONNECTOR_SIDECAR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
     kube-job-configs:
       default:
@@ -206,7 +221,6 @@ airbyte:
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   workspace:
-    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
 
 datadog:

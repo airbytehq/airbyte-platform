@@ -4,20 +4,21 @@
 
 package io.airbyte.workers.process;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
@@ -42,7 +43,6 @@ public class AirbyteIntegrationLauncherFactory {
   private final ProcessFactory processFactory;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
   private final MetricClient metricClient;
@@ -50,14 +50,12 @@ public class AirbyteIntegrationLauncherFactory {
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                           final FeatureFlags featureFlags,
                                            final FeatureFlagClient featureFlagClient,
                                            final GsonPksExtractor gsonPksExtractor,
                                            final MetricClient metricClient) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
     this.metricClient = metricClient;
@@ -85,7 +83,6 @@ public class AirbyteIntegrationLauncherFactory {
         // At this moment, if either source or destination is from custom connector image, we will put all
         // jobs into isolated pool to run.
         launcherConfig.getIsCustomConnector(),
-        featureFlags,
         launcherConfig.getAdditionalEnvironmentVariables() == null ? Collections.emptyMap() : launcherConfig.getAdditionalEnvironmentVariables(),
         launcherConfig.getAdditionalLabels() == null ? Collections.emptyMap() : launcherConfig.getAdditionalLabels());
   }
@@ -109,12 +106,14 @@ public class AirbyteIntegrationLauncherFactory {
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
+    final boolean logConnectorMessages = featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, Empty.INSTANCE);
+
     return new DefaultAirbyteSource(sourceLauncher,
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
-        featureFlags,
+        logConnectorMessages,
         metricClient);
   }
 

@@ -4,12 +4,14 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static io.airbyte.commons.logging.LoggingHelper.RESET;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,22 +20,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
-import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.exception.WorkerException;
@@ -87,12 +84,9 @@ class DefaultAirbyteSourceTest {
 
   private static Path logJobRoot;
 
-  private static final FeatureFlags featureFlags = new EnvVariableFeatureFlags();
-
   static {
     try {
       logJobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-      LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, logJobRoot);
     } catch (final IOException e) {
       LOGGER.error(e.toString());
     }
@@ -104,7 +98,7 @@ class DefaultAirbyteSourceTest {
   private Process process;
   private AirbyteStreamFactory streamFactory;
   private HeartbeatMonitor heartbeatMonitor;
-  private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
+  private final ProtocolSerializer protocolSerializer = spy(new DefaultProtocolSerializer());
   private MetricClient metricClient;
 
   @BeforeEach
@@ -129,16 +123,13 @@ class DefaultAirbyteSourceTest {
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream("qwer".getBytes(StandardCharsets.UTF_8)));
 
     streamFactory = noop -> MESSAGES.stream();
-
-    LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, logJobRoot);
-
     metricClient = mock(MetricClient.class);
   }
 
   @AfterEach
   void tearDown() throws IOException {
     // The log file needs to be present and empty
-    final Path logFile = logJobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logFile = logJobRoot.resolve(DEFAULT_LOG_FILENAME);
     if (Files.exists(logFile)) {
       Files.delete(logFile);
     }
@@ -152,9 +143,12 @@ class DefaultAirbyteSourceTest {
 
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
-    final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
-        metricClient);
+    final AirbyteSource source =
+        new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, false, metricClient);
     source.start(SOURCE_CONFIG, jobRoot, connectionId);
+    // Making sure we are calling the serializer in order to convert internal catalog into protocol
+    // catalog
+    verify(protocolSerializer).serialize(SOURCE_CONFIG.getCatalog(), false);
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
 
@@ -188,8 +182,8 @@ class DefaultAirbyteSourceTest {
 
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
-    final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory,
-        heartbeatMonitor, protocolSerializer, featureFlags, metricClient);
+    final AirbyteSource source =
+        new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, false, metricClient);
     source.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
@@ -201,7 +195,7 @@ class DefaultAirbyteSourceTest {
 
     source.close();
 
-    final Path logPath = logJobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logPath = logJobRoot.resolve(DEFAULT_LOG_FILENAME);
     final Stream<String> logs = IOs.readFile(logPath).lines();
 
     logs
@@ -214,7 +208,7 @@ class DefaultAirbyteSourceTest {
 
   @Test
   void testNonzeroExitCodeThrows() throws Exception {
-    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
+    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, false,
         metricClient);
     tap.start(SOURCE_CONFIG, jobRoot, connectionId);
 
@@ -225,7 +219,7 @@ class DefaultAirbyteSourceTest {
 
   @Test
   void testIgnoredExitCodes() throws Exception {
-    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
+    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, false,
         metricClient);
     tap.start(SOURCE_CONFIG, jobRoot, connectionId);
     when(process.isAlive()).thenReturn(false);
@@ -239,7 +233,7 @@ class DefaultAirbyteSourceTest {
   @Test
   void testGetExitValue() throws Exception {
     final AirbyteSource source =
-        new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags, metricClient);
+        new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, false, metricClient);
     source.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     when(process.isAlive()).thenReturn(false);

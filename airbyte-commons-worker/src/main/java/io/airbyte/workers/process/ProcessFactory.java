@@ -37,8 +37,6 @@ public interface ProcessFactory {
    * @param usesIsolatedPool whether to use isolated pool to run the jobs.
    * @param files File name to contents map that will be written into the working dir of the process
    *        prior to execution.
-   * @param entrypoint If not null, the default entrypoint program of the docker image can be changed
-   *        by this argument.
    * @param connectorResourceRequirements CPU and RAM to assign to the created process.
    * @param labels Labels to assign to the created Kube pod, if any. Ignore for docker.
    * @param jobMetadata Job metadata that will be passed to the created process as environment
@@ -59,7 +57,6 @@ public interface ProcessFactory {
                  final boolean usesIsolatedPool,
                  final boolean usesStdin,
                  final Map<String, String> files,
-                 final String entrypoint,
                  final ConnectorResourceRequirements connectorResourceRequirements,
                  final AllowedHosts allowedHosts,
                  final Map<String, String> labels,
