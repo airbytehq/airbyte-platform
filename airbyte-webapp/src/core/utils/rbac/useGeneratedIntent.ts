@@ -1,4 +1,5 @@
 import { useCurrentWorkspace, useListPermissions } from "core/api";
+import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { assertNever } from "core/utils/asserts";
 
@@ -31,6 +32,8 @@ export const useGeneratedIntent = (intentName: keyof typeof INTENTS, metaOverrid
         case "workspace_editor":
         case "workspace_reader":
           return permission.permissionType === role && permission.workspaceId === workspaceId;
+        // instance_reader is a frontend-only role that is used to support the admin "viewing/editing" feature. We will need to re-engineer that feature now that we are moving away from hierarchical permissions. But for now, this is here to avoid a runtime error when a useGeneratedIntent() encounters an instance_reader permission.
+        case "instance_reader" as PermissionType:
         case "instance_admin":
           return permission.permissionType === role;
         default:
