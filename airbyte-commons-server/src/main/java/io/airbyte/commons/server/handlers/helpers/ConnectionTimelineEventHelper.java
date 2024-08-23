@@ -21,7 +21,7 @@ import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StreamDescriptor;
-import io.airbyte.config.UserInfo;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
@@ -81,7 +81,7 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  private boolean isUserInstanceAdmin(final UserInfo user) {
+  private boolean isUserInstanceAdmin(final User user) {
     return permissionService.getPermissionsForUser(user.getUserId()).stream()
         .anyMatch(permission -> PermissionType.INSTANCE_ADMIN.equals(permission.getPermissionType()));
   }
@@ -93,13 +93,13 @@ public class ConnectionTimelineEventHelper {
 
   public UserReadInConnectionEvent getUserReadInConnectionEvent(final UUID userId, final UUID connectionId) {
     try {
-      final Optional<UserInfo> res = userPersistence.getUserInfo(userId);
+      final Optional<User> res = userPersistence.getUser(userId);
       if (res.isEmpty()) {
         // Deleted user
         return new UserReadInConnectionEvent()
             .isDeleted(true);
       }
-      final UserInfo user = res.get();
+      final User user = res.get();
       // Check if this event was triggered by an Airbyter Support.
       if (isUserInstanceAdmin(user) && isUserEmailFromAirbyteSupport(user.getEmail())) {
         // Check if this connection is in external customers workspaces.

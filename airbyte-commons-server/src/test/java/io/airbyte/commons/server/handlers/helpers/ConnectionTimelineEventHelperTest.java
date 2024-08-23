@@ -27,7 +27,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.UserInfo;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
@@ -135,14 +135,14 @@ class ConnectionTimelineEventHelperTest {
     final UUID airbyteUserId = UUID.randomUUID();
     final String airbyteUserName = "IAMZOZO";
     final String airbyteUserEmail = "xx@airbyte.io";
-    final UserInfo airbyteUser = new UserInfo()
+    final User airbyteUser = new User()
         .withUserId(airbyteUserId)
         .withEmail(airbyteUserEmail)
         .withName(airbyteUserName);
     final UUID userId = UUID.randomUUID();
     final String userEmail = "yy@gmail.com";
     final String userName = "yy";
-    final UserInfo externalUser = new UserInfo()
+    final User externalUser = new User()
         .withUserId(userId)
         .withEmail(userEmail)
         .withName(userName);
@@ -152,7 +152,7 @@ class ConnectionTimelineEventHelperTest {
       // No support email domains. Should show real name as always.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(ossAirbyteSupportEmailDomain,
           currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
-      when(userPersistence.getUserInfo(any())).thenReturn(Optional.of(externalUser));
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
       when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.WORKSPACE_ADMIN)
@@ -169,7 +169,7 @@ class ConnectionTimelineEventHelperTest {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
           currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
-      when(userPersistence.getUserInfo(any())).thenReturn(Optional.of(airbyteUser));
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
       when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.INSTANCE_ADMIN)
@@ -185,7 +185,7 @@ class ConnectionTimelineEventHelperTest {
       // Should hide real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
           currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
-      when(userPersistence.getUserInfo(any())).thenReturn(Optional.of(airbyteUser));
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
       when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.INSTANCE_ADMIN)
@@ -201,7 +201,7 @@ class ConnectionTimelineEventHelperTest {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
           currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
-      when(userPersistence.getUserInfo(any())).thenReturn(Optional.of(externalUser));
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
       when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.INSTANCE_ADMIN)

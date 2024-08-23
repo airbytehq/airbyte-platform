@@ -21,12 +21,12 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.AuthUser;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
-import io.airbyte.config.UserInfo;
 import io.airbyte.config.WorkspaceUserAccessInfo;
-import io.airbyte.config.helpers.UserInfoConverter;
+import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider;
@@ -74,7 +74,7 @@ public class UserPersistence {
    * @param user user to create or update.
    * @throws IOException in case of a db error
    */
-  public void writeUser(final UserInfo user) throws IOException {
+  public void writeUser(final User user) throws IOException {
     database.transaction(ctx -> {
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(USER)
@@ -88,7 +88,7 @@ public class UserPersistence {
     });
   }
 
-  private void updateUser(final DSLContext ctx, final UserInfo user) {
+  private void updateUser(final DSLContext ctx, final User user) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     ctx.update(USER)
         .set(USER.ID, user.getUserId())
@@ -105,7 +105,7 @@ public class UserPersistence {
         .execute();
   }
 
-  private void createUser(final DSLContext ctx, final UserInfo user) {
+  private void createUser(final DSLContext ctx, final User user) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     ctx.insertInto(USER)
         .set(USER.ID, user.getUserId())
@@ -127,16 +127,16 @@ public class UserPersistence {
    *
    * @param user user to create or update.
    */
-  public void writeUserWithAuth(final User user) throws IOException {
+  public void writeAuthenticatedUser(final AuthenticatedUser user) throws IOException {
     database.transaction(ctx -> {
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(USER)
           .where(USER.ID.eq(user.getUserId())));
 
       if (isExistingConfig) {
-        updateUser(ctx, UserInfoConverter.userInfoFromUser(user));
+        updateUser(ctx, AuthenticatedUserConverter.toUser(user));
       } else {
-        createUser(ctx, UserInfoConverter.userInfoFromUser(user));
+        createUser(ctx, AuthenticatedUserConverter.toUser(user));
         writeAuthUser(ctx, user.getUserId(), user.getAuthUserId(), user.getAuthProvider());
       }
 
@@ -198,7 +198,7 @@ public class UserPersistence {
    * @return user if found
    */
   @Deprecated
-  public Optional<User> getUser(final UUID userId) throws IOException {
+  public Optional<AuthenticatedUser> getAuthenticatedUser(final UUID userId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -210,7 +210,7 @@ public class UserPersistence {
     }
 
     // FIXME: in the case of multiple auth providers, this will return the first one found.
-    return Optional.of(createUserFromRecord(result.get(0)));
+    return Optional.of(createAuthenticatedUserFromRecord(result.get(0)));
   }
 
   /**
@@ -220,7 +220,7 @@ public class UserPersistence {
    * @return user if found
    * @throws IOException in case of a db error
    */
-  public Optional<UserInfo> getUserInfo(final UUID userId) throws IOException {
+  public Optional<User> getUser(final UUID userId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -230,11 +230,11 @@ public class UserPersistence {
       return Optional.empty();
     }
 
-    return Optional.of(createUserInfoFromRecord(result.get(0)));
+    return Optional.of(createUserFromRecord(result.get(0)));
   }
 
-  private UserInfo createUserInfoFromRecord(final Record record) {
-    return new UserInfo()
+  private User createUserFromRecord(final Record record) {
+    return new User()
         .withUserId(record.get(USER.ID))
         .withName(record.get(USER.NAME))
         .withDefaultWorkspaceId(record.get(USER.DEFAULT_WORKSPACE_ID))
@@ -248,17 +248,17 @@ public class UserPersistence {
             : Jsons.deserialize(record.get(USER.UI_METADATA).data(), JsonNode.class));
   }
 
-  private User createUserFromRecord(final Record record) {
-    final UserInfo userInfo = createUserInfoFromRecord(record);
-    return new User()
-        .withUserId(userInfo.getUserId())
-        .withName(userInfo.getName())
-        .withDefaultWorkspaceId(userInfo.getDefaultWorkspaceId())
-        .withStatus(userInfo.getStatus())
-        .withCompanyName(userInfo.getCompanyName())
-        .withEmail(userInfo.getEmail())
-        .withNews(userInfo.getNews())
-        .withUiMetadata(userInfo.getUiMetadata())
+  private AuthenticatedUser createAuthenticatedUserFromRecord(final Record record) {
+    final User user = createUserFromRecord(record);
+    return new AuthenticatedUser()
+        .withUserId(user.getUserId())
+        .withName(user.getName())
+        .withDefaultWorkspaceId(user.getDefaultWorkspaceId())
+        .withStatus(user.getStatus())
+        .withCompanyName(user.getCompanyName())
+        .withEmail(user.getEmail())
+        .withNews(user.getNews())
+        .withUiMetadata(user.getUiMetadata())
         .withAuthUserId(record.get(AUTH_USER.AUTH_USER_ID))
         .withAuthProvider(record.get(AUTH_USER.AUTH_PROVIDER) == null ? null
             : Enums.toEnum(record.get(AUTH_USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow());
@@ -271,7 +271,7 @@ public class UserPersistence {
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-  public Optional<User> getUserByAuthId(final String userAuthId) throws IOException {
+  public Optional<AuthenticatedUser> getUserByAuthId(final String userAuthId) throws IOException {
     final var resultFromAuthUsersTable = getUserByAuthIdFromAuthUserTable(userAuthId);
     if (resultFromAuthUsersTable.isEmpty()) {
       log.warn("User with auth user id {} not found in auth_user table", userAuthId);
@@ -279,7 +279,7 @@ public class UserPersistence {
     return resultFromAuthUsersTable;
   }
 
-  public Optional<User> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
+  public Optional<AuthenticatedUser> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
     final var result = database.query(ctx -> ctx
         .select(
             AUTH_USER.AUTH_USER_ID,
@@ -300,19 +300,19 @@ public class UserPersistence {
       return Optional.empty();
     }
 
-    return Optional.of(createUserFromRecord(result.get(0)));
+    return Optional.of(createAuthenticatedUserFromRecord(result.get(0)));
   }
 
   /**
-   * Fetch user information from their email. TODO remove this after Cloud user handlers are removed.
-   * Use getUserInfoByEmail instead.
+   * Fetch user from their email. TODO remove this after Cloud user handlers are removed. Use
+   * getUserByEmail instead.
    *
    * @param email the user email address.
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
   @Deprecated
-  public Optional<User> getUserByEmail(final String email) throws IOException {
+  public Optional<AuthenticatedUser> getAuthenticatedUserByEmail(final String email) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -324,10 +324,10 @@ public class UserPersistence {
     }
 
     // FIXME: in the case of multiple auth providers, this will return the first one found.
-    return Optional.of(createUserFromRecord(result.get(0)));
+    return Optional.of(createAuthenticatedUserFromRecord(result.get(0)));
   }
 
-  public Optional<UserInfo> getUserInfoByEmail(final String email) throws IOException {
+  public Optional<User> getUserByEmail(final String email) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -337,27 +337,27 @@ public class UserPersistence {
       return Optional.empty();
     }
 
-    return Optional.of(createUserInfoFromRecord(result.get(0)));
+    return Optional.of(createUserFromRecord(result.get(0)));
   }
 
   /**
    * Get the default user if it exists by looking up the hardcoded default user id.
    */
-  public Optional<User> getDefaultUser() throws IOException {
-    return getUser(DEFAULT_USER_ID);
+  public Optional<AuthenticatedUser> getDefaultUser() throws IOException {
+    return getAuthenticatedUser(DEFAULT_USER_ID);
   }
 
   /**
    * Get all users that have read access to the specified workspace.
    */
-  public List<UserInfo> getUsersWithWorkspaceAccess(final UUID workspaceId) throws IOException {
+  public List<User> getUsersWithWorkspaceAccess(final UUID workspaceId) throws IOException {
     return database
         .query(ctx -> ctx.fetch(
             PermissionPersistenceHelper.LIST_USERS_BY_WORKSPACE_ID_AND_PERMISSION_TYPES_QUERY,
             workspaceId,
             PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER)))
         .stream()
-        .map(this::createUserInfoFromRecord)
+        .map(this::createUserFromRecord)
         .toList();
   }
 

@@ -16,7 +16,7 @@ import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardWorkspace
-import io.airbyte.config.UserInfo
+import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
@@ -93,7 +93,10 @@ internal class ScopedConfigurationHandlerTest {
     every {
       workspaceService.getStandardWorkspaceNoSecrets(scopedConfiguration.scopeId, true)
     } returns StandardWorkspace().withName("workspace name")
-    every { userPersistence.getUserInfo(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(UserInfo().withEmail("email@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("email@airbyte.io"),
+      )
 
     val scopedConfigurationRead = scopedConfigurationHandler.getScopedConfiguration(testId)
 
@@ -152,7 +155,7 @@ internal class ScopedConfigurationHandlerTest {
     every { organizationService.getOrganization(scopedConfigurations[0].scopeId) } returns Optional.of(Organization().withName("org name"))
     every { sourceService.getSourceConnection(scopedConfigurations[1].scopeId) } returns SourceConnection().withName("source actor name")
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source def name")
-    every { userPersistence.getUserInfo(any()) } returns Optional.of(UserInfo().withEmail("me@airbyte.io"))
+    every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("me@airbyte.io"))
 
     val expectedScopedConfigurationReads =
       scopedConfigurations.map { scopedConfiguration ->
@@ -217,7 +220,10 @@ internal class ScopedConfigurationHandlerTest {
       sourceService.getStandardSourceDefinition(scopedConfiguration.resourceId)
     } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(scopedConfiguration.scopeId) } returns Optional.of(Organization().withName("wkspc name"))
-    every { userPersistence.getUserInfo(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(UserInfo().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("user@airbyte.io"),
+      )
 
     val expectedScopedConfigurationRead =
       ScopedConfigurationRead()
@@ -277,7 +283,10 @@ internal class ScopedConfigurationHandlerTest {
       sourceService.getStandardSourceDefinition(scopedConfiguration.resourceId)
     } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(scopedConfiguration.scopeId) } returns Optional.of(Organization().withName("organization name"))
-    every { userPersistence.getUserInfo(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(UserInfo().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("user@airbyte.io"),
+      )
 
     val expectedScopedConfigurationRead =
       ScopedConfigurationRead()
@@ -344,8 +353,8 @@ internal class ScopedConfigurationHandlerTest {
       organizationService.getOrganization(expectedScopedConfiguration.scopeId)
     } returns Optional.of(Organization().withName("organization name"))
     every {
-      userPersistence.getUserInfo(UUID.fromString(expectedScopedConfiguration.origin))
-    } returns Optional.of(UserInfo().withEmail("user@airbyte.io"))
+      userPersistence.getUser(UUID.fromString(expectedScopedConfiguration.origin))
+    } returns Optional.of(User().withEmail("user@airbyte.io"))
 
     val updatedScopedConfiguration = scopedConfigurationHandler.updateScopedConfiguration(scopedConfigUUID, scopedConfigurationCreate)
 
@@ -399,7 +408,7 @@ internal class ScopedConfigurationHandlerTest {
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
-    every { userPersistence.getUserInfo(any()) } returns Optional.of(UserInfo().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("user@airbyte.io"))
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns ActorDefinitionVersion().withDockerImageTag("0.1.0")
 
     scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
@@ -407,7 +416,7 @@ internal class ScopedConfigurationHandlerTest {
     verifyAll {
       sourceService.getStandardSourceDefinition(any())
       organizationService.getOrganization(any())
-      userPersistence.getUserInfo(any())
+      userPersistence.getUser(any())
       actorDefinitionService.getActorDefinitionVersion(any())
     }
   }
@@ -487,7 +496,7 @@ internal class ScopedConfigurationHandlerTest {
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
-    every { userPersistence.getUserInfo(any()) } returns Optional.empty()
+    every { userPersistence.getUser(any()) } returns Optional.empty()
 
     assertThrows<BadRequestException> {
       scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
@@ -496,7 +505,7 @@ internal class ScopedConfigurationHandlerTest {
     verifyAll {
       sourceService.getStandardSourceDefinition(any())
       organizationService.getOrganization(any())
-      userPersistence.getUserInfo(any())
+      userPersistence.getUser(any())
     }
   }
 
@@ -515,7 +524,7 @@ internal class ScopedConfigurationHandlerTest {
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
-    every { userPersistence.getUserInfo(any()) } returns Optional.of(UserInfo().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("user@airbyte.io"))
     every { actorDefinitionService.getActorDefinitionVersion(any()) } throws
       ConfigNotFoundException(
         ConfigSchema.ACTOR_DEFINITION_VERSION,
@@ -529,7 +538,7 @@ internal class ScopedConfigurationHandlerTest {
     verifyAll {
       sourceService.getStandardSourceDefinition(any())
       organizationService.getOrganization(any())
-      userPersistence.getUserInfo(any())
+      userPersistence.getUser(any())
       actorDefinitionService.getActorDefinitionVersion(any())
     }
   }
@@ -579,7 +588,7 @@ internal class ScopedConfigurationHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(workspaceVersionId) } returns
       ActorDefinitionVersion().withDockerImageTag(workspaceVersion)
     every { actorDefinitionService.getActorDefinitionVersion(sourceVersionId) } returns ActorDefinitionVersion().withDockerImageTag(sourceVersion)
-    every { userPersistence.getUserInfo(UUID.fromString(origin)) } returns Optional.of(UserInfo().withEmail(originName))
+    every { userPersistence.getUser(UUID.fromString(origin)) } returns Optional.of(User().withEmail(originName))
 
     every {
       scopedConfigurationRelationshipResolver.getAllAncestorScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
@@ -760,7 +769,7 @@ internal class ScopedConfigurationHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(orgVersionId)
       actorDefinitionService.getActorDefinitionVersion(workspaceVersionId)
       actorDefinitionService.getActorDefinitionVersion(sourceVersionId)
-      userPersistence.getUserInfo(UUID.fromString(origin))
+      userPersistence.getUser(UUID.fromString(origin))
       scopedConfigurationRelationshipResolver.getAllAncestorScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
       scopedConfigurationRelationshipResolver.getAllDescendantScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
       scopedConfigurationService.getScopedConfiguration(

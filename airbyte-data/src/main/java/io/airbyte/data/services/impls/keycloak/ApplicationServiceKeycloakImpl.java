@@ -9,7 +9,7 @@ import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
 import io.airbyte.config.Application;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.services.ApplicationService;
 import jakarta.annotation.Nonnull;
 import jakarta.inject.Named;
@@ -75,7 +75,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   @SuppressWarnings("PMD.PreserveStackTrace")
-  public Application createApplication(final User user, final String name) {
+  public Application createApplication(final AuthenticatedUser user, final String name) {
     try {
       final RealmResource realmResource = keycloakAdminClient.realm(keycloakConfiguration.getClientRealm());
       final ClientsResource clientsResource = realmResource.clients();
@@ -97,7 +97,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
       }
       final var clientRepresentation = buildClientRepresentation(name);
 
-      try (var response = realmResource.clients().create(clientRepresentation)) {
+      try (final var response = realmResource.clients().create(clientRepresentation)) {
         if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
           throw new BadRequestException("Unable to create Application");
         }
@@ -134,7 +134,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @return The list of Applications for the user.
    */
   @Override
-  public List<Application> listApplicationsByUser(final User user) {
+  public List<Application> listApplicationsByUser(final AuthenticatedUser user) {
     final var clientRealm = keycloakConfiguration.getClientRealm();
     final var clientUsers = keycloakAdminClient
         .realm(clientRealm)
@@ -169,7 +169,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @return The deleted Application.
    */
   @Override
-  public Optional<Application> deleteApplication(final User user, final String applicationId) {
+  public Optional<Application> deleteApplication(final AuthenticatedUser user, final String applicationId) {
     final var clientRealm = keycloakConfiguration.getClientRealm();
     final var client = keycloakAdminClient
         .realm(clientRealm)

@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
 import io.airbyte.config.Application;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
@@ -78,7 +78,7 @@ class ApplicationServiceKeycloakImplTests {
   // TODO: Add this test back in, got tired of fighting mocks.
   // @Test
   void testCreateApiKeyForUser() {
-    final var user = new User().withUserId(UUID.fromString("bf0cc898-4a99-4dc1-834d-26b2ba57fdeb"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("bf0cc898-4a99-4dc1-834d-26b2ba57fdeb"));
 
     doReturn(Collections.emptyList())
         .when(apiKeyServiceKeycloakImpl)
@@ -136,7 +136,7 @@ class ApplicationServiceKeycloakImplTests {
 
   @Test
   void testNoMoreThanTwoApiKeys() {
-    final var user = new User().withUserId(UUID.fromString("6287ecb9-f9fb-4062-a12b-20479b6d2dde"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("6287ecb9-f9fb-4062-a12b-20479b6d2dde"));
 
     doReturn(List.of(
         buildClientRepresentation(user, TEST_1, 0),
@@ -151,7 +151,7 @@ class ApplicationServiceKeycloakImplTests {
 
   @Test
   void testApiKeyNameAlreadyExists() {
-    final var user = new User().withUserId(UUID.fromString("4bb2a760-a0b6-4936-aea0-a13fada349f4"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("4bb2a760-a0b6-4936-aea0-a13fada349f4"));
 
     doReturn(List.of(buildClientRepresentation(user, TEST_1, 0)))
         .when(apiKeyServiceKeycloakImpl)
@@ -167,7 +167,7 @@ class ApplicationServiceKeycloakImplTests {
 
   @Test
   void testBadKeycloakCreateResponse() {
-    final var user = new User().withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"));
     when(clientsResource.create(any(ClientRepresentation.class)))
         .thenReturn(Response.status(500).build());
 
@@ -187,7 +187,7 @@ class ApplicationServiceKeycloakImplTests {
 
   @Test
   void testListKeysForUser() {
-    final var user = new User().withUserId(UUID.fromString("58b32b0c-acef-47b9-8e3d-1c83adc7ce59"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("58b32b0c-acef-47b9-8e3d-1c83adc7ce59"));
     // Note: This can be quickly refactored into an integration test, but for now we mock creating.
 
     doReturn(List.of(
@@ -239,7 +239,7 @@ class ApplicationServiceKeycloakImplTests {
 
   // It was very difficult to mock out the remove call as it returns a void. Commenting this test out.
   void testDeleteApiKey() {
-    final var user = new User().withUserId(UUID.fromString("f81780ef-148e-413d-8e00-6e755e4e2256"));
+    final var user = new AuthenticatedUser().withUserId(UUID.fromString("f81780ef-148e-413d-8e00-6e755e4e2256"));
     // Note: This can be quickly refactored into an integration test, but for now we mock creating.
     doReturn(new Application()).when(apiKeyServiceKeycloakImpl).createApplication(
         user,
@@ -282,7 +282,7 @@ class ApplicationServiceKeycloakImplTests {
     assert apiKeys.isEmpty();
   }
 
-  private ClientRepresentation buildClientRepresentation(final User user, final String name, final int index) {
+  private ClientRepresentation buildClientRepresentation(final AuthenticatedUser user, final String name, final int index) {
     final var clientRepresentation = new ClientRepresentation();
     clientRepresentation.setClientId(user.getUserId() + "-" + index);
     clientRepresentation.setName(name);

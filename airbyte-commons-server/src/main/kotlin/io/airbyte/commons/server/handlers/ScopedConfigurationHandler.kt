@@ -102,7 +102,7 @@ open class ScopedConfigurationHandler
       origin: String,
     ): String? {
       return when (originType) {
-        ConfigOriginType.USER -> userPersistence.getUserInfo(UUID.fromString(origin)).get().email
+        ConfigOriginType.USER -> userPersistence.getUser(UUID.fromString(origin)).get().email
         else -> null
       }
     }

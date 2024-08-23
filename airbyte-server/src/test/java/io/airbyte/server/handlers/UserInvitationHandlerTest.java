@@ -35,11 +35,11 @@ import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -100,7 +100,8 @@ class UserInvitationHandlerTest {
   @Nested
   class CreateInvitationOrPermission {
 
-    private static final User CURRENT_USER = new User().withUserId(UUID.randomUUID()).withEmail("current-user@airbyte.io").withName("Current User");
+    private static final AuthenticatedUser CURRENT_USER =
+        new AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail("current-user@airbyte.io").withName("Current User");
     private static final String WEBAPP_BASE_URL = "https://test.airbyte.io";
     private static final String INVITED_EMAIL = "invited@airbyte.io";
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -140,7 +141,7 @@ class UserInvitationHandlerTest {
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
         // no existing user has the invited email.
-        when(userPersistence.getUserInfoByEmail(INVITED_EMAIL)).thenReturn(Optional.empty());
+        when(userPersistence.getUserByEmail(INVITED_EMAIL)).thenReturn(Optional.empty());
 
         // call the handler method under test.
         final UserInvitationCreateResponse result = handler.createInvitationOrPermission(USER_INVITATION_CREATE_REQUEST_BODY, CURRENT_USER);
@@ -171,11 +172,11 @@ class UserInvitationHandlerTest {
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
         // a user with the email exists, but is not in the workspace's org.
-        final UserInfo userWithEmail = new UserInfo().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
-        when(userPersistence.getUserInfoByEmail(INVITED_EMAIL)).thenReturn(Optional.of(userWithEmail));
+        final User userWithEmail = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
+        when(userPersistence.getUserByEmail(INVITED_EMAIL)).thenReturn(Optional.of(userWithEmail));
 
         // the org has a user with a different email, but not the one we're inviting.
-        final UserInfo otherUserInOrg = new UserInfo().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io");
+        final User otherUserInOrg = new User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io");
         when(permissionPersistence.listUsersInOrganization(ORG_ID)).thenReturn(List.of(new UserPermission().withUser(otherUserInOrg)));
 
         // call the handler method under test.
@@ -254,13 +255,13 @@ class UserInvitationHandlerTest {
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
         // set up user with the same email
-        final UserInfo matchingUserInOrg1 = new UserInfo().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
-        when(userPersistence.getUserInfoByEmail(INVITED_EMAIL))
+        final User matchingUserInOrg1 = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
+        when(userPersistence.getUserByEmail(INVITED_EMAIL))
             .thenReturn(Optional.of(matchingUserInOrg1));
 
         // set up two users inside the workspace's org, one with the same email and one with a different
         // email.
-        final UserInfo otherUserInOrg = new UserInfo().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io");
+        final User otherUserInOrg = new User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io");
         when(permissionPersistence.listUsersInOrganization(ORG_ID)).thenReturn(List.of(
             new UserPermission().withUser(matchingUserInOrg1),
             new UserPermission().withUser(otherUserInOrg)));
@@ -321,7 +322,7 @@ class UserInvitationHandlerTest {
     private static final String INVITE_CODE = "invite-code";
     private static final InviteCodeRequestBody INVITE_CODE_REQUEST_BODY = new InviteCodeRequestBody().inviteCode(INVITE_CODE);
     private static final String CURRENT_USER_EMAIL = "current@airbyte.io";
-    private static final User CURRENT_USER = new User().withUserId(UUID.randomUUID()).withEmail(CURRENT_USER_EMAIL);
+    private static final AuthenticatedUser CURRENT_USER = new AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail(CURRENT_USER_EMAIL);
 
     @Test
     void testEmailMatches() throws Exception {
