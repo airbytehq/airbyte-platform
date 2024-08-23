@@ -115,7 +115,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       }
       // write user table
       for (final User user : MockData.users()) {
-        userPersistence.writeUser(user);
+        userPersistence.writeUserWithAuth(user);
       }
     }
 
@@ -148,16 +148,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       for (final User user : MockData.users()) {
         final Optional<User> userFromDb = userPersistence.getUserByEmail(user.getEmail());
         Assertions.assertEquals(user, userFromDb.get());
-      }
-    }
-
-    @Test
-    void getUsersByEmailTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final List<UserInfo> usersFromDb = userPersistence.getUsersByEmail(user.getEmail());
-        Assertions.assertEquals(1, usersFromDb.size());
-        Assertions.assertEquals(user.getUserId(), usersFromDb.getFirst().getUserId());
-        Assertions.assertEquals(user.getEmail(), usersFromDb.getFirst().getEmail());
       }
     }
 
@@ -348,7 +338,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       }
 
       for (final User user : List.of(ORG_MEMBER_USER, ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER)) {
-        userPersistence.writeUser(user);
+        userPersistence.writeUserWithAuth(user);
       }
 
       for (final Permission permission : List.of(ORG_MEMBER_USER_PERMISSION, ORG_READER_PERMISSION, WORKSPACE_2_READER_PERMISSION,

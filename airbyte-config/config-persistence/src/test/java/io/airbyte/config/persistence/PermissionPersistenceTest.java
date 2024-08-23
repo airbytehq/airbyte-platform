@@ -96,7 +96,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     }
     // write user table
     for (final User user : MockData.users()) {
-      userPersistence.writeUser(user);
+      userPersistence.writeUserWithAuth(user);
     }
 
     for (final Organization organization : MockData.organizations()) {
