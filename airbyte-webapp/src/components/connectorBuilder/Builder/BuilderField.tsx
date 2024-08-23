@@ -317,6 +317,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           }}
           filterOptions={false}
           disabled={isDisabled}
+          allowCustomValue
         />
       )}
       {props.type === "multicombobox" && (
