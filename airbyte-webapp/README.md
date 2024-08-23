@@ -81,7 +81,32 @@ in `cypress/e2e/`), and one for Airbyte Cloud (located in `cypress/cloud-e2e/`).
 Airbyte Cloud e2e tests are open-source, but due to their proprietary nature can only be
 run successfully from within the private Airbyte VPN.
 
-#### Running an interactive Cypress session with `pnpm run cypress:open`
+#### Using local k8s and `make` (recommended)
+##### Running an interactive Cypress session
+The most useful way to run tests locally is with the `cypress open` command. It opens a
+dispatcher window that lets you select which tests and browser to run; the Electron
+browser (whose devtools will be very familiar to chrome users) opens a child window, and
+having both cypress windows grouped behaves nicely when switching between applications. In
+an interactive session, you can use `it.skip` and `it.only` to focus on the tests you care
+about; any change to the source file of a running test will cause tests to be
+automatically rerun. At the end of a test run, the web page is left "dangling" with all
+state present at the end of the last test; you can click around, "inspect element", and
+interact with the page however you wish, which makes it easy to incrementally develop
+tests.
+
+1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2) Run `make test.e2e.oss.open`.  This will take care off all dependencies, start Cypress, and launch the interactive GUI.
+3) Launch the tests in Electron browser (Chrome is not able to properly connect to the Cypress server in this case, and Electron is what we use on CI anyways!)
+
+##### Reproducing CI test results
+This triggers headless runs: you won't have a live browser to interact with, just terminal output.  This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode.  This will print the same output you would see on CI.
+
+1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2) Run `make test.e2e.oss`.  This will take care of running dependency scripts to spin up a source and destination db and dummy API, and finally run `npm run cypress:ci` to begin the tests.
+
+
+#### Using `docker compose` (deprecated)
+##### Running an interactive Cypress session with `pnpm run cypress:open`
 
 The most useful way to run tests locally is with the `cypress open` command. It opens a
 dispatcher window that lets you select which tests and browser to run; the Electron
@@ -109,7 +134,7 @@ Steps:
 6) Start the frontend development server with `pnpm start`.
 7) Start the cypress test runner with `pnpm run cypress:open`.
 
-#### Reproducing CI test results with `pnpm run cypress:run`
+##### Reproducing CI test results with `pnpm run cypress:run`
 
 Unlike `pnpm run cypress:open`, `pnpm run cypress:run` use
 the dockerized UI (i.e. they expect the UI at port 8000, rather than port 3000). If the
