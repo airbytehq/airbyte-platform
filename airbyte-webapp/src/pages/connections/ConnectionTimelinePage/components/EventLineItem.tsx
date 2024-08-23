@@ -5,7 +5,6 @@ import { Box } from "components/ui/Box";
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
 
 import { ClearEventItem } from "./ClearEventItem";
-import styles from "./EventLineItem.module.scss";
 import { JobStartEventItem } from "./JobStartEventItem";
 import { RefreshEventItem } from "./RefreshEventItem";
 import { RunningJobItem } from "./RunningJobItem";
@@ -59,8 +58,5 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
       </Box>
     );
   }
-  // virtuoso cannot gracefully handle a <1px item inside an li, so we need to return a 1px tall empty item
-  // https://virtuoso.dev/troubleshooting/#i-get-error-zero-sized-element-this-should-not-happen
-  // https://github.com/petyosi/react-virtuoso/issues/35
-  return <span className={styles.emptyItem} />;
+  return null;
 };
