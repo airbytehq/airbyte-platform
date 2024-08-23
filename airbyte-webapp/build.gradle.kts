@@ -134,31 +134,6 @@ tasks.register<PnpmTask>("cypress") {
     outputs.upToDateWhen { false }
 }
 
-tasks.register("cypressOpen") {
-    doLast {
-        println("Starting the development server...")
-
-        val processBuilder = ProcessBuilder("pnpm", "start", "--oss-k8s")
-        processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-        processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
-
-        // Start the process
-        val process = processBuilder.start()
-
-        // Give the server time to start
-        Thread.sleep(10000) // Adjust this as needed
-
-        println("Running Cypress tests...")
-        exec {
-            commandLine("pnpm", "run", "cypress:open")
-        }
-
-        // After Cypress is done, stop the server
-        println("Stopping the development server...")
-        process.destroy() // Send a SIGTERM to the server process
-        process.waitFor() // Wait for the process to terminate
-    }
-}
 
 tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
