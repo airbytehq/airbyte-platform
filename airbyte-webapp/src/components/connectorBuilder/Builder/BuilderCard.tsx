@@ -99,6 +99,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
               )}
               <ControlLabels
                 className={classNames(styles.label, { [styles.toggleLabel]: inputsConfig?.toggleable })}
+                headerClassName={inputsConfig?.toggleable ? styles.toggleLabelHeader : undefined}
                 label={label}
                 labelAction={labelAction}
                 infoTooltipContent={tooltip}
