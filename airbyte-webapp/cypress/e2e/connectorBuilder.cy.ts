@@ -30,7 +30,7 @@ import {
   testStream,
 } from "pages/connectorBuilderPage";
 
-describe("Connector builder", { testIsolation: false }, () => {
+describe("Connector builder", { testIsolation: false, tags: "@builder" }, () => {
   let connectorName = "";
   beforeEach(() => {
     cy.on("uncaught:exception", () => false);
