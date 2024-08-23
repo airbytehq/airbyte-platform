@@ -214,9 +214,8 @@ public class UserInvitationHandler {
   private Set<UUID> getOrgUserIdsWithEmail(final UUID orgId, final String email) throws IOException {
     log.info("orgId: " + orgId);
 
-    final Set<UUID> userIdsWithEmail = userPersistence.getUsersByEmail(email).stream()
-        .map(UserInfo::getUserId)
-        .collect(Collectors.toSet());
+    final Optional<UserInfo> userWithEmail = userPersistence.getUserInfoByEmail(email);
+    final Set<UUID> userIdsWithEmail = userWithEmail.map(userInfo -> Set.of(userInfo.getUserId())).orElseGet(Set::of);
 
     log.info("userIdsWithEmail: " + userIdsWithEmail);
 

@@ -26,6 +26,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
 import io.airbyte.config.UserInfo;
 import io.airbyte.config.WorkspaceUserAccessInfo;
+import io.airbyte.config.helpers.UserInfoConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider;
@@ -71,51 +72,74 @@ public class UserPersistence {
    * Create or update a user.
    *
    * @param user user to create or update.
+   * @throws IOException in case of a db error
    */
-  public void writeUser(final User user) throws IOException {
+  public void writeUser(final UserInfo user) throws IOException {
     database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(USER)
+          .where(USER.ID.eq(user.getUserId())));
+      if (isExistingConfig) {
+        updateUser(ctx, user);
+      } else {
+        createUser(ctx, user);
+      }
+      return null;
+    });
+  }
+
+  private void updateUser(final DSLContext ctx, final UserInfo user) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    ctx.update(USER)
+        .set(USER.ID, user.getUserId())
+        .set(USER.NAME, user.getName())
+        .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
+        .set(USER.STATUS, user.getStatus() == null ? null
+            : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
+        .set(USER.COMPANY_NAME, user.getCompanyName())
+        .set(USER.EMAIL, user.getEmail())
+        .set(USER.NEWS, user.getNews())
+        .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
+        .set(USER.UPDATED_AT, timestamp)
+        .where(USER.ID.eq(user.getUserId()))
+        .execute();
+  }
+
+  private void createUser(final DSLContext ctx, final UserInfo user) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    ctx.insertInto(USER)
+        .set(USER.ID, user.getUserId())
+        .set(USER.NAME, user.getName())
+        .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
+        .set(USER.STATUS, user.getStatus() == null ? null
+            : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
+        .set(USER.COMPANY_NAME, user.getCompanyName())
+        .set(USER.EMAIL, user.getEmail())
+        .set(USER.NEWS, user.getNews())
+        .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
+        .set(USER.CREATED_AT, timestamp)
+        .set(USER.UPDATED_AT, timestamp)
+        .execute();
+  }
+
+  /**
+   * Create or update a user.
+   *
+   * @param user user to create or update.
+   */
+  public void writeUserWithAuth(final User user) throws IOException {
+    database.transaction(ctx -> {
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(USER)
           .where(USER.ID.eq(user.getUserId())));
 
       if (isExistingConfig) {
-        ctx.update(USER)
-            .set(USER.ID, user.getUserId())
-            .set(USER.NAME, user.getName())
-            .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
-            .set(USER.STATUS, user.getStatus() == null ? null
-                : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
-            .set(USER.COMPANY_NAME, user.getCompanyName())
-            .set(USER.EMAIL, user.getEmail())
-            .set(USER.NEWS, user.getNews())
-            .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
-            .set(USER.UPDATED_AT, timestamp)
-            .where(USER.ID.eq(user.getUserId()))
-            .execute();
+        updateUser(ctx, UserInfoConverter.userInfoFromUser(user));
       } else {
-        final boolean authIdAlreadyExists = ctx.fetchExists(select()
-            .from(AUTH_USER)
-            .where(AUTH_USER.AUTH_USER_ID.eq(user.getAuthUserId())));
-        if (authIdAlreadyExists) {
-          throw new SQLOperationNotAllowedException("Auth user id is already in use: " + user.getAuthUserId());
-        }
-
-        ctx.insertInto(USER)
-            .set(USER.ID, user.getUserId())
-            .set(USER.NAME, user.getName())
-            .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
-            .set(USER.STATUS, user.getStatus() == null ? null
-                : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
-            .set(USER.COMPANY_NAME, user.getCompanyName())
-            .set(USER.EMAIL, user.getEmail())
-            .set(USER.NEWS, user.getNews())
-            .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
-            .set(USER.CREATED_AT, timestamp)
-            .set(USER.UPDATED_AT, timestamp)
-            .execute();
+        createUser(ctx, UserInfoConverter.userInfoFromUser(user));
         writeAuthUser(ctx, user.getUserId(), user.getAuthUserId(), user.getAuthProvider());
       }
+
       return null;
     });
   }
@@ -173,6 +197,7 @@ public class UserPersistence {
    * @param userId internal user id
    * @return user if found
    */
+  @Deprecated
   public Optional<User> getUser(final UUID userId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
@@ -186,6 +211,26 @@ public class UserPersistence {
 
     // FIXME: in the case of multiple auth providers, this will return the first one found.
     return Optional.of(createUserFromRecord(result.get(0)));
+  }
+
+  /**
+   * Get User.
+   *
+   * @param userId internal user id
+   * @return user if found
+   * @throws IOException in case of a db error
+   */
+  public Optional<UserInfo> getUserInfo(final UUID userId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(USER)
+        .where(USER.ID.eq(userId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createUserInfoFromRecord(result.get(0)));
   }
 
   private UserInfo createUserInfoFromRecord(final Record record) {
@@ -259,13 +304,14 @@ public class UserPersistence {
   }
 
   /**
-   * Fetch user information from their email. TODO remove this after Firebase invitations are
-   * replaced, flawed because email is not unique
+   * Fetch user information from their email. TODO remove this after Cloud user handlers are removed.
+   * Use getUserInfoByEmail instead.
    *
    * @param email the user email address.
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
+  @Deprecated
   public Optional<User> getUserByEmail(final String email) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
@@ -281,19 +327,17 @@ public class UserPersistence {
     return Optional.of(createUserFromRecord(result.get(0)));
   }
 
-  /**
-   * Fetch all users with a given email address. Deprecated: This will be removed once usages are
-   * updated, since user emails are now unique.
-   */
-  @Deprecated
-  public List<UserInfo> getUsersByEmail(final String email) throws IOException {
-    return database.query(ctx -> ctx
+  public Optional<UserInfo> getUserInfoByEmail(final String email) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
-        .where(USER.EMAIL.eq(email)).fetch())
-        .stream()
-        .map(this::createUserInfoFromRecord)
-        .toList();
+        .where(USER.EMAIL.eq(email)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createUserInfoFromRecord(result.get(0)));
   }
 
   /**

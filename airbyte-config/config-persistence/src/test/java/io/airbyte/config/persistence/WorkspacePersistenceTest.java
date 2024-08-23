@@ -410,7 +410,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUser(new User()
+    userPersistence.writeUserWithAuth(new User()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")
@@ -480,7 +480,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUser(new User()
+    userPersistence.writeUserWithAuth(new User()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")

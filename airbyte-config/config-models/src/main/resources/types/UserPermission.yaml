@@ -14,4 +14,4 @@ properties:
     "$ref": Permission.yaml
   user:
     description: User metadata associated with this permission. Warning, not all fields in User object will be populated.
-    "$ref": User.yaml
+    "$ref": UserInfo.yaml

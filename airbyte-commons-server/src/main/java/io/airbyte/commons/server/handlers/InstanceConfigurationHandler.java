@@ -156,7 +156,7 @@ public class InstanceConfigurationHandler {
       defaultUser.setName(requestBody.getUserName());
     }
 
-    userPersistence.writeUser(defaultUser);
+    userPersistence.writeUserWithAuth(defaultUser);
   }
 
   private Organization getDefaultOrganization() throws IOException {

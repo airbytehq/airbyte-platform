@@ -239,7 +239,7 @@ class InstanceConfigurationHandlerTest {
     assertEquals(expected, actual);
 
     // verify the user was updated with the email and name from the request
-    verify(mUserPersistence).writeUser(eq(new User()
+    verify(mUserPersistence).writeUserWithAuth(eq(new User()
         .withUserId(USER_ID)
         .withEmail(EMAIL)
         .withName(expectedUserName)));

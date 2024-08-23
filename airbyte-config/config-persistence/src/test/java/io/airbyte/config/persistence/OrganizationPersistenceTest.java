@@ -178,7 +178,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   void testListOrganizationsByUserId(final Boolean withKeywordSearch, final Boolean withPagination) throws Exception {
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUser(new User()
+    userPersistence.writeUserWithAuth(new User()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")
