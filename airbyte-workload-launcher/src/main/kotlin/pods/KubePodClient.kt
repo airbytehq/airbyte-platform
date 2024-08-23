@@ -9,6 +9,7 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.ReplicationMonoPod
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -25,6 +26,7 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SO
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
+import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -43,6 +45,7 @@ class KubePodClient(
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
   private val orchestratorPodFactory: OrchestratorPodFactory,
+  private val replicationPodFactory: ReplicationPodFactory,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
@@ -55,6 +58,18 @@ class KubePodClient(
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(
+    replicationInput: ReplicationInput,
+    launcherInput: LauncherInput,
+  ) {
+    val ffContext = Multi(listOf(Workspace(replicationInput.workspaceId), Connection(replicationInput.connectionId)))
+    if (featureFlagClient.boolVariation(ReplicationMonoPod, ffContext)) {
+      launchReplicationMonoPod(replicationInput, launcherInput)
+    } else {
+      launchReplicationPodTriplet(replicationInput, launcherInput)
+    }
+  }
+
+  fun launchReplicationPodTriplet(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
@@ -103,7 +118,7 @@ class KubePodClient(
 
       copyFileToOrchestrator(kubeInput, pod)
     } else {
-      waitForPodInitComplete(pod, "orchestrator")
+      waitForPodInitComplete(pod, PodType.ORCHESTRATOR.toString())
     }
 
     waitForOrchestratorStart(pod)
@@ -114,6 +129,51 @@ class KubePodClient(
     if (!replicationInput.isReset) {
       waitSourceReadyOrTerminalInit(kubeInput)
     }
+  }
+
+  fun launchReplicationMonoPod(
+    replicationInput: ReplicationInput,
+    launcherInput: LauncherInput,
+  ) {
+    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+
+    val kubeInput = mapper.toReplicationKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+
+    var pod =
+      replicationPodFactory.create(
+        kubeInput.podName,
+        kubeInput.labels,
+        kubeInput.annotations,
+        kubeInput.nodeSelectors,
+        kubeInput.orchestratorImage,
+        kubeInput.sourceImage,
+        kubeInput.destinationImage,
+        kubeInput.orchestratorReqs,
+        kubeInput.sourceReqs,
+        kubeInput.destinationReqs,
+        kubeInput.orchestratorRuntimeEnvVars,
+        kubeInput.sourceRuntimeEnvVars,
+        kubeInput.destinationRuntimeEnvVars,
+        replicationInput.connectionId,
+      )
+
+    try {
+      pod =
+        kubePodLauncher.create(pod)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubeClientException(
+        "Failed to create pod ${kubeInput.podName}.",
+        e,
+        KubeCommandType.CREATE,
+        PodType.REPLICATION,
+      )
+    }
+
+    // NOTE: might not be necessary depending on when `serversideApply` returns.
+    // If it blocks until it moves from PENDING, then we are good. Otherwise, we
+    // need this or something similar to wait for the pod to be running on the node.
+    waitForPodInitComplete(pod, PodType.REPLICATION.toString())
   }
 
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)

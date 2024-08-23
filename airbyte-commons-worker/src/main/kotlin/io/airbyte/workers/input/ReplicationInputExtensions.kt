@@ -15,6 +15,14 @@ fun ReplicationInput.getOrchestratorResourceReqs(): ResourceRequirements? {
   return this.syncResourceRequirements?.orchestrator
 }
 
+fun ReplicationInput.getSourceResourceReqs(): ResourceRequirements? {
+  return this.syncResourceRequirements?.source
+}
+
+fun ReplicationInput.getDestinationResourceReqs(): ResourceRequirements? {
+  return this.syncResourceRequirements?.destination
+}
+
 fun ReplicationInput.usesCustomConnector(): Boolean {
   return this.sourceLauncherConfig.isCustomConnector || this.destinationLauncherConfig.isCustomConnector
 }

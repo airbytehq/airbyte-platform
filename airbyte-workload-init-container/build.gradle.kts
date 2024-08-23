@@ -30,6 +30,7 @@ dependencies {
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
+  implementation(project(":oss:airbyte-commons-protocol"))
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)

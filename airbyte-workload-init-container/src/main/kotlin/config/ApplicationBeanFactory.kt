@@ -1,6 +1,8 @@
 package io.airbyte.initContainer.config
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.commons.protocol.DefaultProtocolSerializer
+import io.airbyte.commons.protocol.ProtocolSerializer
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
@@ -49,5 +51,10 @@ class ApplicationBeanFactory {
   @Singleton
   fun discoverCatalogInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): DiscoverCatalogInputHydrator {
     return DiscoverCatalogInputHydrator(connectorSecretsHydrator)
+  }
+
+  @Singleton
+  fun protocolSerializer(): ProtocolSerializer {
+    return DefaultProtocolSerializer()
   }
 }

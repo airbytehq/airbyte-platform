@@ -193,3 +193,5 @@ object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.r
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
 object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
+
+object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = false)
