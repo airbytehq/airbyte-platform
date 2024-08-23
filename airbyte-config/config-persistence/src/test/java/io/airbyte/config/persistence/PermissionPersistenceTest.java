@@ -7,11 +7,11 @@ package io.airbyte.config.persistence;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -95,8 +95,8 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }
     // write user table
-    for (final User user : MockData.users()) {
-      userPersistence.writeUserWithAuth(user);
+    for (final AuthenticatedUser user : MockData.users()) {
+      userPersistence.writeAuthenticatedUser(user);
     }
 
     for (final Organization organization : MockData.organizations()) {
@@ -199,12 +199,12 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void isUserInstanceAdmin() throws IOException {
-    final User user1 = MockData.users().get(0);
+    final AuthenticatedUser user1 = MockData.users().get(0);
     Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
     Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
     Assertions.assertTrue(permissionPersistence.isUserInstanceAdmin(user1.getUserId()));
 
-    final User user2 = MockData.users().get(1);
+    final AuthenticatedUser user2 = MockData.users().get(1);
     Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
     Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
     Assertions.assertFalse(permissionPersistence.isUserInstanceAdmin(user2.getUserId()));
@@ -212,12 +212,12 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void isAuthUserInstanceAdmin() throws IOException {
-    final User user1 = MockData.users().get(0);
+    final AuthenticatedUser user1 = MockData.users().get(0);
     Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
     Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
     Assertions.assertTrue(permissionPersistence.isAuthUserInstanceAdmin(user1.getAuthUserId()));
 
-    final User user2 = MockData.users().get(1);
+    final AuthenticatedUser user2 = MockData.users().get(1);
     Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
     Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
     Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));

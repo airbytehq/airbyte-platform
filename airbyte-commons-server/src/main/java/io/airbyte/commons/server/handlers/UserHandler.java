@@ -44,6 +44,7 @@ import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Application;
 import io.airbyte.config.AuthUser;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.OrganizationEmailDomain;
@@ -51,10 +52,9 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
-import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.WorkspaceUserAccessInfo;
-import io.airbyte.config.helpers.UserInfoConverter;
+import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -164,9 +164,9 @@ public class UserHandler {
    */
   public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
+    final Optional<AuthenticatedUser> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
-      return buildUserRead(UserInfoConverter.userInfoFromUser(user.get()));
+      return buildUserRead(AuthenticatedUserConverter.toUser(user.get()));
     } else {
       throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
     }
@@ -182,7 +182,7 @@ public class UserHandler {
    */
   public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final Optional<UserInfo> user = userPersistence.getUserInfoByEmail(userEmailRequestBody.getEmail());
+    final Optional<User> user = userPersistence.getUserByEmail(userEmailRequestBody.getEmail());
     if (user.isPresent()) {
       return buildUserRead(user.get());
     } else {
@@ -191,14 +191,14 @@ public class UserHandler {
   }
 
   private UserRead buildUserRead(final UUID userId) throws ConfigNotFoundException, IOException, JsonValidationException {
-    final Optional<UserInfo> user = userPersistence.getUserInfo(userId);
+    final Optional<User> user = userPersistence.getUser(userId);
     if (user.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.USER, userId);
     }
     return buildUserRead(user.get());
   }
 
-  private UserRead buildUserRead(final UserInfo user) {
+  private UserRead buildUserRead(final User user) {
     return new UserRead()
         .name(user.getName())
         .userId(user.getUserId())
@@ -224,7 +224,7 @@ public class UserHandler {
 
     final UserRead userRead = getUser(new UserIdRequestBody().userId(userUpdate.getUserId()));
 
-    final UserInfo user = buildUserInfo(userRead);
+    final User user = buildUserInfo(userRead);
 
     // We do not allow update on these fields: userId and email
     boolean hasUpdate = false;
@@ -266,8 +266,8 @@ public class UserHandler {
         "Patch update user is not successful because there is nothing to update, or requested updating fields are not supported.");
   }
 
-  private UserInfo buildUserInfo(final UserRead userRead) {
-    return new UserInfo()
+  private User buildUserInfo(final UserRead userRead) {
+    return new User()
         .withName(userRead.getName())
         .withUserId(userRead.getUserId())
         .withDefaultWorkspaceId(userRead.getDefaultWorkspaceId())
@@ -370,7 +370,7 @@ public class UserHandler {
     return false;
   }
 
-  private void handleSSORestrictions(final User incomingJwtUser, final boolean authUserExists) throws IOException {
+  private void handleSSORestrictions(final AuthenticatedUser incomingJwtUser, final boolean authUserExists) throws IOException {
     final boolean allowDomain = isAllowedDomain(incomingJwtUser.getEmail());
     if (!allowDomain) {
       if (!authUserExists) {
@@ -383,14 +383,14 @@ public class UserHandler {
     }
   }
 
-  private UserGetOrCreateByAuthIdResponse handleNewUserLogin(final User incomingJwtUser)
+  private UserGetOrCreateByAuthIdResponse handleNewUserLogin(final AuthenticatedUser incomingJwtUser)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UserRead createdUser = createUserFromIncomingUser(incomingJwtUser);
     handleUserPermissionsAndWorkspace(createdUser);
 
     // refresh the user from the database in case anything changed during permission/workspace
     // modification
-    final UserInfo updatedUser = userPersistence.getUserInfo(createdUser.getUserId())
+    final User updatedUser = userPersistence.getUser(createdUser.getUserId())
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, createdUser.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
@@ -400,12 +400,12 @@ public class UserHandler {
         .newUserCreated(true);
   }
 
-  private UserGetOrCreateByAuthIdResponse handleRelinkAuthUser(final UserInfo existingUser, final User incomingJwtUser)
+  private UserGetOrCreateByAuthIdResponse handleRelinkAuthUser(final User existingUser, final AuthenticatedUser incomingJwtUser)
       throws IOException, ConfigNotFoundException {
     LOGGER.info("Relinking auth user {} to orphaned existing user {}...", incomingJwtUser.getAuthUserId(), existingUser.getUserId());
     userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
 
-    final UserInfo updatedUser = userPersistence.getUserInfo(existingUser.getUserId())
+    final User updatedUser = userPersistence.getUser(existingUser.getUserId())
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, existingUser.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
@@ -415,7 +415,7 @@ public class UserHandler {
         .newUserCreated(false);
   }
 
-  private UserGetOrCreateByAuthIdResponse handleFirstTimeSSOLogin(final UserInfo existingUser, final User incomingJwtUser)
+  private UserGetOrCreateByAuthIdResponse handleFirstTimeSSOLogin(final User existingUser, final AuthenticatedUser incomingJwtUser)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     LOGGER.info("Migrating existing user {} to SSO...", existingUser.getUserId());
     // (1) Revoke existing applications
@@ -424,10 +424,11 @@ public class UserHandler {
       LOGGER.info("Revoking existing applications for user {}...", existingUser.getUserId());
       final List<AuthUser> authUsers = userPersistence.listAuthUsersForUser(existingUser.getUserId());
       for (final AuthUser authUser : authUsers) {
-        final User userWithAuth = UserInfoConverter.userFromUserInfo(existingUser, authUser.getAuthUserId(), authUser.getAuthProvider());
-        final List<Application> existingApplications = appService.listApplicationsByUser(userWithAuth);
+        final AuthenticatedUser authedUser =
+            AuthenticatedUserConverter.toAuthenticatedUser(existingUser, authUser.getAuthUserId(), authUser.getAuthProvider());
+        final List<Application> existingApplications = appService.listApplicationsByUser(authedUser);
         for (final Application application : existingApplications) {
-          appService.deleteApplication(userWithAuth, application.getId());
+          appService.deleteApplication(authedUser, application.getId());
           LOGGER.info("Revoked application {} for user {} (auth user {})...", application.getId(), existingUser.getUserId(),
               authUser.getAuthUserId());
         }
@@ -451,7 +452,7 @@ public class UserHandler {
 
     // refresh the user from the database in case anything changed during permission/workspace
     // modification
-    final UserInfo updatedUser = userPersistence.getUserInfo(userRead.getUserId())
+    final User updatedUser = userPersistence.getUser(userRead.getUserId())
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, userRead.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
@@ -463,8 +464,8 @@ public class UserHandler {
 
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
-    final Optional<User> existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
+    final AuthenticatedUser incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
+    final Optional<AuthenticatedUser> existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
 
     // (1) Restrict logins for SSO domains
     handleSSORestrictions(incomingJwtUser, existingAuthUser.isPresent());
@@ -472,7 +473,7 @@ public class UserHandler {
     // (2) Authenticate existing auth_user
     if (existingAuthUser.isPresent()) {
       return new UserGetOrCreateByAuthIdResponse()
-          .userRead(buildUserRead(UserInfoConverter.userInfoFromUser(existingAuthUser.get())))
+          .userRead(buildUserRead(AuthenticatedUserConverter.toUser(existingAuthUser.get())))
           .authUserId(userAuthIdRequestBody.getAuthUserId())
           .authProvider(Enums.convertTo(incomingJwtUser.getAuthProvider(), AuthProvider.class))
           .newUserCreated(false);
@@ -480,7 +481,7 @@ public class UserHandler {
 
     // (3) Handle non-existing auth_user
 
-    Optional<UserInfo> existingUserWithEmail = userPersistence.getUserInfoByEmail(incomingJwtUser.getEmail());
+    Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.getEmail());
     if (existingUserWithEmail.isPresent() && existingUserWithEmail.get().getUserId() == DEFAULT_USER_ID) {
       // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
       // real user can be created
@@ -496,7 +497,7 @@ public class UserHandler {
     }
 
     // (3b) A user with the same email already exists
-    final UserInfo existingUser = existingUserWithEmail.get();
+    final User existingUser = existingUserWithEmail.get();
     final List<String> existingUserRealms = getExistingUserRealms(existingUser.getUserId());
 
     // (3b0) The existing user does not exist in any auth realm, relink it
@@ -518,25 +519,25 @@ public class UserHandler {
     throw new UserAlreadyExistsProblem(new ProblemEmailData().email(existingUser.getEmail()));
   }
 
-  private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
+  private AuthenticatedUser resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
-    final User incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
+    final AuthenticatedUser incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
     if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
     return incomingJwtUser;
   }
 
-  private UserRead createUserFromIncomingUser(final User incomingUser)
+  private UserRead createUserFromIncomingUser(final AuthenticatedUser incomingUser)
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
     final UUID userId = uuidGenerator.get();
-    final User user = incomingUser.withUserId(userId);
+    final AuthenticatedUser user = incomingUser.withUserId(userId);
 
     LOGGER.debug("Creating User: " + user);
 
     try {
-      userPersistence.writeUserWithAuth(user);
+      userPersistence.writeAuthenticatedUser(user);
     } catch (final DataAccessException e) {
       if (e.getCause() instanceof SQLOperationNotAllowedException) {
         throw new OperationNotAllowedException(e.getCause().getMessage());

@@ -11,6 +11,7 @@ enum class PodType {
   ORCHESTRATOR,
   SOURCE,
   DESTINATION,
+  REPLICATION,
 }
 
 enum class KubeCommandType {

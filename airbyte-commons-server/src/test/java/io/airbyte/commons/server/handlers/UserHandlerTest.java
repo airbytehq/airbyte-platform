@@ -43,6 +43,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Application;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthUser;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Organization;
 import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
@@ -50,10 +51,9 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
-import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.WorkspaceUserAccessInfo;
-import io.airbyte.config.helpers.UserInfoConverter;
+import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -113,7 +113,7 @@ class UserHandlerTest {
   private static final Organization ORGANIZATION = new Organization().withOrganizationId(UUID.randomUUID()).withName(USER_NAME).withEmail(USER_EMAIL);
   private static final UUID PERMISSION1_ID = UUID.randomUUID();
 
-  private final User user = new User()
+  private final AuthenticatedUser user = new AuthenticatedUser()
       .withUserId(USER_ID)
       .withAuthUserId(USER_ID.toString())
       .withEmail(USER_EMAIL)
@@ -156,11 +156,11 @@ class UserHandlerTest {
 
     // expecting the default user to be excluded from the response
     final UserPermission defaultUserPermission = new UserPermission()
-        .withUser(new UserInfo().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
+        .withUser(new User().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
         .withPermission(new Permission().withPermissionId(UUID.randomUUID()).withPermissionType(PermissionType.ORGANIZATION_ADMIN));
 
     final UserPermission realUserPermission = new UserPermission()
-        .withUser(new UserInfo().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL))
+        .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.ORGANIZATION_ADMIN));
 
     when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
@@ -185,11 +185,11 @@ class UserHandlerTest {
 
     // expecting the default user to be excluded from the response
     final UserPermission defaultUserPermission = new UserPermission()
-        .withUser(new UserInfo().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
+        .withUser(new User().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
         .withPermission(new Permission().withPermissionId(UUID.randomUUID()).withPermissionType(PermissionType.WORKSPACE_ADMIN));
 
     final UserPermission realUserPermission = new UserPermission()
-        .withUser(new UserInfo().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL).withDefaultWorkspaceId(workspaceId))
+        .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL).withDefaultWorkspaceId(workspaceId))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN));
 
     when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
@@ -211,7 +211,7 @@ class UserHandlerTest {
   @Test
   void testListInstanceAdminUser() throws Exception {
     when(permissionPersistence.listInstanceAdminUsers()).thenReturn(List.of(new UserPermission().withUser(
-        new UserInfo().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
+        new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
     final var result = userHandler.listInstanceAdminUsers();
@@ -293,13 +293,13 @@ class UserHandlerTest {
       private static final String SSO_REALM = "airbyte-realm";
       private static final String REALM = "_airbyte-users";
 
-      private User jwtUser;
-      private UserInfo existingUser;
+      private AuthenticatedUser jwtUser;
+      private User existingUser;
 
       @BeforeEach
       void setup() {
-        jwtUser = new User().withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK);
-        existingUser = new UserInfo().withUserId(EXISTING_USER_ID).withEmail(EMAIL);
+        jwtUser = new AuthenticatedUser().withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK);
+        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EMAIL);
       }
 
       @ParameterizedTest
@@ -307,7 +307,7 @@ class UserHandlerTest {
       void testNonSSOSignInEmailExistsThrowsError(final Boolean isExistingUserSSO) throws Exception {
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
-        when(userPersistence.getUserInfoByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
         when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
             .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
         when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(REALM);
@@ -325,13 +325,14 @@ class UserHandlerTest {
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
 
-        final UserInfo defaultUser = new UserInfo().withUserId(DEFAULT_USER_ID).withEmail(EMAIL);
-        when(userPersistence.getUserInfoByEmail(EMAIL)).thenReturn(Optional.of(defaultUser));
+        final User defaultUser = new User().withUserId(DEFAULT_USER_ID).withEmail(EMAIL);
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(defaultUser));
 
-        final User newUser =
-            new User().withUserId(UUID.randomUUID()).withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withDefaultWorkspaceId(UUID.randomUUID());
+        final AuthenticatedUser newUser =
+            new AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID)
+                .withDefaultWorkspaceId(UUID.randomUUID());
         when(uuidSupplier.get()).thenReturn(newUser.getUserId());
-        when(userPersistence.getUserInfo(newUser.getUserId())).thenReturn(Optional.of(UserInfoConverter.userInfoFromUser(newUser)));
+        when(userPersistence.getUser(newUser.getUserId())).thenReturn(Optional.of(AuthenticatedUserConverter.toUser(newUser)));
 
         final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
         assertTrue(res.getNewUserCreated());
@@ -341,7 +342,8 @@ class UserHandlerTest {
 
         verify(userPersistence).writeUser(defaultUser.withEmail(""));
         verify(userPersistence)
-            .writeUserWithAuth(argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
+            .writeAuthenticatedUser(
+                argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
       }
 
       @Test
@@ -351,8 +353,8 @@ class UserHandlerTest {
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
 
         // A user with the same email exists in the database
-        when(userPersistence.getUserInfoByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
-        when(userPersistence.getUserInfo(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
 
         // None of the auth users configured for the existing user actually exist in the external user
         // service
@@ -386,8 +388,8 @@ class UserHandlerTest {
 
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
-        when(userPersistence.getUserInfoByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
-        when(userPersistence.getUserInfo(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
         when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
             .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
 
@@ -406,9 +408,10 @@ class UserHandlerTest {
         when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
             .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
 
-        final User existingUserWithAuth = UserInfoConverter.userFromUserInfo(existingUser, EXISTING_AUTH_USER_ID, AuthProvider.KEYCLOAK);
+        final AuthenticatedUser existingAuthedUser =
+            AuthenticatedUserConverter.toAuthenticatedUser(existingUser, EXISTING_AUTH_USER_ID, AuthProvider.KEYCLOAK);
 
-        when(applicationService.listApplicationsByUser(existingUserWithAuth)).thenReturn(List.of(new Application().withId("app_id")));
+        when(applicationService.listApplicationsByUser(existingAuthedUser)).thenReturn(List.of(new Application().withId("app_id")));
         when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.of(SSO_REALM));
         when(workspacesHandler
             .listWorkspacesInOrganization(new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId())))
@@ -419,14 +422,14 @@ class UserHandlerTest {
               .thenReturn(List.of(new UserPermission().withUser(existingUser)));
         } else {
           when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
-              .thenReturn(List.of(new UserPermission().withUser(new UserInfo().withUserId(UUID.randomUUID()))));
+              .thenReturn(List.of(new UserPermission().withUser(new User().withUserId(UUID.randomUUID()))));
         }
 
         final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
         assertFalse(res.getNewUserCreated());
 
         // verify apps are revoked
-        verify(applicationService).deleteApplication(existingUserWithAuth, "app_id");
+        verify(applicationService).deleteApplication(existingAuthedUser, "app_id");
 
         // verify auth user is replaced
         verify(userPersistence).replaceAuthUserForUserId(EXISTING_USER_ID, NEW_AUTH_USER_ID, AuthProvider.KEYCLOAK);
@@ -461,9 +464,9 @@ class UserHandlerTest {
       private static final String EXISTING_EMAIL = "existing@gmail.com";
       private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
+      private AuthenticatedUser newAuthedUser;
       private User newUser;
-      private UserInfo newUserInfo;
-      private UserInfo existingUser;
+      private User existingUser;
       private WorkspaceRead defaultWorkspace;
 
       // this class provides the arguments for the parameterized test below, by returning all
@@ -498,14 +501,14 @@ class UserHandlerTest {
 
       @BeforeEach
       void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
-        newUser = new User().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
-        newUserInfo = UserInfoConverter.userInfoFromUser(newUser);
-        existingUser = new UserInfo().withUserId(EXISTING_USER_ID).withEmail(EXISTING_EMAIL);
+        newAuthedUser = new AuthenticatedUser().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
+        newUser = AuthenticatedUserConverter.toUser(newAuthedUser);
+        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EXISTING_EMAIL);
         defaultWorkspace = new WorkspaceRead().workspaceId(WORKSPACE_ID);
         when(userPersistence.getUserByAuthId(anyString())).thenReturn(Optional.empty());
-        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newUser);
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newAuthedUser);
         when(uuidSupplier.get()).thenReturn(NEW_USER_ID);
-        when(userPersistence.getUserInfo(NEW_USER_ID)).thenReturn(Optional.of(newUserInfo));
+        when(userPersistence.getUser(NEW_USER_ID)).thenReturn(Optional.of(newUser));
         when(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace);
       }
 
@@ -520,7 +523,7 @@ class UserHandlerTest {
                                final UUID domainRestrictedToOrgId)
           throws Exception {
 
-        newUser.setAuthProvider(authProvider);
+        newAuthedUser.setAuthProvider(authProvider);
 
         if (domainRestrictedToOrgId != null) {
           final String emailDomain = newUser.getEmail().split("@")[1];
@@ -562,8 +565,8 @@ class UserHandlerTest {
           when(workspacesHandler.listWorkspacesInOrganization(
               new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId()))).thenReturn(
                   new WorkspaceReadList().workspaces(List.of(defaultWorkspace)));
-          if (newUserInfo.getDefaultWorkspaceId() == null) {
-            newUserInfo.setDefaultWorkspaceId(defaultWorkspace.getWorkspaceId());
+          if (newUser.getDefaultWorkspaceId() == null) {
+            newUser.setDefaultWorkspaceId(defaultWorkspace.getWorkspaceId());
           }
         } else {
           when(workspacesHandler.listWorkspacesInOrganization(any())).thenReturn(new WorkspaceReadList().workspaces(List.of()));
@@ -574,9 +577,9 @@ class UserHandlerTest {
 
         if (domainRestrictedToOrgId != null && (authRealm == null || domainRestrictedToOrgId != ORGANIZATION.getOrganizationId())) {
           assertThrows(SSORequiredProblem.class, () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
-          verify(userPersistence, never()).writeUserWithAuth(any());
+          verify(userPersistence, never()).writeAuthenticatedUser(any());
           if (authRealm != null) {
-            verify(externalUserService).deleteUserByExternalId(newUser.getAuthUserId(), authRealm);
+            verify(externalUserService).deleteUserByExternalId(newAuthedUser.getAuthUserId(), authRealm);
           }
           return;
         }
@@ -595,7 +598,7 @@ class UserHandlerTest {
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {
-        inOrder.verify(userPersistence).writeUserWithAuth(argThat(user -> user.getUserId().equals(NEW_USER_ID)
+        inOrder.verify(userPersistence).writeAuthenticatedUser(argThat(user -> user.getUserId().equals(NEW_USER_ID)
             && NEW_EMAIL.equals(user.getEmail())
             && NEW_AUTH_USER_ID.equals(user.getAuthUserId())
             && user.getAuthProvider().equals(expectedAuthProvider)));

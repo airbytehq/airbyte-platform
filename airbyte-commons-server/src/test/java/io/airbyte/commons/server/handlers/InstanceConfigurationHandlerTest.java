@@ -25,10 +25,10 @@ import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -239,7 +239,7 @@ class InstanceConfigurationHandlerTest {
     assertEquals(expected, actual);
 
     // verify the user was updated with the email and name from the request
-    verify(mUserPersistence).writeUserWithAuth(eq(new User()
+    verify(mUserPersistence).writeAuthenticatedUser(eq(new AuthenticatedUser()
         .withUserId(USER_ID)
         .withEmail(EMAIL)
         .withName(expectedUserName)));
@@ -261,7 +261,7 @@ class InstanceConfigurationHandlerTest {
 
   private void stubGetDefaultUser() throws IOException {
     when(mUserPersistence.getDefaultUser()).thenReturn(
-        Optional.of(new User()
+        Optional.of(new AuthenticatedUser()
             .withUserId(USER_ID)
             .withName(DEFAULT_USER_NAME)));
   }

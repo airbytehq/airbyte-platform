@@ -9,11 +9,11 @@ import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
-import io.airbyte.config.User
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
@@ -82,7 +82,7 @@ open class ResourceBootstrapHandler(
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
 
-  fun findOrCreateOrganizationAndPermission(user: User): Organization {
+  fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
     findExistingOrganization(user)?.let { return it }
 
     val organization =
@@ -104,7 +104,7 @@ open class ResourceBootstrapHandler(
   /**
    * Tries to find an existing organization for the user. Permission checks will happen elsewhere.
    */
-  open fun findExistingOrganization(user: User): Organization? {
+  open fun findExistingOrganization(user: AuthenticatedUser): Organization? {
     val organizationPermissionList = permissionService.getPermissionsForUser(user.userId).filter { it.organizationId != null }
 
     val hasSingleOrganization = organizationPermissionList.size == 1
@@ -154,7 +154,7 @@ open class ResourceBootstrapHandler(
     }
   }
 
-  private fun getDefaultOrganizationName(user: User): String {
+  private fun getDefaultOrganizationName(user: AuthenticatedUser): String {
     return when {
       user.companyName != null -> {
         "${user.companyName}'s Organization"

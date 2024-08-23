@@ -259,6 +259,7 @@ class ReplicationInputHydratorTest {
     assertEquals(EXPECTED_STATE, replicationInput.getState());
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(TEST_STREAM_NAME, replicationInput.getCatalog().getStreams().get(0).getStream().getName());
+    assertEquals(withRefresh, replicationInput.getDestinationSupportsRefreshes());
   }
 
   @ParameterizedTest

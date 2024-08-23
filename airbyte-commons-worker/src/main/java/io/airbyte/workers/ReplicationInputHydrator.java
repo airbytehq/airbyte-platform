@@ -155,7 +155,8 @@ public class ReplicationInputHydrator {
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)
         .withCatalog(catalog)
-        .withState(state);
+        .withState(state)
+        .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
   }
 
   /**

@@ -3,6 +3,9 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.workers.pod.FileConstants.CONFIG_DIR
 import io.airbyte.workers.pod.FileConstants.EXIT_CODE_FILE
 import io.airbyte.workers.pod.FileConstants.JOB_OUTPUT_FILE
+import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE
+import io.airbyte.workers.pod.FileConstants.STDIN_PIPE_FILE
+import io.airbyte.workers.pod.FileConstants.STDOUT_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.TERMINATION_MARKER_FILE
 
 /**
@@ -33,6 +36,16 @@ object ContainerCommandFactory {
   ) = connectorCommandWrapper(
     """
     eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" > $CONFIG_DIR/$JOB_OUTPUT_FILE
+    """.trimIndent(),
+  )
+
+  fun replConnector(
+    operationCommand: String,
+    configArgs: String,
+    stdIn: String? = STDIN_PIPE_FILE,
+  ) = connectorCommandWrapper(
+    """
+    eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE < $stdIn
     """.trimIndent(),
   )
 

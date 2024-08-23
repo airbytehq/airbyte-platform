@@ -17,7 +17,6 @@ global:
     secretName: "airbyte-config-secrets"
     # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
     licenseKeySecretKey: "license-key"
-    workloadsOptIn: false
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""

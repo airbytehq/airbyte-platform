@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -59,17 +59,17 @@ class SecurityAwareCurrentUserServiceTest {
     ServerRequestContext.with(HttpRequest.GET("/"), () -> {
       try {
         final String authUserId = "testUser";
-        final User expectedUser = new User().withAuthUserId(authUserId);
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withAuthUserId(authUserId);
 
         when(securityService.username()).thenReturn(Optional.of(authUserId));
         when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(expectedUser));
 
         // First call - should fetch from userPersistence
-        final User user1 = currentUserService.getCurrentUser();
+        final AuthenticatedUser user1 = currentUserService.getCurrentUser();
         Assertions.assertEquals(expectedUser, user1);
 
         // Second call - should use cached user
-        final User user2 = currentUserService.getCurrentUser();
+        final AuthenticatedUser user2 = currentUserService.getCurrentUser();
         Assertions.assertEquals(expectedUser, user2);
 
         // Verify that getUserByAuthId is called only once

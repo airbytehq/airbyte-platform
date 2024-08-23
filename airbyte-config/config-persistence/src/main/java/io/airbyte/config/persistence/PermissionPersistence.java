@@ -14,7 +14,7 @@ import static org.jooq.impl.DSL.select;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.UserInfo;
+import io.airbyte.config.User;
 import io.airbyte.config.UserPermission;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -282,7 +282,7 @@ public class PermissionPersistence {
   private UserPermission buildUserPermissionFromRecord(final Record record) {
     return new UserPermission()
         .withUser(
-            new UserInfo()
+            new User()
                 .withUserId(record.get(USER.ID))
                 .withName(record.get(USER.NAME))
                 .withEmail(record.get(USER.EMAIL))

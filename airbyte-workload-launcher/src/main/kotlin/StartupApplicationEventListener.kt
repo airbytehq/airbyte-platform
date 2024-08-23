@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
+import io.airbyte.workload.launcher.temporal.TemporalWorkerController
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.discovery.event.ServiceReadyEvent
@@ -25,6 +26,7 @@ class StartupApplicationEventListener(
   @Named("highPriorityWorkerFactory") private val highPriorityWorkerFactory: WorkerFactory,
   private val claimProcessorTracker: ClaimProcessorTracker,
   private val customMetricPublisher: CustomMetricPublisher,
+  private val temporalWorkerController: TemporalWorkerController,
 ) : ApplicationEventListener<ServiceReadyEvent> {
   @VisibleForTesting
   var processorThread: Thread? = null
@@ -45,9 +47,7 @@ class StartupApplicationEventListener(
     trackerThread =
       thread {
         claimProcessorTracker.await()
-
-        workerFactory.start()
-        highPriorityWorkerFactory.start()
+        temporalWorkerController.start()
       }
   }
 }

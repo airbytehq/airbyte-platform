@@ -13,9 +13,6 @@ global:
     secretName: ""
     secretValue: ""
 
-  enterprise:
-    workloadsOptIn: false
-
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

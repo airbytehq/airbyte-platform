@@ -1,9 +1,10 @@
 import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
 import classNames from "classnames";
-import React, { forwardRef, ReactNode } from "react";
+import React, { ReactNode, useMemo, useState } from "react";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import styles from "./ComboBox.module.scss";
+import { Box } from "../Box";
 import { FlexContainer } from "../Flex";
 import { Input } from "../Input";
 import { TagInput } from "../TagInput";
@@ -11,11 +12,18 @@ import { Text } from "../Text";
 
 export interface Option {
   value: string;
+  label?: string;
+  icon?: React.ReactNode;
   description?: string;
 }
 
+interface OptionSection {
+  sectionTitle?: string;
+  innerOptions: Option[];
+}
+
 interface BaseProps {
-  options: Option[];
+  options: Option[] | OptionSection[];
   error?: boolean;
   fieldInputProps?: ControllerRenderProps<FieldValues, string>;
 }
@@ -27,6 +35,7 @@ export interface ComboBoxProps extends BaseProps {
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   filterOptions?: boolean;
   disabled?: boolean;
+  allowCustomValue?: boolean;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -36,28 +45,95 @@ export interface MultiComboBoxProps extends BaseProps {
   disabled?: boolean;
 }
 
-const Options = forwardRef<HTMLDivElement, { options: Option[] }>(({ options }, ref) => (
-  <ComboboxOptions ref={ref} as="ul" className={styles.optionsMenu} modal={false}>
-    {options.length > 0 &&
-      options.map(({ value, description }) => (
-        <ComboboxOption as="li" key={value} value={value}>
-          {({ focus, selected }) => (
-            <FlexContainer
-              className={classNames(styles.optionValue, { [styles.focus]: focus, [styles.selected]: selected })}
-              alignItems="baseline"
-            >
-              <Text size="md">{value}</Text>
-              <Text size="sm" className={styles.description}>
-                {description}
-              </Text>
-            </FlexContainer>
+const ComboBoxOption = ({ option }: { option: Option }) => (
+  <ComboboxOption as="li" value={option.value}>
+    {({ focus, selected }) => (
+      <FlexContainer
+        className={classNames(styles.optionValue, { [styles.focus]: focus, [styles.selected]: selected })}
+        alignItems="center"
+      >
+        {option.icon}
+        <FlexContainer alignItems="baseline">
+          <Text size="md">{getLabel(option)}</Text>
+          {option.description && (
+            <Text size="sm" className={styles.description}>
+              {option.description}
+            </Text>
           )}
-        </ComboboxOption>
-      ))}
-  </ComboboxOptions>
-));
-Options.displayName = "Options";
+        </FlexContainer>
+      </FlexContainer>
+    )}
+  </ComboboxOption>
+);
 
+const Options = ({ optionSections }: { optionSections: OptionSection[] }) => (
+  <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
+    {optionSections.map(({ sectionTitle, innerOptions }, index) => (
+      <FlexContainer direction="column" key={`${sectionTitle}_${index}`} gap="none">
+        {sectionTitle && (
+          <Box p="md">
+            <Text size="sm" color="grey">
+              {sectionTitle}
+            </Text>
+          </Box>
+        )}
+        {innerOptions.map((option) => (
+          <ComboBoxOption key={getLabel(option)} option={option} />
+        ))}
+      </FlexContainer>
+    ))}
+  </ComboboxOptions>
+);
+
+const normalizeOptionsAsSections = (options: Option[] | OptionSection[]): OptionSection[] => {
+  if (options.length === 0) {
+    return [];
+  }
+
+  if ("innerOptions" in options[0]) {
+    return options as OptionSection[];
+  }
+
+  return [{ innerOptions: options as Option[] }];
+};
+
+function getLabel(option: Option): string {
+  return option.label ?? option.value;
+}
+
+const findMatchingOption = (
+  stringToMatch: string,
+  matchType: "value" | "label",
+  optionsSections: OptionSection[]
+): Option | undefined => {
+  for (const section of optionsSections) {
+    const foundOption = section.innerOptions.find((option) =>
+      matchType === "value" ? option.value === stringToMatch : getLabel(option) === stringToMatch
+    );
+    if (foundOption) {
+      return foundOption;
+    }
+  }
+
+  return undefined;
+};
+
+const filterOptionSectionsByQuery = (optionSections: OptionSection[], query: string): OptionSection[] => {
+  return optionSections
+    .map(({ sectionTitle, innerOptions }) => ({
+      sectionTitle,
+      innerOptions: innerOptions.filter((option) => getLabel(option).toLowerCase().includes(query.toLowerCase())),
+    }))
+    .filter(({ innerOptions }) => innerOptions.length > 0);
+};
+
+const isCustomValue = (value: string, optionSections: OptionSection[]) => {
+  return !optionSections.some((optionSection) =>
+    optionSection.innerOptions.some((option) => getLabel(option) === value)
+  );
+};
+
+// the values and labels across all options should be unique!
 export const ComboBox = ({
   options,
   value,
@@ -68,31 +144,74 @@ export const ComboBox = ({
   fieldInputProps,
   disabled,
   filterOptions = true,
+  allowCustomValue,
 }: ComboBoxProps) => {
-  const filteredOptions =
-    filterOptions && value
-      ? options.filter((option) => option.value.toLowerCase().includes(value.toLowerCase()))
-      : options;
-  const displayOptions = [
-    ...(value && !options.map((option) => option.value).includes(value) ? [{ value }] : []),
-    ...filteredOptions,
-  ];
+  // Stores the value that the user types in to filter the options
+  const [query, setQuery] = useState("");
+
+  const inputOptionSections = useMemo(() => normalizeOptionsAsSections(options), [options]);
+
+  const currentInputValue = useMemo(() => {
+    if (query) {
+      return query;
+    }
+
+    const selectedOption = value ? findMatchingOption(value, "value", inputOptionSections) : undefined;
+    if (selectedOption) {
+      return getLabel(selectedOption);
+    }
+
+    if (allowCustomValue) {
+      return value;
+    }
+
+    return undefined;
+  }, [allowCustomValue, inputOptionSections, query, value]);
+
+  const displayOptionSections = useMemo(() => {
+    const filteredOptionSections =
+      filterOptions && query ? filterOptionSectionsByQuery(inputOptionSections, query) : inputOptionSections;
+
+    const shouldAddCustomValue =
+      allowCustomValue && currentInputValue && isCustomValue(currentInputValue, filteredOptionSections);
+    const customValueOption = shouldAddCustomValue ? [{ innerOptions: [{ value: currentInputValue }] }] : [];
+
+    return [...customValueOption, ...filteredOptionSections];
+  }, [filterOptions, query, inputOptionSections, allowCustomValue, currentInputValue]);
 
   return (
-    <Combobox value={value} onChange={onChange} immediate>
+    <Combobox
+      value={value}
+      onChange={(newValue) => onChange(newValue ?? "")}
+      onClose={() => {
+        setQuery("");
+      }}
+      immediate
+      as="div"
+    >
       <ComboboxInput as={React.Fragment}>
         <Input
           {...fieldInputProps}
-          value={value}
+          value={currentInputValue}
           error={error}
           adornment={adornment}
           autoComplete="off"
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            const newQuery = event.target.value;
+            setQuery(newQuery);
+
+            const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
+            if (allowCustomValue) {
+              onChange(selectedOption?.value ?? newQuery);
+            } else if (selectedOption) {
+              onChange(selectedOption.value);
+            }
+          }}
           onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
           disabled={disabled}
         />
       </ComboboxInput>
-      <Options options={displayOptions} />
+      <Options optionSections={displayOptionSections} />
     </Combobox>
   );
 };
@@ -105,20 +224,18 @@ export const MultiComboBox = ({
   error,
   fieldInputProps,
   disabled,
-}: MultiComboBoxProps) => {
-  return (
-    <Combobox value={value} onChange={onChange} multiple immediate>
-      <ComboboxInput as={React.Fragment}>
-        <TagInput
-          name={name}
-          fieldValue={value ?? []}
-          onChange={onChange}
-          onBlur={fieldInputProps?.onBlur}
-          error={error}
-          disabled={disabled}
-        />
-      </ComboboxInput>
-      <Options options={options} />
-    </Combobox>
-  );
-};
+}: MultiComboBoxProps) => (
+  <Combobox value={value} onChange={onChange} multiple immediate>
+    <ComboboxInput as={React.Fragment}>
+      <TagInput
+        name={name}
+        fieldValue={value ?? []}
+        onChange={onChange}
+        onBlur={fieldInputProps?.onBlur}
+        error={error}
+        disabled={disabled}
+      />
+    </ComboboxInput>
+    <Options optionSections={normalizeOptionsAsSections(options)} />
+  </Combobox>
+);

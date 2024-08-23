@@ -959,6 +959,10 @@ public class KubePodProcess implements KubePod {
     return new ResourceRequirementsBuilder();
   }
 
+  public static io.fabric8.kubernetes.api.model.ResourceRequirements buildResourceRequirements(final ResourceRequirements resourceRequirements) {
+    return getResourceRequirementsBuilder(resourceRequirements).build();
+  }
+
   private static Quantity min(final Quantity request, final Quantity limit) {
     if (limit == null) {
       return request;

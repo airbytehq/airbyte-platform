@@ -16,6 +16,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
@@ -27,7 +28,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -410,7 +410,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUserWithAuth(new User()
+    userPersistence.writeAuthenticatedUser(new AuthenticatedUser()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")
@@ -480,7 +480,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUserWithAuth(new User()
+    userPersistence.writeAuthenticatedUser(new AuthenticatedUser()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")
