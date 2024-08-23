@@ -1,3 +1,4 @@
+import registerCypressGrep from "@cypress/grep";
 import { requestWorkspaceId, completeInitialSetup } from "commands/api";
 require("dd-trace/ci/cypress/support");
 
@@ -11,6 +12,9 @@ Cypress.on("window:load", (window) => {
   `;
   window.document.head.appendChild(style);
 });
+
+// we use cypress grep tags to split cypress tests in multiple CI jobs.
+registerCypressGrep();
 
 before(() => {
   requestWorkspaceId().then(completeInitialSetup);
