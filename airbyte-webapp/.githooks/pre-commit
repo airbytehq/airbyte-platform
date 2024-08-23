@@ -1,4 +1,3 @@
-
 # Find the airbyte-webapp folder (which might be either inside oss/ or on the root)
 if [ -d "./oss/airbyte-webapp" ]; then
   webappDir="./oss/airbyte-webapp"
