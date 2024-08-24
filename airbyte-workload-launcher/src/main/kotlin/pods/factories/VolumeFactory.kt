@@ -136,8 +136,6 @@ class VolumeFactory(
     val config = config()
     volumes.add(config.volume)
     orchVolumeMounts.add(config.mount)
-    sourceVolumeMounts.add(config.mount)
-    destVolumeMounts.add(config.mount)
 
     val source = source()
     volumes.add(source.volume)

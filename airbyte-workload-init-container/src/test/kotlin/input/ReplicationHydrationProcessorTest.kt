@@ -112,11 +112,11 @@ class ReplicationHydrationProcessorTest {
     verify { serializer.serialize(hydrated.state) }
     verify { protocolSerializer.serialize(hydrated.catalog, false) }
     verify { protocolSerializer.serialize(mapper.mapCatalog(hydrated.catalog), hydrated.destinationSupportsRefreshes) }
-    verify { fileClient.writeInputFile(FileConstants.SOURCE_CATALOG_FILE, serializedSrcCatalog) }
-    verify { fileClient.writeInputFile(FileConstants.SOURCE_CONFIG_FILE, serializedSrcConfig) }
-    verify { fileClient.writeInputFile(FileConstants.DESTINATION_CATALOG_FILE, serializedDestCatalog) }
-    verify { fileClient.writeInputFile(FileConstants.DESTINATION_CONFIG_FILE, serializedDestConfig) }
-    verify { fileClient.writeInputFile(FileConstants.INPUT_STATE_FILE, serializedState) }
+    verify { fileClient.writeInputFile(FileConstants.CATALOG_FILE, serializedSrcCatalog, FileConstants.SOURCE_DIR) }
+    verify { fileClient.writeInputFile(FileConstants.CONNECTOR_CONFIG_FILE, serializedSrcConfig, FileConstants.SOURCE_DIR) }
+    verify { fileClient.writeInputFile(FileConstants.INPUT_STATE_FILE, serializedState, FileConstants.SOURCE_DIR) }
+    verify { fileClient.writeInputFile(FileConstants.CATALOG_FILE, serializedDestCatalog, FileConstants.DEST_DIR) }
+    verify { fileClient.writeInputFile(FileConstants.CONNECTOR_CONFIG_FILE, serializedDestConfig, FileConstants.DEST_DIR) }
     verify { fileClient.makeNamedPipes() }
   }
 

@@ -7,6 +7,8 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workers.pod.FileConstants.DEST_DIR
+import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -47,13 +49,21 @@ class ReplicationHydrationProcessor(
     // source inputs
     logger.info { "Writing source inputs..." }
     fileClient.writeInputFile(
-      FileConstants.SOURCE_CATALOG_FILE,
+      FileConstants.CATALOG_FILE,
       protocolSerializer.serialize(hydrated.catalog, false),
+      SOURCE_DIR,
     )
 
     fileClient.writeInputFile(
-      FileConstants.SOURCE_CONFIG_FILE,
+      FileConstants.CONNECTOR_CONFIG_FILE,
       serializer.serialize(hydrated.sourceConfiguration),
+      SOURCE_DIR,
+    )
+
+    fileClient.writeInputFile(
+      FileConstants.INPUT_STATE_FILE,
+      serializer.serialize(hydrated.state),
+      SOURCE_DIR,
     )
 
     // dest inputs
@@ -68,19 +78,15 @@ class ReplicationHydrationProcessor(
     val destinationCatalog = mapper.mapCatalog(hydrated.catalog)
 
     fileClient.writeInputFile(
-      FileConstants.DESTINATION_CATALOG_FILE,
+      FileConstants.CATALOG_FILE,
       protocolSerializer.serialize(destinationCatalog, hydrated.destinationSupportsRefreshes),
+      DEST_DIR,
     )
 
     fileClient.writeInputFile(
-      FileConstants.DESTINATION_CONFIG_FILE,
+      FileConstants.CONNECTOR_CONFIG_FILE,
       serializer.serialize(hydrated.destinationConfiguration),
-    )
-
-    // shared state input
-    fileClient.writeInputFile(
-      FileConstants.INPUT_STATE_FILE,
-      serializer.serialize(hydrated.state),
+      DEST_DIR,
     )
 
     // pipes for passing messages between all three
