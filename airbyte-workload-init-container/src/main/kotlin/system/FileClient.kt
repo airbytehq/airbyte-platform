@@ -29,9 +29,10 @@ class FileClient {
   fun writeInputFile(
     fileName: String,
     fileContents: String,
+    baseDir: String = FileConstants.CONFIG_DIR,
   ) {
     Files.writeString(
-      Path.of(FileConstants.CONFIG_DIR).resolve(fileName),
+      Path.of(baseDir).resolve(fileName),
       fileContents,
       StandardCharsets.UTF_8,
     )

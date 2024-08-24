@@ -91,6 +91,7 @@ class ReplicationPodFactory(
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelectors)
+      .withAutomountServiceAccountToken(false)
       .withSecurityContext(podSecurityContext())
       .endSpec()
       .build()

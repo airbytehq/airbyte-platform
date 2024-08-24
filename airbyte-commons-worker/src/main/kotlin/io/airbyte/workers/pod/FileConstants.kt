@@ -23,10 +23,8 @@ object FileConstants {
   const val CONNECTION_CONFIGURATION_FILE = "connectionConfiguration.json"
   const val INIT_INPUT_FILE = "input.json"
   const val SIDECAR_INPUT_FILE = "sidecarInput.json"
-  const val SOURCE_CONFIG_FILE = "sourceConfig.json"
-  const val DESTINATION_CONFIG_FILE = "destinationConfig.json"
-  const val SOURCE_CATALOG_FILE = "sourceCatalog.json"
-  const val DESTINATION_CATALOG_FILE = "destinationCatalog.json"
+  const val CONNECTOR_CONFIG_FILE = "connectorConfig.json"
+  const val CATALOG_FILE = "catalog.json"
   const val INPUT_STATE_FILE = "inputState.json"
 
   // marker files
