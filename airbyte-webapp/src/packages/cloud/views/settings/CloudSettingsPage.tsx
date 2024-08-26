@@ -23,7 +23,6 @@ export const CloudSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
@@ -38,13 +37,11 @@ export const CloudSettingsPage: React.FC = () => {
             name={formatMessage({ id: "settings.account" })}
             to={CloudSettingsRoutePaths.Account}
           />
-          {isTokenManagementEnabled && (
-            <SettingsLink
-              iconType="grid"
-              name={formatMessage({ id: "settings.applications" })}
-              to={CloudSettingsRoutePaths.Applications}
-            />
-          )}
+          <SettingsLink
+            iconType="grid"
+            name={formatMessage({ id: "settings.applications" })}
+            to={CloudSettingsRoutePaths.Applications}
+          />
           {isOsanoActive() && (
             <SettingsButton
               iconType="parameters"

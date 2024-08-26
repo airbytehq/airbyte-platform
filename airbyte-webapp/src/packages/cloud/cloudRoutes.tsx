@@ -69,7 +69,6 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
 
@@ -111,9 +110,7 @@ const MainRoutes: React.FC = () => {
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
           <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
-          {isTokenManagementEnabled && (
-            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
-          )}
+          <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
           {supportsDataResidency && (
             <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />

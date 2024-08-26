@@ -20,7 +20,6 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
-  "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
