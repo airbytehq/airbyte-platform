@@ -92,16 +92,31 @@ export function initializeUserManager() {
   // If there's no active redirect, so we can check for an existing session based on an entry in local storage
   // The local storage key looks like this: oidc.user:https://example.com/auth/realms/<realm>:<client-id>
   const localStorageKeys = Object.keys(window.localStorage);
-  const realmAndClientId = localStorageKeys.find((key) => key.startsWith("oidc.user:"));
-  if (realmAndClientId) {
-    const match = realmAndClientId.match(/^oidc.user:.*\/(?<realm>[^:]+):(?<clientId>.+)$/);
-    if (match?.groups) {
-      return createUserManager(match.groups.realm);
+
+  // Look for a localStorage entry that matches the current backend we're connecting to
+  const existingLocalStorageEntry = localStorageKeys.find((key) =>
+    key.startsWith(`oidc.user:${config.keycloakBaseUrl}`)
+  );
+
+  if (existingLocalStorageEntry) {
+    const realmAndClientId = existingLocalStorageEntry.match(/^oidc.user:.*\/(?<realm>[^:]+):(?<clientId>.+)$/);
+    if (realmAndClientId?.groups) {
+      return createUserManager(realmAndClientId.groups.realm);
     }
   }
 
   // If no session is found, we can fall back to the default realm and client id
   return createUserManager(AIRBYTE_CLOUD_REALM);
+}
+
+// During local development there may be multiple oidc sessions present in local storage when switching between environments. Clearing them avoids initializing the userManager with the wrong realm.
+function clearLocalStorageOidcSessions() {
+  const localStorageKeys = Object.keys(window.localStorage);
+  localStorageKeys.forEach((key) => {
+    if (key.startsWith("oidc.user:")) {
+      window.localStorage.removeItem(key);
+    }
+  });
 }
 
 // Removes OIDC params from URL, but doesn't remove other params that might be present
@@ -184,6 +199,7 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         error: null,
       };
     case "error":
+      clearLocalStorageOidcSessions();
       return {
         ...state,
         didInitialize: true,
