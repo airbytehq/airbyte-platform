@@ -866,7 +866,7 @@ class WebBackendConnectionsHandlerTest {
 
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
         new ConnectionRead().connectionId(expected.getConnectionId()).sourceId(expected.getSourceId()));
-    when(connectionsHandler.updateConnection(any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -929,7 +929,7 @@ class WebBackendConnectionsHandlerTest {
             .sourceId(expected.getSourceId())
             .operationIds(connectionRead.getOperationIds())
             .breakingChange(false));
-    when(connectionsHandler.updateConnection(any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -1004,7 +1004,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
@@ -1020,7 +1020,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     final InOrder orderVerifier = inOrder(eventRunner);
     if (useRefresh) {
       orderVerifier.verify(eventRunner, times(1)).refreshConnectionAsync(connectionId.getConnectionId(),
@@ -1074,7 +1074,7 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(expectedWithNewSchema.getSyncCatalog())
         .status(expected.getStatus())
         .schedule(expected.getSchedule()).breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
@@ -1088,7 +1088,7 @@ class WebBackendConnectionsHandlerTest {
     verify(connectionsHandler).getConfigurationDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     final InOrder orderVerifier = inOrder(eventRunner);
     orderVerifier.verify(eventRunner, times(0)).resetConnection(eq(connectionId.getConnectionId()), any());
     orderVerifier.verify(eventRunner, times(0)).startNewManualSync(connectionId.getConnectionId());
@@ -1124,7 +1124,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1134,7 +1134,7 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(0)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     verify(eventRunner, times(0)).resetConnection(any(), any());
   }
 
@@ -1183,7 +1183,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .breakingChange(false);
 
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1191,7 +1191,7 @@ class WebBackendConnectionsHandlerTest {
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
-    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture());
+    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture(), any(), any());
     final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
     // Expect the ConnectionUpdate object to have breakingChange: false
     assertEquals(false, connectionUpdateValues.get(0).getBreakingChange());
@@ -1199,7 +1199,7 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(2)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
   }
 
   @Test

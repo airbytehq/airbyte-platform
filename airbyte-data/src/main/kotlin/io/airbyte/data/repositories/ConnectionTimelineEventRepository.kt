@@ -12,8 +12,6 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimelineEvent, UUID> {
-  fun findByConnectionId(connectionId: UUID): List<ConnectionTimelineEvent>
-
   @Query(
     """
         SELECT * FROM connection_timeline_event
