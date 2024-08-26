@@ -314,7 +314,11 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
 
   const buttonClickHandler = () => {
     hideDataPreview();
-    setValue(formKey, valueToSet);
+    setValue(formKey, valueToSet, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
     if (updatedFullForm?.inputs) {
       setValue("formValues.inputs", mergeInputs(currentInputs, updatedFullForm.inputs));
     }
