@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -222,7 +223,21 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
       expectedWorkspace.withTombstone(false);
     }
 
-    assertEquals(workspace, configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true));
+    assertWorkspaceEquals(expectedWorkspace, configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true));
+  }
+
+  private void assertWorkspaceEquals(final StandardWorkspace expectedWorkspace, final StandardWorkspace actualWorkspace) {
+    assertThat(actualWorkspace)
+        .usingRecursiveComparison()
+        .ignoringFields("createdAt", "updatedAt")
+        .isEqualTo(expectedWorkspace);
+  }
+
+  private void assertWorkspacesEqual(final Set<StandardWorkspace> expectedWorkspaces, final Set<StandardWorkspace> actualWorkspaces) {
+    assertThat(actualWorkspaces)
+        .usingRecursiveComparison()
+        .ignoringFields("createdAt", "updatedAt")
+        .isEqualTo(expectedWorkspaces);
   }
 
   // @ParameterizedTest
@@ -312,7 +327,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(false));
 
     assertEquals(1, workspaces.size());
-    assertEquals(workspace, workspaces.get(0));
+    assertWorkspaceEquals(workspace, workspaces.get(0));
   }
 
   @Test
@@ -331,7 +346,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
 
     assertEquals(1, workspaces.size());
-    assertEquals(workspace, workspaces.get(0));
+    assertWorkspaceEquals(workspace, workspaces.get(0));
   }
 
   @Test
@@ -350,7 +365,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
 
     assertEquals(1, workspaces.size());
-    assertEquals(workspace, workspaces.get(0));
+    assertWorkspaceEquals(workspace, workspaces.get(0));
   }
 
   @Test
@@ -379,7 +394,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     final StandardWorkspace actualWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(MockData.ORGANIZATION_ID_1);
 
-    assertEquals(expectedWorkspace, actualWorkspace);
+    assertWorkspaceEquals(expectedWorkspace, actualWorkspace);
   }
 
   @ParameterizedTest
@@ -469,7 +484,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final Set<StandardWorkspace> expectedWorkspaces = Set.of(workspace1, workspace2);
     final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspaces);
 
-    assertEquals(expectedWorkspaces, actualWorkspaces);
+    assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces);
   }
 
   @Test
@@ -534,7 +549,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty()));
 
-    assertEquals(expectedWorkspaces, actualWorkspaces);
+    assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces);
   }
 
 }
