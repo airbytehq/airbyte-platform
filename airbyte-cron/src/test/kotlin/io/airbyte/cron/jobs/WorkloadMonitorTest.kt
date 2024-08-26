@@ -27,6 +27,7 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.Optional
 
 class WorkloadMonitorTest {
   val nonSyncTimeout = Duration.of(9, ChronoUnit.MINUTES)
@@ -53,7 +54,7 @@ class WorkloadMonitorTest {
         nonSyncWorkloadTimeout = nonSyncTimeout,
         syncWorkloadTimeout = syncTimeout,
         metricClient = metricClient,
-        timeProvider = { _: ZoneId -> currentTime },
+        timeProvider = Optional.of({ _: ZoneId -> currentTime }),
       )
   }
 
