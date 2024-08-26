@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -58,21 +56,14 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
 }
 
-val env =
-  Properties().apply {
-    load(rootProject.file(".env.dev").inputStream())
-  }
-
 airbyte {
   application {
     mainClass = "io.airbyte.cron.MicronautCronRunner"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
       ),
     )
   }
