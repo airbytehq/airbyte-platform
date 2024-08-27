@@ -3,10 +3,7 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.workers.pod.ContainerConstants.DESTINATION_CONTAINER_NAME
 import io.airbyte.workers.pod.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
 import io.airbyte.workers.pod.ContainerConstants.SOURCE_CONTAINER_NAME
-import io.airbyte.workers.pod.FileConstants.CATALOG_FILE
-import io.airbyte.workers.pod.FileConstants.CONNECTOR_CONFIG_FILE
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
-import io.airbyte.workers.pod.FileConstants.INPUT_STATE_FILE
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
@@ -55,13 +52,7 @@ class ReplicationContainerFactory(
     image: String,
   ): Container {
     val mainCommand =
-      ContainerCommandFactory.replConnector(
-        "read",
-        "--config $SOURCE_DIR/${CONNECTOR_CONFIG_FILE} " +
-          "--catalog $SOURCE_DIR/${CATALOG_FILE} " +
-          "--state $SOURCE_DIR/${INPUT_STATE_FILE}",
-        "/dev/null",
-      )
+      ContainerCommandFactory.source()
 
     return ContainerBuilder()
       .withName(SOURCE_CONTAINER_NAME)
@@ -83,11 +74,7 @@ class ReplicationContainerFactory(
     image: String,
   ): Container {
     val mainCommand =
-      ContainerCommandFactory.replConnector(
-        "write",
-        "--config $DEST_DIR/${CONNECTOR_CONFIG_FILE} " +
-          "--catalog $DEST_DIR/${CATALOG_FILE} ",
-      )
+      ContainerCommandFactory.destination()
 
     return ContainerBuilder()
       .withName(DESTINATION_CONTAINER_NAME)

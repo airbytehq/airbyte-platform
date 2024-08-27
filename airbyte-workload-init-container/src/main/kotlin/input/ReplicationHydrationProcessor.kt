@@ -60,17 +60,14 @@ class ReplicationHydrationProcessor(
       SOURCE_DIR,
     )
 
-    // ensure empty state serializes properly as we will pass it to the connector
-    val serializedState =
-      hydrated.state?.state?.let {
-        serializer.serialize(it)
-      } ?: "{}"
-
-    fileClient.writeInputFile(
-      FileConstants.INPUT_STATE_FILE,
-      serializedState,
-      SOURCE_DIR,
-    )
+    // no need to pass state if empty
+    hydrated.state?.state?.let {
+      fileClient.writeInputFile(
+        FileConstants.INPUT_STATE_FILE,
+        serializer.serialize(it),
+        SOURCE_DIR,
+      )
+    }
 
     // dest inputs
     logger.info { "Writing destination inputs..." }

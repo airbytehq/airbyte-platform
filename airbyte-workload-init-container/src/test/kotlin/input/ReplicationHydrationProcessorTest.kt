@@ -7,7 +7,6 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
-import io.airbyte.initContainer.input.ReplicationHydrationProcessorTest.Fixtures.SERIALIZED_STATE
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -66,7 +65,7 @@ class ReplicationHydrationProcessorTest {
   @MethodSource("stateMatrix")
   fun `parses input, hydrates, and writes output to expected files`(
     state: State?,
-    expectedSerializedState: String,
+    timesStateFileWritten: Int,
   ) {
     val input = Fixtures.workload
     val catalog =
@@ -100,7 +99,7 @@ class ReplicationHydrationProcessorTest {
     val serializedSrcConfig = "serialized src config"
     val serializedDestCatalog = "serialized dest catalog"
     val serializedDestConfig = "serialized dest config"
-    val serializedState = SERIALIZED_STATE
+    val serializedState = "serialized state config"
 
     every { deserializer.toReplicationActivityInput(input.inputPayload) } returns activityInput
     every { replicationInputHydrator.getHydratedReplicationInput(activityInput) } returns hydrated
@@ -123,7 +122,7 @@ class ReplicationHydrationProcessorTest {
     verify { protocolSerializer.serialize(mapper.mapCatalog(hydrated.catalog), hydrated.destinationSupportsRefreshes) }
     verify { fileClient.writeInputFile(FileConstants.CATALOG_FILE, serializedSrcCatalog, FileConstants.SOURCE_DIR) }
     verify { fileClient.writeInputFile(FileConstants.CONNECTOR_CONFIG_FILE, serializedSrcConfig, FileConstants.SOURCE_DIR) }
-    verify { fileClient.writeInputFile(FileConstants.INPUT_STATE_FILE, expectedSerializedState, FileConstants.SOURCE_DIR) }
+    verify(exactly = timesStateFileWritten) { fileClient.writeInputFile(FileConstants.INPUT_STATE_FILE, serializedState, FileConstants.SOURCE_DIR) }
     verify { fileClient.writeInputFile(FileConstants.CATALOG_FILE, serializedDestCatalog, FileConstants.DEST_DIR) }
     verify { fileClient.writeInputFile(FileConstants.CONNECTOR_CONFIG_FILE, serializedDestConfig, FileConstants.DEST_DIR) }
     verify { fileClient.makeNamedPipes() }
@@ -134,15 +133,14 @@ class ReplicationHydrationProcessorTest {
     @JvmStatic
     private fun stateMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(State().withState(null), "{}"),
-        Arguments.of(null, "{}"),
-        Arguments.of(State().withState(Jsons.jsonNode("this is" to "nested for some reason")), SERIALIZED_STATE),
+        Arguments.of(State().withState(null), 0),
+        Arguments.of(null, 0),
+        Arguments.of(State().withState(Jsons.jsonNode("this is" to "nested for some reason")), 1),
       )
     }
   }
 
   object Fixtures {
-    const val SERIALIZED_STATE = "serialized state config"
     private const val WORKLOAD_ID = "workload-id-13"
 
     val workload =

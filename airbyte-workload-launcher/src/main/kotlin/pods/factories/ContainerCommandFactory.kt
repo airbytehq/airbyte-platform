@@ -1,8 +1,13 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.workers.pod.FileConstants.CATALOG_FILE
 import io.airbyte.workers.pod.FileConstants.CONFIG_DIR
+import io.airbyte.workers.pod.FileConstants.CONNECTOR_CONFIG_FILE
+import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.EXIT_CODE_FILE
+import io.airbyte.workers.pod.FileConstants.INPUT_STATE_FILE
 import io.airbyte.workers.pod.FileConstants.JOB_OUTPUT_FILE
+import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDIN_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDOUT_PIPE_FILE
@@ -39,15 +44,26 @@ object ContainerCommandFactory {
     """.trimIndent(),
   )
 
-  fun replConnector(
-    operationCommand: String,
-    configArgs: String,
-    stdIn: String? = STDIN_PIPE_FILE,
-  ) = connectorCommandWrapper(
-    """
-    eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE < $stdIn
-    """.trimIndent(),
-  )
+  @SuppressWarnings("LineLength")
+  fun source() =
+    connectorCommandWrapper(
+      """
+      # only provide the state flag if present
+      if [ ! -f $SOURCE_DIR/$INPUT_STATE_FILE ]; then
+        eval "${'$'}AIRBYTE_ENTRYPOINT read --config $SOURCE_DIR/${CONNECTOR_CONFIG_FILE} --catalog $SOURCE_DIR/${CATALOG_FILE}" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE
+      else
+        eval "${'$'}AIRBYTE_ENTRYPOINT read --config $SOURCE_DIR/${CONNECTOR_CONFIG_FILE} --catalog $SOURCE_DIR/${CATALOG_FILE} --state $SOURCE_DIR/$INPUT_STATE_FILE" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE
+      fi
+      """.trimIndent(),
+    )
+
+  @SuppressWarnings("LineLength")
+  fun destination() =
+    connectorCommandWrapper(
+      """
+      eval "${'$'}AIRBYTE_ENTRYPOINT write --config $DEST_DIR/${CONNECTOR_CONFIG_FILE} --catalog $DEST_DIR/${CATALOG_FILE}" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE < $STDIN_PIPE_FILE
+      """.trimIndent(),
+    )
 
   private fun connectorCommandWrapper(command: String): String =
     """
@@ -60,7 +76,7 @@ object ContainerCommandFactory {
     fi
 
     # run connector in background and store PID
-    $command &
+    ($command) &
     CHILD_PID=${'$'}!
 
     # run busy loop in background that checks for termination file and if present kills the connector operation and exits
