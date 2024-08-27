@@ -25,10 +25,10 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
-import { AssistWaiting } from "./AssistWaiting";
+import { convertToAssistFormValuesSync } from "./Assist/assist";
+import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { convertToAssistFormValuesSync } from "../assist";
 import { AssistData, BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamResponse {

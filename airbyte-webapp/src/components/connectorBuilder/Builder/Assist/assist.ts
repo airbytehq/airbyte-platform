@@ -1,8 +1,8 @@
 import { BuilderAssistManifestResponse } from "core/api";
 import { DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 
-import { convertToBuilderFormValuesSync } from "./convertManifestToBuilderForm";
-import { BuilderFormValues } from "./types";
+import { convertToBuilderFormValuesSync } from "../../convertManifestToBuilderForm";
+import { BuilderFormValues } from "../../types";
 
 export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator";
 

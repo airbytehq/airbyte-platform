@@ -66,6 +66,7 @@ export type BuilderFieldProps = BaseFieldProps &
         onBlur?: (value: string) => void;
         step?: number;
         min?: number;
+        placeholder?: string;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabledTooltip?: string }
@@ -220,6 +221,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             onChange={(e) => {
               setValue(e.target.value);
             }}
+            placeholder={props.placeholder}
             className={props.className}
             type={props.type}
             value={(fieldValue as string | number | undefined) ?? ""}

@@ -24,8 +24,8 @@ import {
 import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { AssistKey, convertToAssistFormValuesSync } from "../assist";
-import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../types";
+import { AssistKey, convertToAssistFormValuesSync } from "./assist";
+import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
 
 /**
  * HELPERS
