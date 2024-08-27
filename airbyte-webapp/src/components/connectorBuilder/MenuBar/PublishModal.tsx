@@ -204,7 +204,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
 
-  const isMarketplaceContributionEnabled = useExperiment("connectorBuilder.contributeToMarketplace", false);
+  const isMarketplaceContributionEnabled = useExperiment("connectorBuilder.contributeToMarketplace", true);
 
   if (isLoadingVersions) {
     return (
