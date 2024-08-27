@@ -41,13 +41,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         replicationFeatureFlagReader,
         replicationWorkerHelper,
         destinationTimeoutMonitor,
-        getQueueType(),
         OptionalInt.of(1),
         streamStatusCompletionTracker);
-  }
-
-  public BufferedReplicationWorkerType getQueueType() {
-    return BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
   }
 
   // BufferedReplicationWorkerTests.

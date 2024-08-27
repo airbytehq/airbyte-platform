@@ -7,7 +7,6 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
 import io.airbyte.commons.concurrency.ClosableLinkedBlockingQueue;
 import io.airbyte.commons.concurrency.ClosableQueue;
 import io.airbyte.commons.io.LineGobbler;
@@ -101,10 +100,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final BufferedReplicationWorkerType bufferedReplicationWorkerType,
                                    final StreamStatusCompletionTracker streamStatusCompletionTracker) {
     this(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader,
-        replicationWorkerHelper, destinationTimeoutMonitor, bufferedReplicationWorkerType, OptionalInt.empty(), streamStatusCompletionTracker);
+        replicationWorkerHelper, destinationTimeoutMonitor, OptionalInt.empty(), streamStatusCompletionTracker);
   }
 
   public BufferedReplicationWorker(final String jobId,
@@ -117,7 +115,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final BufferedReplicationWorkerType bufferedReplicationWorkerType,
                                    final OptionalInt pollTimeOutDurationForQueue,
                                    final StreamStatusCompletionTracker streamStatusCompletionTracker) {
     this.jobId = jobId;
@@ -130,12 +127,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
-    this.messagesFromSourceQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize)
-            : new ClosableLinkedBlockingQueue<>(sourceMaxBufferSize, pollTimeOutDurationForQueue);
-    this.messagesForDestinationQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize)
-            : new ClosableLinkedBlockingQueue<>(destinationMaxBufferSize, pollTimeOutDurationForQueue);
+    this.messagesFromSourceQueue = new ClosableLinkedBlockingQueue<>(sourceMaxBufferSize, pollTimeOutDurationForQueue);
+    this.messagesForDestinationQueue = new ClosableLinkedBlockingQueue<>(destinationMaxBufferSize, pollTimeOutDurationForQueue);
     // readFromSource + processMessage + writeToDestination + readFromDestination +
     // source heartbeat + dest timeout monitor + workload heartbeat = 7 threads
     this.executors = Executors.newFixedThreadPool(7);
