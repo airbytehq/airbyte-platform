@@ -184,7 +184,7 @@ slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.2" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 spring-core = { module = "org.springframework:spring-core", version = "6.1.6" }
-stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
+stripe = { module = "com.stripe:stripe-java", version = "26.7.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }

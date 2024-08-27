@@ -4458,6 +4458,63 @@ paths:
       responses:
         "204":
           description: Successfully persisted the job cancellation.
+  /v1/billing/customer_portal:
+    post:
+      summary: Get a link to the customer portal
+      tags:
+        - billing
+        - cloud-only
+      operationId: getCustomerPortalLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerPortalRequestBody"
+      responses:
+        "200":
+          description: Successfully got customer portal session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerPortalRead"
+  /v1/billing/list_invoices:
+    post:
+      summary: Get a list of past invoices of the customer
+      tags:
+        - billing
+        - cloud-only
+      operationId: listPastInvoices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved list of invoices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInvoicesRead"
+  /v1/billing/payment_information:
+    post:
+      summary: Get a summary of payment information for a specific organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getPaymentInformation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully got organization's payment information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInformationRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -9569,6 +9626,125 @@ components:
             - failed
         message:
           type: string
+
+    # Billing
+    CustomerPortalRequestBody:
+      type: object
+      required:
+        - organizationId
+        - returnUrl
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        returnUrl:
+          type: string
+        flow:
+          type: string
+          enum:
+            - portal
+            - payment_method
+          default: portal
+    CustomerPortalRead:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+    InvoiceRead:
+      type: object
+      required:
+        - id
+        - total
+        - currency
+        - invoiceDate
+        - status
+        - pdfUrl
+        - invoiceUrl
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        total:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        invoiceDate:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+            - draft
+            - open
+            - paid
+            - void
+            - uncollectible
+        pdfUrl:
+          type: string
+        invoiceUrl:
+          type: string
+    ListInvoicesRead:
+      type: object
+      required:
+        - invoices
+        - hasMore
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceRead"
+        hasMore:
+          type: boolean
+    AddressRead:
+      type: object
+      properties:
+        country:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        line1:
+          type: string
+        line2:
+          type: string
+    PaymentMethodRead:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+        cardBrand:
+          type: string
+        cardLastDigits:
+          type: string
+        cardExpireMonth:
+          type: integer
+          format: int64
+        cardExpireYear:
+          type: integer
+          format: int64
+    PaymentInformationRead:
+      type: object
+      properties:
+        customer:
+          type: object
+          properties:
+            email:
+              type: string
+            customerAddress:
+              $ref: "#/components/schemas/AddressRead"
+            shippingAddress:
+              $ref: "#/components/schemas/AddressRead"
+            defaultPaymentMethod:
+              $ref: "#/components/schemas/PaymentMethodRead"
 
     # ORGANIZATIONS
     OrganizationId:

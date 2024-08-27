@@ -8,3 +8,9 @@ intents:
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
+  ManageOrganizationBilling:
+    name: Manage Organization Billing
+    description: View and edit billing information for the organization
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN

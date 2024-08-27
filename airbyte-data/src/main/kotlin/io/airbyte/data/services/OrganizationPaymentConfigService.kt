@@ -5,4 +5,6 @@ import java.util.UUID
 
 interface OrganizationPaymentConfigService {
   fun findByOrganizationId(organizationId: UUID): OrganizationPaymentConfig?
+
+  fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig): Unit
 }
