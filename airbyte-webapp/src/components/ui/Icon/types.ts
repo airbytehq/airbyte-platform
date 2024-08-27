@@ -151,6 +151,7 @@ export type IconColor =
   | "error"
   | "warning"
   | "affordance"
+  | "highlight"
   | "foreground";
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 

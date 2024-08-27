@@ -31,3 +31,13 @@
 .description {
   color: colors.$grey-400;
 }
+
+.optionInstructions {
+  cursor: not-allowed;
+  font-size: variables.$font-size-md;
+  line-height: 1.2;
+}
+
+.optionLoading {
+  color: colors.$grey-400;
+}

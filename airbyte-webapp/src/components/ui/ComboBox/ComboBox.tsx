@@ -2,6 +2,9 @@ import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headl
 import classNames from "classnames";
 import React, { ReactNode, useMemo, useState } from "react";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
+import { useIntl } from "react-intl";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./ComboBox.module.scss";
 import { Box } from "../Box";
@@ -13,7 +16,8 @@ import { Text } from "../Text";
 export interface Option {
   value: string;
   label?: string;
-  icon?: React.ReactNode;
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
   description?: string;
 }
 
@@ -28,6 +32,16 @@ interface BaseProps {
   fieldInputProps?: ControllerRenderProps<FieldValues, string>;
 }
 
+export interface OptionsConfig {
+  loading?: boolean;
+  loadingMessage?: ReactNode;
+  instructionMessage?: ReactNode;
+}
+
+export interface OptionsProps extends OptionsConfig {
+  optionSections: OptionSection[];
+}
+
 export interface ComboBoxProps extends BaseProps {
   value: string | undefined;
   onChange: (newValue: string) => void;
@@ -36,6 +50,7 @@ export interface ComboBoxProps extends BaseProps {
   filterOptions?: boolean;
   disabled?: boolean;
   allowCustomValue?: boolean;
+  optionsConfig?: OptionsConfig;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -49,10 +64,11 @@ const ComboBoxOption = ({ option }: { option: Option }) => (
   <ComboboxOption as="li" value={option.value}>
     {({ focus, selected }) => (
       <FlexContainer
+        gap="sm"
         className={classNames(styles.optionValue, { [styles.focus]: focus, [styles.selected]: selected })}
         alignItems="center"
       >
-        {option.icon}
+        {option.iconLeft}
         <FlexContainer alignItems="baseline">
           <Text size="md">{getLabel(option)}</Text>
           {option.description && (
@@ -61,29 +77,72 @@ const ComboBoxOption = ({ option }: { option: Option }) => (
             </Text>
           )}
         </FlexContainer>
+        {option.iconRight}
       </FlexContainer>
     )}
   </ComboboxOption>
 );
 
-const Options = ({ optionSections }: { optionSections: OptionSection[] }) => (
-  <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
-    {optionSections.map(({ sectionTitle, innerOptions }, index) => (
-      <FlexContainer direction="column" key={`${sectionTitle}_${index}`} gap="none">
-        {sectionTitle && (
-          <Box p="md">
-            <Text size="sm" color="grey">
-              {sectionTitle}
-            </Text>
-          </Box>
-        )}
-        {innerOptions.map((option) => (
-          <ComboBoxOption key={getLabel(option)} option={option} />
-        ))}
-      </FlexContainer>
-    ))}
-  </ComboboxOptions>
-);
+const getOptionsList = ({ optionSections }: { optionSections: OptionSection[] }) => {
+  return optionSections.map(({ sectionTitle, innerOptions }, index) => (
+    <FlexContainer direction="column" key={`${sectionTitle}_${index}`} gap="none">
+      {sectionTitle && (
+        <Box p="md">
+          <Text size="sm" color="grey">
+            {sectionTitle}
+          </Text>
+        </Box>
+      )}
+      {innerOptions.map((option) => (
+        <ComboBoxOption key={getLabel(option)} option={option} />
+      ))}
+    </FlexContainer>
+  ));
+};
+
+const OptionsLoading = ({ message }: { message: ReactNode }) => {
+  return (
+    <FlexContainer
+      gap="sm"
+      className={classNames(styles.optionValue, styles.optionInstructions, styles.optionLoading)}
+      alignItems="center"
+    >
+      <Icon type="loading" size="xs" color="disabled" />
+      {message}
+    </FlexContainer>
+  );
+};
+
+const OptionsInstruction = ({ message }: { message: ReactNode }) => {
+  return (
+    <FlexContainer className={classNames(styles.optionValue, styles.optionInstructions)} alignItems="center">
+      {message}
+    </FlexContainer>
+  );
+};
+
+const Options = ({ optionSections, loadingMessage, instructionMessage, loading = false }: OptionsProps) => {
+  const { formatMessage } = useIntl();
+  const defaultLoadingMessage = formatMessage({ id: "ui.loading" });
+  const optionsList = getOptionsList({ optionSections });
+  if (optionSections.length === 0 && !loading) {
+    return null;
+  }
+
+  if (loading) {
+    optionsList.unshift(<OptionsLoading message={loadingMessage || defaultLoadingMessage} />);
+  }
+
+  if (instructionMessage) {
+    optionsList.unshift(<OptionsInstruction message={instructionMessage} />);
+  }
+
+  return (
+    <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
+      {optionsList}
+    </ComboboxOptions>
+  );
+};
 
 const normalizeOptionsAsSections = (options: Option[] | OptionSection[]): OptionSection[] => {
   if (options.length === 0) {
@@ -143,6 +202,7 @@ export const ComboBox = ({
   onBlur,
   fieldInputProps,
   disabled,
+  optionsConfig,
   filterOptions = true,
   allowCustomValue,
 }: ComboBoxProps) => {
@@ -211,7 +271,7 @@ export const ComboBox = ({
           disabled={disabled}
         />
       </ComboboxInput>
-      <Options optionSections={displayOptionSections} />
+      <Options optionSections={displayOptionSections} {...optionsConfig} />
     </Combobox>
   );
 };

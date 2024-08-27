@@ -107,23 +107,24 @@ export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest,
   });
 };
 
-interface BuilderAssistBaseParams {
+export interface BuilderAssistBaseParams {
   session_id?: string;
   cdk_version?: string;
 }
-interface BuilderAssistGlobalParams extends BuilderAssistBaseParams {
+export interface BuilderAssistGlobalParams extends BuilderAssistBaseParams {
   docs_url?: string;
   openapi_spec_url?: string;
   app_name: string;
 }
-interface BuilderAssistGlobalUrlParams extends BuilderAssistGlobalParams {
+export interface BuilderAssistGlobalUrlParams extends BuilderAssistGlobalParams {
   url_base?: string;
 }
-interface BuilderAssistStreamParams extends BuilderAssistGlobalUrlParams {
+export interface BuilderAssistStreamParams extends BuilderAssistGlobalUrlParams {
   stream_name: string;
 }
 export type BuilderAssistFindUrlBaseParams = BuilderAssistGlobalParams;
 export type BuilderAssistFindAuthParams = BuilderAssistGlobalUrlParams;
+export type BuilderAssistCreateStreamParams = BuilderAssistStreamParams;
 export type BuilderAssistFindStreamPaginatorParams = BuilderAssistStreamParams;
 export type BuilderAssistFindStreamMetadataParams = BuilderAssistStreamParams;
 export type BuilderAssistFindStreamResponseParams = BuilderAssistStreamParams;
@@ -186,6 +187,11 @@ export const useBuilderAssistFindUrlBase = (params: BuilderAssistFindUrlBasePara
 export const useBuilderAssistFindAuth = (params: BuilderAssistFindAuthParams) => {
   const hasRequiredParams = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
   return useAssistManifestQuery<BuilderAssistManifestResponse>("find_auth", hasRequiredParams, params);
+};
+
+export const useBuilderAssistCreateStream = (params: BuilderAssistCreateStreamParams) => {
+  // this one is always enabled, let the server return an error if there is a problem
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("create_stream", true, params);
 };
 
 export const useBuilderAssistFindStreamPaginator = (params: BuilderAssistFindStreamPaginatorParams) => {
