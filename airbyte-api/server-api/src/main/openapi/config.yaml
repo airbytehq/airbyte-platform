@@ -7039,6 +7039,23 @@ components:
           type: boolean
         sso:
           type: boolean
+        billing:
+          type: object
+          required:
+            - paymentStatus
+          properties:
+            paymentStatus:
+              type: string
+              enum:
+                - uninitialized
+                - okay
+                - grace_period
+                - disabled
+                - locked
+                - manual
+            gracePeriodEndsAt:
+              type: integer
+              format: int64
     WebhookConfigRead:
       type: object
       description: the readable info for a webhook config; omits sensitive info e.g. auth token
