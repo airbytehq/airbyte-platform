@@ -7,9 +7,9 @@ $min-width-horizontal: 900px;
   display: grid;
   grid-auto-columns: 1fr;
   grid-template-rows: 1fr;
-  gap: 1px;
+  gap: variables.$border-thin;
   background: colors.$grey-100;
-  border: 1px solid colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-100;
   border-radius: variables.$border-radius-md;
   container-type: inline-size;
 
