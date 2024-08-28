@@ -691,7 +691,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                     <span
                       class="<removed-for-snapshot-test>"
                     >
-                      Sorry. Something went wrong...
+                      Sorry. Something went wrong…
                     </span>
                   </div>
                 </div>
