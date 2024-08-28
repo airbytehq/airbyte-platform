@@ -31,7 +31,6 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   useConnectorBuilderFormState,
@@ -204,8 +203,6 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
 
-  const isMarketplaceContributionEnabled = useExperiment("connectorBuilder.contributeToMarketplace", true);
-
   if (isLoadingVersions) {
     return (
       <ModalBody>
@@ -230,9 +227,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
     >
       <ModalBody>
         <FlexContainer direction="column" gap="xl">
-          {isMarketplaceContributionEnabled && (
-            <PublishTypeSwitcher selectedPublishType="workspace" setPublishType={setPublishType} />
-          )}
+          <PublishTypeSwitcher selectedPublishType="workspace" setPublishType={setPublishType} />
           <Message
             text={
               <FormattedMessage

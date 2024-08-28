@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Button, ButtonProps } from "components/ui/Button";
+import { ButtonProps } from "components/ui/Button";
 import { DropdownButton } from "components/ui/DropdownButton";
 import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
@@ -109,9 +108,8 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     type: "button",
   };
   const { formatMessage } = useIntl();
-  const isMarketplaceContributionFeatureEnabled = useExperiment("connectorBuilder.contributeToMarketplace", true);
   const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
-  const publishButton = isMarketplaceContributionFeatureEnabled ? (
+  const publishButton = (
     <DropdownButton
       {...buttonProps}
       dropdown={{
@@ -144,10 +142,6 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     >
       <FormattedMessage id="connectorBuilder.publish" />
     </DropdownButton>
-  ) : (
-    <Button {...buttonProps}>
-      <FormattedMessage id="connectorBuilder.publish" />
-    </Button>
   );
 
   return (
