@@ -4,10 +4,12 @@
 
 package io.airbyte.commons.protocol;
 
+import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.helpers.ProtocolConverters;
 
 /**
  * Default JSON serialization for the Airbyte Protocol.
@@ -16,16 +18,16 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
 
   @Override
   public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes) {
-    return Jsons.serialize(replaceDestinationSyncModes(configuredAirbyteCatalog, supportsRefreshes));
-  }
-
-  static ConfiguredAirbyteCatalog replaceDestinationSyncModes(final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
-                                                              final boolean supportsRefreshes) {
     // Copy to avoid mutating input
     final ConfiguredAirbyteCatalog clonedCatalog = Jsons.clone(configuredAirbyteCatalog);
+    replaceDestinationSyncModes(clonedCatalog, supportsRefreshes);
 
+    return Jsons.serialize(toProtocol(clonedCatalog));
+  }
+
+  private void replaceDestinationSyncModes(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes) {
     // Ensure we convert destination sync modes to the expected ones
-    for (final ConfiguredAirbyteStream stream : clonedCatalog.getStreams()) {
+    for (final ConfiguredAirbyteStream stream : configuredAirbyteCatalog.getStreams()) {
       if (supportsRefreshes) {
         if (DestinationSyncMode.OVERWRITE.equals(stream.getDestinationSyncMode())) {
           stream.setDestinationSyncMode(DestinationSyncMode.APPEND);
@@ -38,7 +40,23 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
         }
       }
     }
-    return clonedCatalog;
+  }
+
+  private io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocol(final ConfiguredAirbyteCatalog catalog) {
+    return new io.airbyte.protocol.models.ConfiguredAirbyteCatalog()
+        .withStreams(catalog.getStreams().stream().map(this::toProtocol).toList());
+  }
+
+  private io.airbyte.protocol.models.ConfiguredAirbyteStream toProtocol(final ConfiguredAirbyteStream stream) {
+    return new io.airbyte.protocol.models.ConfiguredAirbyteStream()
+        .withStream(ProtocolConverters.toProtocol(stream.getStream()))
+        .withSyncMode(Enums.convertTo(stream.getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
+        .withDestinationSyncMode(Enums.convertTo(stream.getDestinationSyncMode(), io.airbyte.protocol.models.DestinationSyncMode.class))
+        .withCursorField(stream.getCursorField())
+        .withPrimaryKey(stream.getPrimaryKey())
+        .withGenerationId(stream.getGenerationId())
+        .withMinimumGenerationId(stream.getMinimumGenerationId())
+        .withSyncId(stream.getSyncId());
   }
 
 }
