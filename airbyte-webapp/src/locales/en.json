@@ -846,7 +846,7 @@
 
   "connection.overview.graph.uptimeStatus.incomplete": "{count, plural, one {# stream} other {# streams}} incomplete",
   "connection.overview.graph.uptimeStatus.failed": "{count, plural, one {# stream} other {# streams}} stopped (action required)",
-  "connection.overview.graph.uptimeStatus.synced": "Synced",
+  "connection.overview.graph.uptimeStatus.synced": "{count, plural, one {# stream} other {# streams}} synced",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleTypeNext": "Sync schedule",
