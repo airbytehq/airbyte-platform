@@ -74,7 +74,7 @@ const AIButton = (props: ButtonProps) => {
   const variant = assistEnabled ? "highlight" : "secondary";
 
   return (
-    <Button variant={variant} icon="aiStars" {...props}>
+    <Button variant={variant} icon="aiStars" {...props} type="button">
       {formatMessage({ id: "connectorBuilder.assist.configModal.button" })}
     </Button>
   );
