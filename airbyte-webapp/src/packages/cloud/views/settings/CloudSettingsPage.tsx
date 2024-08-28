@@ -15,6 +15,7 @@ import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { useIntent } from "core/utils/rbac";
+import { useGeneratedIntent } from "core/utils/rbac/useGeneratedIntent";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
@@ -27,6 +28,7 @@ export const CloudSettingsPage: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
   const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const canManageOrganizationBilling = useGeneratedIntent("ManageOrganizationBilling");
 
   return (
     <SettingsLayout>
@@ -108,7 +110,7 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.general" })}
               to={CloudSettingsRoutePaths.Organization}
             />
-            {isBillingInArrearsActive && (
+            {isBillingInArrearsActive && canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}

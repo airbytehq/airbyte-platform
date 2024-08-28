@@ -55,7 +55,7 @@ const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ di
   const scheduleTypeOptions: Array<Option<ConnectionScheduleType>> = [
     {
       label: formatMessage({
-        id: "frequency.scheduled",
+        id: "frequency.basic",
       }),
       value: ConnectionScheduleType.basic,
       "data-testid": "scheduled",

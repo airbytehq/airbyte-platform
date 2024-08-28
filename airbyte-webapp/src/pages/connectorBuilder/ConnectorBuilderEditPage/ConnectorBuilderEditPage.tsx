@@ -4,13 +4,13 @@ import React, { useMemo, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { AnyObjectSchema } from "yup";
 
-import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
 import { BuilderState, useBuilderWatch } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
+import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 

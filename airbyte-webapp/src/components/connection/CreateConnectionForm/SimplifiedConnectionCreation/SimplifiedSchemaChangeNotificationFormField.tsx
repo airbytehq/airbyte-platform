@@ -38,7 +38,7 @@ export const SimplifiedSchemaChangeNotificationFormField: React.FC<{ disabled?: 
             label={
               <FlexContainer direction="column" gap="sm">
                 <Text bold>
-                  <FormattedMessage id="connection.schemaUpdateNotifications.titleNext" />
+                  <FormattedMessage id="connection.schemaUpdateNotifications.title" />
                 </Text>
                 <Text size="sm" color="grey">
                   <FormattedMessage id="connection.schemaUpdateNotifications.subtitle" />

@@ -47,7 +47,7 @@ describe("LastSyncCell", () => {
       />
     );
 
-    expect(result.container.textContent).toBe("Starting... | 1m elapsed");
+    expect(result.container.textContent).toBe("Starting… | 1m elapsed");
   });
 
   it("extracted > 0 && loaded == 0", async () => {

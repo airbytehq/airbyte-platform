@@ -112,6 +112,10 @@ $ansi-green-fg: var(--color-ansi-green-fg);
 $ansi-yellow-fg: var(--color-ansi-yellow-fg);
 $ansi-red-fg: var(--color-ansi-red-fg);
 
+$loading-skeleton-base: var(--color-loading-skeleton-base);
+$loading-skeleton-stop-1: var(--color-loading-skeleton-gradient-stop-1);
+$loading-skeleton-stop-2: var(--color-loading-skeleton-gradient-stop-2);
+
 // LEGACY - DEPRECATED
 
 $primaryColor12: rgba(103, 87, 255, 12%);

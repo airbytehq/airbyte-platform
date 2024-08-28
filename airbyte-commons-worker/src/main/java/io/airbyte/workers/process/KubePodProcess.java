@@ -275,8 +275,8 @@ public class KubePodProcess implements KubePod {
     List<EnvVar> allEnvVars = Lists.concat(envVars, secretEnvVars);
 
     if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(envVars);
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(allEnvVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, allEnvVars);
     }
 
     final ContainerBuilder containerBuilder = new ContainerBuilder()

@@ -33,10 +33,6 @@ object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
-object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = true)
-
-object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
-
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -187,6 +183,11 @@ object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator
 object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
 
 object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
+
+object RefreshConfigBeforeSecretHydrationInitContainer : Temporary<Boolean>(
+  key = "platform.refresh-config-before-secret-hydration-init-container",
+  default = false,
+)
 
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 

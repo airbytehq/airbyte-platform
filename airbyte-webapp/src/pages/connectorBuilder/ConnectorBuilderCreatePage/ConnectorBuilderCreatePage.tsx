@@ -5,9 +5,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { HeadTitle } from "components/common/HeadTitle";
 import { BuilderFormValues, DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/types";
 import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
+import { HeadTitle } from "components/HeadTitle";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";

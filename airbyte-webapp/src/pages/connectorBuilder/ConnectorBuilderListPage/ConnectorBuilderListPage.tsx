@@ -2,8 +2,8 @@ import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { MainPageWithScroll } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
+import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";

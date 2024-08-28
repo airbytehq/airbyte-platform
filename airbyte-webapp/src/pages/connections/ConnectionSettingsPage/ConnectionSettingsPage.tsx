@@ -3,7 +3,6 @@ import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ConnectionActionsBlock } from "components/common/ConnectionActionsBlock";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -17,6 +16,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
+import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
 import { useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";

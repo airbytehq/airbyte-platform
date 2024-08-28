@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 
 import { useCurrentUser } from "core/services/auth";
 import { links } from "core/utils/links";

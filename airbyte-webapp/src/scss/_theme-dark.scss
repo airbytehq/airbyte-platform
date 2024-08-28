@@ -120,6 +120,10 @@
   --box-shadow-menu: 0 8px 10px 0 hsla(0, 0%, 0%, 40%), 0 3px 14px 0 hsla(0, 0%, 0%, 45%),
     0 5px 5px 0 hsla(0, 0%, 0%, 50%);
 
+  --color-loading-skeleton-base: hsl(0, 0%, 13%);
+  --color-loading-skeleton-gradient-stop-1: hsl(0, 0%, 8%);
+  --color-loading-skeleton-gradient-stop-2: hsl(0, 0%, 4%);
+
   .react-select__menu {
     background-color: var(--color-foreground);
   }
