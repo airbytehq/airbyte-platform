@@ -119,4 +119,8 @@
   --box-shadow-inset: inset 0 1.5px 3px hsla(241, 51%, 20%, 12%);
   --box-shadow-menu: 0 8px 10px 0 hsla(0, 0%, 0%, 4%), 0 3px 14px 0 hsla(0, 0%, 0%, 8%),
     0 5px 5px 0 hsla(0, 0%, 0%, 12%);
+
+  --color-loading-skeleton-base: hsl(0, 0%, 87%);
+  --color-loading-skeleton-gradient-stop-1: hsl(0, 0%, 96%);
+  --color-loading-skeleton-gradient-stop-2: hsl(0, 0%, 94%);
 }

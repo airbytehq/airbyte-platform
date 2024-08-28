@@ -1,0 +1,8 @@
+@use "scss/variables";
+
+.countryFlag {
+  height: 0.8em;
+  margin-left: variables.$spacing-sm;
+  display: inline-block;
+  vertical-align: middle;
+}

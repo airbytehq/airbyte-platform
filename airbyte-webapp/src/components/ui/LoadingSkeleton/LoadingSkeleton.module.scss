@@ -1,0 +1,32 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.loadingSkeleton {
+  animation-duration: 1.6s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: shimmer;
+  animation-timing-function: linear;
+  background: colors.$loading-skeleton-base;
+  background: linear-gradient(
+    to right,
+    colors.$loading-skeleton-stop-1 8%,
+    colors.$loading-skeleton-stop-2 25%,
+    colors.$loading-skeleton-stop-1 50%
+  );
+  background-size: 1200px 100%;
+
+  &--button {
+    height: variables.$button-height-xs;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1200px 0;
+  }
+
+  100% {
+    background-position: 1200px 0;
+  }
+}

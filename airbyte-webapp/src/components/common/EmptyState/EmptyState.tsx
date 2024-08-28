@@ -18,12 +18,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon = "cactus", text, d
     <FlexContainer alignItems="center" justifyContent="center" className={styles.circle}>
       <Icon type={icon} color="action" />
     </FlexContainer>
-    <FlexContainer alignItems="center" direction="column" gap="sm">
-      <Text color="grey500" size="lg">
-        {text}
-      </Text>
-      {description && <Text color="grey400">{description}</Text>}
-      {button && button}
-    </FlexContainer>
+    <Text color="grey500" size="lg">
+      {text}
+    </Text>
+    {description && <Text color="grey400">{description}</Text>}
+    {button}
   </FlexContainer>
 );
