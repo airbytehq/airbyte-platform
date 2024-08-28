@@ -42,11 +42,23 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
     }
   }
 
+  /**
+   * Protocol conversion helper.
+   * <p>
+   * This is private as the to protocol serialization should be handled through the serializer rather
+   * than a plain to class conversion because we may adapt data based on the protocol version.
+   */
   private io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocol(final ConfiguredAirbyteCatalog catalog) {
     return new io.airbyte.protocol.models.ConfiguredAirbyteCatalog()
         .withStreams(catalog.getStreams().stream().map(this::toProtocol).toList());
   }
 
+  /**
+   * Protocol conversion helper.
+   * <p>
+   * This is private as the to protocol serialization should be handled through the serializer rather
+   * than a plain to class conversion because we may adapt data based on the protocol version.
+   */
   private io.airbyte.protocol.models.ConfiguredAirbyteStream toProtocol(final ConfiguredAirbyteStream stream) {
     return new io.airbyte.protocol.models.ConfiguredAirbyteStream()
         .withStream(ProtocolConverters.toProtocol(stream.getStream()))

@@ -8,7 +8,7 @@ import io.airbyte.config.FieldType
 import io.airbyte.config.SyncMode
 
 /**
- *
+ * Sample of ConfiguredAirbyteStream with mapper configurations.
  */
 val configuredUsersStream =
   ConfiguredAirbyteStream(
