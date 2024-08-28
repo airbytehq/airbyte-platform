@@ -92,8 +92,8 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
             />
             <LabeledRadioButtonFormControl
               name="namespaceDefinition"
-              controlId="destinationNamespace.customFormat"
-              label={formatMessage({ id: "connectionForm.modal.destinationNamespace.option.customFormat" })}
+              controlId="destinationNamespace.customformat"
+              label={formatMessage({ id: "connectionForm.modal.destinationNamespace.option.customformat" })}
               value={NamespaceDefinitionType.customformat}
               data-testid="namespace-definition-custom-format-radio"
             />

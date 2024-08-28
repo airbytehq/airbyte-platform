@@ -18,11 +18,7 @@ export const DestinationNamespaceDescription = () => {
   return (
     <>
       <FormattedMessage
-        id={`connectionForm.modal.destinationNamespace.option.${
-          watchedNamespaceDefinition === NamespaceDefinitionType.customformat
-            ? "customFormat"
-            : watchedNamespaceDefinition
-        }.description`}
+        id={`connectionForm.modal.destinationNamespace.option.${watchedNamespaceDefinition}.description`}
       />
       <Box py="lg">
         <Text color="grey">
