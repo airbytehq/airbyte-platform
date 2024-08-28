@@ -1,9 +1,9 @@
 import React, { useMemo } from "react";
 import { createSearchParams, useNavigate } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
 import { TableItemTitle } from "components/ConnectorBlocks";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 

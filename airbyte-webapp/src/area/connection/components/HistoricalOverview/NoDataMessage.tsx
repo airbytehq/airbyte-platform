@@ -1,7 +1,7 @@
 import { FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/common/EmptyState";
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { EmptyState } from "components/EmptyState";
 import { Button } from "components/ui/Button";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

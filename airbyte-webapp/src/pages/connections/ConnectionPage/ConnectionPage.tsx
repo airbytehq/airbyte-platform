@@ -2,7 +2,7 @@ import React, { Suspense } from "react";
 import { Outlet, useParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 
 import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";

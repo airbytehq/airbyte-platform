@@ -2,7 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { FormattedDate, FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/common/EmptyState";
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";

@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/common/EmptyState";
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer } from "components/ui/Flex";

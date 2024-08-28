@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Breadcrumbs } from "components/ui/Breadcrumbs";
 import { FlexContainer, FlexItem } from "components/ui/Flex";

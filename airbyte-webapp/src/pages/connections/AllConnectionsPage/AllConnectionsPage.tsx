@@ -3,8 +3,8 @@ import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { LoadingPage, MainPageWithScroll } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
+import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";

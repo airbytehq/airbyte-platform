@@ -2,10 +2,10 @@ import React, { useDeferredValue, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { HeadTitle } from "components/common/HeadTitle";
-import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { ImplementationTable } from "components/EntityTable";
 import { filterBySearchEntityTableData, getEntityTableData, statusFilterOptions } from "components/EntityTable/utils";
+import { HeadTitle } from "components/HeadTitle";
+import { MainPageWithScroll } from "components/MainPageWithScroll";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";

@@ -4,8 +4,8 @@ import { Virtuoso } from "react-virtuoso";
 import { InferType } from "yup";
 
 import { LoadingPage } from "components";
-import { EmptyState } from "components/common/EmptyState";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";

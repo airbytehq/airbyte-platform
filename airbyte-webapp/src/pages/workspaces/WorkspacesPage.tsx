@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import React, { useDeferredValue, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";

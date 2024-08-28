@@ -1,6 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { EmptyState } from "components/common/EmptyState";
+import { EmptyState } from "components/EmptyState";
 import { PageContainer } from "components/PageContainer";
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
