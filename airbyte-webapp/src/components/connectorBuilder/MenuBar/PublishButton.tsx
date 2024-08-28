@@ -121,11 +121,11 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
           },
           {
             icon: <Icon size="sm" type="github" />,
-            displayName: formatMessage({ id: "connectorBuilder.publishModal.toMarketplace.label" }),
+            displayName: formatMessage({ id: "connectorBuilder.publishModal.toAirbyte.label" }),
             value: "marketplace",
             disabled: isMarketplaceContributionActionDisabled,
             tooltipContent: isMarketplaceContributionActionDisabled ? (
-              <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.disabledDescription" />
+              <FormattedMessage id="connectorBuilder.publishModal.toAirbyte.disabledDescription" />
             ) : null,
           },
         ],
