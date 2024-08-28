@@ -66,6 +66,7 @@
   "sidebar.defaultUsername": "User",
 
   "form.error": "Error: {message}",
+  "form.error.pkAndCursor.required": "Primary key and cursor are missing",
   "form.error.pk.missing": "Primary key missing",
   "form.error.pk.addMissing": "Add primary key",
   "form.error.pk.edit": "Edit primary key",

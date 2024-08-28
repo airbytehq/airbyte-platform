@@ -1017,7 +1017,7 @@ exports[`CreateConnectionForm should render 1`] = `
                       class="<removed-for-snapshot-test>"
                       data-type="text"
                     >
-                      Unable to save the connection. Review the errors above to finish setup.
+                      Primary key missing
                     </span>
                   </span>
                   <button
