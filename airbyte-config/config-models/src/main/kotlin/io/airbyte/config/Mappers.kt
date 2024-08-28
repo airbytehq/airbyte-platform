@@ -32,8 +32,8 @@ interface MapperSpecificationField<out T : Any> {
 data class MapperSpecificationFieldString(
   override val title: String,
   override val description: String,
-  override val examples: List<String>?,
-  override val default: String?,
+  override val examples: List<String>? = null,
+  override val default: String? = null,
 ) : MapperSpecificationField<String> {
   override val type = "string"
 }
