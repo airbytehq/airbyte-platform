@@ -51,7 +51,7 @@ interface BaseFieldProps {
   optional?: boolean;
   pattern?: string;
   adornment?: ReactNode;
-  preview?: (arg0: string) => ReactNode;
+  preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
   omitInterpolationContext?: boolean;
