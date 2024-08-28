@@ -194,3 +194,5 @@ object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", defaul
 object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
 
 object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = false)
+
+object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)

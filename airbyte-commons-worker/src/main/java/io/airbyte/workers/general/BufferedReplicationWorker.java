@@ -39,7 +39,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -86,8 +85,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final Stopwatch processFromDestStopwatch;
   private final StreamStatusCompletionTracker streamStatusCompletionTracker;
 
-  private static final int sourceMaxBufferSize = 1000;
-  private static final int destinationMaxBufferSize = 1000;
   private static final int executorShutdownGracePeriodInSeconds = 10;
 
   public BufferedReplicationWorker(final String jobId,
@@ -100,23 +97,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final StreamStatusCompletionTracker streamStatusCompletionTracker) {
-    this(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader,
-        replicationWorkerHelper, destinationTimeoutMonitor, OptionalInt.empty(), streamStatusCompletionTracker);
-  }
-
-  public BufferedReplicationWorker(final String jobId,
-                                   final int attempt,
-                                   final AirbyteSource source,
-                                   final AirbyteDestination destination,
-                                   final SyncPersistence syncPersistence,
-                                   final RecordSchemaValidator recordSchemaValidator,
-                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                   final ReplicationWorkerHelper replicationWorkerHelper,
-                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final OptionalInt pollTimeOutDurationForQueue,
-                                   final StreamStatusCompletionTracker streamStatusCompletionTracker) {
+                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                   final BufferConfiguration bufferConfiguration) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -127,8 +109,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
-    this.messagesFromSourceQueue = new ClosableLinkedBlockingQueue<>(sourceMaxBufferSize, pollTimeOutDurationForQueue);
-    this.messagesForDestinationQueue = new ClosableLinkedBlockingQueue<>(destinationMaxBufferSize, pollTimeOutDurationForQueue);
+    this.messagesFromSourceQueue =
+        new ClosableLinkedBlockingQueue<>(bufferConfiguration.getSourceMaxBufferSize(), bufferConfiguration.getPollTimeoutDuration());
+    this.messagesForDestinationQueue =
+        new ClosableLinkedBlockingQueue<>(bufferConfiguration.getDestinationMaxBufferSize(), bufferConfiguration.getPollTimeoutDuration());
     // readFromSource + processMessage + writeToDestination + readFromDestination +
     // source heartbeat + dest timeout monitor + workload heartbeat = 7 threads
     this.executors = Executors.newFixedThreadPool(7);
