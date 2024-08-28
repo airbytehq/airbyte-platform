@@ -4,6 +4,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
@@ -14,6 +15,7 @@ import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getJobId
@@ -133,16 +135,14 @@ class PayloadKubeInputMapper(
     val sourceRuntimeEnvVars =
       input.sourceLauncherConfig.additionalEnvironmentVariables
         ?.map { EnvVar(it.key, it.value, null) }
-        ?.toList()
-        .orEmpty()
+        ?.toList().orEmpty() + getConnectorApmEnvVars(image = sourceImage, context = buildFFContext(workspaceId = input.workspaceId))
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
     val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
     val destinationRuntimeEnvVars =
       input.destinationLauncherConfig.additionalEnvironmentVariables
         ?.map { EnvVar(it.key, it.value, null) }
-        ?.toList()
-        .orEmpty()
+        ?.toList().orEmpty() + getConnectorApmEnvVars(image = destinationImage, context = buildFFContext(workspaceId = input.workspaceId))
 
     val labels =
       labeler.getReplicationLabels(
@@ -432,6 +432,22 @@ class PayloadKubeInputMapper(
         addAll(contexts)
       },
     )
+  }
+
+  private fun getConnectorApmEnvVars(
+    image: String,
+    context: Context,
+  ): List<EnvVar> {
+    val connectorApmEnvVars = mutableListOf<EnvVar>()
+    if (featureFlagClient.boolVariation(ConnectorApmEnabled, context)) {
+      connectorApmSupportHelper.addApmEnvVars(connectorApmEnvVars)
+      connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, connectorApmEnvVars)
+    }
+    return connectorApmEnvVars.toList()
+  }
+
+  companion object {
+    var connectorApmSupportHelper: ConnectorApmSupportHelper = ConnectorApmSupportHelper()
   }
 }
 
