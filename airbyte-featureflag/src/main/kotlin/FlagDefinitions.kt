@@ -196,3 +196,5 @@ object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", defau
 object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = false)
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
+
+object ReplicationMonoPodMemoryTolerance : Temporary<Int>(key = "platform.replication-mono-pod-memory-tolerance-gb", default = 6)

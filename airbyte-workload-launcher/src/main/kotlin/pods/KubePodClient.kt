@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.Context
@@ -10,15 +11,20 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.ReplicationMonoPod
+import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.getDestinationResourceReqs
+import io.airbyte.workers.input.getOrchestratorResourceReqs
+import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.input.setDestinationLabels
 import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.PodLabeler
+import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
@@ -61,8 +67,7 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val ffContext = Multi(listOf(Workspace(replicationInput.workspaceId), Connection(replicationInput.connectionId)))
-    if (featureFlagClient.boolVariation(ReplicationMonoPod, ffContext)) {
+    if (useMonoPod(replicationInput = replicationInput)) {
       launchReplicationMonoPod(replicationInput, launcherInput)
     } else {
       launchReplicationPodTriplet(replicationInput, launcherInput)
@@ -424,10 +429,39 @@ class KubePodClient(
     }
   }
 
+  private fun useMonoPod(replicationInput: ReplicationInput): Boolean {
+    val ffContext = Multi(listOf(Workspace(replicationInput.workspaceId), Connection(replicationInput.connectionId)))
+    val memoryFootprint = getMemoryLimitTotal(replicationInput)
+    return featureFlagClient.boolVariation(
+      ReplicationMonoPod,
+      ffContext,
+    ) && featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, ffContext) >= toGigabytes(memoryFootprint)
+  }
+
+  private fun getMemoryLimitTotal(replicationInput: ReplicationInput): Long {
+    val sourceMemoryLimit = extractMemoryLimit(replicationInput.getSourceResourceReqs())
+    val destinationMemoryLimit = extractMemoryLimit(replicationInput.getDestinationResourceReqs())
+    val orchestratorMemoryLimit = extractMemoryLimit(replicationInput.getOrchestratorResourceReqs())
+    return sourceMemoryLimit + destinationMemoryLimit + orchestratorMemoryLimit
+  }
+
+  private fun extractMemoryLimit(resourceRequirements: ResourceRequirements?): Long {
+    return KubePodProcess.buildResourceRequirements(resourceRequirements)?.limits?.get("memory")?.numericalAmount?.toLong() ?: 0
+  }
+
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
     val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(1)
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
+    private const val BYTES_PER_GB = 1024 * 1024 * 1024
+
+    private fun toGigabytes(bytes: Long): Int {
+      return if (bytes > 0) {
+        (bytes / BYTES_PER_GB).toInt()
+      } else {
+        bytes.toInt()
+      }
+    }
   }
 }

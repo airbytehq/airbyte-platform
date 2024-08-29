@@ -5,11 +5,15 @@
 package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
+import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.resources.MoreResources
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.ReplicationMonoPod
+import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -558,6 +562,118 @@ class KubePodClientTest {
       launcherInput = replLauncherInput,
     )
 
+    verify(exactly = 1) { launcher.create(pod) }
+    verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
+  }
+
+  @Test
+  internal fun testLaunchingMonoPodBelowMemoryTolerance() {
+    val resourceRequirements =
+      Jsons.deserialize(
+        MoreResources.readResource("resource.requirements/small-resource-requirements.json"),
+        ResourceRequirements::class.java,
+      )
+    val kubeInput =
+      ReplicationKubeInput(
+        podName = "podName",
+        labels = mapOf("label" to "value"),
+        annotations = mapOf("annotation" to "value"),
+        nodeSelectors = mapOf("selector" to "value"),
+        orchestratorImage = "orch-image",
+        sourceImage = "source-image",
+        destinationImage = "destination-image",
+        orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+      )
+    val syncResourceRequirements = mockk<SyncResourceRequirements>()
+    every { syncResourceRequirements.destination } returns resourceRequirements
+    every { syncResourceRequirements.orchestrator } returns resourceRequirements
+    every { syncResourceRequirements.source } returns resourceRequirements
+    replInput.withSyncResourceRequirements(syncResourceRequirements)
+    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
+    every { featureFlagClient.boolVariation(ReplicationMonoPod, any()) } returns true
+    every { featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, any()) } returns 32
+    every {
+      replicationPodFactory.create(
+        kubeInput.podName,
+        kubeInput.labels,
+        kubeInput.annotations,
+        kubeInput.nodeSelectors,
+        kubeInput.orchestratorImage,
+        kubeInput.sourceImage,
+        kubeInput.destinationImage,
+        kubeInput.orchestratorReqs,
+        kubeInput.sourceReqs,
+        kubeInput.destinationReqs,
+        kubeInput.orchestratorRuntimeEnvVars,
+        kubeInput.sourceRuntimeEnvVars,
+        kubeInput.destinationRuntimeEnvVars,
+        replInput.connectionId,
+      )
+    } returns pod
+    client.launchReplication(
+      replicationInput = replInput,
+      launcherInput = replLauncherInput,
+    )
+
+    verify(exactly = 1) { launcher.create(pod) }
+    verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
+  }
+
+  @Test
+  internal fun testLaunchingMonoPodAboveMemoryTolerance() {
+    val resourceRequirements =
+      Jsons.deserialize(
+        MoreResources.readResource("resource.requirements/large-resource-requirements.json"),
+        ResourceRequirements::class.java,
+      )
+    val kubeInput =
+      ReplicationKubeInput(
+        podName = "podName",
+        labels = mapOf("label" to "value"),
+        annotations = mapOf("annotation" to "value"),
+        nodeSelectors = mapOf("selector" to "value"),
+        orchestratorImage = "orch-image",
+        sourceImage = "source-image",
+        destinationImage = "destination-image",
+        orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+      )
+    val syncResourceRequirements = mockk<SyncResourceRequirements>()
+    every { syncResourceRequirements.destination } returns resourceRequirements
+    every { syncResourceRequirements.orchestrator } returns resourceRequirements
+    every { syncResourceRequirements.source } returns resourceRequirements
+    replInput.withSyncResourceRequirements(syncResourceRequirements)
+    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
+    every { featureFlagClient.boolVariation(ReplicationMonoPod, any()) } returns true
+    every { featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, any()) } returns 32
+    every {
+      orchestratorPodFactory.create(
+        replInput.connectionId,
+        kubeInput.labels,
+        resourceRequirements,
+        kubeInput.nodeSelectors,
+        any(),
+        kubeInput.annotations,
+        kubeInput.orchestratorRuntimeEnvVars,
+        any(),
+      )
+    } returns pod
+
+    client.launchReplication(
+      replicationInput = replInput,
+      launcherInput = replLauncherInput,
+    )
+
+    verify(exactly = 1) { orchestratorPodFactory.create(any(), any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { launcher.create(pod) }
     verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
   }
