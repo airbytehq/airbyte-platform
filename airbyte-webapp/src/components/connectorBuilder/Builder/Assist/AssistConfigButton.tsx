@@ -9,6 +9,8 @@ import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useTrackMount } from "core/services/analytics/useAnalyticsService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -43,9 +45,17 @@ export const AssistForm: React.FC = () => {
 };
 
 const AssistSwitch: React.FC = () => {
-  const { assistEnabled, setAssistEnabled } = useConnectorBuilderFormState();
+  const { assistEnabled, setAssistEnabled, projectId } = useConnectorBuilderFormState();
+  const analyticsService = useAnalyticsService();
+
   const onChange: ChangeEventFunction = (e) => {
     setAssistEnabled(e.currentTarget.checked);
+    const actionToTrack = e.currentTarget.checked
+      ? Action.CONNECTOR_BUILDER_ASSIST_ENABLED
+      : Action.CONNECTOR_BUILDER_ASSIST_DISABLED;
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, actionToTrack, {
+      projectId,
+    });
   };
 
   return <Switch checked={assistEnabled} onChange={onChange} />;
@@ -67,6 +77,16 @@ const AssistTitle = () => {
 
 const AssistConfigPanel = () => {
   const { formatMessage } = useIntl();
+  const { projectId } = useConnectorBuilderFormState();
+
+  useTrackMount({
+    namespace: Namespace.CONNECTOR_BUILDER,
+    mountAction: Action.CONNECTOR_BUILDER_ASSIST_CONFIG_OPENED,
+    unmountAction: Action.CONNECTOR_BUILDER_ASSIST_CONFIG_CLOSED,
+    params: {
+      projectId,
+    },
+  });
 
   return (
     <FlexContainer direction="column" gap="lg" className={styles.assistConfigPanel}>

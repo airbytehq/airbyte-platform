@@ -22,6 +22,7 @@ import {
   HttpError,
 } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AssistKey, convertToAssistFormValuesSync } from "./assist";
@@ -58,7 +59,10 @@ const replaceStreamsSubpath = (subpath: string): string => {
   return subpath.replace(pattern, "streams.0");
 };
 
+type AssistStateKey = "fetching" | "needMoreInfo" | "defaultError" | "noSuggestions" | "agreeWithConfig" | "success";
+
 interface AssistState {
+  stateKey: AssistStateKey;
   tooltipContent?: string;
   iconColor: IconColor;
   disabled: boolean;
@@ -84,6 +88,7 @@ const getAssistButtonState = ({
 
   if (isFetching) {
     return {
+      stateKey: "fetching",
       tooltipContent: "connectorBuilder.assist.tooltip.fetching",
       iconColor: "disabled",
       disabled: true,
@@ -92,6 +97,7 @@ const getAssistButtonState = ({
 
   if (!hasRequiredData) {
     return {
+      stateKey: "needMoreInfo",
       tooltipContent: "connectorBuilder.assist.tooltip.needMoreInfo",
       iconColor: "disabled",
       disabled: true,
@@ -100,6 +106,7 @@ const getAssistButtonState = ({
 
   if (errorMessage) {
     return {
+      stateKey: "defaultError",
       tooltipContent: "connectorBuilder.assist.tooltip.defaultError",
       iconColor: "error",
       disabled: true,
@@ -108,6 +115,7 @@ const getAssistButtonState = ({
 
   if (hasNoSuggestions) {
     return {
+      stateKey: "noSuggestions",
       tooltipContent: "connectorBuilder.assist.tooltip.noSuggestions",
       iconColor: "disabled",
       disabled: true,
@@ -116,13 +124,18 @@ const getAssistButtonState = ({
 
   if (agreesWithCurrentConfig) {
     return {
+      stateKey: "agreeWithConfig",
       tooltipContent: "connectorBuilder.assist.tooltip.agreeWithConfig",
       iconColor: "disabled",
       disabled: true,
     };
   }
 
-  return { iconColor: "primary", disabled: false };
+  return {
+    stateKey: "success",
+    iconColor: "primary",
+    disabled: false,
+  };
 };
 
 export interface AssistButtonProps {
@@ -191,7 +204,7 @@ export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum
     streamNum,
   };
 
-  return <InternalAssistButton hookParams={hookParams} streamNum={streamNum} {...config} />;
+  return <InternalAssistButton assistKey={assistKey} hookParams={hookParams} streamNum={streamNum} {...config} />;
 };
 
 interface AssistAddStreamProps {
@@ -266,6 +279,7 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
 interface InternalAssistButtonProps extends AssistButtonConfig {
   streamNum?: number;
   hookParams: object;
+  assistKey: AssistKey;
 }
 
 const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
@@ -274,9 +288,13 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
   propertiesToPluck,
   streamNum,
   formPathToSet,
+  assistKey,
 }) => {
-  const { setValue } = useFormContext();
   const { formatMessage } = useIntl();
+  const analyticsService = useAnalyticsService();
+
+  const { projectId } = useConnectorBuilderFormState();
+  const { setValue } = useFormContext();
 
   const { data, isError, error, isFetching } = useHook(hookParams);
   const formPath = typeof formPathToSet === "function" ? formPathToSet(streamNum as number) : formPathToSet;
@@ -309,21 +327,6 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
   const previewValue = propertiesToPluck ? pick(pathAssistValue, propertiesToPluck) : pathAssistValue;
   const valueToSet = propertiesToPluck ? merge({}, currentValue, previewValue) : previewValue;
 
-  const showDataPreview = () => setValue(previewKey, previewValue);
-  const hideDataPreview = () => setValue(previewKey, undefined);
-
-  const buttonClickHandler = () => {
-    hideDataPreview();
-    setValue(formKey, valueToSet, {
-      shouldValidate: true,
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    if (updatedFullForm?.inputs) {
-      setValue("formValues.inputs", mergeInputs(currentInputs, updatedFullForm.inputs));
-    }
-  };
-
   const errorMessage =
     isError || error ? error?.message || formatMessage({ id: "connectorBuilder.assist.tooltip.defaultError" }) : "";
   const assistButtonState = useMemo(
@@ -338,6 +341,47 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
     [valueToSet, currentValue, errorMessage, hasRequiredData, isFetching]
   );
 
+  const showDataPreview = () => {
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_ASSIST_SUGGESTION_VIEWED, {
+      projectId,
+      assistKey,
+      disabled: assistButtonState.disabled,
+      assistState: assistButtonState.stateKey,
+      metadata: data?.metadata,
+    });
+
+    if (assistButtonState.disabled) {
+      return;
+    }
+
+    setValue(previewKey, previewValue);
+  };
+  const hideDataPreview = () => {
+    setValue(previewKey, undefined);
+  };
+
+  const buttonClickHandler = () => {
+    if (assistButtonState.disabled) {
+      return;
+    }
+    hideDataPreview();
+    setValue(formKey, valueToSet, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    if (updatedFullForm?.inputs) {
+      setValue("formValues.inputs", mergeInputs(currentInputs, updatedFullForm.inputs));
+    }
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_ASSIST_SUGGESTION_ACCEPTED, {
+      projectId,
+      assistKey,
+      disabled: assistButtonState.disabled,
+      assistState: assistButtonState.stateKey,
+      metadata: data?.metadata,
+    });
+  };
+
   const button = (
     <Button
       type="button"
@@ -347,8 +391,8 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
       disabled={assistButtonState.disabled}
       isLoading={isFetching}
       iconColor={assistButtonState.iconColor}
-      onMouseOver={assistButtonState.disabled ? undefined : showDataPreview}
-      onMouseOut={assistButtonState.disabled ? undefined : hideDataPreview}
+      onMouseOver={showDataPreview}
+      onMouseOut={hideDataPreview}
     />
   );
 

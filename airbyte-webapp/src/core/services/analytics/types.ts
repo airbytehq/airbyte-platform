@@ -89,6 +89,14 @@ export const enum Action {
   CONTRIBUTE_FAILURE = "ContributeFailure",
   PUBLISH_DROPDOWN_SELECTED = "PublishDropdownSelected",
   PUBLISH_RADIO_BUTTON_SELECTED = "PublishRadioButtonSelected",
+
+  // Connector Builder Actions
+  CONNECTOR_BUILDER_ASSIST_CONFIG_OPENED = "ConnectorBuilderAssistConfigOpened",
+  CONNECTOR_BUILDER_ASSIST_CONFIG_CLOSED = "ConnectorBuilderAssistConfigClosed",
+  CONNECTOR_BUILDER_ASSIST_ENABLED = "ConnectorBuilderAssistEnabled",
+  CONNECTOR_BUILDER_ASSIST_DISABLED = "ConnectorBuilderAssistDisabled",
+  CONNECTOR_BUILDER_ASSIST_SUGGESTION_VIEWED = "ConnectorBuilderAssistSuggestionViewed",
+  CONNECTOR_BUILDER_ASSIST_SUGGESTION_ACCEPTED = "ConnectorBuilderAssistSuggestionAccepted",
 }
 
 export type EventParams = Record<string, unknown>;
