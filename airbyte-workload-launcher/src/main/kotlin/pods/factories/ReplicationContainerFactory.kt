@@ -29,12 +29,14 @@ class ReplicationContainerFactory(
     image: String,
     connectionId: UUID,
   ): Container {
+    val mainCommand = ContainerCommandFactory.orchestrator()
     val envVars = orchestratorEnvFactory.orchestratorEnvVars(connectionId) + runtimeEnvVars
 
     return ContainerBuilder()
       .withName(ORCHESTRATOR_CONTAINER_NAME)
       .withImage(image)
       .withImagePullPolicy(imagePullPolicy)
+      .withCommand("sh", "-c", mainCommand)
       .withResources(resourceReqs)
       .withEnv(envVars)
       .withVolumeMounts(volumeMounts)
@@ -48,8 +50,7 @@ class ReplicationContainerFactory(
     runtimeEnvVars: List<EnvVar>,
     image: String,
   ): Container {
-    val mainCommand =
-      ContainerCommandFactory.source()
+    val mainCommand = ContainerCommandFactory.source()
 
     return ContainerBuilder()
       .withName(SOURCE_CONTAINER_NAME)
@@ -70,8 +71,7 @@ class ReplicationContainerFactory(
     runtimeEnvVars: List<EnvVar>,
     image: String,
   ): Container {
-    val mainCommand =
-      ContainerCommandFactory.destination()
+    val mainCommand = ContainerCommandFactory.destination()
 
     return ContainerBuilder()
       .withName(DESTINATION_CONTAINER_NAME)

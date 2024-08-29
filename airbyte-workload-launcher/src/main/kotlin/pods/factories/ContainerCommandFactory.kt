@@ -20,6 +20,7 @@ import io.airbyte.workers.pod.FileConstants.TERMINATION_MARKER_FILE
 object ContainerCommandFactory {
   // WARNING: Fragile. Coupled to our conventions on building, unpacking and naming our executables.
   private const val SIDE_CAR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-connector-sidecar"
+  private const val ORCHESTRATOR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-container-orchestrator"
   private const val TERMINATION_CHECK_INTERVAL_SECONDS = 10
 
   /**
@@ -29,6 +30,16 @@ object ContainerCommandFactory {
     """
     trap "touch $TERMINATION_MARKER_FILE" EXIT
     $SIDE_CAR_APPLICATION_EXECUTABLE
+    """.trimIndent()
+
+  /**
+   * Runs the orchestrator and creates the TERMINATION_MARKER_FILE file on exit for both success and failure.
+   */
+  fun orchestrator() =
+    """
+    trap "touch $SOURCE_DIR/$TERMINATION_MARKER_FILE" EXIT
+    trap "touch $DEST_DIR/$TERMINATION_MARKER_FILE" EXIT
+    $ORCHESTRATOR_APPLICATION_EXECUTABLE
     """.trimIndent()
 
   /**
