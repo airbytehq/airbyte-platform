@@ -7,6 +7,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useDebounceValue } from "core/utils/useDebounceValue";
 import { useNotificationService } from "hooks/services/Notification";
 
 import {
@@ -153,9 +154,11 @@ export interface BuilderAssistManifestResponse extends BuilderAssistBaseResponse
 
 const useAssistManifestQuery = <T>(controller: string, enabled: boolean, params: AssistV1ProcessRequestBody) => {
   const requestOptions = useRequestOptions();
+  const queryKey = connectorBuilderKeys.assist(controller, params);
+  const debouncedQueryKey = useDebounceValue(queryKey, 500);
 
   return useQuery<T, HttpError<KnownExceptionInfo>>(
-    connectorBuilderKeys.assist(controller, params),
+    debouncedQueryKey,
     // HACK: We need to cast the response from `assistV1Process` to `BuilderAssistManifestResponse`
     // WHY: Because we intentionally did not implement an explicit response type for the assist endpoints
     //      due to the assist service being in an experimental state and the response schema being subject to change frequently
@@ -163,10 +166,14 @@ const useAssistManifestQuery = <T>(controller: string, enabled: boolean, params:
     // ISSUE: https://github.com/airbytehq/airbyte-internal-issues/issues/9398
     () => assistV1Process({ controller, ...params }, requestOptions) as Promise<T>,
     {
-      keepPreviousData: true,
-      cacheTime: 0,
-      retry: false,
       enabled,
+      keepPreviousData: true,
+      cacheTime: Infinity,
+      retry: false,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      staleTime: Infinity, // Prevent automatic refetching
     }
   );
 };
