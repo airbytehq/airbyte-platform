@@ -18,7 +18,6 @@ export interface Experiments {
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
-  "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
