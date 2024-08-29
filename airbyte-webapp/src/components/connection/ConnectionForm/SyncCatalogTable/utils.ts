@@ -10,7 +10,7 @@ import { Path, SyncSchemaField, SyncSchemaFieldObject, traverseSchemaToField } f
 
 import { SyncCatalogUIModel } from "./SyncCatalogTable";
 import { StatusToDisplay } from "../../syncCatalog/StreamsConfigTable/useStreamsConfigTableRowProps";
-import { compareObjectsByFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
+import { compareObjectsByFields, flattenSyncSchemaFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 import { isSameSyncStream } from "../utils";
 
@@ -40,24 +40,22 @@ export const getSyncCatalogRows = (
       namespace: streamNode.stream?.namespace || "",
       isEnabled: streamNode.config?.selected,
       traversedFields, // we need all traversed fields for updating field
-      subRows: traversedFields.map((rowField) => {
-        return {
-          streamNode,
-          initialStreamNode,
-          name: getFieldPathDisplayName(rowField.path),
-          field: rowField,
-          traversedFields,
-          subRows: rowField?.fields?.map((nestedField) => {
-            return {
-              streamNode,
-              initialStreamNode,
-              name: getFieldPathDisplayName(nestedField.path),
-              field: nestedField,
-              traversedFields,
-            };
-          }),
-        };
-      }),
+      subRows: traversedFields.map((rowField) => ({
+        streamNode,
+        initialStreamNode,
+        name: getFieldPathDisplayName(rowField.path),
+        field: rowField,
+        traversedFields,
+        subRows:
+          rowField?.fields &&
+          flattenSyncSchemaFields(rowField?.fields)?.map((nestedField) => ({
+            streamNode,
+            initialStreamNode,
+            name: getFieldPathDisplayName(nestedField.path),
+            field: nestedField,
+            traversedFields,
+          })),
+      })),
     };
   });
 
