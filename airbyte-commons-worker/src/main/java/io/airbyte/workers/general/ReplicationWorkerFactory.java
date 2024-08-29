@@ -164,7 +164,7 @@ public class ReplicationWorkerFactory {
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, replicationInput, replicationAirbyteMessageEventPublishingHelper,
         onReplicationRunning, destinationTimeout, workloadApiClient, workloadEnabled, analyticsMessageTracker,
-        workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory);
+        workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory, metricClient);
   }
 
   /**
@@ -310,7 +310,8 @@ public class ReplicationWorkerFactory {
                                                            final Optional<String> workloadId,
                                                            final AirbyteApiClient airbyteApiClient,
                                                            final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                           final StreamStatusTrackerFactory streamStatusTrackerFactory) {
+                                                           final StreamStatusTrackerFactory streamStatusTrackerFactory,
+                                                           final MetricClient metricClient) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
 
     final int bufferSize = featureFlagClient.intVariation(ReplicationBufferOverride.INSTANCE, flagContext);
@@ -342,7 +343,9 @@ public class ReplicationWorkerFactory {
         airbyteApiClient,
         streamStatusCompletionTracker,
         streamStatusTrackerFactory,
-        bufferConfiguration);
+        bufferConfiguration,
+        metricClient,
+        replicationInput);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -388,7 +391,9 @@ public class ReplicationWorkerFactory {
                                                                   final AirbyteApiClient airbyteApiClient,
                                                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                   final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                                                  final BufferConfiguration bufferConfiguration) {
+                                                                  final BufferConfiguration bufferConfiguration,
+                                                                  final MetricClient metricClient,
+                                                                  final ReplicationInput replicationInput) {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
             messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
@@ -396,7 +401,7 @@ public class ReplicationWorkerFactory {
 
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
         srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout, streamStatusCompletionTracker,
-        bufferConfiguration);
+        bufferConfiguration, metricClient, replicationInput);
 
   }
 

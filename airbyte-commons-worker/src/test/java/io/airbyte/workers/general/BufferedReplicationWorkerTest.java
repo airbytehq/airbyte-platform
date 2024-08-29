@@ -41,7 +41,9 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         replicationWorkerHelper,
         destinationTimeoutMonitor,
         streamStatusCompletionTracker,
-        BufferConfiguration.withPollTimeout(1));
+        BufferConfiguration.withPollTimeout(1),
+        metricClient,
+        replicationInput);
   }
 
   // BufferedReplicationWorkerTests.

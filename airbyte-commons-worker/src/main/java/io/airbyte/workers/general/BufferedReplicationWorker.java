@@ -84,6 +84,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final Stopwatch readFromDestStopwatch;
   private final Stopwatch processFromDestStopwatch;
   private final StreamStatusCompletionTracker streamStatusCompletionTracker;
+  private final MetricClient metricClient;
+  private final ReplicationInput replicationInput;
 
   private static final int executorShutdownGracePeriodInSeconds = 10;
 
@@ -98,7 +100,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
                                    final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                   final BufferConfiguration bufferConfiguration) {
+                                   final BufferConfiguration bufferConfiguration,
+                                   final MetricClient metricClient,
+                                   final ReplicationInput replicationInput) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -125,6 +129,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.readFromDestStopwatch = new Stopwatch();
     this.processFromDestStopwatch = new Stopwatch();
     this.streamStatusCompletionTracker = streamStatusCompletionTracker;
+    this.metricClient = metricClient;
+    this.replicationInput = replicationInput;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -352,6 +358,11 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       if (source.getExitValue() == 0) {
         replicationWorkerHelper.endOfSource();
       } else {
+        recordErrorExitValue(
+            replicationInput.getConnectionId().toString(),
+            "source",
+            replicationInput.getSourceLauncherConfig().getDockerImage(),
+            String.valueOf(source.getExitValue()));
         throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
       }
     } catch (final SourceException e) {
@@ -467,6 +478,11 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
       if (destination.getExitValue() != 0) {
+        recordErrorExitValue(
+            replicationInput.getConnectionId().toString(),
+            "destination",
+            replicationInput.getDestinationLauncherConfig().getDockerImage(),
+            String.valueOf(source.getExitValue()));
         throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
       } else {
         replicationWorkerHelper.endOfDestination();
@@ -520,6 +536,14 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       }
     }
 
+  }
+
+  private void recordErrorExitValue(final String connectionId, final String connectorType, final String connectorImage, final String exitValue) {
+    metricClient.count(OssMetricsRegistry.CONNECTOR_FAILURE_EXIT_VALUE, 1L,
+        new MetricAttribute("connection_id", connectionId),
+        new MetricAttribute("connector", connectorType),
+        new MetricAttribute("image", connectorImage),
+        new MetricAttribute("exit_value", exitValue));
   }
 
 }
