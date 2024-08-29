@@ -272,7 +272,7 @@ public class KubePodProcess implements KubePod {
         })
         .collect(Collectors.toList());
 
-    List<EnvVar> allEnvVars = Lists.concat(envVars, secretEnvVars);
+    List<EnvVar> allEnvVars = new ArrayList<>(Lists.concat(envVars, secretEnvVars));
 
     if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
       CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(allEnvVars);
