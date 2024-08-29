@@ -101,7 +101,16 @@ export const InvoiceGrid: React.FC<InvoiceGridProps> = ({ invoices, hasMore }) =
       {hasMore && (
         <Box mt="xl">
           <Text color="grey" size="sm">
-            <FormattedMessage id="settings.organization.billing.invoices.moreInvoices" />
+            <FormattedMessage
+              id="settings.organization.billing.invoices.moreInvoices"
+              values={{
+                viewAll: (
+                  <strong>
+                    <FormattedMessage id="settings.organization.billing.invoices.viewAll" />
+                  </strong>
+                ),
+              }}
+            />
           </Text>
         </Box>
       )}

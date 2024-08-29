@@ -1010,7 +1010,7 @@
   "settings.organization.billing.paymentMethod.preview": "···· ···· ···· {lastFour}",
   "settings.organization.billing.paymentMethod.expires": "Expires {month}/{year}",
   "settings.organization.billing.paymentMethod.add": "Add payment method",
-  "settings.organization.billing.invoices.moreInvoices": "Only the most recent invoices are shown here.",
+  "settings.organization.billing.invoices.moreInvoices": "Only the most recent invoices are shown here. Click {viewAll} above to see all your invoices.",
   "settings.organization.billing.paymentMethodError": "Error loading payment method",
   "settings.organization.billing.paymentMethodUnknown": "Your payment method is set up.",
   "settings.workspaceSettings.update.success": "Workspace settings have been updated!",
