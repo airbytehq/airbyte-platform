@@ -1,4 +1,5 @@
 import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
+import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import React, { ReactNode, useMemo, useState } from "react";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
@@ -121,28 +122,31 @@ const OptionsInstruction = ({ message }: { message: ReactNode }) => {
   );
 };
 
-const Options = ({ optionSections, loadingMessage, instructionMessage, loading = false }: OptionsProps) => {
-  const { formatMessage } = useIntl();
-  const defaultLoadingMessage = formatMessage({ id: "ui.loading" });
-  const optionsList = getOptionsList({ optionSections });
-  if (optionSections.length === 0 && !loading) {
-    return null;
-  }
+const Options = React.forwardRef<HTMLDivElement, OptionsProps>(
+  ({ optionSections, loadingMessage, instructionMessage, loading = false }, ref) => {
+    const { formatMessage } = useIntl();
+    const defaultLoadingMessage = formatMessage({ id: "ui.loading" });
+    const optionsList = getOptionsList({ optionSections });
+    if (optionSections.length === 0 && !loading) {
+      return null;
+    }
 
-  if (loading) {
-    optionsList.unshift(<OptionsLoading message={loadingMessage || defaultLoadingMessage} />);
-  }
+    if (loading) {
+      optionsList.unshift(<OptionsLoading message={loadingMessage || defaultLoadingMessage} />);
+    }
 
-  if (instructionMessage) {
-    optionsList.unshift(<OptionsInstruction message={instructionMessage} />);
-  }
+    if (instructionMessage) {
+      optionsList.unshift(<OptionsInstruction message={instructionMessage} />);
+    }
 
-  return (
-    <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
-      {optionsList}
-    </ComboboxOptions>
-  );
-};
+    return (
+      <ComboboxOptions ref={ref} as="ul" className={styles.optionsMenu} modal={false}>
+        {optionsList}
+      </ComboboxOptions>
+    );
+  }
+);
+Options.displayName = "Options";
 
 const normalizeOptionsAsSections = (options: Option[] | OptionSection[]): OptionSection[] => {
   if (options.length === 0) {
@@ -249,29 +253,31 @@ export const ComboBox = ({
       immediate
       as="div"
     >
-      <ComboboxInput as={React.Fragment}>
-        <Input
-          {...fieldInputProps}
-          value={currentInputValue}
-          error={error}
-          adornment={adornment}
-          autoComplete="off"
-          onChange={(event) => {
-            const newQuery = event.target.value;
-            setQuery(newQuery);
+      <Float adaptiveWidth placement="bottom-start">
+        <ComboboxInput as={React.Fragment}>
+          <Input
+            {...fieldInputProps}
+            value={currentInputValue}
+            error={error}
+            adornment={adornment}
+            autoComplete="off"
+            onChange={(event) => {
+              const newQuery = event.target.value;
+              setQuery(newQuery);
 
-            const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
-            if (allowCustomValue) {
-              onChange(selectedOption?.value ?? newQuery);
-            } else if (selectedOption) {
-              onChange(selectedOption.value);
-            }
-          }}
-          onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
-          disabled={disabled}
-        />
-      </ComboboxInput>
-      <Options optionSections={displayOptionSections} {...optionsConfig} />
+              const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
+              if (allowCustomValue) {
+                onChange(selectedOption?.value ?? newQuery);
+              } else if (selectedOption) {
+                onChange(selectedOption.value);
+              }
+            }}
+            onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
+            disabled={disabled}
+          />
+        </ComboboxInput>
+        <Options optionSections={displayOptionSections} {...optionsConfig} />
+      </Float>
     </Combobox>
   );
 };
