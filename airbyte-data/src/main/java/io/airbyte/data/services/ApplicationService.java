@@ -5,17 +5,17 @@
 package io.airbyte.data.services;
 
 import io.airbyte.config.Application;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import java.util.List;
 import java.util.Optional;
 
 public interface ApplicationService {
 
-  Application createApplication(User user, String name);
+  Application createApplication(AuthenticatedUser user, String name);
 
-  List<Application> listApplicationsByUser(User user);
+  List<Application> listApplicationsByUser(AuthenticatedUser user);
 
-  Optional<Application> deleteApplication(User user, String applicationId);
+  Optional<Application> deleteApplication(AuthenticatedUser user, String applicationId);
 
   String getToken(String clientId, String clientSecret);
 

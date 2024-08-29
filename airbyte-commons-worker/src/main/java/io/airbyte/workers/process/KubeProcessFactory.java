@@ -27,6 +27,7 @@ import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSocatInConnectorContainer;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.airbyte.workers.models.SecretMetadata;
@@ -61,12 +62,14 @@ public class KubeProcessFactory implements ProcessFactory {
   private final KubernetesClient fabricClient;
   private final String kubeHeartbeatUrl;
   private final String processRunnerHost;
+  private final WorkloadSecurityContextProvider workloadSecurityContextProvider;
 
   /**
    * Sets up a process factory with the default processRunnerHost.
    */
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final FeatureFlagClient featureFlagClient,
+                            final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
@@ -74,6 +77,7 @@ public class KubeProcessFactory implements ProcessFactory {
     this(
         workerConfigsProvider,
         featureFlagClient,
+        workloadSecurityContextProvider,
         namespace,
         serviceAccount,
         fabricClient,
@@ -94,6 +98,7 @@ public class KubeProcessFactory implements ProcessFactory {
   @VisibleForTesting
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final FeatureFlagClient featureFlagClient,
+                            final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
@@ -106,6 +111,7 @@ public class KubeProcessFactory implements ProcessFactory {
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
     this.processRunnerHost = processRunnerHost;
+    this.workloadSecurityContextProvider = workloadSecurityContextProvider;
   }
 
   @Override
@@ -165,6 +171,7 @@ public class KubeProcessFactory implements ProcessFactory {
           fabricClient,
           featureFlagClient,
           featureFlagContext,
+          workloadSecurityContextProvider,
           podName,
           namespace,
           serviceAccount,

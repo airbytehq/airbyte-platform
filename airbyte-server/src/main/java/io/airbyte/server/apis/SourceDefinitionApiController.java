@@ -6,9 +6,7 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.SourceDefinitionApi;
@@ -23,6 +21,8 @@ import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.auth.generated.Intent;
+import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
@@ -53,7 +53,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/create_custom")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionRead createCustomSourceDefinition(@Body final CustomSourceDefinitionCreate customSourceDefinitionCreate) {

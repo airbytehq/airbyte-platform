@@ -1,6 +1,7 @@
 package io.airbyte.workload.launcher.pods
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.constants.WorkerConstants
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
@@ -8,6 +9,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
@@ -17,20 +19,23 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
+import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.input.getOrchestratorResourceReqs
+import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -38,7 +43,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -51,7 +56,7 @@ import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  fun `builds a kube input from a replication payload`(customConnector: Boolean) {
+  fun `builds a kube input from a replication payload (orchestrator)`(customConnector: Boolean) {
     // I'm overloading this parameter to exercise the FF. The FF check will be removed shortly
     val shouldKubeCpInput = customConnector
 
@@ -127,7 +132,7 @@ class PayloadKubeInputMapperTest {
     val expectedFileMap: Map<String, String> =
       buildMap {
         if (shouldKubeCpInput) {
-          put(OrchestratorConstants.INIT_FILE_INPUT, mockSerializedOutput)
+          put(FileConstants.INIT_INPUT_FILE, mockSerializedOutput)
         }
       }
 
@@ -142,6 +147,269 @@ class PayloadKubeInputMapperTest {
           EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
         ),
     )
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `builds a kube input from a replication payload (mono-pod)`(customConnector: Boolean) {
+    val serializer: ObjectSerializer = mockk()
+    val labeler: PodLabeler = mockk()
+    val namespace = "test-namespace"
+    val podName = "a-repl-pod"
+    val podNameGenerator: PodNameGenerator = mockk()
+    every { podNameGenerator.getReplicationPodName(any(), any()) } returns podName
+    val containerInfo = KubeContainerInfo("img-name", "pull-policy")
+    val awsAssumedRoleEnv: List<EnvVar> = listOf()
+    val replSelectors = mapOf("test-selector" to "normal-repl")
+    val replCustomSelectors = mapOf("test-selector" to "custom-repl")
+    val checkConfigs: WorkerConfigs = mockk()
+    val discoverConfigs: WorkerConfigs = mockk()
+    val specConfigs: WorkerConfigs = mockk()
+    val replConfigs: WorkerConfigs = mockk()
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
+    val annotations = mapOf("annotation" to "value2")
+    every { replConfigs.workerKubeAnnotations } returns annotations
+    val ffClient: TestClient = mockk()
+    every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
+    every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns false
+
+    val mapper =
+      PayloadKubeInputMapper(
+        serializer,
+        labeler,
+        podNameGenerator,
+        namespace,
+        containerInfo,
+        awsAssumedRoleEnv,
+        replConfigs,
+        checkConfigs,
+        discoverConfigs,
+        specConfigs,
+        ffClient,
+        listOf(),
+      )
+    val input: ReplicationInput = mockk()
+
+    mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
+    val jobId = "415"
+    val attemptId = 7654L
+    val resourceReqs1 =
+      ResourceRequirements()
+        .withCpuLimit("1")
+        .withMemoryRequest("7Mi")
+    val resourceReqs2 =
+      ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryRequest("3Mi")
+    val resourceReqs3 =
+      ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryRequest("300Mi")
+    val srcLauncherConfig =
+      IntegrationLauncherConfig()
+        .withAdditionalEnvironmentVariables(mapOf("env-1" to "val-1", "env-2" to "val-2"))
+        .withDockerImage("src-docker-img")
+    val destLauncherConfig =
+      IntegrationLauncherConfig()
+        .withDockerImage("dest-docker-img")
+        .withAdditionalEnvironmentVariables(mapOf("env-3" to "val-3"))
+
+    every { input.getJobId() } returns jobId
+    every { input.getAttemptId() } returns attemptId
+    every { input.getOrchestratorResourceReqs() } returns resourceReqs1
+    every { input.getSourceResourceReqs() } returns resourceReqs2
+    every { input.getDestinationResourceReqs() } returns resourceReqs3
+    every { input.usesCustomConnector() } returns customConnector
+    every { input.jobRunConfig } returns mockk<JobRunConfig>()
+    every { input.sourceLauncherConfig } returns srcLauncherConfig
+    every { input.destinationLauncherConfig } returns destLauncherConfig
+    every { input.connectionId } returns mockk<UUID>()
+    every { input.workspaceId } returns mockk<UUID>()
+
+    val mockSerializedOutput = "Serialized Obj."
+    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
+
+    val replLabels = mapOf("orchestrator" to "labels")
+    val sharedLabels = mapOf("pass through" to "labels")
+    every {
+      labeler.getReplicationLabels(
+        containerInfo.image,
+        srcLauncherConfig.dockerImage,
+        destLauncherConfig.dockerImage,
+      )
+    } returns replLabels
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toReplicationKubeInput(workloadId, input, sharedLabels)
+
+    assertEquals(podName, result.podName)
+    assertEquals(replLabels + sharedLabels, result.labels)
+    assertEquals(if (customConnector) replCustomSelectors else replSelectors, result.nodeSelectors)
+    assertEquals(annotations, result.annotations)
+    assertEquals(containerInfo.image, result.orchestratorImage)
+    assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
+    assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs2), result.sourceReqs)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+
+    val expectedOrchestratorRuntimeEnvVars =
+      listOf(
+        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      )
+    val expectedSrcRuntimeEnvVars =
+      listOf(
+        EnvVar("env-1", "val-1", null),
+        EnvVar("env-2", "val-2", null),
+      )
+    val expectedDestRuntimeEnvVars =
+      listOf(
+        EnvVar("env-3", "val-3", null),
+      )
+
+    assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
+    assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars)
+    assertEquals(expectedDestRuntimeEnvVars, result.destinationRuntimeEnvVars)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `builds a kube input from a replication payload with apm support (mono-pod)`(customConnector: Boolean) {
+    val imageVersion = "1.2.3"
+    val destinationImageName = "dest-docker-img"
+    val sourceImageName = "src-docker-img"
+    val serializer: ObjectSerializer = mockk()
+    val labeler: PodLabeler = mockk()
+    val namespace = "test-namespace"
+    val podName = "a-repl-pod"
+    val podNameGenerator: PodNameGenerator = mockk()
+    every { podNameGenerator.getReplicationPodName(any(), any()) } returns podName
+    val containerInfo = KubeContainerInfo("img-name", "pull-policy")
+    val awsAssumedRoleEnv: List<EnvVar> = listOf()
+    val replSelectors = mapOf("test-selector" to "normal-repl")
+    val replCustomSelectors = mapOf("test-selector" to "custom-repl")
+    val checkConfigs: WorkerConfigs = mockk()
+    val discoverConfigs: WorkerConfigs = mockk()
+    val specConfigs: WorkerConfigs = mockk()
+    val replConfigs: WorkerConfigs = mockk()
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
+    val annotations = mapOf("annotation" to "value2")
+    every { replConfigs.workerKubeAnnotations } returns annotations
+    val ffClient: TestClient = mockk()
+    every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
+    every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns true
+
+    val mapper =
+      PayloadKubeInputMapper(
+        serializer,
+        labeler,
+        podNameGenerator,
+        namespace,
+        containerInfo,
+        awsAssumedRoleEnv,
+        replConfigs,
+        checkConfigs,
+        discoverConfigs,
+        specConfigs,
+        ffClient,
+        listOf(),
+      )
+    val input: ReplicationInput = mockk()
+
+    mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
+    val jobId = "415"
+    val attemptId = 7654L
+    val resourceReqs1 =
+      ResourceRequirements()
+        .withCpuLimit("1")
+        .withMemoryRequest("7Mi")
+    val resourceReqs2 =
+      ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryRequest("3Mi")
+    val resourceReqs3 =
+      ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryRequest("300Mi")
+    val srcLauncherConfig =
+      IntegrationLauncherConfig()
+        .withAdditionalEnvironmentVariables(mapOf("env-1" to "val-1", "env-2" to "val-2"))
+        .withDockerImage("$sourceImageName:$imageVersion")
+    val destLauncherConfig =
+      IntegrationLauncherConfig()
+        .withDockerImage("$destinationImageName:$imageVersion")
+        .withAdditionalEnvironmentVariables(mapOf("env-3" to "val-3"))
+
+    every { input.getJobId() } returns jobId
+    every { input.getAttemptId() } returns attemptId
+    every { input.getOrchestratorResourceReqs() } returns resourceReqs1
+    every { input.getSourceResourceReqs() } returns resourceReqs2
+    every { input.getDestinationResourceReqs() } returns resourceReqs3
+    every { input.usesCustomConnector() } returns customConnector
+    every { input.jobRunConfig } returns mockk<JobRunConfig>()
+    every { input.sourceLauncherConfig } returns srcLauncherConfig
+    every { input.destinationLauncherConfig } returns destLauncherConfig
+    every { input.connectionId } returns mockk<UUID>()
+    every { input.workspaceId } returns mockk<UUID>()
+
+    val mockSerializedOutput = "Serialized Obj."
+    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
+
+    val replLabels = mapOf("orchestrator" to "labels")
+    val sharedLabels = mapOf("pass through" to "labels")
+    every {
+      labeler.getReplicationLabels(
+        containerInfo.image,
+        srcLauncherConfig.dockerImage,
+        destLauncherConfig.dockerImage,
+      )
+    } returns replLabels
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toReplicationKubeInput(workloadId, input, sharedLabels)
+
+    assertEquals(podName, result.podName)
+    assertEquals(replLabels + sharedLabels, result.labels)
+    assertEquals(if (customConnector) replCustomSelectors else replSelectors, result.nodeSelectors)
+    assertEquals(annotations, result.annotations)
+    assertEquals(containerInfo.image, result.orchestratorImage)
+    assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
+    assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs2), result.sourceReqs)
+    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+
+    val expectedOrchestratorRuntimeEnvVars =
+      listOf(
+        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      )
+    val expectedSrcRuntimeEnvVars =
+      listOf(
+        EnvVar("env-1", "val-1", null),
+        EnvVar("env-2", "val-2", null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.JAVA_OPTS.name, WorkerConstants.DD_ENV_VAR, null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.DD_SERVICE.name, sourceImageName, null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.DD_VERSION.name, imageVersion, null),
+      ).sortedBy { it.name }
+    val expectedDestRuntimeEnvVars =
+      listOf(
+        EnvVar("env-3", "val-3", null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.JAVA_OPTS.name, WorkerConstants.DD_ENV_VAR, null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.DD_SERVICE.name, destinationImageName, null),
+        EnvVar(io.airbyte.commons.envvar.EnvVar.DD_VERSION.name, imageVersion, null),
+      ).sortedBy { it.name }
+
+    assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
+    assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars.sortedBy { it.name })
+    assertEquals(expectedDestRuntimeEnvVars, result.destinationRuntimeEnvVars.sortedBy { it.name })
   }
 
   @ParameterizedTest
@@ -237,8 +505,8 @@ class PayloadKubeInputMapperTest {
     every { labeler.getCheckLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
-    Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(
+    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(
       if (customConnector) {
         checkCustomSelectors
       } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
@@ -248,18 +516,18 @@ class PayloadKubeInputMapperTest {
       },
       result.nodeSelectors,
     )
-    Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
-    Assertions.assertEquals(podName, result.kubePodInfo.name)
-    Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(namespace, result.kubePodInfo.namespace)
+    assertEquals(podName, result.kubePodInfo.name)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.CONNECTION_CONFIGURATION_FILE, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
-    Assertions.assertEquals(expectedFileMap, result.fileMap)
+    assertEquals(expectedFileMap, result.fileMap)
 
     val workloadTypeEnvVar = EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null)
     val workloadIdEnvVar = EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
@@ -375,8 +643,8 @@ class PayloadKubeInputMapperTest {
     every { labeler.getDiscoverLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
-    Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(
+    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(
       if (customConnector) {
         checkCustomSelectors
       } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
@@ -386,18 +654,18 @@ class PayloadKubeInputMapperTest {
       },
       result.nodeSelectors,
     )
-    Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
-    Assertions.assertEquals(podName, result.kubePodInfo.name)
-    Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(namespace, result.kubePodInfo.namespace)
+    assertEquals(podName, result.kubePodInfo.name)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.CONNECTION_CONFIGURATION_FILE, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
-    Assertions.assertEquals(expectedFileMap, result.fileMap)
+    assertEquals(expectedFileMap, result.fileMap)
 
     val workloadTypeEnvVar = EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null)
     val workloadIdEnvVar = EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
@@ -503,19 +771,19 @@ class PayloadKubeInputMapperTest {
     every { labeler.getSpecLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
-    Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
-    Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
-    Assertions.assertEquals(podName, result.kubePodInfo.name)
-    Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
+    assertEquals(namespace, result.kubePodInfo.namespace)
+    assertEquals(podName, result.kubePodInfo.name)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     val expectedFileMap =
       buildMap {
         if (!useFetchingInit) {
-          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+          put(FileConstants.SIDECAR_INPUT_FILE, mockSerializedOutput)
         }
       }
-    Assertions.assertEquals(expectedFileMap, result.fileMap)
+    assertEquals(expectedFileMap, result.fileMap)
   }
 
   companion object {

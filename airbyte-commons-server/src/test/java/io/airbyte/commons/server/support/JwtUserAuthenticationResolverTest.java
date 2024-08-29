@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver;
 import io.airbyte.config.AuthProvider;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.utils.SecurityService;
 import java.util.Map;
@@ -47,10 +47,11 @@ class JwtUserAuthenticationResolverTest {
             Map.of(JWT_USER_EMAIL, EMAIL, JWT_USER_NAME, USER_NAME, JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final User userRead = jwtUserAuthenticationResolver.resolveUser(AUTH_USER_ID);
+    final AuthenticatedUser userRead = jwtUserAuthenticationResolver.resolveUser(AUTH_USER_ID);
 
-    final User expectedUserRead = new User().withAuthUserId(AUTH_USER_ID).withEmail(EMAIL).withName(USER_NAME).withAuthProvider(
-        AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+    final AuthenticatedUser expectedUserRead =
+        new AuthenticatedUser().withAuthUserId(AUTH_USER_ID).withEmail(EMAIL).withName(USER_NAME).withAuthProvider(
+            AuthProvider.GOOGLE_IDENTITY_PLATFORM);
     assertEquals(expectedUserRead, userRead);
 
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a

@@ -2,10 +2,14 @@ import * as yup from "yup";
 
 import {
   ConnectionEventType,
+  ConnectionScheduleType,
   FailureOrigin,
   FailureReason,
   FailureType,
+  Geography,
   JobConfigType,
+  NamespaceDefinitionType,
+  NonBreakingChangesPreference,
 } from "core/api/types/AirbyteClient";
 
 /**
@@ -19,6 +23,19 @@ import {
 /**
  * SCHEMA OBJECTS
  */
+
+const connectionAutoDisabledReasons = [
+  "ONLY_FAILED_JOBS_RECENTLY",
+  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
+  "SCHEMA_CHANGES_ARE_BREAKING",
+  "DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES",
+  "INVALID_CREDIT_BALANCE",
+  "CONNECTOR_NOT_SUPPORTED",
+  "WORKSPACE_IS_DELINQUENT",
+
+  // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
+  "SCHEMA_CHANGE_AUTO_PROPAGATE",
+];
 
 // property-specific schemas
 const streamDescriptorSchema = yup.object({
@@ -100,6 +117,50 @@ export const jobStartedSummarySchema = yup.object({
   jobId: yup.number().required(),
 });
 
+export const connectionDisabledEventSummarySchema = yup.object({
+  disabledReason: yup.string().oneOf(connectionAutoDisabledReasons),
+});
+
+export const connectionSettingsUpdateEventSummaryPatchesShape = {
+  scheduleType: yup.object({
+    from: yup.string().oneOf(Object.values(ConnectionScheduleType)),
+    to: yup.string().oneOf(Object.values(ConnectionScheduleType)),
+  }),
+  name: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  namespaceDefinition: yup.object().shape({
+    from: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
+    to: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
+  }),
+  namespaceFormat: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  prefix: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  geography: yup
+    .object()
+    .shape({ from: yup.string().oneOf(Object.values(Geography)), to: yup.string().oneOf(Object.values(Geography)) }),
+  notifySchemaChanges: yup.object().shape({ from: yup.boolean(), to: yup.boolean() }),
+  nonBreakingChangesPreference: yup.object().shape({
+    from: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
+    to: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
+  }),
+  backfillPreference: yup.object().shape({ from: yup.string(), to: yup.string() }),
+} as const;
+
+export const patchFields = Object.keys(connectionSettingsUpdateEventSummaryPatchesShape) as Array<
+  keyof typeof connectionSettingsUpdateEventSummaryPatchesShape
+>;
+
+export const connectionSettingsUpdateEventSummarySchema = yup.object({
+  startTimeEpochSeconds: yup.number().required(),
+  patches: yup
+    .object(connectionSettingsUpdateEventSummaryPatchesShape)
+    // ensure that at least one of the known patch fields is present
+    // pull `originalValue` from the test context as the obj argument provided has all of the known fields set to non-confirming objects
+    .test((_, testContext) => {
+      const { originalValue } = testContext as unknown as { originalValue: Record<string, unknown> };
+      return Object.keys(originalValue).some((key) => (patchFields as string[]).includes(key));
+    })
+    .required(),
+});
+
 export const generalEventSchema = yup.object({
   id: yup.string().required(),
   connectionId: yup.string().required(),
@@ -165,4 +226,18 @@ export const jobStartedEventSchema = generalEventSchema.shape({
 export const jobRunningSchema = generalEventSchema.shape({
   eventType: yup.string().oneOf(["RUNNING_JOB"]).required(),
   summary: jobRunningSummarySchema.required(),
+});
+
+export const connectionEnabledEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_ENABLED]).required(),
+});
+
+export const connectionDisabledEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_DISABLED]).required(),
+  summary: connectionDisabledEventSummarySchema.required(),
+});
+
+export const connectionSettingsUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_SETTINGS_UPDATE]).required(),
+  summary: connectionSettingsUpdateEventSummarySchema.required(),
 });

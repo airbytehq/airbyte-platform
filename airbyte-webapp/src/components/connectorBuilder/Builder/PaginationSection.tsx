@@ -2,6 +2,7 @@ import lowerCase from "lodash/lowerCase";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import { LabelInfo } from "components/Label";
 
 import { RequestOption } from "core/api/types/ConnectorManifest";
@@ -42,6 +43,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       docLink={links.connectorBuilderPagination}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
+      labelAction={<AssistButton assistKey="paginator" streamNum={currentStreamIndex} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("paginator"),

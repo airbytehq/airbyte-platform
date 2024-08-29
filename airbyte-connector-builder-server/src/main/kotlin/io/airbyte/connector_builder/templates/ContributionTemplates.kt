@@ -128,7 +128,7 @@ class ContributionTemplates {
         "specProperties" to specProperties,
         "streams" to streams,
         "releaseDate" to releaseDate,
-        "changelogMessage" to "Initial release by $authorUsername via Connector Builder",
+        "changelogMessage" to "Initial release by [@$authorUsername](https://github.com/$authorUsername) via Connector Builder",
       )
     return renderTemplateString("contribution_templates/docs.md.peb", context)
   }

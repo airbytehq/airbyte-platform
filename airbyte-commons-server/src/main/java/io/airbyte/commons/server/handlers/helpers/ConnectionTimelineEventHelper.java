@@ -5,6 +5,10 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionStatus;
+import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.commons.server.JobStatus;
@@ -26,14 +30,21 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.shared.ConnectionDisabledEvent;
+import io.airbyte.data.services.shared.ConnectionEnabledEvent;
+import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
+import io.airbyte.data.services.shared.SchemaUpdateEvent;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -222,6 +233,73 @@ public class ConnectionTimelineEventHelper {
           jobInfo.getJob().getConfigType().name(),
           streams);
       connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    }
+  }
+
+  public void logStatusChangedEventInConnectionTimeline(final UUID connectionId,
+                                                        final ConnectionStatus status,
+                                                        final String updateReason,
+                                                        final boolean autoUpdate) {
+    if (status != null) {
+      if (status == ConnectionStatus.ACTIVE) {
+        final ConnectionEnabledEvent event = new ConnectionEnabledEvent(
+            Instant.now().getEpochSecond());
+        connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+      } else if (status == ConnectionStatus.INACTIVE) {
+        final ConnectionDisabledEvent event = new ConnectionDisabledEvent(
+            Instant.now().getEpochSecond(), updateReason);
+        connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+      }
+    }
+  }
+
+  public void logSchemaChangedEventInConnectionTimeline(final UUID connectionId,
+                                                        final CatalogDiff diff,
+                                                        final String updateReason,
+                                                        final boolean autoUpdate) {
+    // Schema changes including streams enabling/disabling, sync mode, primary keys, etc.
+    // Will not log complete catalog, should log diff.
+    final SchemaUpdateEvent event = new SchemaUpdateEvent(
+        Instant.now().getEpochSecond(), diff, updateReason);
+    connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+  }
+
+  private void addPatchIfFieldIsChanged(final Map<String, Map<String, Object>> patches,
+                                        final String fieldName,
+                                        final Object oldValue,
+                                        final Object newValue) {
+    if (newValue != null && !newValue.equals(oldValue)) {
+      patches.put(fieldName, Map.of("from", oldValue, "to", newValue));
+    }
+  }
+
+  public void logConnectionSettingsChangedEventInConnectionTimeline(final UUID connectionId,
+                                                                    final ConnectionRead originalConnectionRead,
+                                                                    final ConnectionUpdate patch,
+                                                                    final String updateReason,
+                                                                    final boolean autoUpdate) {
+    // Note: if status is changed with other settings changes,we are logging them as separate events.
+    // 1. log event for connection status changes
+    logStatusChangedEventInConnectionTimeline(connectionId, patch.getStatus(), updateReason, autoUpdate);
+    // 2. log event for other connection settings changes
+    final Map<String, Map<String, Object>> patches = new HashMap<>();
+    addPatchIfFieldIsChanged(patches, "scheduleType", originalConnectionRead.getScheduleType(), patch.getScheduleType());
+    addPatchIfFieldIsChanged(patches, "name", originalConnectionRead.getName(), patch.getName());
+    addPatchIfFieldIsChanged(patches, "namespaceDefinition", originalConnectionRead.getNamespaceDefinition(), patch.getNamespaceDefinition());
+    addPatchIfFieldIsChanged(patches, "namespaceFormat", originalConnectionRead.getNamespaceFormat(), patch.getNamespaceFormat());
+    addPatchIfFieldIsChanged(patches, "prefix", originalConnectionRead.getPrefix(), patch.getPrefix());
+    addPatchIfFieldIsChanged(patches, "resourceRequirements", originalConnectionRead.getResourceRequirements(), patch.getResourceRequirements());
+    addPatchIfFieldIsChanged(patches, "geography", originalConnectionRead.getGeography(), patch.getGeography());
+    addPatchIfFieldIsChanged(patches, "notifySchemaChanges", originalConnectionRead.getNotifySchemaChanges(), patch.getNotifySchemaChanges());
+    addPatchIfFieldIsChanged(patches, "notifySchemaChangesByEmail", originalConnectionRead.getNotifySchemaChangesByEmail(),
+        patch.getNotifySchemaChangesByEmail());
+    addPatchIfFieldIsChanged(patches, "nonBreakingChangesPreference", originalConnectionRead.getNonBreakingChangesPreference(),
+        patch.getNonBreakingChangesPreference());
+    addPatchIfFieldIsChanged(patches, "backfillPreference", originalConnectionRead.getBackfillPreference(), patch.getBackfillPreference());
+    if (!patches.isEmpty()) {
+      final ConnectionSettingsChangedEvent event = new ConnectionSettingsChangedEvent(
+          Instant.now().getEpochSecond(), patches, updateReason);
+      connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
     }
   }
 

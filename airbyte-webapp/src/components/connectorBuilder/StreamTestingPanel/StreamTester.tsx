@@ -223,7 +223,11 @@ export const StreamTester: React.FC<{
             ...(hasAuxiliaryRequests
               ? [
                   {
-                    children: <GlobalRequestsDisplay requests={auxiliaryRequests} />,
+                    children: (
+                      // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
+                      // to reset the selected request index in case the number of requests differs between streams
+                      <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
+                    ),
                     minWidth: 0,
                     flex: auxiliaryRequestsFlex,
                     splitter: (

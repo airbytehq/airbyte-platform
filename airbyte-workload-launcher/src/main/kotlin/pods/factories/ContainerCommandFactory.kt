@@ -1,17 +1,26 @@
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.workers.process.KubePodProcess
-import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.pod.FileConstants.CATALOG_FILE
+import io.airbyte.workers.pod.FileConstants.CONFIG_DIR
+import io.airbyte.workers.pod.FileConstants.CONNECTOR_CONFIG_FILE
+import io.airbyte.workers.pod.FileConstants.DEST_DIR
+import io.airbyte.workers.pod.FileConstants.EXIT_CODE_FILE
+import io.airbyte.workers.pod.FileConstants.INPUT_STATE_FILE
+import io.airbyte.workers.pod.FileConstants.JOB_OUTPUT_FILE
+import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
+import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE
+import io.airbyte.workers.pod.FileConstants.STDIN_PIPE_FILE
+import io.airbyte.workers.pod.FileConstants.STDOUT_PIPE_FILE
+import io.airbyte.workers.pod.FileConstants.TERMINATION_MARKER_FILE
 
 /**
  * Factory for generating/templating the main shell scripts we use as the entry points in our containers.
  * Factor out into Singleton as necessary.
  */
 object ContainerCommandFactory {
-  private const val TERMINATION_MARKER_FILE = "TERMINATED"
-
   // WARNING: Fragile. Coupled to our conventions on building, unpacking and naming our executables.
   private const val SIDE_CAR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-connector-sidecar"
+  private const val ORCHESTRATOR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-container-orchestrator"
   private const val TERMINATION_CHECK_INTERVAL_SECONDS = 10
 
   /**
@@ -24,23 +33,61 @@ object ContainerCommandFactory {
     """.trimIndent()
 
   /**
+   * Runs the orchestrator and creates the TERMINATION_MARKER_FILE file on exit for both success and failure.
+   */
+  fun orchestrator() =
+    """
+    trap "touch $SOURCE_DIR/$TERMINATION_MARKER_FILE" EXIT
+    trap "touch $DEST_DIR/$TERMINATION_MARKER_FILE" EXIT
+    $ORCHESTRATOR_APPLICATION_EXECUTABLE
+    """.trimIndent()
+
+  /**
    * Starts the connector operation and a monitor process that conditionally kills the connector and exits if
    * a TERMINATION_MARKER_FILE is present. This ensures the connector exits when the sidecar exits.
    */
   fun connectorOperation(
     operationCommand: String,
     configArgs: String,
-  ) = """
+  ) = connectorCommandWrapper(
+    """
+    eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" > $CONFIG_DIR/$JOB_OUTPUT_FILE
+    """.trimIndent(),
+  )
+
+  @SuppressWarnings("LineLength")
+  fun source() =
+    connectorCommandWrapper(
+      """
+      # only provide the state flag if present
+      if [ ! -f $SOURCE_DIR/$INPUT_STATE_FILE ]; then
+        eval "${'$'}AIRBYTE_ENTRYPOINT read --config $SOURCE_DIR/${CONNECTOR_CONFIG_FILE} --catalog $SOURCE_DIR/${CATALOG_FILE}" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE
+      else
+        eval "${'$'}AIRBYTE_ENTRYPOINT read --config $SOURCE_DIR/${CONNECTOR_CONFIG_FILE} --catalog $SOURCE_DIR/${CATALOG_FILE} --state $SOURCE_DIR/$INPUT_STATE_FILE" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE
+      fi
+      """.trimIndent(),
+    )
+
+  @SuppressWarnings("LineLength")
+  fun destination() =
+    connectorCommandWrapper(
+      """
+      eval "${'$'}AIRBYTE_ENTRYPOINT write --config $DEST_DIR/${CONNECTOR_CONFIG_FILE} --catalog $DEST_DIR/${CATALOG_FILE}" 2> $STDERR_PIPE_FILE > $STDOUT_PIPE_FILE < $STDIN_PIPE_FILE
+      """.trimIndent(),
+    )
+
+  private fun connectorCommandWrapper(command: String): String =
+    """
     # fail loudly if entry point not set
     if [ -z "${'$'}AIRBYTE_ENTRYPOINT" ]; then
-      echo "Entrypoint was not set! AIRBYTE_ENTRYPOINT must be set in the container to run on Kubernetes."
+      echo "Entrypoint was not set! AIRBYTE_ENTRYPOINT must be set in the container."
       exit 127
     else
-      echo "Using existing AIRBYTE_ENTRYPOINT: ${'$'}AIRBYTE_ENTRYPOINT"
+      echo "Using AIRBYTE_ENTRYPOINT: ${'$'}AIRBYTE_ENTRYPOINT"
     fi
 
-    # run connector operation in background and store PID
-    (eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}) &
+    # run connector in background and store PID
+    ($command) &
     CHILD_PID=${'$'}!
 
     # run busy loop in background that checks for termination file and if present kills the connector operation and exits
@@ -51,10 +98,7 @@ object ContainerCommandFactory {
     EXIT_CODE=$?
 
     # write its exit code to a file for the sidecar
-    echo ${'$'}EXIT_CODE > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
-
-    # print result for debugging
-    cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
+    echo ${'$'}EXIT_CODE > $EXIT_CODE_FILE
 
     # propagate connector exit code by assuming it
     exit ${'$'}EXIT_CODE

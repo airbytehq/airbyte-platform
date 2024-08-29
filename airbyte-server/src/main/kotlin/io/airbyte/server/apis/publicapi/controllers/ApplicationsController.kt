@@ -8,7 +8,7 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
-import io.airbyte.config.User
+import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.publicApi.server.generated.apis.PublicApplicationsApi
 import io.airbyte.publicApi.server.generated.models.ApplicationCreate
@@ -44,7 +44,7 @@ open class ApplicationsController(
 ) : PublicApplicationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateApplication(applicationCreate: ApplicationCreate): Response {
-    val user: User = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.currentUser
 
     // process and monitor the request
     val applicationRead =
@@ -67,7 +67,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteApplication(applicationId: String): Response {
-    val user: User = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.currentUser
 
     // process and monitor the request
     val application: Optional<Application> =
@@ -115,7 +115,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetApplication(applicationId: String): Response {
-    val user: User = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.currentUser
 
     // process and monitor the request
     val application: Optional<ApplicationRead> =
@@ -148,7 +148,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListApplications(): Response {
-    val user: User = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.currentUser
 
     // process and monitor the request
     val applications =

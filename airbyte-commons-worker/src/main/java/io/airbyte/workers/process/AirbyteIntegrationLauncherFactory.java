@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.process;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
@@ -21,12 +22,17 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
+import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
+import io.airbyte.workers.internal.ContainerIOHandle;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.LocalContainerAirbyteDestination;
+import io.airbyte.workers.internal.LocalContainerAirbyteSource;
+import io.airbyte.workers.internal.MessageMetricsTracker;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import jakarta.inject.Singleton;
@@ -99,22 +105,30 @@ public class AirbyteIntegrationLauncherFactory {
                                            final SyncResourceRequirements syncResourceRequirements,
                                            final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                            final HeartbeatMonitor heartbeatMonitor) {
-    final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, syncResourceRequirements);
-
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
-
-    final boolean logConnectorMessages = featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, Empty.INSTANCE);
-
-    return new DefaultAirbyteSource(sourceLauncher,
+    final AirbyteStreamFactory streamFactory =
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks)),
-        heartbeatMonitor,
-        getProtocolSerializer(sourceLauncherConfig),
-        logConnectorMessages,
-        metricClient);
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks));
+
+    if (Boolean.parseBoolean(EnvVar.MONO_POD.fetch(Boolean.FALSE.toString()))) {
+      return new LocalContainerAirbyteSource(
+          heartbeatMonitor,
+          streamFactory,
+          new MessageMetricsTracker(metricClient),
+          ContainerIOHandle.source());
+    } else {
+      final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, syncResourceRequirements);
+      final boolean logConnectorMessages = featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, Empty.INSTANCE);
+      return new DefaultAirbyteSource(sourceLauncher,
+          streamFactory,
+          heartbeatMonitor,
+          getProtocolSerializer(sourceLauncherConfig),
+          logConnectorMessages,
+          metricClient);
+    }
   }
 
   /**
@@ -128,18 +142,29 @@ public class AirbyteIntegrationLauncherFactory {
                                                      final SyncResourceRequirements syncResourceRequirements,
                                                      final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                                      final DestinationTimeoutMonitor destinationTimeoutMonitor) {
-
-    final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
-    return new DefaultAirbyteDestination(destinationLauncher,
-        getStreamFactory(destinationLauncherConfig,
-            configuredAirbyteCatalog,
-            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false)),
+    final AirbyteStreamFactory streamFactory = getStreamFactory(destinationLauncherConfig,
+        configuredAirbyteCatalog,
+        DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
+        new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false));
+    final AirbyteMessageBufferedWriterFactory messageWriterFactory =
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-            Optional.of(configuredAirbyteCatalog)),
-        getProtocolSerializer(destinationLauncherConfig),
-        destinationTimeoutMonitor,
-        metricClient);
+            Optional.of(configuredAirbyteCatalog));
+    if (Boolean.parseBoolean(EnvVar.MONO_POD.fetch(Boolean.FALSE.toString()))) {
+      return new LocalContainerAirbyteDestination(
+          streamFactory,
+          new MessageMetricsTracker(metricClient),
+          messageWriterFactory,
+          destinationTimeoutMonitor,
+          ContainerIOHandle.dest());
+    } else {
+      final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
+      return new DefaultAirbyteDestination(destinationLauncher,
+          streamFactory,
+          messageWriterFactory,
+          getProtocolSerializer(destinationLauncherConfig),
+          destinationTimeoutMonitor,
+          metricClient);
+    }
   }
 
   private VersionedProtocolSerializer getProtocolSerializer(final IntegrationLauncherConfig launcherConfig) {

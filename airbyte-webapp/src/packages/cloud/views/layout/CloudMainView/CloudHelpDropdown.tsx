@@ -26,12 +26,13 @@ export const CloudHelpDropdown: React.FC<HelpDropdownProps> = ({ className, hide
           icon: <Icon type="share" />,
           displayName: formatMessage({ id: "sidebar.supportPortal" }),
         },
-        {
-          as: "button",
-          value: "inApp",
-          icon: <Icon type="chat" />,
-          displayName: formatMessage({ id: "sidebar.inAppHelpCenter" }),
-        },
+        // Disabled until we fix issue with zendesk widget
+        // {
+        //   as: "button",
+        //   value: "inApp",
+        //   icon: <Icon type="chat" />,
+        //   displayName: formatMessage({ id: "sidebar.inAppHelpCenter" }),
+        // },
         {
           as: "separator",
         },

@@ -93,7 +93,9 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                          final ReplicationWorkerHelper replicationWorkerHelper,
                                                          final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                                         final StreamStatusCompletionTracker streamStatusCompletionTracker);
+                                                         final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                                         final MetricClient metricClient,
+                                                         final ReplicationInput replicationInput);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -123,6 +125,7 @@ public abstract class ReplicationWorkerPerformanceTest {
   public void executeOneSync() throws InterruptedException {
     log.warn("availableProcessors {}", Runtime.getRuntime().availableProcessors());
     final var perDestination = new EmptyAirbyteDestination();
+    final var metricClient = mock(MetricClient.class);
     final var messageTracker = mock(AirbyteMessageTracker.class);
     final var analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     final var syncPersistence = mock(SyncPersistence.class);
@@ -134,6 +137,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
+    final var replicationInput = mock(ReplicationInput.class);
     when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false));
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
@@ -205,7 +209,9 @@ public abstract class ReplicationWorkerPerformanceTest {
         replicationAirbyteMessageEventPublishingHelper,
         replicationWorkerHelper,
         destinationTimeoutMonitor,
-        streamStatusCompletionTracker);
+        streamStatusCompletionTracker,
+        metricClient,
+        replicationInput);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {

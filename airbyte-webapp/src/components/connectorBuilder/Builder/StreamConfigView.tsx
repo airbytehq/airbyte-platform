@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
@@ -82,6 +83,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
+              labelAction={<AssistButton assistKey="metadata" streamNum={streamNum} />}
             />
             <BuilderField
               type="enum"

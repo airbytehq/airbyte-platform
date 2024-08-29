@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -12,7 +12,7 @@ interface LatestSyncCellProps {
   recordsLoaded?: number;
   recordsExtracted?: number;
   syncStartedAt?: number;
-  status: ConnectionStatusIndicatorStatus;
+  status: StreamStatusType;
   isLoadingHistoricalData: boolean;
 }
 

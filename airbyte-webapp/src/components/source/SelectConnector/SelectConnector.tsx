@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";

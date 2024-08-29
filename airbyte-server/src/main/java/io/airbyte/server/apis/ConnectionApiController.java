@@ -126,7 +126,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
-    return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate));
+    return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
   }
 
   @Override

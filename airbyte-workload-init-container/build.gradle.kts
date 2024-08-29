@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
@@ -30,6 +28,7 @@ dependencies {
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
+  implementation(project(":oss:airbyte-commons-protocol"))
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
@@ -42,19 +41,13 @@ dependencies {
   testImplementation(libs.assertj.core)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass.set("io.airbyte.initContainer.ApplicationKt")
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
         "MICRONAUT_ENVIRONMENTS" to "test"
       )

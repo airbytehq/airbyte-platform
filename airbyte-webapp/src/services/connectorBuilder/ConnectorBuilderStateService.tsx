@@ -2,6 +2,7 @@ import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
 import { dump } from "js-yaml";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
+import merge from "lodash/merge";
 import toPath from "lodash/toPath";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
@@ -21,7 +22,7 @@ import {
 } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
-import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
+import { getStreamHash, useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
@@ -112,6 +113,8 @@ interface FormStateContext {
   setFormValuesDirty: (value: boolean) => void;
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
+  assistEnabled: boolean;
+  setAssistEnabled: (enabled: boolean) => void;
 }
 
 interface TestReadLimits {
@@ -232,7 +235,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
-  const { setStoredMode } = useConnectorBuilderLocalStorage();
+  const { setStoredMode, checkAssistEnabled, setAssistEnabledById } = useConnectorBuilderLocalStorage();
+
+  const assistEnabled = checkAssistEnabled(projectId);
+  const setAssistEnabled = setAssistEnabledById(projectId);
+
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
 
@@ -561,6 +568,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setFormValuesDirty,
     updateTestingValues,
     updateYamlCdkVersion,
+    setAssistEnabled,
+    assistEnabled,
   };
 
   return (
@@ -630,6 +639,7 @@ export function useInitializedBuilderProject() {
       // could not resolve manifest, use default form values
       return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(persistedManifest)];
     }
+    setInitialStreamHashes(persistedManifest, resolvedManifest);
     try {
       return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(persistedManifest)];
     } catch (e) {
@@ -647,6 +657,39 @@ export function useInitializedBuilderProject() {
     failedInitialFormValueConversion,
     initialYaml,
   };
+}
+
+/**
+ * Sets the hash of the resolved streams in the testedStreams metadata on both the persisted and resolved manifest,
+ * for any streams which aren't already in testedStreams.
+ *
+ * The reason for this is that connectors built outside of the builder likely have already been tested in their own way,
+ * and we don't want to require users who are making changes to those connectors to have to re-test those streams in
+ * order to contribute their changes.
+ *
+ * With this, we will only require testing streams that the user changes.
+ */
+function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedManifest: ConnectorManifest) {
+  if (persistedManifest.streams.length !== resolvedManifest.streams.length) {
+    // this should never happen, since resolving a manifest should never affect the number of streams
+    throw new Error("Persisted manifest streams length doesn't match resolved streams length");
+  }
+  resolvedManifest.streams.forEach((resolvedStream, i) => {
+    const streamName = streamNameOrDefault(resolvedStream.name, i);
+    if (persistedManifest.metadata?.testedStreams?.[streamName]) {
+      return;
+    }
+    const streamHash = getStreamHash(resolvedStream);
+    const updatedMetadata = merge({}, persistedManifest.metadata, {
+      testedStreams: {
+        [streamName]: {
+          streamHash,
+        },
+      },
+    });
+    persistedManifest.metadata = updatedMetadata;
+    resolvedManifest.metadata = updatedMetadata;
+  });
 }
 
 function useBlockOnSavingState(savingState: SavingState) {

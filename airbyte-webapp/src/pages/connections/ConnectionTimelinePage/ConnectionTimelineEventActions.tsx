@@ -6,7 +6,7 @@ import styles from "./ConnectionTimelineEventActions.module.scss";
 import { JobEventMenu } from "./JobEventMenu";
 
 interface ConnectionTimelineEventActionsProps {
-  jobId: number;
+  jobId?: number;
   eventId?: string;
   createdAt: number;
   attemptCount?: number;
@@ -23,7 +23,7 @@ export const ConnectionTimelineEventActions: React.FC<ConnectionTimelineEventAct
       <Text color="grey400">
         <FormattedDate value={createdAt * 1000} timeStyle="short" dateStyle="medium" />
       </Text>
-      <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />
+      {jobId && <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />}
     </div>
   );
 };

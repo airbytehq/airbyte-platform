@@ -13,6 +13,8 @@ let windowSearchSpy: jest.SpyInstance;
 
 let mockUserManager: UserManager;
 
+const DEFAULT_JEST_WINDOW_ORIGIN = "http://localhost";
+
 jest.mock("oidc-client-ts", () => ({
   UserManager: jest.fn().mockImplementation((options) => {
     // Mock the UserManager contructor to store the latest created instance to access it for testing
@@ -44,7 +46,7 @@ describe(`${initializeUserManager.name}()`, () => {
   });
 
   it("should initialize realm based on local storage", () => {
-    const mockKey = "oidc.user:https://example.com/auth/realms/local-storage-realm:local-storage-client-id";
+    const mockKey = `oidc.user:${DEFAULT_JEST_WINDOW_ORIGIN}/auth/realms/local-storage-realm:local-storage-client-id`;
     window.localStorage.setItem(mockKey, "no need to populate the value for this test");
     const userManager = initializeUserManager();
     expect(userManager.settings.authority).toMatch(/auth\/realms\/local-storage-realm/);
@@ -83,7 +85,7 @@ describe(`${CloudAuthService.name}`, () => {
 
   it("should initialize realm based on local storage", async () => {
     window.localStorage.setItem(
-      "oidc.user:https://example.com/auth/realms/local-storage-realm:local-storage-client-id",
+      `oidc.user:${DEFAULT_JEST_WINDOW_ORIGIN}/auth/realms/local-storage-realm:local-storage-client-id`,
       JSON.stringify({
         id_token:
           "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIxOXpGOG5CVWNJcDNPMTBTQVZvUE1oYnhocThsbmVnRnJaNXBZcEtzT3NzIn0.eyJleHAiOjE2OTU2ODIzMjIsImlhdCI6MTY5NTY4MjAyMiwiYXV0aF90aW1lIjoxNjk1NjgyMDIxLCJqdGkiOiIxMGQ4Y2FkNi1jMWViLTQ3MTUtODFiMS01OGZmYjU3MDgyZGEiLCJpc3MiOiJodHRwczovL2Rldi0yLWNsb3VkLmFpcmJ5dGUuY29tL2F1dGgvcmVhbG1zL3Rlc3QtY29tcGFueS0xIiwiYXVkIjoiYWlyYnl0ZS13ZWJhcHAiLCJzdWIiOiIwYWEzYmVhYi02MDU3LTQ4NjEtYWQ5MS0wNWZlM2U3NmJhMjIiLCJ0eXAiOiJJRCIsImF6cCI6ImFpcmJ5dGUtd2ViYXBwIiwic2Vzc2lvbl9zdGF0ZSI6ImQwZDBlN2FhLWE1YzgtNDgwNi05MzA4LTQ2ZWE5ODRkZmE5ZCIsImF0X2hhc2giOiJ3TjNLSFltcDRDUUs4emN0QkwyMmVnIiwiYWNyIjoiMSIsInNpZCI6ImQwZDBlN2FhLWE1YzgtNDgwNi05MzA4LTQ2ZWE5ODRkZmE5ZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiSm9leSBNYXJzaG1lbnQtSG93ZWxsIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYWRtaW4tY29tcGFueS0xIiwiZ2l2ZW5fbmFtZSI6IkpvZXkiLCJmYW1pbHlfbmFtZSI6Ik1hcnNobWVudC1Ib3dlbGwiLCJlbWFpbCI6Impvc2VwaCthZG1pbi1jb21wYW55LTFAYWlyYnl0ZS5pbyJ9.eVbTYihQPkwBZugWClsbE6ePayDh5b3wGXYrBAhgxq0Bxe9ZdaJb_3EadqMu2xCCnYam1JgJyvnNoEBVQJlLPoBehByyBMC4xwoaHbNjvwAWHUXPlIvLIct_jo9Mnk-l2l_6uZf5rPAqBlQHQFf5SFIF_l9m7WyFafLQFemnkfy0AzmdO_yaT0LyuCpALHmXUeJuUgILuBM3AQd6IVeAi7zKwRHTk4YjaUbE4fdtFC1x11XGEVfuYJaH3S8-Zyu45vO7MKeK9gsqF6mtkgu66a0FBp8kjy4SsVCyBjoj9IZp_Q428Uy9MYX9JvQL3xEXBilv_ydjnCPp2J1pJ4Gdlw",

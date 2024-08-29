@@ -5,65 +5,47 @@ import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
 import styles from "./ConnectionStatusIndicator.module.scss";
+import { StreamStatusType } from "../StreamStatusIndicator";
 
-export enum ConnectionStatusIndicatorStatus {
-  Synced = "synced",
-  Pending = "pending",
-  Paused = "paused",
-  Syncing = "syncing",
-  Queued = "queued",
-  Incomplete = "incomplete",
-  Failed = "failed",
-  QueuedForNextSync = "queuedForNextSync",
-  Clearing = "clearing",
-  Refreshing = "refreshing",
-  RateLimited = "rateLimited",
+// Connection Statuses are a subset of Stream Statuses
+export enum ConnectionStatusType {
+  Synced = StreamStatusType.Synced,
+  Pending = StreamStatusType.Pending,
+  Paused = StreamStatusType.Paused,
+  Syncing = StreamStatusType.Syncing,
+  Failed = StreamStatusType.Failed,
+  Incomplete = StreamStatusType.Incomplete,
 }
 
-const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
+const ICON_BY_STATUS: Readonly<Record<ConnectionStatusType, JSX.Element>> = {
   synced: <Icon type="statusSuccess" size="md" />,
   incomplete: <Icon type="statusWarning" size="md" />,
   paused: <Icon type="statusInactive" size="md" />,
   pending: <Icon type="statusInactive" size="md" />,
   failed: <Icon type="statusError" size="md" />,
   syncing: <CircleLoader className={styles.circleLoader} />,
-  clearing: <CircleLoader className={styles.circleLoader} />,
-  refreshing: <CircleLoader className={styles.circleLoader} />,
-  queued: <Icon type="statusQueued" title="Queued" size="md" />,
-  queuedForNextSync: <Icon type="statusQueued" title="Queued" size="md" />,
-  rateLimited: <CircleLoader className={styles.circleLoader} />,
 };
 
-const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
+const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusType, string>> = {
   synced: styles["status--upToDate"],
   incomplete: styles["status--incomplete"],
   paused: styles["status--paused"],
   pending: styles["status--pending"],
   failed: styles["status--failed"],
   syncing: styles["status--syncing"],
-  clearing: styles["status--syncing"],
-  refreshing: styles["status--syncing"],
-  queued: styles["status--syncing"],
-  queuedForNextSync: styles["status--syncing"],
-  rateLimited: styles["status--syncing"],
 };
 
-const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
+const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusType, string>> = {
   synced: styles["status--upToDate-withBox"],
   incomplete: styles["status--incomplete-withBox"],
   paused: styles["status--paused-withBox"],
   pending: styles["status--pending-withBox"],
   failed: styles["status--failed-withBox"],
   syncing: styles["status--syncing-withBox"],
-  clearing: styles["status--syncing-withBox"],
-  refreshing: styles["status--syncing-withBox"],
-  queued: styles["status--syncing-withBox"],
-  queuedForNextSync: styles["status--syncing-withBox"],
-  rateLimited: styles["status--syncing-withBox"],
 };
 
 interface ConnectionStatusIndicatorProps {
-  status: ConnectionStatusIndicatorStatus;
+  status: ConnectionStatusType;
   loading?: boolean;
   withBox?: boolean;
   size?: IconProps["size"];

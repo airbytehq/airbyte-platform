@@ -115,7 +115,7 @@ class DefaultAirbyteSourceTest {
         WorkerConstants.SOURCE_CONFIG_JSON_FILENAME,
         Jsons.serialize(CONFIG),
         WorkerConstants.SOURCE_CATALOG_JSON_FILENAME,
-        Jsons.serialize(CATALOG),
+        new DefaultProtocolSerializer().serialize(CATALOG, false),
         WorkerConstants.INPUT_STATE_JSON_FILENAME,
         Jsons.serialize(STATE))).thenReturn(process);
     when(process.isAlive()).thenReturn(true);

@@ -16,10 +16,10 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
-import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
@@ -62,22 +62,11 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  @Requires(notEnv = Environment.KUBERNETES)
-  ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
-    return new DockerProcessFactory(
-        workerConfigsProvider,
-        configs.getWorkspaceRoot(), // Path.of(workspaceRoot),
-        EnvVar.WORKSPACE_DOCKER_MOUNT.fetch(EnvVar.WORKSPACE_ROOT.fetch()), // workspaceDockerMount,
-        EnvVar.LOCAL_DOCKER_MOUNT.fetch(EnvVar.LOCAL_ROOT.fetch()), // localDockerMount,
-        EnvVar.DOCKER_NETWORK.fetch(DEFAULT_NETWORK)// dockerNetwork
-    );
-  }
-
-  @Singleton
   @Requires(env = Environment.KUBERNETES)
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
                                     final FeatureFlagClient featureFlagClient,
+                                    final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                                     @Value("${micronaut.server.port}") final int serverPort,
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
@@ -91,6 +80,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigsProvider,
         featureFlagClient,
+        workloadSecurityContextProvider,
         EnvVar.JOB_KUBE_NAMESPACE.fetch(DEFAULT_JOB_KUBE_NAMESPACE),
         serviceAccount,
         new DefaultKubernetesClient(),

@@ -19,9 +19,9 @@ import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.airbyte.workers.models.SecretMetadata;
-import io.fabric8.kubernetes.api.model.CapabilitiesBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -32,14 +32,10 @@ import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
-import io.fabric8.kubernetes.api.model.PodSecurityContext;
-import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
-import io.fabric8.kubernetes.api.model.SeccompProfileBuilder;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.SecurityContext;
-import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -121,7 +117,6 @@ public class KubePodProcess implements KubePod {
   private static final Logger LOGGER = LoggerFactory.getLogger(KubePodProcess.class);
 
   public static final String MAIN_CONTAINER_NAME = "main";
-  public static final String SIDECAR_CONTAINER_NAME = "connector-sidecar";
   public static final String INIT_CONTAINER_NAME = "init";
 
   private static final String PIPES_DIR = "/pipes";
@@ -178,6 +173,7 @@ public class KubePodProcess implements KubePod {
   private final ExecutorService executorService;
   private final CompletableFuture<Integer> exitCodeFuture;
   private final SharedIndexInformer<Pod> podInformer;
+  private final WorkloadSecurityContextProvider workloadSecurityContextProvider;
 
   /**
    * Get pod IP.
@@ -198,7 +194,8 @@ public class KubePodProcess implements KubePod {
   private static Container getInit(final boolean usesStdin,
                                    final List<VolumeMount> mainVolumeMounts,
                                    final String busyboxImage,
-                                   final ResourceRequirements resourceRequirements)
+                                   final ResourceRequirements resourceRequirements,
+                                   final WorkloadSecurityContextProvider workloadSecurityContextProvider)
       throws IOException {
 
     final var initCommand = MoreResources.readResource("entrypoints/sync/init.sh")
@@ -217,12 +214,14 @@ public class KubePodProcess implements KubePod {
         .withCommand("sh", "-c", initCommand)
         .withResources(getResourceRequirementsBuilder(resourceRequirements).build())
         .withVolumeMounts(mainVolumeMounts)
-        .withSecurityContext(containerSecurityContext())
+        .withSecurityContext(workloadSecurityContextProvider.defaultContainerSecurityContext(WorkloadSecurityContextProvider.ROOTLESS_USER_ID,
+            WorkloadSecurityContextProvider.ROOTLESS_GROUP_ID))
         .build();
   }
 
   private static Container getMain(final FeatureFlagClient featureFlagClient,
                                    final Context featureFlagContext,
+                                   final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                                    final String image,
                                    final String imagePullPolicy,
                                    final boolean usesStdin,
@@ -273,11 +272,11 @@ public class KubePodProcess implements KubePod {
         })
         .collect(Collectors.toList());
 
-    List<EnvVar> allEnvVars = Lists.concat(envVars, secretEnvVars);
+    List<EnvVar> allEnvVars = new ArrayList<>(Lists.concat(envVars, secretEnvVars));
 
     if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(envVars);
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(allEnvVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, allEnvVars);
     }
 
     final ContainerBuilder containerBuilder = new ContainerBuilder()
@@ -289,7 +288,8 @@ public class KubePodProcess implements KubePod {
         .withEnv(allEnvVars)
         .withWorkingDir(CONFIG_DIR)
         .withVolumeMounts(mainVolumeMounts)
-        .withSecurityContext(containerSecurityContext());
+        .withSecurityContext(workloadSecurityContextProvider.defaultContainerSecurityContext(WorkloadSecurityContextProvider.ROOTLESS_USER_ID,
+            WorkloadSecurityContextProvider.ROOTLESS_GROUP_ID));
 
     final ResourceRequirementsBuilder resourceRequirementsBuilder = getResourceRequirementsBuilder(resourceRequirements);
     if (resourceRequirementsBuilder != null) {
@@ -428,6 +428,7 @@ public class KubePodProcess implements KubePod {
                         final KubernetesClient fabricClient,
                         final FeatureFlagClient featureFlagClient,
                         final Context featureFlagContext,
+                        final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                         final String podName,
                         final String namespace,
                         final String serviceAccount,
@@ -457,6 +458,7 @@ public class KubePodProcess implements KubePod {
       throws IOException, InterruptedException {
     try {
       this.fabricClient = fabricClient;
+      this.workloadSecurityContextProvider = workloadSecurityContextProvider;
       this.stdoutLocalPort = stdoutLocalPort;
       this.stderrLocalPort = stderrLocalPort;
       this.stdoutServerSocket = new ServerSocket(stdoutLocalPort);
@@ -564,10 +566,13 @@ public class KubePodProcess implements KubePod {
       // could pass that for the init, but it's
       // probably not worth the extra logic to sum everything. Passing what should be the largest
       // requirements should do.
-      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
+      final Container init =
+          getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main(),
+              workloadSecurityContextProvider);
       final Container main = getMain(
           featureFlagClient,
           featureFlagContext,
+          workloadSecurityContextProvider,
           image,
           imagePullPolicy,
           usesStdin,
@@ -594,7 +599,7 @@ public class KubePodProcess implements KubePod {
           .withVolumeMounts(terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.heartbeat()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
-          .withSecurityContext(containerSecurityContext(100, 101)) // uid=100(curl_user) gid=101(curl_group)
+          .withSecurityContext(workloadSecurityContextProvider.defaultContainerSecurityContext(100, 101)) // uid=100(curl_user) gid=101(curl_group)
           .build();
 
       final List<Container> containers = Lists.concat(List.of(main, callHeartbeatServer), socatContainers);
@@ -623,7 +628,8 @@ public class KubePodProcess implements KubePod {
           .withInitContainers(init)
           .withContainers(containers)
           .withVolumes(pipeVolume, configVolume, terminationVolume, tmpVolume)
-          .withSecurityContext(podSecurityContext())
+          .withSecurityContext(workloadSecurityContextProvider.rootlessPodSecurityContext(WorkloadSecurityContextProvider.ROOTLESS_USER_ID,
+              WorkloadSecurityContextProvider.ROOTLESS_GROUP_ID))
           .endSpec()
           .build();
 
@@ -695,6 +701,11 @@ public class KubePodProcess implements KubePod {
       cleanup();
       throw e; // Throw the exception again to inform the caller
     }
+  }
+
+  private SecurityContext containerSecurityContext() {
+    return workloadSecurityContextProvider.defaultContainerSecurityContext(WorkloadSecurityContextProvider.ROOTLESS_USER_ID,
+        WorkloadSecurityContextProvider.ROOTLESS_GROUP_ID);
   }
 
   private void setupStdOutAndStdErrListeners() {
@@ -960,6 +971,10 @@ public class KubePodProcess implements KubePod {
     return new ResourceRequirementsBuilder();
   }
 
+  public static io.fabric8.kubernetes.api.model.ResourceRequirements buildResourceRequirements(final ResourceRequirements resourceRequirements) {
+    return getResourceRequirementsBuilder(resourceRequirements).build();
+  }
+
   private static Quantity min(final Quantity request, final Quantity limit) {
     if (limit == null) {
       return request;
@@ -977,52 +992,6 @@ public class KubePodProcess implements KubePod {
 
   private static String prependPodInfo(final String message, final String podNamespace, final String podName) {
     return String.format("(pod: %s / %s) - %s", podNamespace, podName, message);
-  }
-
-  /**
-   * Returns a PodSecurityContext specific to containers.
-   *
-   * @return PodSecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
-   */
-  private static PodSecurityContext podSecurityContext(final long user, final long group) {
-    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
-      return new PodSecurityContextBuilder()
-          .withRunAsUser(user)
-          .withRunAsGroup(group)
-          .withFsGroup(group)
-          .withRunAsNonRoot(true)
-          .withSeccompProfile(new SeccompProfileBuilder().withType("RuntimeDefault").build())
-          .build();
-    }
-
-    return null;
-  }
-
-  private static PodSecurityContext podSecurityContext() {
-    return podSecurityContext(1000, 1000);
-  }
-
-  /**
-   * Returns a SecurityContext specific to containers.
-   *
-   * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
-   */
-  private static SecurityContext containerSecurityContext(final long user, final long group) {
-    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
-      return new SecurityContextBuilder()
-          .withRunAsUser(user)
-          .withRunAsGroup(group)
-          .withAllowPrivilegeEscalation(false)
-          .withReadOnlyRootFilesystem(false)
-          .withCapabilities(new CapabilitiesBuilder().addAllToDrop(List.of("ALL")).build())
-          .build();
-    }
-
-    return null;
-  }
-
-  private static SecurityContext containerSecurityContext() {
-    return containerSecurityContext(1000, 1000);
   }
 
 }

@@ -11,7 +11,6 @@ projectDir=(
   "connector-builder-server"
   "db/db-lib"
   "metrics/reporter"
-  "proxy"
   "server"
   "temporal"
   "webapp"

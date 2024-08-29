@@ -633,7 +633,7 @@ public class WebBackendConnectionsHandler {
     final ConnectionUpdate connectionPatch = toConnectionPatch(webBackendConnectionPatch, newAndExistingOperationIds, breakingChange);
 
     // persist the update and set the connectionRead to the updated form.
-    final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
+    final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch, null, false);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
     resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);

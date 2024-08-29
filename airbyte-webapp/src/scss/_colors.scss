@@ -88,6 +88,7 @@ $inverse: var(--color-inverse);
 $white: var(--color-white);
 $black: var(--color-black);
 
+$yellow-25: var(--color-yellow-25);
 $yellow-50: var(--color-yellow-50);
 $yellow-100: var(--color-yellow-100);
 $yellow-200: var(--color-yellow-200);
@@ -110,6 +111,10 @@ $ansi-cyan-fg: var(--color-ansi-cyan-fg);
 $ansi-green-fg: var(--color-ansi-green-fg);
 $ansi-yellow-fg: var(--color-ansi-yellow-fg);
 $ansi-red-fg: var(--color-ansi-red-fg);
+
+$loading-skeleton-base: var(--color-loading-skeleton-base);
+$loading-skeleton-stop-1: var(--color-loading-skeleton-gradient-stop-1);
+$loading-skeleton-stop-2: var(--color-loading-skeleton-gradient-stop-2);
 
 // LEGACY - DEPRECATED
 

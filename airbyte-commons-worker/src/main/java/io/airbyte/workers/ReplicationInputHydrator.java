@@ -6,6 +6,9 @@ package io.airbyte.workers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.function.CheckedSupplier;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
@@ -22,6 +25,7 @@ import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
+import io.airbyte.api.client.model.generated.SyncInput;
 import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.StateConverter;
@@ -29,6 +33,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
@@ -36,18 +41,23 @@ import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.RefreshConfigBeforeSecretHydrationInitContainer;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +86,42 @@ public class ReplicationInputHydrator {
     this.featureFlagClient = featureFlagClient;
   }
 
+  private Boolean shouldRefreshSecretsReferences(final ReplicationActivityInput input) {
+    final Multi context = new Multi(Arrays.asList(new Connection(input.getConnectionId()), new Workspace(input.getWorkspaceId())));
+    return featureFlagClient.boolVariation(RefreshConfigBeforeSecretHydrationInitContainer.INSTANCE, context);
+  }
+
+  private <T> T retry(final CheckedSupplier<T> supplier) {
+    return Failsafe.with(
+        RetryPolicy.builder()
+            .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
+            .withMaxRetries(5)
+            .build())
+        .get(supplier);
+  }
+
+  private void refreshSecretsReferences(ReplicationActivityInput parsed) {
+    final Object jobInput = retry(() -> airbyteApiClient.getJobsApi().getJobInput(
+        new SyncInput(
+            Long.parseLong(parsed.getJobRunConfig().getJobId()),
+            parsed.getJobRunConfig().getAttemptId().intValue())));
+
+    if (jobInput != null) {
+      final JobInput apiResult = Jsons.convertValue(jobInput, JobInput.class);
+      if (apiResult != null && apiResult.getSyncInput() != null) {
+        final StandardSyncInput syncInput = apiResult.getSyncInput();
+
+        if (syncInput.getSourceConfiguration() != null) {
+          parsed.setSourceConfiguration(syncInput.getSourceConfiguration());
+        }
+
+        if (syncInput.getDestinationConfiguration() != null) {
+          parsed.setDestinationConfiguration(syncInput.getDestinationConfiguration());
+        }
+      }
+    }
+  }
+
   /**
    * Converts a ReplicationActivityInput -- passed through Temporal to the replication activity -- to
    * a ReplicationInput which will be passed down the stack to the actual
@@ -88,6 +134,9 @@ public class ReplicationInputHydrator {
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
     ApmTraceUtils.addTagsToTrace(Map.of("api_base_url", airbyteApiClient.getDestinationApi().getBaseUrl()));
+    if (shouldRefreshSecretsReferences(replicationActivityInput)) {
+      refreshSecretsReferences(replicationActivityInput);
+    }
     final var destination =
         airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
     final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
@@ -109,9 +158,7 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    final boolean backfillEnabledForWorkspace =
-        featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(replicationActivityInput.getWorkspaceId()));
-    if (backfillEnabledForWorkspace && BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
       streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
@@ -155,7 +202,8 @@ public class ReplicationInputHydrator {
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)
         .withCatalog(catalog)
-        .withState(state);
+        .withState(state)
+        .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
   }
 
   /**

@@ -1,4 +1,4 @@
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";

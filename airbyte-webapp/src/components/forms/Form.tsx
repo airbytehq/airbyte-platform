@@ -3,9 +3,8 @@ import { ReactNode, useEffect } from "react";
 import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
 import { SchemaOf } from "yup";
 
-import { FormChangeTracker } from "components/common/FormChangeTracker";
-
 import styles from "./Form.module.scss";
+import { FormChangeTracker } from "./FormChangeTracker";
 import { FormDevTools } from "./FormDevTools";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

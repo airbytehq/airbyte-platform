@@ -1,10 +1,10 @@
 import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ConnectionHeaderControls } from "components/connection/ConnectionHeaderControls";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicator } from "components/connection/ConnectionStatusIndicator";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";

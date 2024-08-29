@@ -83,6 +83,8 @@ public final class DatabaseConstants {
 
   public static final String SSO_CONFIG_TABLE = "sso_config";
 
+  public static final String ORGANIZATION_PAYMENT_CONFIG_TABLE = "organization_payment_config";
+
   /**
    * Private constructor to prevent instantiation.
    */

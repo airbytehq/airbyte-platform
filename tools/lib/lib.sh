@@ -72,7 +72,7 @@ get_connector_version() {
   _get_docker_image_version "$dockerfile"
 }
 
-VERSION=$(cat .env | grep "^VERSION=" | cut -d = -f 2); export VERSION
+VERSION=$(cat .version | grep "^VERSION=" | cut -d = -f 2); export VERSION
 SCRIPT_DIRECTORY=$(_script_directory); export SCRIPT_DIRECTORY
 
 DOT_AIRBYTE_ROOT=${DOT_AIRBYTE_ROOT:=~/.airbyte}

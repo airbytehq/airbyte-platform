@@ -246,14 +246,3 @@ Get gcs credentials secret key or default
   {{- printf "gcs-credentials" -}}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Convert tags to a comma-separated list of key=value pairs.
-*/}}
-{{- define "airbyte.tagsToString" -}}
-{{- $result := list -}}
-{{- range . -}}
-  {{- $result = append $result (printf "%s=%s" .key .value) -}}
-{{- end -}}
-{{- join "," $result -}}
-{{- end -}}

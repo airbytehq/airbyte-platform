@@ -3,8 +3,8 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { EmptyState } from "components/common/EmptyState";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { EmptyState } from "components/EmptyState";
 import { PageContainer } from "components/PageContainer";
 import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";

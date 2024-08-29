@@ -111,6 +111,7 @@ $row-height: 40px;
 .td {
   padding: 0 variables.$spacing-lg;
   word-wrap: break-word;
+  border-bottom: variables.$border-thin solid colors.$grey-50;
 }
 
 .streamOrFieldNameCell {

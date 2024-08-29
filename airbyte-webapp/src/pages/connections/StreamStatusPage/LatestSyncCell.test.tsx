@@ -1,4 +1,4 @@
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { render } from "test-utils";
 
 import { LatestSyncCell } from "./LatestSyncCell";
@@ -11,7 +11,7 @@ describe("LastSyncCell", () => {
   it("past sync", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Synced}
+        status={StreamStatusType.Synced}
         recordsLoaded={1000}
         recordsExtracted={1000}
         syncStartedAt={BASE_TIME - 1000}
@@ -25,7 +25,7 @@ describe("LastSyncCell", () => {
   it("past sync without recordsLoaded", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Synced}
+        status={StreamStatusType.Synced}
         recordsLoaded={undefined}
         recordsExtracted={undefined}
         syncStartedAt={BASE_TIME - 1000}
@@ -39,7 +39,7 @@ describe("LastSyncCell", () => {
   it("extracted == 0 && loaded == 0", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Syncing}
+        status={StreamStatusType.Syncing}
         recordsLoaded={0}
         recordsExtracted={0}
         syncStartedAt={BASE_TIME - 100_000}
@@ -47,13 +47,13 @@ describe("LastSyncCell", () => {
       />
     );
 
-    expect(result.container.textContent).toBe("Starting... | 1m elapsed");
+    expect(result.container.textContent).toBe("Starting… | 1m elapsed");
   });
 
   it("extracted > 0 && loaded == 0", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Syncing}
+        status={StreamStatusType.Syncing}
         recordsLoaded={0}
         recordsExtracted={5000}
         syncStartedAt={BASE_TIME - 130_000}
@@ -67,7 +67,7 @@ describe("LastSyncCell", () => {
   it("extracted > 0 && loaded > 0", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Syncing}
+        status={StreamStatusType.Syncing}
         recordsLoaded={3000}
         recordsExtracted={5000}
         syncStartedAt={BASE_TIME - 130_000}
@@ -86,7 +86,7 @@ describe("LastSyncCell", () => {
   ])("should format time elapsed (%i) correctly", async (elapsedTime, expected) => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.Syncing}
+        status={StreamStatusType.Syncing}
         recordsLoaded={3000}
         recordsExtracted={5000}
         syncStartedAt={BASE_TIME - elapsedTime}

@@ -2,8 +2,9 @@ package io.airbyte.workload.launcher.config
 
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.workers.context.WorkloadSecurityContextProvider
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.CHECK_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
@@ -34,6 +35,7 @@ class PodFactoryBeanFactory {
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
+    workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       CHECK_OPERATION_NAME,
@@ -49,8 +51,9 @@ class PodFactoryBeanFactory {
       volumeFactory,
       initContainerFactory,
       mapOf(
-        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+        "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
+      workloadSecurityContextProvider,
     )
   }
 
@@ -68,6 +71,7 @@ class PodFactoryBeanFactory {
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
+    workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
@@ -83,8 +87,9 @@ class PodFactoryBeanFactory {
       volumeFactory,
       initContainerFactory,
       mapOf(
-        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+        "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
+      workloadSecurityContextProvider,
     )
   }
 
@@ -102,6 +107,7 @@ class PodFactoryBeanFactory {
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
+    workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       SPEC_OPERATION_NAME,
@@ -117,6 +123,7 @@ class PodFactoryBeanFactory {
       volumeFactory,
       initContainerFactory,
       mapOf(),
+      workloadSecurityContextProvider,
     )
   }
 }

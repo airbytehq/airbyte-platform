@@ -2,6 +2,7 @@
 
 {{ description }}
 
+
 ## Configuration
 
 | Input | Type | Description | Default Value |
@@ -15,7 +16,6 @@
 |-------------|-------------|------------|---------------------|----------------------|
 {% for stream in streams -%}
 | {{ stream.name }} | {{ stream.primaryKey }} | {{ stream.paginationStrategy }} | ✅ | {% if stream.incrementalSyncEnabled %} ✅ {% else %} ❌ {% endif %} |
-
 {% endfor %}
 
 ## Changelog

@@ -4,8 +4,8 @@ import { Virtuoso } from "react-virtuoso";
 import { InferType } from "yup";
 
 import { LoadingPage } from "components";
-import { EmptyState } from "components/common/EmptyState";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
@@ -72,7 +72,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
       (filterValues.eventCategory === "clear" && syncProgressData.configType === "reset_connection"));
 
   const connectionEventsToShow = useMemo(() => {
-    return [
+    const events = [
       ...(showRunningJob
         ? [
             {
@@ -96,6 +96,8 @@ export const ConnectionTimelineAllEventsList: React.FC<{
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),
     ];
+
+    return events;
   }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
           Item: "li" as any,
         }}
         itemContent={(_index, event) => {
-          return <EventLineItem event={event} />;
+          return <EventLineItem event={event} key={event.id} />;
         }}
       />
       {isFetchingNextPage && (

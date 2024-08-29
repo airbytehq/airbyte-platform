@@ -1,7 +1,6 @@
 package io.airbyte.connectorSidecar.config
 
-import io.airbyte.workers.process.KubePodProcess
-import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.pod.FileConstants
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -13,7 +12,7 @@ class ConfigFactory {
   /**
    * Returns the config directory which contains all the configuration files.
    *
-   * @param configDir optional directory, defaults to KubePodProcess.CONFIG_DIR if not defined.
+   * @param configDir optional directory, defaults to FileConstants.CONFIG_DIR if not defined.
    * @return Configuration directory.
    */
   @Singleton
@@ -22,7 +21,7 @@ class ConfigFactory {
     @Value("\${airbyte.config-dir}") configDir: String?,
   ): String {
     if (configDir == null) {
-      return KubePodProcess.CONFIG_DIR
+      return FileConstants.CONFIG_DIR
     }
     return configDir
   }
@@ -33,6 +32,6 @@ class ConfigFactory {
   @Singleton
   @Named("output")
   fun output(): Path {
-    return Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME)
+    return Path.of(FileConstants.JOB_OUTPUT_FILE)
   }
 }

@@ -1,7 +1,8 @@
 import { renderHook } from "@testing-library/react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import {
@@ -66,7 +67,7 @@ describe("useStreamsStatuses", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValue({ streamStatuses: mockStreamStatuses });
     (useSchemaChanges as jest.Mock).mockReturnValue({ hasBreakingSchemaChange: false });
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: ConnectionStatusType.Pending,
       isRunning: true,
       lastSuccessfulSync: 1609459200,
     });
@@ -82,7 +83,7 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Synced);
+    expect(stream1Status?.status).toBe(StreamStatusType.Synced);
     expect(stream1Status?.isRunning).toBe(false);
     expect(stream1Status?.relevantHistory).toHaveLength(1);
     expect(stream1Status?.relevantHistory[0]).toEqual(mockCompletedStreamStatus);
@@ -96,14 +97,14 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Pending);
+    expect(stream1Status?.status).toBe(StreamStatusType.Pending);
     expect(stream1Status?.isRunning).toBe(false);
     expect(stream1Status?.relevantHistory).toHaveLength(0);
   });
 
   it("no per-stream statuses, stream should return connection status", () => {
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusIndicatorStatus.Failed,
+      status: ConnectionStatusType.Failed,
       isRunning: true,
       lastSuccessfulSync: 1609459200,
     });
@@ -115,7 +116,7 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Failed);
+    expect(stream1Status?.status).toBe(StreamStatusType.Failed);
     expect(stream1Status?.isRunning).toBe(false);
     expect(stream1Status?.relevantHistory).toHaveLength(0); // No history should be recorded
   });
@@ -124,7 +125,7 @@ describe("useStreamsStatuses", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValueOnce({ streamStatuses: mockIncompleteStreamStatuses });
 
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusIndicatorStatus.Failed,
+      status: ConnectionStatusType.Failed,
       isRunning: false,
       lastSuccessfulSync: 1609459200,
     });
@@ -134,14 +135,14 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Failed);
+    expect(stream1Status?.status).toBe(StreamStatusType.Failed);
   });
 
   it("should retain the Incomplete status if the connection status is not Failed", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValueOnce({ streamStatuses: mockIncompleteStreamStatuses });
 
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusIndicatorStatus.Incomplete,
+      status: ConnectionStatusType.Incomplete,
       isRunning: false,
       lastSuccessfulSync: 1609459200,
     });
@@ -151,7 +152,7 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Incomplete);
+    expect(stream1Status?.status).toBe(StreamStatusType.Incomplete);
   });
 
   it("should set streams to paused if connection disabled", () => {
@@ -162,7 +163,7 @@ describe("useStreamsStatuses", () => {
     const streamStatuses = result.current.streamStatuses;
     const stream1Status = streamStatuses.get("stream1-namespace1");
 
-    expect(stream1Status?.status).toBe(ConnectionStatusIndicatorStatus.Paused);
+    expect(stream1Status?.status).toBe(StreamStatusType.Paused);
     expect(stream1Status?.isRunning).toBe(false);
   });
 });

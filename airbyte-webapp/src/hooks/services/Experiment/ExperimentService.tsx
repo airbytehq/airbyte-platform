@@ -65,13 +65,23 @@ export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: st
 };
 
 function useExperimentHook<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K] {
+  const hasWindowOverwrites = window.hasOwnProperty("_e2eOverwrites");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const windowOverwriteValue = hasWindowOverwrites ? (window as any)._e2eOverwrites[key] : undefined;
+
   const experimentService = useContext(experimentContext);
   // Get the observable for the changes of the experiment or an empty (never emitting) observable in case the
   // experiment service doesn't exist (e.g. we're running in OSS or it failed to initialize)
   const onChanges$ = useMemo(() => experimentService?.getExperimentChanges$(key) ?? EMPTY, [experimentService, key]);
   // Listen to changes on that observable and use the current value (if the service exist) or the defaultValue otherwise
   // as the starting value.
-  return useObservable(onChanges$, experimentService?.getExperiment(key, defaultValue) ?? defaultValue);
+
+  const initialValue =
+    windowOverwriteValue !== undefined
+      ? windowOverwriteValue
+      : experimentService?.getExperiment(key, defaultValue) ?? defaultValue;
+
+  return useObservable(onChanges$, initialValue);
 }
 
 function useExperimentWithOverwrites<K extends keyof Experiments>(

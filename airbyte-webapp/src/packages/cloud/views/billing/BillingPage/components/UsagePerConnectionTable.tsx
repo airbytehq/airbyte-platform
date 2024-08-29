@@ -3,7 +3,7 @@ import classNames from "classnames";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";

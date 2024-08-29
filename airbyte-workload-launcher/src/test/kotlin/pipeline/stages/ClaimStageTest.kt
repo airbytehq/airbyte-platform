@@ -6,7 +6,7 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
 import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
@@ -24,6 +24,7 @@ class ClaimStageTest {
         workloadId,
       )
     } returns true
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     val claimStage = ClaimStage(workloadApiClient, metricPublisher, "dataplane-id")
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
@@ -44,6 +45,7 @@ class ClaimStageTest {
         workloadId,
       )
     } returns false
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     val claimStage = ClaimStage(workloadApiClient, metricPublisher, "dataplane-id")
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))

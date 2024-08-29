@@ -1,10 +1,10 @@
 package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.workers.config.WorkerConfigs
-import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
@@ -15,31 +15,37 @@ import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.input.getAttemptId
+import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.input.getOrchestratorResourceReqs
+import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.fabric8.kubernetes.api.model.EnvVar
+import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -99,6 +105,66 @@ class PayloadKubeInputMapper(
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
       runtimeEnvVars,
+    )
+  }
+
+  fun toReplicationKubeInput(
+    workloadId: String,
+    input: ReplicationInput,
+    sharedLabels: Map<String, String>,
+  ): ReplicationKubeInput {
+    val jobId = input.getJobId()
+    val attemptId = input.getAttemptId()
+
+    val podName = podNameGenerator.getReplicationPodName(jobId, attemptId)
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
+
+    val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
+    val orchestratorReqs = KubePodProcess.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchRuntimeEnvVars =
+      listOf(
+        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      )
+
+    val sourceImage = input.sourceLauncherConfig.dockerImage
+    val sourceReqs = KubePodProcess.buildResourceRequirements(input.getSourceResourceReqs())
+    val sourceRuntimeEnvVars =
+      input.sourceLauncherConfig.additionalEnvironmentVariables
+        ?.map { EnvVar(it.key, it.value, null) }
+        ?.toList().orEmpty() + getConnectorApmEnvVars(image = sourceImage, context = buildFFContext(workspaceId = input.workspaceId))
+
+    val destinationImage = input.destinationLauncherConfig.dockerImage
+    val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationRuntimeEnvVars =
+      input.destinationLauncherConfig.additionalEnvironmentVariables
+        ?.map { EnvVar(it.key, it.value, null) }
+        ?.toList().orEmpty() + getConnectorApmEnvVars(image = destinationImage, context = buildFFContext(workspaceId = input.workspaceId))
+
+    val labels =
+      labeler.getReplicationLabels(
+        orchImage,
+        sourceImage,
+        destinationImage,
+      ) + sharedLabels
+
+    return ReplicationKubeInput(
+      podName,
+      labels,
+      replicationWorkerConfigs.workerKubeAnnotations,
+      nodeSelectors,
+      orchImage,
+      sourceImage,
+      destinationImage,
+      orchestratorReqs,
+      sourceReqs,
+      destinationReqs,
+      orchRuntimeEnvVars,
+      sourceRuntimeEnvVars,
+      destinationRuntimeEnvVars,
     )
   }
 
@@ -280,7 +346,7 @@ class PayloadKubeInputMapper(
 
     return buildMap {
       if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)) {
-        put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
+        put(FileConstants.INIT_INPUT_FILE, serializer.serialize(input))
       }
     }
   }
@@ -295,8 +361,8 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             input.checkConnectionInput,
@@ -320,8 +386,8 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             null,
@@ -345,7 +411,7 @@ class PayloadKubeInputMapper(
     }
 
     return mapOf(
-      OrchestratorConstants.SIDECAR_INPUT to
+      FileConstants.SIDECAR_INPUT_FILE to
         serializer.serialize(
           SidecarInput(
             null,
@@ -367,6 +433,22 @@ class PayloadKubeInputMapper(
       },
     )
   }
+
+  private fun getConnectorApmEnvVars(
+    image: String,
+    context: Context,
+  ): List<EnvVar> {
+    val connectorApmEnvVars = mutableListOf<EnvVar>()
+    if (featureFlagClient.boolVariation(ConnectorApmEnabled, context)) {
+      connectorApmSupportHelper.addApmEnvVars(connectorApmEnvVars)
+      connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, connectorApmEnvVars)
+    }
+    return connectorApmEnvVars.toList()
+  }
+
+  companion object {
+    var connectorApmSupportHelper: ConnectorApmSupportHelper = ConnectorApmSupportHelper()
+  }
 }
 
 data class OrchestratorKubeInput(
@@ -376,9 +458,25 @@ data class OrchestratorKubeInput(
   val nodeSelectors: Map<String, String>,
   val kubePodInfo: KubePodInfo,
   val fileMap: Map<String, String>,
-  val resourceReqs: ResourceRequirements?,
+  val resourceReqs: AirbyteResourceRequirements?,
   val annotations: Map<String, String>,
   val extraEnv: List<EnvVar>,
+)
+
+data class ReplicationKubeInput(
+  val podName: String,
+  val labels: Map<String, String>,
+  val annotations: Map<String, String>,
+  val nodeSelectors: Map<String, String>,
+  val orchestratorImage: String,
+  val sourceImage: String,
+  val destinationImage: String,
+  val orchestratorReqs: ResourceRequirements,
+  val sourceReqs: ResourceRequirements,
+  val destinationReqs: ResourceRequirements,
+  val orchestratorRuntimeEnvVars: List<EnvVar>,
+  val sourceRuntimeEnvVars: List<EnvVar>,
+  val destinationRuntimeEnvVars: List<EnvVar>,
 )
 
 data class ConnectorKubeInput(

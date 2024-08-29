@@ -1,12 +1,8 @@
-import dayjs from "dayjs";
-
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import {
   AirbyteStream,
   AirbyteStreamAndConfiguration,
-  ConnectionScheduleData,
-  ConnectionScheduleType,
   ConnectionSyncResultRead,
   JobConfigType,
   StreamStatusIncompleteRunCause,
@@ -17,11 +13,11 @@ import {
 
 export type AirbyteStreamAndConfigurationWithEnforcedStream = AirbyteStreamAndConfiguration & { stream: AirbyteStream };
 
-export const activeStatuses: readonly ConnectionStatusIndicatorStatus[] = [
-  ConnectionStatusIndicatorStatus.Syncing,
-  ConnectionStatusIndicatorStatus.Queued,
-  ConnectionStatusIndicatorStatus.Clearing,
-  ConnectionStatusIndicatorStatus.Refreshing,
+export const activeStatuses: readonly StreamStatusType[] = [
+  StreamStatusType.Syncing,
+  StreamStatusType.Queued,
+  StreamStatusType.Clearing,
+  StreamStatusType.Refreshing,
 ] as const;
 
 export function getStreamKey(streamStatus: StreamStatusRead | AirbyteStream | ConnectionSyncResultRead) {
@@ -52,50 +48,13 @@ export function getStreamKey(streamStatus: StreamStatusRead | AirbyteStream | Co
   return `${name}-${namespace}`;
 }
 
-export const isStreamLate = (
-  streamStatuses: StreamStatusRead[],
-  scheduleType: ConnectionScheduleType | undefined,
-  scheduleData: ConnectionScheduleData | undefined,
-  missedScheduleCount: number
-) => {
-  if (scheduleType !== ConnectionScheduleType.basic) {
-    // only basic schedules can be OnTrack
-    return false;
-  }
-
-  const { timeUnit, units } = scheduleData?.basicSchedule ?? {};
-
-  if (timeUnit == null || units == null) {
-    // shouldn't be possible, but lacking type safety for this case
-    return false;
-  }
-
-  const { transitionedAt: lastSuccessfulSync } =
-    streamStatuses.find(
-      ({ jobType, runState }) => jobType === StreamStatusJobType.SYNC && runState === StreamStatusRunState.COMPLETE
-    ) ?? {};
-
-  if (lastSuccessfulSync == null) {
-    // connections with no successful syncs are either Pending or Failed
-    return false;
-  }
-
-  return (
-    lastSuccessfulSync <
-    dayjs()
-      // Subtract time for N (missedScheduleCount) runs and compare it to last sync time
-      .subtract(units * missedScheduleCount, timeUnit)
-      .valueOf()
-  );
-};
-
 interface BaseUIStreamStatus {
-  status: Exclude<ConnectionStatusIndicatorStatus, "rateLimited"> | undefined;
+  status: Exclude<StreamStatusType, "rateLimited"> | undefined;
   lastSuccessfulSync: StreamStatusRead | undefined;
   isRunning: boolean; // isRunning can be removed once sync progress has been fully rolled out, as it can be inferred from the status.  until then, it is required for the v1 stream status ui.
 }
 interface RateLimitedUIStreamStatus {
-  status: ConnectionStatusIndicatorStatus.RateLimited;
+  status: StreamStatusType.RateLimited;
   lastSuccessfulSync: StreamStatusRead | undefined;
   isRunning: true;
   quotaReset?: number;
@@ -112,8 +71,6 @@ export const computeStreamStatus = ({
   isRateLimitedUiEnabled = true, // default to `true` here so unit tests execute against this side, this value is set from the one actual call site
 }: {
   statuses: StreamStatusRead[];
-  scheduleType?: ConnectionScheduleType;
-  scheduleData?: ConnectionScheduleData;
   hasBreakingSchemaChange: boolean;
   isSyncing: boolean;
   recordsExtracted?: number;
@@ -123,7 +80,7 @@ export const computeStreamStatus = ({
   // no statuses
   if (statuses == null || statuses.length === 0) {
     return {
-      status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+      status: StreamStatusType.QueuedForNextSync,
       isRunning: false,
       lastSuccessfulSync: undefined,
     };
@@ -144,7 +101,7 @@ export const computeStreamStatus = ({
     (statuses[0].runState === StreamStatusRunState.PENDING || statuses[0].jobType === StreamStatusJobType.RESET)
   ) {
     return {
-      status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+      status: StreamStatusType.QueuedForNextSync,
       isRunning,
       lastSuccessfulSync,
     };
@@ -152,7 +109,7 @@ export const computeStreamStatus = ({
 
   if (isRateLimitedUiEnabled && statuses[0].runState === StreamStatusRunState.RATE_LIMITED) {
     return {
-      status: ConnectionStatusIndicatorStatus.RateLimited,
+      status: StreamStatusType.RateLimited,
       isRunning: true,
       lastSuccessfulSync,
       quotaReset: statuses[0].metadata?.quotaReset,
@@ -163,7 +120,7 @@ export const computeStreamStatus = ({
   if (isRunning) {
     if (runningJobConfigType === JobConfigType.reset_connection || runningJobConfigType === JobConfigType.clear) {
       return {
-        status: ConnectionStatusIndicatorStatus.Clearing,
+        status: StreamStatusType.Clearing,
         isRunning,
         lastSuccessfulSync,
       };
@@ -171,7 +128,7 @@ export const computeStreamStatus = ({
 
     if (!recordsExtracted || recordsExtracted === 0) {
       return {
-        status: ConnectionStatusIndicatorStatus.Queued,
+        status: StreamStatusType.Queued,
         isRunning,
         lastSuccessfulSync,
       };
@@ -180,13 +137,13 @@ export const computeStreamStatus = ({
       // syncing or refreshing
       if (runningJobConfigType === "sync") {
         return {
-          status: ConnectionStatusIndicatorStatus.Syncing,
+          status: StreamStatusType.Syncing,
           isRunning,
           lastSuccessfulSync,
         };
       } else if (runningJobConfigType === "refresh") {
         return {
-          status: ConnectionStatusIndicatorStatus.Refreshing,
+          status: StreamStatusType.Refreshing,
           isRunning,
           lastSuccessfulSync,
         };
@@ -197,7 +154,7 @@ export const computeStreamStatus = ({
   // breaking schema change means user action is required
   if (hasBreakingSchemaChange) {
     return {
-      status: ConnectionStatusIndicatorStatus.Failed,
+      status: StreamStatusType.Failed,
       isRunning,
       lastSuccessfulSync,
     };
@@ -205,7 +162,7 @@ export const computeStreamStatus = ({
 
   if (statuses[0].runState === StreamStatusRunState.PENDING) {
     return {
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: StreamStatusType.Pending,
       isRunning,
       lastSuccessfulSync,
     };
@@ -214,7 +171,7 @@ export const computeStreamStatus = ({
   // reset streams are pending, regardless of the run state
   if (statuses[0].jobType === StreamStatusJobType.RESET) {
     return {
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: StreamStatusType.Pending,
       isRunning,
       lastSuccessfulSync,
     };
@@ -227,16 +184,16 @@ export const computeStreamStatus = ({
     statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED
   ) {
     return {
-      status: ConnectionStatusIndicatorStatus.Incomplete,
+      status: StreamStatusType.Incomplete,
       isRunning,
       lastSuccessfulSync,
     };
   }
 
-  // completed syncs that haven't been flagged as ontrack/late are on time
+  // completed syncs that haven't been flagged as anything else are synced
   if (lastSuccessfulSync) {
     return {
-      status: ConnectionStatusIndicatorStatus.Synced,
+      status: StreamStatusType.Synced,
       isRunning,
       lastSuccessfulSync,
     };

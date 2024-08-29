@@ -2,7 +2,8 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 
 import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
@@ -35,7 +36,7 @@ describe("useUiStreamStates", () => {
   (useQueryClient as jest.Mock).mockReturnValue(mockQueryClient);
 
   const mockConnectionStatus = {
-    status: ConnectionStatusIndicatorStatus.Pending,
+    status: ConnectionStatusType.Pending,
     isRunning: false,
   };
 
@@ -43,7 +44,7 @@ describe("useUiStreamStates", () => {
     [
       "stream1-namespace1",
       {
-        status: ConnectionStatusIndicatorStatus.Synced,
+        status: StreamStatusType.Synced,
         relevantHistory: [],
         lastSuccessfulSyncAt: 12345,
       },
@@ -120,7 +121,7 @@ describe("useUiStreamStates", () => {
       expect(uiStreamState.recordsExtracted).toBeUndefined();
       expect(uiStreamState.recordsLoaded).toBeUndefined();
       expect(uiStreamState.bytesLoaded).toBeUndefined();
-      expect(uiStreamState.status).toBe(ConnectionStatusIndicatorStatus.Pending);
+      expect(uiStreamState.status).toBe(StreamStatusType.Pending);
       expect(uiStreamState.dataFreshAsOf).toBeUndefined();
     });
 
@@ -139,7 +140,7 @@ describe("useUiStreamStates", () => {
       expect(uiStreamState.recordsExtracted).toBe(1000);
       expect(uiStreamState.recordsLoaded).toBe(950);
       expect(uiStreamState.bytesLoaded).toBeUndefined();
-      expect(uiStreamState.status).toBe(ConnectionStatusIndicatorStatus.Synced);
+      expect(uiStreamState.status).toBe(StreamStatusType.Synced);
       expect(uiStreamState.dataFreshAsOf).toBeUndefined();
     });
   });
@@ -154,7 +155,7 @@ describe("useUiStreamStates", () => {
           [
             "stream1-namespace1",
             {
-              status: ConnectionStatusIndicatorStatus.Syncing,
+              status: StreamStatusType.Syncing,
               relevantHistory: [],
               lastSuccessfulSyncAt: 12345,
             },
@@ -176,7 +177,7 @@ describe("useUiStreamStates", () => {
       expect(uiStreamState.recordsExtracted).toBe(1000);
       expect(uiStreamState.recordsLoaded).toBe(950);
       expect(uiStreamState.bytesLoaded).toBeUndefined();
-      expect(uiStreamState.status).toBe(ConnectionStatusIndicatorStatus.Syncing);
+      expect(uiStreamState.status).toBe(StreamStatusType.Syncing);
       expect(uiStreamState.dataFreshAsOf).toBeUndefined();
     });
   });
@@ -203,7 +204,7 @@ describe("useUiStreamStates", () => {
         [
           "stream1-namespace1",
           {
-            status: ConnectionStatusIndicatorStatus.RateLimited,
+            status: StreamStatusType.RateLimited,
             relevantHistory: [
               {
                 jobType: StreamStatusJobType.SYNC,
@@ -223,7 +224,7 @@ describe("useUiStreamStates", () => {
     const uiStreamStates = result.current;
 
     expect(uiStreamStates).toHaveLength(1);
-    expect(uiStreamStates[0].status).toBe(ConnectionStatusIndicatorStatus.RateLimited);
+    expect(uiStreamStates[0].status).toBe(StreamStatusType.RateLimited);
   });
 
   it("should handle post-job fetching correctly", async () => {

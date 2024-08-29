@@ -1,10 +1,7 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -13,8 +10,8 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -51,28 +48,21 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
 
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.micronaut.test)
 }
 
-val env =
-  Properties().apply {
-    load(rootProject.file(".env.dev").inputStream())
-  }
-
 airbyte {
   application {
     mainClass = "io.airbyte.cron.MicronautCronRunner"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
       ),
     )
   }
@@ -80,10 +70,6 @@ airbyte {
   docker {
     imageName = "cron"
   }
-}
-
-kapt {
-  keepJavacAnnotationProcessors = true
 }
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.

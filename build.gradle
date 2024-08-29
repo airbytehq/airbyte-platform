@@ -25,12 +25,12 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.37.2" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.37.2" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.37.2" apply false
-    id "io.airbyte.gradle.docker" version "0.37.2" apply false
-    id "io.airbyte.gradle.publish" version "0.37.2" apply false
-    id "io.airbyte.gradle.kube-reload" version "0.37.2" apply false
+    id "io.airbyte.gradle.jvm" version "0.37.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.37.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.37.0" apply false
+    id "io.airbyte.gradle.docker" version "0.37.0" apply false
+    id "io.airbyte.gradle.publish" version "0.37.0" apply false
+    id "io.airbyte.gradle.kube-reload" version "0.37.0" apply false
     // uncomment for testing plugin locally
     // id "io.airbyte.gradle.jvm" version "local-test" apply false
     // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
@@ -69,20 +69,12 @@ if (System.getProperty("ciMode", "false") == "true") {
     }
 }
 
-Properties env = new Properties()
-// can't use rootProject, because sometimes this project is root and sometimes it is project(':oss')
-project.file(".env.dev").withInputStream { env.load(it) }
-
-if (!env.containsKey('VERSION')) {
-    throw new Exception('Version not specified in .env file...')
-}
-
 ext {
     // used for publishing jars
     oss_version = System.getenv("VERSION")
     // todo (cgardens) - remove the implicit behavior so it doesn't require an explanatory comment.
     // for cloud (prod + stage) this is going to be an image_tag (see build-artifacts.yaml). for OSS this is going to be the oss version.
-    webapp_version = System.getenv("VERSION") ?: env.VERSION
+    webapp_version = System.getenv("VERSION") ?: "dev"
 }
 
 allprojects {
