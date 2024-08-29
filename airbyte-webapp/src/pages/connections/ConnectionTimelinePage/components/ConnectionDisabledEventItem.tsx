@@ -36,7 +36,7 @@ export const ConnectionDisabledEventItem: React.FC<ConnectionDisabledEventItemPr
           {event.user ? (
             <Text as="span" size="sm" color="grey400">
               <FormattedMessage
-                id="connection.timeline.connection_enabled.description"
+                id="connection.timeline.connection_disabled.description"
                 values={{
                   user: <TimelineEventUser user={event.user} />,
                 }}
