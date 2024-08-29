@@ -26,6 +26,7 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.pod.FileConstants;
 import io.airbyte.workers.process.AsyncKubePodStatus;
@@ -91,6 +92,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
   private final WorkloadIdGenerator workloadIdGenerator;
+  private final WorkloadSecurityContextProvider workloadSecurityContextProvider;
 
   public LauncherWorker(final UUID connectionId,
                         final UUID workspaceId,
@@ -106,7 +108,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
                         final FeatureFlagClient featureFlagClient,
                         final boolean isCustomConnector,
                         final MetricClient metricClient,
-                        final WorkloadIdGenerator workloadIdGenerator) {
+                        final WorkloadIdGenerator workloadIdGenerator,
+                        final WorkloadSecurityContextProvider workloadSecurityContextProvider) {
 
     this.connectionId = connectionId;
     this.workspaceId = workspaceId;
@@ -123,6 +126,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
     this.isCustomConnector = isCustomConnector;
     this.metricClient = metricClient;
     this.workloadIdGenerator = workloadIdGenerator;
+    this.workloadSecurityContextProvider = workloadSecurityContextProvider;
 
     // Generate a random UUID to unique identify the pod process
     processId = UUID.randomUUID();
@@ -144,11 +148,11 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
       envMap.put(WorkerConstants.ATTEMPT_ID, jobRunConfig.getAttemptId().toString());
 
       // Merge in the env from the ContainerOrchestratorConfig
-      containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
+      containerOrchestratorConfig.environmentVariables().forEach(envMap::putIfAbsent);
 
       final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
-      fileMap.putAll(Map.of(
-          FileConstants.INIT_INPUT_FILE, Jsons.serialize(input)));
+      fileMap.put(
+          FileConstants.INIT_INPUT_FILE, Jsons.serialize(input));
 
       final Map<Integer, Integer> portMap = Map.of(
           serverPort, serverPort,
@@ -187,6 +191,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
           kubePodInfo,
           containerOrchestratorConfig.storageClient(),
           containerOrchestratorConfig.kubernetesClient(),
+          workloadSecurityContextProvider,
           containerOrchestratorConfig.secretName(),
           containerOrchestratorConfig.secretMountPath(),
           containerOrchestratorConfig.dataPlaneCredsSecretName(),

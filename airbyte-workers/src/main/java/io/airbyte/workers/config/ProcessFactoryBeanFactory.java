@@ -6,6 +6,7 @@ package io.airbyte.workers.config;
 
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -29,6 +30,7 @@ public class ProcessFactoryBeanFactory {
   @Requires(env = Environment.KUBERNETES)
   public ProcessFactory createKubernetesProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                                                        final FeatureFlagClient featureFlagClient,
+                                                       final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                                                        @Value("${airbyte.worker.job.kube.namespace}") final String kubernetesNamespace,
                                                        @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount,
                                                        @Value("${micronaut.server.port}") final Integer serverPort)
@@ -38,6 +40,7 @@ public class ProcessFactoryBeanFactory {
     final String kubeHeartbeatUrl = localIp + ":" + serverPort;
     return new KubeProcessFactory(workerConfigsProvider,
         featureFlagClient,
+        workloadSecurityContextProvider,
         kubernetesNamespace,
         serviceAccount,
         fabricClient,

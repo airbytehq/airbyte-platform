@@ -1,28 +1,25 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants.DESTINATION_CONTAINER_NAME
 import io.airbyte.workers.pod.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
 import io.airbyte.workers.pod.ContainerConstants.SOURCE_CONTAINER_NAME
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
-import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
-import io.fabric8.kubernetes.api.model.SecurityContext
-import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
-import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 @Singleton
 class ReplicationContainerFactory(
   private val orchestratorEnvFactory: OrchestratorEnvSingleton,
+  private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") private val imagePullPolicy: String,
 ) {
   fun createOrchestrator(
@@ -41,7 +38,7 @@ class ReplicationContainerFactory(
       .withResources(resourceReqs)
       .withEnv(envVars)
       .withVolumeMounts(volumeMounts)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }
 
@@ -62,7 +59,7 @@ class ReplicationContainerFactory(
       .withEnv(runtimeEnvVars)
       .withWorkingDir(SOURCE_DIR)
       .withVolumeMounts(volumeMounts)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .withResources(resourceReqs)
       .build()
   }
@@ -84,24 +81,8 @@ class ReplicationContainerFactory(
       .withEnv(runtimeEnvVars)
       .withWorkingDir(DEST_DIR)
       .withVolumeMounts(volumeMounts)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .withResources(resourceReqs)
       .build()
   }
 }
-
-// TODO: make this a proper singleton
-private fun containerSecurityContext(): SecurityContext? =
-  when (AirbyteEnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
-    true ->
-      SecurityContextBuilder()
-        .withAllowPrivilegeEscalation(false)
-        .withRunAsUser(1000L)
-        .withRunAsGroup(1000L)
-        .withReadOnlyRootFilesystem(false)
-        .withRunAsNonRoot(true)
-        .withCapabilities(CapabilitiesBuilder().addAllToDrop(listOf("ALL")).build())
-        .withSeccompProfile(SeccompProfileBuilder().withType("RuntimeDefault").build())
-        .build()
-    false -> null
-  }

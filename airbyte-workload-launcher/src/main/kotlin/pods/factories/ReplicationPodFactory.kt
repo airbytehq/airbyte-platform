@@ -4,18 +4,16 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
-import io.fabric8.kubernetes.api.model.PodSecurityContext
-import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
-import io.airbyte.commons.envvar.EnvVar as AbEnvVar
 
 @Singleton
 class ReplicationPodFactory(
@@ -23,6 +21,7 @@ class ReplicationPodFactory(
   private val initContainerFactory: InitContainerFactory,
   private val replContainerFactory: ReplicationContainerFactory,
   private val volumeFactory: VolumeFactory,
+  private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
 ) {
@@ -92,15 +91,8 @@ class ReplicationPodFactory(
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelectors)
       .withAutomountServiceAccountToken(false)
-      .withSecurityContext(podSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()
       .build()
   }
 }
-
-// TODO: more leftover work to move to singleton
-private fun podSecurityContext(): PodSecurityContext? =
-  when (AbEnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
-    true -> PodSecurityContextBuilder().withFsGroup(1000L).build()
-    false -> null
-  }

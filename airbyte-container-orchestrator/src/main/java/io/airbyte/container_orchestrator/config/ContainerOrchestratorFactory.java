@@ -16,6 +16,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.context.WorkloadSecurityContextProvider;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -65,6 +66,7 @@ class ContainerOrchestratorFactory {
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
                                     final FeatureFlagClient featureFlagClient,
+                                    final WorkloadSecurityContextProvider workloadSecurityContextProvider,
                                     @Value("${micronaut.server.port}") final int serverPort,
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
@@ -78,6 +80,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigsProvider,
         featureFlagClient,
+        workloadSecurityContextProvider,
         EnvVar.JOB_KUBE_NAMESPACE.fetch(DEFAULT_JOB_KUBE_NAMESPACE),
         serviceAccount,
         new DefaultKubernetesClient(),

@@ -4,24 +4,19 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
-import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
-import io.fabric8.kubernetes.api.model.PodSecurityContext
-import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
-import io.fabric8.kubernetes.api.model.SecurityContext
-import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
@@ -41,6 +36,7 @@ class ConnectorPodFactory(
   private val volumeFactory: VolumeFactory,
   private val initContainerFactory: InitContainerFactory,
   private val connectorArgs: Map<String, String>,
+  private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -104,7 +100,7 @@ class ConnectorPodFactory(
       .withNodeSelector<String, String>(nodeSelectors)
       .withTolerations(tolerations)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
-      .withSecurityContext(podSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()
       .build()
   }
@@ -132,7 +128,7 @@ class ConnectorPodFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
       .withResources(resourceReqs)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }
 
@@ -148,7 +144,7 @@ class ConnectorPodFactory(
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }
 
@@ -158,24 +154,3 @@ class ConnectorPodFactory(
     const val SPEC_OPERATION_NAME = "spec"
   }
 }
-
-private fun containerSecurityContext(): SecurityContext? =
-  when (io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
-    true ->
-      SecurityContextBuilder()
-        .withAllowPrivilegeEscalation(false)
-        .withRunAsUser(1000L)
-        .withRunAsGroup(1000L)
-        .withReadOnlyRootFilesystem(false)
-        .withRunAsNonRoot(true)
-        .withCapabilities(CapabilitiesBuilder().addAllToDrop(listOf("ALL")).build())
-        .withSeccompProfile(SeccompProfileBuilder().withType("RuntimeDefault").build())
-        .build()
-    false -> null
-  }
-
-private fun podSecurityContext(): PodSecurityContext? =
-  when (io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
-    true -> PodSecurityContextBuilder().withFsGroup(1000L).build()
-    false -> null
-  }

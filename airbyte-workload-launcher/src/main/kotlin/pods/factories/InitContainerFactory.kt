@@ -1,24 +1,25 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.process.KubeContainerInfo
-import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
-import io.fabric8.kubernetes.api.model.SecurityContext
-import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 @Singleton
 class InitContainerFactory(
+  private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Named("initEnvVars") private val envVars: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.images.busybox}") private val imageName: String,
   @Named("initContainerInfo") private val initContainerInfo: KubeContainerInfo,
@@ -61,7 +62,7 @@ class InitContainerFactory(
       )
       .withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }
 
@@ -77,23 +78,8 @@ class InitContainerFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
-      .withSecurityContext(containerSecurityContext())
+      .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .withEnv(envVars + runtimeEnvVars)
       .build()
   }
 }
-
-private fun containerSecurityContext(): SecurityContext? =
-  when (AirbyteEnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
-    true ->
-      SecurityContextBuilder()
-        .withAllowPrivilegeEscalation(false)
-        .withRunAsUser(1000L)
-        .withRunAsGroup(1000L)
-        .withReadOnlyRootFilesystem(false)
-        .withRunAsNonRoot(true)
-        .withCapabilities(CapabilitiesBuilder().addAllToDrop(listOf("ALL")).build())
-        .withSeccompProfile(SeccompProfileBuilder().withType("RuntimeDefault").build())
-        .build()
-    false -> null
-  }
