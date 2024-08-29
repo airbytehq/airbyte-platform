@@ -1412,6 +1412,7 @@
   "connectorBuilder.globalConfiguration.assist.docsUrl.placeholder": "e.g. https://docs.airbyte.io",
   "connectorBuilder.globalConfiguration.assist.openApiSpecUrl": "Open API Specification URL",
   "connectorBuilder.globalConfiguration.assist.openApiSpecUrl.placeholder": "e.g. https://api.airbyte.com/openapi.json",
+  "connectorBuilder.assist.configModal.title": "AI Assist",
   "connectorBuilder.assist.configModal.button": "AI Assist",
   "connectorBuilder.assist.configModal.description": "By providing this information, you will enable AI Assist to make suggestions for the configuration of your connector.",
   "connectorBuilder.assist.tooltip.needMoreInfo": "Your AI Assistant needs more information to make suggestions. Please provide more information by clicking the AI Assist button in the header.",

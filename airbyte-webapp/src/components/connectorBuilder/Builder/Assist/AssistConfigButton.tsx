@@ -4,6 +4,8 @@ import { useIntl } from "react-intl";
 
 import { Button, ButtonProps } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -49,14 +51,27 @@ const AssistSwitch: React.FC = () => {
   return <Switch checked={assistEnabled} onChange={onChange} />;
 };
 
+const AssistTitle = () => {
+  const { formatMessage } = useIntl();
+  const { assistEnabled } = useConnectorBuilderFormState();
+
+  return (
+    <FlexContainer direction="row" alignItems="center" gap="sm">
+      <Icon type="aiStars" color={assistEnabled ? "highlight" : "disabled"} size="md" />
+      <Heading as="h3" size="sm" className={styles.assistTitle}>
+        {formatMessage({ id: "connectorBuilder.assist.configModal.title" })}
+      </Heading>
+    </FlexContainer>
+  );
+};
+
 const AssistConfigPanel = () => {
   const { formatMessage } = useIntl();
-  const { setAssistEnabled, assistEnabled } = useConnectorBuilderFormState();
 
   return (
     <FlexContainer direction="column" gap="lg" className={styles.assistConfigPanel}>
       <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
-        <AIButton onClick={() => setAssistEnabled(!assistEnabled)} />
+        <AssistTitle />
         <AssistSwitch />
       </FlexContainer>
       <Text as="span" color="grey400" size="sm">
