@@ -6,7 +6,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
     <div
       class="<removed-for-snapshot-test>"
     >
-      <form>
+      <form
+        class="<removed-for-snapshot-test>"
+      >
         <fieldset
           class="<removed-for-snapshot-test>"
         >
