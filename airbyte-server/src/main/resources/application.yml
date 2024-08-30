@@ -199,7 +199,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-stdin:
         cpu-limit: 1
         cpu-request: 0.5
@@ -214,7 +214,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source-stdout:
         cpu-limit: 1
         cpu-request: 0.5
@@ -225,7 +225,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source-stdout-api:
         cpu-limit: 1
         cpu-request: 0.2
@@ -240,7 +240,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-stdin-api:
         cpu-limit: 1
         cpu-request: 0.1
@@ -251,7 +251,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source-stdout-database:
         cpu-limit: 1
         cpu-request: 0.5
@@ -266,7 +266,7 @@ airbyte:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-stdin-database:
         cpu-limit: 2
         cpu-request: 0.5
