@@ -355,15 +355,16 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         source.cancel();
       }
 
-      if (source.getExitValue() == 0) {
+      final int exitValue = source.getExitValue();
+      if (exitValue == 0) {
         replicationWorkerHelper.endOfSource();
       } else {
         recordErrorExitValue(
             replicationInput.getConnectionId().toString(),
             "source",
             replicationInput.getSourceLauncherConfig().getDockerImage(),
-            String.valueOf(source.getExitValue()));
-        throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
+            String.valueOf(exitValue));
+        throw new SourceException("Source process exited with non-zero exit code " + exitValue);
       }
     } catch (final SourceException e) {
       LOGGER.info("readFromSource: source exception", e);
@@ -477,13 +478,15 @@ public class BufferedReplicationWorker implements ReplicationWorker {
           }
         }
       }
-      if (destination.getExitValue() != 0) {
+
+      final int exitValue = destination.getExitValue();
+      if (exitValue != 0) {
         recordErrorExitValue(
             replicationInput.getConnectionId().toString(),
             "destination",
             replicationInput.getDestinationLauncherConfig().getDockerImage(),
-            String.valueOf(destination.getExitValue()));
-        throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
+            String.valueOf(exitValue));
+        throw new DestinationException("Destination process exited with non-zero exit code " + exitValue);
       } else {
         replicationWorkerHelper.endOfDestination();
       }
