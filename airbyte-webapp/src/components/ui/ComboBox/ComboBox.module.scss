@@ -40,3 +40,15 @@
 .optionLoading {
   color: colors.$grey-400;
 }
+
+.caretButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-300;
+  padding-inline: 8px;
+}

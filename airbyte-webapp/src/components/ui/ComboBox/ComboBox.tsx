@@ -1,4 +1,4 @@
-import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
+import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
 import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import React, { ReactNode, useMemo, useState } from "react";
@@ -46,6 +46,7 @@ export interface OptionsProps extends OptionsConfig {
 export interface ComboBoxProps extends BaseProps {
   value: string | undefined;
   onChange: (newValue: string) => void;
+  /** overrides the caret down button */
   adornment?: ReactNode;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   filterOptions?: boolean;
@@ -259,7 +260,13 @@ export const ComboBox = ({
             {...fieldInputProps}
             value={currentInputValue}
             error={error}
-            adornment={adornment}
+            adornment={
+              adornment ?? (
+                <ComboboxButton className={styles.caretButton}>
+                  <Icon type="caretDown" />
+                </ComboboxButton>
+              )
+            }
             autoComplete="off"
             onChange={(event) => {
               const newQuery = event.target.value;
