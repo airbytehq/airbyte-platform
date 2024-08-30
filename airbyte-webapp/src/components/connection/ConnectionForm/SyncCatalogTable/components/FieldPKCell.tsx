@@ -21,7 +21,7 @@ export interface FieldPKCellProps {
 export const FieldPKCell: React.FC<FieldPKCellProps> = ({ row }) => {
   const { streamNode, field } = row.original;
 
-  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode.config?.selected) {
+  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode?.config?.selected) {
     return null;
   }
 

@@ -21,7 +21,7 @@ interface FieldCursorCellProps {
 export const FieldCursorCell: React.FC<FieldCursorCellProps> = ({ row }) => {
   const { streamNode, field } = row.original;
 
-  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode.config?.selected) {
+  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode?.config?.selected) {
     return null;
   }
 
