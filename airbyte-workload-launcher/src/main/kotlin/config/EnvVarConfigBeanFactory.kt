@@ -42,7 +42,7 @@ class EnvVarConfigBeanFactory {
     @Named("secretPersistenceSecretsEnvMap") secretPersistenceSecretsEnvMap: Map<String, EnvVarSource>,
     @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
   ): List<EnvVar> {
@@ -90,7 +90,7 @@ class EnvVarConfigBeanFactory {
     @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -188,14 +188,19 @@ class EnvVarConfigBeanFactory {
   }
 
   @Singleton
-  @Named("workloadApiSecretEnv")
-  fun workloadApiSecretEnv(
+  @Named("apiAuthSecretEnv")
+  fun apiAuthSecretEnv(
     @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
     @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
+    @Value("\${airbyte.internal-api.keycloak-auth-client.secret-name}") keycloakAuthSecretName: String,
+    @Value("\${airbyte.internal-api.keycloak-auth-client.secret-key}") keycloakAuthSecretKey: String,
   ): Map<String, EnvVarSource> {
     return buildMap {
       if (bearerTokenSecretName.isNotBlank()) {
         put(WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+      }
+      if (keycloakAuthSecretName.isNotBlank()) {
+        put(KEYCLOAK_CLIENT_SECRET_ENV_VAR, createEnvVarSource(keycloakAuthSecretName, keycloakAuthSecretKey))
       }
     }
   }
@@ -243,10 +248,10 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("orchestratorSecretsEnvMap")
   fun orchestratorSecretsEnvMap(
-    @Named("workloadApiSecretEnv") workloadApiSecretEnv: Map<String, EnvVarSource>,
+    @Named("apiAuthSecretEnv") apiAuthSecretEnv: Map<String, EnvVarSource>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
   ): Map<String, EnvVarSource> {
-    return workloadApiSecretEnv + awsAssumedRoleSecretEnv
+    return apiAuthSecretEnv + awsAssumedRoleSecretEnv
   }
 
   private fun createEnvVarSource(
@@ -285,6 +290,8 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
+    @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
+    @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -295,6 +302,10 @@ class EnvVarConfigBeanFactory {
     envMap[DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR] = dataPlaneServiceAccountEmail
     envMap[DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR] = dataPlaneServiceAccountCredentialsPath
     envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
+
+    // Expected to be present in Cloud for internal api auth
+    envMap[KEYCLOAK_CLIENT_ID_ENV_VAR] = keycloakAuthClientId
+    envMap[KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR] = keycloakAuthOpenIdIssuer
 
     return envMap
   }
@@ -472,6 +483,8 @@ class EnvVarConfigBeanFactory {
     private const val DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR = "DATA_PLANE_SERVICE_ACCOUNT_EMAIL"
     private const val AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_NAME"
     private const val AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_VALUE"
+    private const val KEYCLOAK_CLIENT_ID_ENV_VAR = "KEYCLOAK_CLIENT_ID"
+    private const val KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR = "KEYCLOAK_INTERNAL_REALM_ISSUER"
     private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
@@ -493,6 +506,7 @@ class EnvVarConfigBeanFactory {
     const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
     const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
     const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
+    const val KEYCLOAK_CLIENT_SECRET_ENV_VAR = "KEYCLOAK_CLIENT_SECRET"
     private const val SECRET_STORE_GCP_CREDENTIALS = "SECRET_STORE_GCP_CREDENTIALS"
     private const val AWS_SECRET_MANAGER_ACCESS_KEY_ID = "AWS_SECRET_MANAGER_ACCESS_KEY_ID"
     private const val AWS_SECRET_MANAGER_SECRET_ACCESS_KEY = "AWS_SECRET_MANAGER_SECRET_ACCESS_KEY"
