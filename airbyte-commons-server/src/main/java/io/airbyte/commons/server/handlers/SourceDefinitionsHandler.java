@@ -53,7 +53,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -192,11 +191,8 @@ public class SourceDefinitionsHandler {
         new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = new HashMap<>();
-    for (final var definition : shownSourceDefs) {
-      sourceDefVersionMap.put(definition.getSourceDefinitionId(),
-          actorDefinitionVersionHelper.getSourceVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
-    }
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
+        actorDefinitionVersionHelper.getSourceVersions(shownSourceDefs, workspaceIdRequestBody.getWorkspaceId());
     return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap);
   }
 

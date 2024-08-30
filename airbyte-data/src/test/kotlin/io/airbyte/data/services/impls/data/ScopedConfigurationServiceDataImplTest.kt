@@ -183,6 +183,95 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `test get configurations by scope map and key object`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE, ModelConfigScopeType.ORGANIZATION),
+      )
+
+    val configId = UUID.randomUUID()
+    val scopeId1 = UUID.randomUUID()
+    val scopeId2 = UUID.randomUUID()
+    val resourceId = UUID.randomUUID()
+
+    val config1 =
+      ScopedConfiguration(
+        id = configId,
+        key = configKey.key,
+        value = "value-1",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = scopeId1,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    every {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        EntityConfigScopeType.workspace,
+        scopeId1,
+      )
+    } returns listOf(config1)
+
+    val config2 =
+      ScopedConfiguration(
+        id = configId,
+        key = configKey.key,
+        value = "value-2",
+        scopeType = EntityConfigScopeType.organization,
+        scopeId = scopeId2,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    every {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        EntityConfigScopeType.organization,
+        scopeId2,
+      )
+    } returns listOf(config2)
+
+    val retrievedConfig =
+      scopedConfigurationService.getScopedConfigurations(
+        configKey,
+        mapOf(
+          ModelConfigScopeType.WORKSPACE to scopeId1,
+          ModelConfigScopeType.ORGANIZATION to scopeId2,
+        ),
+        ModelConfigResourceType.ACTOR_DEFINITION,
+      )
+
+    assert(retrievedConfig.size == 1)
+    val firstConfig1 = retrievedConfig.stream().findFirst().get()
+    assert(firstConfig1 == config1.toConfigModel())
+    assert(firstConfig1.scopeType == ModelConfigScopeType.WORKSPACE)
+
+    val retrievedConfig2 =
+      scopedConfigurationService.getScopedConfigurations(
+        configKey,
+        mapOf(
+          ModelConfigScopeType.ORGANIZATION to scopeId2,
+        ),
+        ModelConfigResourceType.ACTOR_DEFINITION,
+      )
+
+    assert(retrievedConfig2.size == 1)
+    val firstConfig2 = retrievedConfig2.stream().findFirst().get()
+    assert(firstConfig2 == config2.toConfigModel())
+    assert(firstConfig2.scopeType == ModelConfigScopeType.ORGANIZATION)
+  }
+
+  @Test
   fun `test get configuration with unsupported scope throws`() {
     val configKey =
       ScopedConfigurationKey(
