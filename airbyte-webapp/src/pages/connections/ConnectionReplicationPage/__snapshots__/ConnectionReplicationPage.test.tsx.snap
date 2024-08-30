@@ -626,10 +626,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
         </fieldset>
       </form>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -701,9 +701,9 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
         </div>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;

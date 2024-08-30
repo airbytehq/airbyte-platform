@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useCallback, useContext, useMemo } from "react";
+import { createPortal } from "react-dom";
 
 import { Toast } from "components/ui/Toast";
 
@@ -45,38 +46,41 @@ export const NotificationService = React.memo(({ children }: { children: React.R
   return (
     <>
       <notificationServiceContext.Provider value={notificationService}>{children}</notificationServiceContext.Provider>
-      <motion.div className={styles.notifications}>
-        <AnimatePresence>
-          {state.notifications
-            .slice()
-            .reverse()
-            .map((notification) => {
-              return (
-                <motion.div
-                  layout="position"
-                  key={notification.id}
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1, transition: { delay: 0.1 } }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  transition={{ ease: "easeOut" }}
-                >
-                  <Toast
-                    text={notification.text}
-                    type={notification.type}
-                    timeout={notification.timeout}
-                    actionBtnText={notification.actionBtnText}
-                    onAction={notification.onAction}
-                    data-testid={`notification-${notification.id}`}
-                    onClose={() => {
-                      deleteNotificationById(notification.id);
-                      notification.onClose?.();
-                    }}
-                  />
-                </motion.div>
-              );
-            })}
-        </AnimatePresence>
-      </motion.div>
+      {createPortal(
+        <motion.div className={styles.notifications}>
+          <AnimatePresence>
+            {state.notifications
+              .slice()
+              .reverse()
+              .map((notification) => {
+                return (
+                  <motion.div
+                    layout="position"
+                    key={notification.id}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, transition: { delay: 0.1 } }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    transition={{ ease: "easeOut" }}
+                  >
+                    <Toast
+                      text={notification.text}
+                      type={notification.type}
+                      timeout={notification.timeout}
+                      actionBtnText={notification.actionBtnText}
+                      onAction={notification.onAction}
+                      data-testid={`notification-${notification.id}`}
+                      onClose={() => {
+                        deleteNotificationById(notification.id);
+                        notification.onClose?.();
+                      }}
+                    />
+                  </motion.div>
+                );
+              })}
+          </AnimatePresence>
+        </motion.div>,
+        document.body
+      )}
     </>
   );
 });
