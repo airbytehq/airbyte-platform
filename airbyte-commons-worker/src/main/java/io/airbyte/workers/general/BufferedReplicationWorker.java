@@ -482,7 +482,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
             replicationInput.getConnectionId().toString(),
             "destination",
             replicationInput.getDestinationLauncherConfig().getDockerImage(),
-            String.valueOf(source.getExitValue()));
+            String.valueOf(destination.getExitValue()));
         throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
       } else {
         replicationWorkerHelper.endOfDestination();
