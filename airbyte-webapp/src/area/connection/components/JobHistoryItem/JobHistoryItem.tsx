@@ -71,12 +71,16 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
               </div>
             }
           >
-            <JobLogsModal jobId={jobWithAttempts.job.id} initialAttemptId={initialAttemptId} />
+            <JobLogsModal
+              connectionId={connection.connectionId}
+              jobId={jobWithAttempts.job.id}
+              initialAttemptId={initialAttemptId}
+            />
           </Suspense>
         ),
       });
     },
-    [connection.name, formatMessage, jobWithAttempts.job.id, openModal]
+    [connection.connectionId, connection.name, formatMessage, jobWithAttempts.job.id, openModal]
   );
 
   const handleClick = (optionClicked: DropdownMenuOptionType) => {

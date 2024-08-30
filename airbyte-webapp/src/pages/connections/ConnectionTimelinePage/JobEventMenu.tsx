@@ -17,6 +17,7 @@ import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobEventMenu.module.scss";
 import { JobLogsModalContent } from "./JobLogsModalContent";
+import { TimelineFilterValues } from "./utils";
 
 enum JobMenuOptions {
   OpenLogsModal = "OpenLogsModal",
@@ -24,13 +25,14 @@ enum JobMenuOptions {
   DownloadLogs = "DownloadLogs",
 }
 
-export const openJobLogsModalFromTimeline = ({
+export const nextOpenJobLogsModal = ({
   openModal,
   jobId,
   eventId,
   connectionName,
   attemptNumber,
   connectionId,
+  setFilterValue,
 }: {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
   jobId?: number;
@@ -38,6 +40,7 @@ export const openJobLogsModalFromTimeline = ({
   connectionName: string;
   attemptNumber?: number;
   connectionId: string;
+  setFilterValue?: (filterName: keyof TimelineFilterValues, value: string) => void;
 }) => {
   if (!jobId && !eventId) {
     return;
@@ -62,6 +65,10 @@ export const openJobLogsModalFromTimeline = ({
         />
       </Suspense>
     ),
+  }).then((result) => {
+    if (result && setFilterValue) {
+      setFilterValue("openLogs", "");
+    }
   });
 };
 
@@ -81,7 +88,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   const onChangeHandler = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
       case JobMenuOptions.OpenLogsModal:
-        openJobLogsModalFromTimeline({
+        nextOpenJobLogsModal({
           openModal,
           jobId,
           eventId,

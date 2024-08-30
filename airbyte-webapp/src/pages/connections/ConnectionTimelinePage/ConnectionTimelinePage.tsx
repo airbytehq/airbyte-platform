@@ -17,7 +17,7 @@ import { useModalService } from "hooks/services/Modal";
 import { EventLineItem } from "./components/EventLineItem";
 import { ConnectionTimelineAllEventsList } from "./ConnectionTimelineAllEventsList";
 import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";
-import { openJobLogsModalFromTimeline } from "./JobEventMenu";
+import { nextOpenJobLogsModal } from "./JobEventMenu";
 import { TimelineFilterValues } from "./utils";
 
 const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eventId, connectionId }) => {
@@ -46,13 +46,14 @@ export const ConnectionTimelinePage = () => {
     const jobIdFromFilter = parseInt(filterValues.jobId ?? "");
     const attemptNumberFromFilter = parseInt(filterValues.attemptNumber ?? "");
 
-    openJobLogsModalFromTimeline({
+    nextOpenJobLogsModal({
       openModal,
       jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : undefined,
       eventId: filterValues.eventId,
       connectionName: connection.name,
       attemptNumber: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
       connectionId: connection.connectionId,
+      setFilterValue,
     });
   }
 
