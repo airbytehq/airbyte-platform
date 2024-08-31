@@ -341,8 +341,6 @@ describe("catalog diff modal", () => {
       </IntlProvider>
     );
 
-    screen.debug();
-
     expect(
       within(screen.getByTestId(`toggle-accordion-stream1-stream`)).queryByTestId("breakingChangeStream")
     ).toBeInTheDocument();
