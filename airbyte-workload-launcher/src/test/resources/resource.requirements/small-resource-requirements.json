@@ -1,0 +1,6 @@
+{
+  "cpu_limit": "1.0",
+  "cpu_request": "1.0",
+  "memory_limit": "4Gi",
+  "memory_request": "4Gi"
+}

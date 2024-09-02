@@ -263,26 +263,20 @@
   }
 
   &.typeHighlight {
-    background-color: colors.$yellow-50;
+    background-color: colors.$yellow-25;
     border: 1px solid colors.$yellow-300;
     color: colors.$inverse;
 
     & .buttonIcon {
-      &.isRegularIcon {
-        color: colors.$yellow-500;
-      }
-    }
-
-    &.isLoading {
       color: colors.$yellow-500;
     }
 
     &:hover {
-      background-color: colors.$yellow-100;
+      background-color: colors.$yellow-50;
     }
 
     &:active {
-      background-color: colors.$yellow-200;
+      background-color: colors.$yellow-100;
     }
   }
 

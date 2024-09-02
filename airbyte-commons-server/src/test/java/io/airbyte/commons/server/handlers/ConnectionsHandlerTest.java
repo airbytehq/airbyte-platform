@@ -1238,7 +1238,7 @@ class ConnectionsHandlerTest {
             .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalogForUpdate);
 
-        assertThrows(JsonValidationException.class, () -> connectionsHandler.updateConnection(connectionUpdate));
+        assertThrows(JsonValidationException.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
@@ -1260,7 +1260,7 @@ class ConnectionsHandlerTest {
             .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalogForUpdate);
 
-        assertThrows(JsonValidationException.class, () -> connectionsHandler.updateConnection(connectionUpdate));
+        assertThrows(JsonValidationException.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
@@ -1421,7 +1421,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1447,7 +1447,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1462,7 +1462,7 @@ class ConnectionsHandlerTest {
             .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalog);
 
-        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate));
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate, null, false));
       }
 
       @Test
@@ -1489,7 +1489,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1520,7 +1520,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1560,7 +1560,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1598,7 +1598,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1631,7 +1631,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
@@ -1685,7 +1685,7 @@ class ConnectionsHandlerTest {
 
         when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
-        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate);
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 
         final AirbyteCatalog expectedCatalogInRead = ConnectionHelpers.generateBasicApiCatalog();
         expectedCatalogInRead.getStreams().get(0).getStream().setName(AZKABAN_USERS);
@@ -1724,7 +1724,7 @@ class ConnectionsHandlerTest {
             .operationIds(Collections.singletonList(operationId))
             .syncCatalog(CatalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()));
 
-        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate));
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
@@ -1736,7 +1736,7 @@ class ConnectionsHandlerTest {
             .name("newName");
         when(catalogValidator.fieldCount(eq(catalog), any())).thenReturn(new ValidationError("bad catalog"));
 
-        assertThrows(BadRequestException.class, () -> connectionsHandler.updateConnection(request));
+        assertThrows(BadRequestException.class, () -> connectionsHandler.updateConnection(request, null, false));
       }
 
       @Test
@@ -1755,7 +1755,7 @@ class ConnectionsHandlerTest {
             .connectionId(moreComplexCatalogSync.getConnectionId())
             .syncCatalog(catalog);
         when(featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
-        connectionsHandler.updateConnection(request);
+        connectionsHandler.updateConnection(request, null, false);
         final Set<io.airbyte.config.StreamDescriptor> expectedStreams =
             Set.of(new io.airbyte.config.StreamDescriptor().withName("user"), new io.airbyte.config.StreamDescriptor().withName("permission"));
         verify(statePersistence).bulkDelete(moreComplexCatalogSync.getConnectionId(), expectedStreams);
@@ -2700,7 +2700,7 @@ class ConnectionsHandlerTest {
 
       final var spiedConnectionsHandler = spy(connectionsHandler);
       doReturn(diffResult).when(spiedConnectionsHandler).diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
-      doReturn(autoPropResult).when(spiedConnectionsHandler).applySchemaChange(CONNECTION_ID, WORKSPACE_ID, DISCOVERED_CATALOG_ID, catalog);
+      doReturn(autoPropResult).when(spiedConnectionsHandler).applySchemaChange(CONNECTION_ID, WORKSPACE_ID, DISCOVERED_CATALOG_ID, catalog, true);
 
       final var result = spiedConnectionsHandler.postprocessDiscoveredCatalog(CONNECTION_ID, DISCOVERED_CATALOG_ID);
 

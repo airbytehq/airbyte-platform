@@ -22,5 +22,17 @@
       background-color: colors.$grey-100;
       transform: translateX(-50%);
     }
+
+    &:empty {
+      // virtuoso cannot gracefully handle a <1px item inside an li, so we need to return a 1px tall empty item
+      // https://virtuoso.dev/troubleshooting/#i-get-error-zero-sized-element-this-should-not-happen
+      // https://github.com/petyosi/react-virtuoso/issues/35
+      height: 1px;
+
+      /* stylelint-disable-next-line no-descending-specificity */
+      &::before {
+        background-color: transparent;
+      }
+    }
   }
 }

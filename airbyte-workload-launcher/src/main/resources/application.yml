@@ -30,6 +30,8 @@ airbyte:
             access-key: AWS_ACCESS_KEY_ID
             secret-key: AWS_SECRET_ACCESS_KEY
             secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
+  container:
+    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
@@ -189,6 +191,9 @@ airbyte:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
       value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    keycloak-auth-client:
+      secret-name: ${KEYCLOAK_AUTH_CLIENT_SECRET_NAME:}
+      secret-key: ${KEYCLOAK_AUTH_CLIENT_SECRET_KEY:}
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}

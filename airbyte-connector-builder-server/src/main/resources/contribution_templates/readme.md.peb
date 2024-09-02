@@ -4,8 +4,9 @@ This directory contains the manifest-only connector for `{{connectorImageName}}`
 
 {{ description }}
 
-## Usage
 
+## Usage
+There are multiple ways to use this connector:
 - You can use this connector as any other connector in Airbyte Marketplace.
 - You can load this connector in `pyairbyte` using `get_source`!
 - You can open this connector in Connector Builder, edit it, and publish to your workspaces.

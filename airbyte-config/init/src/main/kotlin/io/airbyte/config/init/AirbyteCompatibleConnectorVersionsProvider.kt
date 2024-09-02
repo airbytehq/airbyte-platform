@@ -50,14 +50,15 @@ open class AirbyteCompatibleConnectorVersionsProvider(
           val compatibleConnectorVersionsMatrix = Jsons.deserialize(responseBody, AirbyteCompatibleConnectorVersionsMatrix::class.java)
           return compatibleConnectorVersionsMatrix?.convertToMap() ?: emptyMap()
         } else {
-          logger.error {
-            "Request to fetch platform compatibility matrix failed: ${response.code} with message: ${response.message}"
+          logger.warn {
+            "Disabling compatibility validation: request to fetch platform compatibility matrix failed: " +
+              "${response.code} with message: ${response.message}."
           }
           return emptyMap()
         }
       }
     } catch (e: Exception) {
-      logger.error(e) { "Failed to fetch remote platform compatibility file." }
+      logger.warn { "Disabling compatibility validation: failed to fetch remote platform compatibility file: ${e.message}" }
       return emptyMap()
     }
   }

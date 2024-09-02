@@ -164,7 +164,7 @@ class ConnectionServiceImpl(
     // this is kept as a string to easily parse the error response to determine if a source or a
     // destination id is invalid
     val result =
-      kotlin.runCatching { connectionHandler.updateConnection(connectionUpdate) }
+      kotlin.runCatching { connectionHandler.updateConnection(connectionUpdate, null, false) }
         .onFailure {
           log.error("Error while updating connection: ", it)
           ConfigClientErrorHandler.handleError(it)

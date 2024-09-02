@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.io.Resources;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -97,7 +96,6 @@ import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.commons.util.MoreProperties;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
@@ -105,7 +103,6 @@ import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.container.AirbyteTestContainer;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
-import java.io.File;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.URI;
@@ -158,9 +155,6 @@ public class AcceptanceTestHarness {
 
   private static final UUID DEFAULT_ORGANIZATION_ID = OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
   private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
-  // assume env file is one directory level up from airbyte-tests.
-  private static final File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
-
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
@@ -217,7 +211,6 @@ public class AcceptanceTestHarness {
   private static boolean isMinikube;
   private static boolean isGke;
   private static boolean isMac;
-  private static boolean useExternalDeployment;
   private static boolean ensureCleanSlate;
   private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
 
@@ -323,24 +316,7 @@ public class AcceptanceTestHarness {
         .withMaxRetries(MAX_TRIES)
         .build();
 
-    // by default use airbyte deployment governed by a test container.
-    if (!useExternalDeployment) {
-      LOGGER.info("Using deployment of airbyte managed by test containers.");
-      airbyteTestContainer = new AirbyteTestContainer.Builder(new File(Resources.getResource(DOCKER_COMPOSE_FILE_NAME).toURI()))
-          .setEnv(MoreProperties.envFileToProperties(ENV_FILE))
-          // override env VERSION to use dev to test current build of airbyte.
-          .setEnvVariable("VERSION", "dev")
-          // override to use test mounts.
-          .setEnvVariable("DATA_DOCKER_MOUNT", "airbyte_data_migration_test")
-          .setEnvVariable("DB_DOCKER_MOUNT", "airbyte_db_migration_test")
-          .setEnvVariable("WORKSPACE_DOCKER_MOUNT", "airbyte_workspace_migration_test")
-          .setEnvVariable("LOCAL_ROOT", "/tmp/airbyte_local_migration_test")
-          .setEnvVariable("LOCAL_DOCKER_MOUNT", "/tmp/airbyte_local_migration_test")
-          .build();
-      airbyteTestContainer.startBlocking();
-    } else {
-      LOGGER.info("Using external deployment of airbyte.");
-    }
+    LOGGER.info("Using external deployment of airbyte.");
   }
 
   public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId)
@@ -501,9 +477,6 @@ public class AcceptanceTestHarness {
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
     isGke = System.getenv().containsKey("IS_GKE");
     isMac = System.getProperty("os.name").startsWith("Mac");
-    useExternalDeployment =
-        System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
-            && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
     gcpProjectId = System.getenv("GCP_PROJECT_ID");

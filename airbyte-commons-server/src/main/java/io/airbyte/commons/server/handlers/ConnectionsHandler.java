@@ -116,6 +116,8 @@ import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.StreamStatusesService;
+import io.airbyte.data.services.shared.ConnectionAutoDisabledReason;
+import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -397,7 +399,8 @@ public class ConnectionsHandler {
       return new InternalOperationResult().succeeded(false);
     } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
       // disable connection if max consecutive failed jobs limit has been hit
-      disableConnection(standardSync, optionalLastJob.get());
+      autoDisableConnection(standardSync, optionalLastJob.get(),
+          ConnectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW);
       return new InternalOperationResult().succeeded(true);
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
@@ -414,7 +417,7 @@ public class ConnectionsHandler {
 
     // disable connection if only failed jobs in the past maxDaysOfOnlyFailedJobs days
     if (firstReplicationOlderThanMaxDisableDays && noPreviousSuccess) {
-      disableConnection(standardSync, optionalLastJob.get());
+      autoDisableConnection(standardSync, optionalLastJob.get(), ConnectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY);
       return new InternalOperationResult().succeeded(true);
     }
 
@@ -437,9 +440,14 @@ public class ConnectionsHandler {
     return new InternalOperationResult().succeeded(false);
   }
 
-  private void disableConnection(final StandardSync standardSync, final Job lastJob) throws IOException {
+  private void autoDisableConnection(final StandardSync standardSync, final Job lastJob, final ConnectionAutoDisabledReason disabledReason)
+      throws IOException {
+    // apply patch to connection
     standardSync.setStatus(Status.INACTIVE);
     configRepository.writeStandardSync(standardSync);
+    // log connection disabled event in connection timeline
+    connectionTimelineEventHelper.logStatusChangedEventInConnectionTimeline(standardSync.getConnectionId(), ConnectionStatus.INACTIVE,
+        disabledReason.name(), true);
 
     final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     for (final Attempt attempt : lastJob.getAttempts()) {
@@ -679,7 +687,7 @@ public class ConnectionsHandler {
     return metadata;
   }
 
-  public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch)
+  public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch, String updateReason, Boolean autoUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final UUID connectionId = connectionPatch.getConnectionId();
@@ -721,6 +729,11 @@ public class ConnectionsHandler {
     LOGGER.debug("final connectionRead: {}", updatedRead);
 
     trackUpdateConnection(sync);
+
+    // Log settings change event in connection timeline.
+    connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, initialConnectionRead, connectionPatch,
+        updateReason, autoUpdate);
+
     return updatedRead;
   }
 
@@ -1250,14 +1263,15 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog());
+    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog(), false);
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(
                                                          final UUID connectionId,
                                                          final UUID workspaceId,
                                                          final UUID catalogId,
-                                                         final AirbyteCatalog catalog)
+                                                         final AirbyteCatalog catalog,
+                                                         final Boolean autoApply)
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
     LOGGER.info("Applying schema change for connection '{}' only", connectionId);
@@ -1289,7 +1303,7 @@ public class ConnectionsHandler {
           diffToApply.getTransforms(),
           catalogId,
           connection.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
-      updateConnection(updateObject);
+      updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), autoApply);
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.getConnectionId(), catalogId);
       notificationHelper.notifySchemaPropagated(
@@ -1407,10 +1421,48 @@ public class ConnectionsHandler {
     final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
 
     final var autoPropResult =
-        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog());
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog(), true);
     final var diff = autoPropResult.getPropagatedDiff();
 
     return new PostprocessDiscoveredCatalogResult().appliedDiff(diff);
+  }
+
+  /**
+   *
+   * Disable the connection if: 1. there are schema breaking changes 2. there are non-breaking schema
+   * changes but the connection is configured to disable for any schema changes
+   *
+   */
+  public ConnectionRead updateSchemaChangesAndAutoDisableConnectionIfNeeded(final ConnectionRead connectionRead,
+                                                                            final boolean containsBreakingChange,
+                                                                            final CatalogDiff diff)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID connectionId = connectionRead.getConnectionId();
+    // Monitor the schema change detection
+    if (containsBreakingChange) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    } else {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    }
+    // Update connection
+    // 1. update flag for breaking changes
+    final var patch = new ConnectionUpdate()
+        .breakingChange(containsBreakingChange)
+        .connectionId(connectionId);
+    // 2. disable connection and log a timeline event (connection_disabled) if needed
+    ConnectionAutoDisabledReason autoDisabledReason = null;
+    if (containsBreakingChange) {
+      patch.status(ConnectionStatus.INACTIVE);
+      autoDisabledReason = ConnectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING;
+    } else if (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE
+        && AutoPropagateSchemaChangeHelper.containsChanges(diff)) {
+      patch.status(ConnectionStatus.INACTIVE);
+      autoDisabledReason = ConnectionAutoDisabledReason.DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES;
+    }
+    final var updated = updateConnection(patch, autoDisabledReason != null ? autoDisabledReason.name() : null, true);
+    return updated;
   }
 
   /**
@@ -1428,33 +1480,13 @@ public class ConnectionsHandler {
 
     final var diff = getDiff(connectionRead, discoveredCatalog);
     final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-
-    if (containsBreakingChange) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    } else {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    }
-
-    final var patch = new ConnectionUpdate()
-        .breakingChange(containsBreakingChange)
-        .connectionId(connectionId);
-
-    final var disableForNonBreakingChange = (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE);
-
-    if (containsBreakingChange || (disableForNonBreakingChange && AutoPropagateSchemaChangeHelper.containsChanges(diff))) {
-      patch.status(ConnectionStatus.INACTIVE);
-    }
-
-    final var updated = updateConnection(patch);
-
+    final ConnectionRead updatedConnection = updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
     return new SourceDiscoverSchemaRead()
         .breakingChange(containsBreakingChange)
         .catalogDiff(diff)
         .catalog(discoveredCatalog)
         .catalogId(discoveredCatalogId)
-        .connectionStatus(updated.getStatus());
+        .connectionStatus(updatedConnection.getStatus());
   }
 
   private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)

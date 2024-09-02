@@ -165,8 +165,8 @@ class DestinationDefinitionsHandlerTest {
         .withInternalSupportLevel(100L)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
-
-        .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")));
+        .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")))
+        .withLanguage("java");
   }
 
   private List<ActorDefinitionBreakingChange> generateBreakingChangesFromDestinationDefinition(final StandardDestinationDefinition destDef) {
@@ -186,7 +186,8 @@ class DestinationDefinitionsHandlerTest {
         .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-        .withAllowedHosts(null);
+        .withAllowedHosts(null)
+        .withLanguage("manifest-only");
   }
 
   private StandardDestinationDefinition generateDestinationDefinitionWithOptionals() {
@@ -226,7 +227,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionRead expectedDestinationDefinitionReadWithOpts = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinitionWithOptionals.getDestinationDefinitionId())
@@ -245,7 +247,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithOptionals.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersionWithOptionals.getLanguage());
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler.listDestinationDefinitions();
 
@@ -259,7 +262,8 @@ class DestinationDefinitionsHandlerTest {
   void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
+        .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -275,7 +279,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -296,7 +301,8 @@ class DestinationDefinitionsHandlerTest {
             .thenReturn(true);
 
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, hiddenDestinationDefinition));
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
+        .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -333,7 +339,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final PrivateDestinationDefinitionRead expectedDestinationDefinitionOptInRead1 =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead1).granted(false);
@@ -369,7 +376,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody = new DestinationDefinitionIdRequestBody()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
@@ -438,7 +446,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId = new DestinationDefinitionIdWithWorkspaceId()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -476,7 +485,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
         .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -539,7 +549,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate);
 
@@ -603,7 +614,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final DestinationDefinitionRead actualRead =
         destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
@@ -729,7 +741,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     assertEquals(expectedDestinationDefinitionRead, destinationRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
@@ -839,7 +852,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final PrivateDestinationDefinitionRead expectedPrivateDestinationDefinitionRead =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true);
@@ -875,7 +889,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .language(destinationDefinitionVersion.getLanguage());
 
     final PrivateDestinationDefinitionRead expectedPrivateDestinationDefinitionRead =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true);
@@ -929,7 +944,8 @@ class DestinationDefinitionsHandlerTest {
           .withAbInternal(new AbInternal().withSl(100L))
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
-          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+          .withLanguage("java");
       when(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
 
       final var destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions();

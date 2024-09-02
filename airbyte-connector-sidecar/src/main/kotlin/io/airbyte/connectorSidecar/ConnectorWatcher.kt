@@ -19,7 +19,7 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration
 import io.airbyte.workers.models.SidecarInput
-import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -53,7 +53,7 @@ class ConnectorWatcher(
   private val logContextFactory: SidecarLogContextFactory,
 ) {
   fun run() {
-    val input = Jsons.deserialize(readFile(OrchestratorConstants.SIDECAR_INPUT), SidecarInput::class.java)
+    val input = Jsons.deserialize(readFile(FileConstants.SIDECAR_INPUT_FILE), SidecarInput::class.java)
     withLoggingContext(logContextFactory.create(input.logPath)) {
       LineGobbler.startSection(input.operationType.toString())
       val checkConnectionConfiguration = input.checkConnectionInput
@@ -86,13 +86,13 @@ class ConnectorWatcher(
         }
         logger.info { "Connector exited, processing output" }
         val outputIS =
-          if (Files.exists(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))) {
-            logger.info { "Output file ${OrchestratorConstants.JOB_OUTPUT_FILENAME} found" }
-            Files.newInputStream(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))
+          if (Files.exists(Path.of(FileConstants.JOB_OUTPUT_FILE))) {
+            logger.info { "Output file ${FileConstants.JOB_OUTPUT_FILE} found" }
+            Files.newInputStream(Path.of(FileConstants.JOB_OUTPUT_FILE))
           } else {
             InputStream.nullInputStream()
           }
-        val exitCode = readFile(OrchestratorConstants.EXIT_CODE_FILE).trim().toInt()
+        val exitCode = readFile(FileConstants.EXIT_CODE_FILE).trim().toInt()
         logger.info { "Connector exited with $exitCode" }
         val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
         val connectorOutput: ConnectorJobOutput =
@@ -164,7 +164,7 @@ class ConnectorWatcher(
 
   @VisibleForTesting
   fun areNeededFilesPresent(): Boolean {
-    return Files.exists(outputPath) && Files.exists(Path.of(configDir, OrchestratorConstants.EXIT_CODE_FILE))
+    return Files.exists(outputPath) && Files.exists(Path.of(configDir, FileConstants.EXIT_CODE_FILE))
   }
 
   @VisibleForTesting

@@ -22,13 +22,20 @@ import styles from "./JobLogsModal.module.scss";
 import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
 
 interface JobLogsModalProps {
+  connectionId: string;
   jobId: number;
   initialAttemptId?: number;
   eventId?: string;
-  openedFromTimeline?: boolean;
+  connectionTimelineEnabled?: boolean;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, openedFromTimeline }) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({
+  jobId,
+  initialAttemptId,
+  eventId,
+  connectionId,
+  connectionTimelineEnabled,
+}) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
@@ -157,6 +164,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === firstMatchIndex ? lastMatchIndex : highlightedMatchIndex - 1);
     }
+    searchInputRef.current?.focus();
   };
 
   const scrollToNextMatch = () => {
@@ -168,19 +176,26 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === lastMatchIndex ? firstMatchIndex : highlightedMatchIndex + 1);
     }
+    searchInputRef.current?.focus();
   };
 
   // Focus the search input with cmd + f / ctrl + f
+  // Clear search input on `esc`, if search input is focused
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "f" && (navigator.platform.toLowerCase().includes("mac") ? e.metaKey : e.ctrlKey)) {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        if (inputValue.length > 0) {
+          e.preventDefault();
+          setInputValue("");
+        }
       }
     };
     document.body.addEventListener("keydown", handleKeyDown);
     return () => document.body.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [inputValue]);
 
   return (
     <FlexContainer direction="column" style={{ height: "100%" }}>
@@ -204,10 +219,11 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
           />
           <FlexContainer className={styles.downloadLogs}>
             <LinkToAttemptButton
+              connectionId={connectionId}
               jobId={jobId}
               attemptId={selectedAttemptId}
               eventId={eventId}
-              openedFromTimeline={openedFromTimeline}
+              connectionTimelineEnabled={connectionTimelineEnabled}
             />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>

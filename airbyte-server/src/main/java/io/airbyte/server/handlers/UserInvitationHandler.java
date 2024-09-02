@@ -17,12 +17,12 @@ import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.Permission;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
-import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -89,7 +89,7 @@ public class UserInvitationHandler {
     this.trackingClient = trackingClient;
   }
 
-  public UserInvitationRead getByInviteCode(final String inviteCode, final User currentUser) {
+  public UserInvitationRead getByInviteCode(final String inviteCode, final AuthenticatedUser currentUser) {
     final UserInvitation invitation = service.getUserInvitationByInviteCode(inviteCode);
 
     if (!invitation.getInvitedEmail().equals(currentUser.getEmail())) {
@@ -113,7 +113,7 @@ public class UserInvitationHandler {
    * address, depending on whether the email address is already associated with a User within the
    * relevant organization.
    */
-  public UserInvitationCreateResponse createInvitationOrPermission(final UserInvitationCreateRequestBody req, final User currentUser)
+  public UserInvitationCreateResponse createInvitationOrPermission(final UserInvitationCreateRequestBody req, final AuthenticatedUser currentUser)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final UserInvitationCreateResponse response;
@@ -133,7 +133,7 @@ public class UserInvitationHandler {
     }
   }
 
-  private void trackUserInvited(final UserInvitationCreateRequestBody requestBody, final User currentUser) {
+  private void trackUserInvited(final UserInvitationCreateRequestBody requestBody, final AuthenticatedUser currentUser) {
     try {
       switch (requestBody.getScopeType()) {
         case ORGANIZATION -> {
@@ -178,7 +178,7 @@ public class UserInvitationHandler {
    * requested organization. If any such users are found, a new permission is created for each user
    * via the {@link PermissionHandler}, and an email notification is sent to the email.
    */
-  private boolean attemptDirectAddEmailToOrg(final UserInvitationCreateRequestBody req, final User currentUser)
+  private boolean attemptDirectAddEmailToOrg(final UserInvitationCreateRequestBody req, final AuthenticatedUser currentUser)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final Optional<UUID> orgId = getOrgIdFromCreateRequest(req);
@@ -214,9 +214,8 @@ public class UserInvitationHandler {
   private Set<UUID> getOrgUserIdsWithEmail(final UUID orgId, final String email) throws IOException {
     log.info("orgId: " + orgId);
 
-    final Set<UUID> userIdsWithEmail = userPersistence.getUsersByEmail(email).stream()
-        .map(UserInfo::getUserId)
-        .collect(Collectors.toSet());
+    final Optional<User> userWithEmail = userPersistence.getUserByEmail(email);
+    final Set<UUID> userIdsWithEmail = userWithEmail.map(userInfo -> Set.of(userInfo.getUserId())).orElseGet(Set::of);
 
     log.info("userIdsWithEmail: " + userIdsWithEmail);
 
@@ -261,7 +260,7 @@ public class UserInvitationHandler {
    * this method only handles the path where the invited email address is not already associated with
    * a User inside the relevant organization.
    */
-  private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final User currentUser)
+  private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final AuthenticatedUser currentUser)
       throws InvitationDuplicateException {
     final UserInvitation model = mapper.toDomain(req);
 
@@ -309,7 +308,7 @@ public class UserInvitationHandler {
     }
   }
 
-  public UserInvitationRead accept(final InviteCodeRequestBody req, final User currentUser) {
+  public UserInvitationRead accept(final InviteCodeRequestBody req, final AuthenticatedUser currentUser) {
     final UserInvitation invitation = service.getUserInvitationByInviteCode(req.getInviteCode());
 
     if (!invitation.getInvitedEmail().equals(currentUser.getEmail())) {

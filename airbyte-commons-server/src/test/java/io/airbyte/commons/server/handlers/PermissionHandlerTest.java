@@ -24,10 +24,10 @@ import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.errors.ConflictException;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
@@ -123,7 +123,7 @@ class PermissionHandlerTest {
 
     private static final UUID ORGANIZATION_ID = UUID.randomUUID();
 
-    private static final User USER = new User()
+    private static final AuthenticatedUser USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withName("User")
@@ -229,7 +229,7 @@ class PermissionHandlerTest {
 
     private static final UUID ORGANIZATION_ID = UUID.randomUUID();
 
-    private static final User USER = new User()
+    private static final AuthenticatedUser USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withName("User")

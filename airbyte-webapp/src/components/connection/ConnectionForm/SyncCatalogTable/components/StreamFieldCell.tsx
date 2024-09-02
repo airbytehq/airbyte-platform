@@ -1,9 +1,7 @@
 import { Row } from "@tanstack/react-table";
-import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -16,7 +14,6 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import styles from "./StreamFieldCell.module.scss";
 import { TextHighlighter } from "./TextHighlighter";
 import {
   isChildFieldCursor as checkIsChildFieldCursor,
@@ -44,6 +41,10 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { formatMessage } = useIntl();
   const { mode } = useConnectionFormService();
+
+  if (!row.original.streamNode) {
+    return null;
+  }
 
   const {
     streamNode: { config, stream },
@@ -82,6 +83,10 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   };
 
   const onToggleFieldSelected = (fieldPath: string[], isSelected: boolean) => {
+    if (!row.original.streamNode) {
+      return;
+    }
+
     const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
     const updatedConfig = updateFieldSelected({
       config,
@@ -98,41 +103,39 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   };
 
   return (
-    <Box className={classnames(styles.secondDepth, { [styles.thirdDepth]: isNestedField })}>
-      <FlexContainer alignItems="center">
-        <FlexContainer alignItems="center" gap="xs">
-          {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
-          {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
-            <CheckBox
-              checkboxSize="sm"
-              checked={isFieldSelected}
-              disabled={isDisabled}
-              onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
-              data-testid="sync-field-checkbox"
-            />
-          )}
-          {showTooltip && !isNestedField && (
-            <Tooltip
-              control={
-                <FlexContainer alignItems="center">
-                  <CheckBox checkboxSize="sm" disabled checked={isFieldSelected} readOnly />
-                </FlexContainer>
-              }
-            >
-              {renderDisabledReasonMessage()}
-            </Tooltip>
-          )}
-        </FlexContainer>
-        <TextWithOverflowTooltip size="sm">
-          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
-        </TextWithOverflowTooltip>
-        <Text size="sm" color="grey300">
-          <FormattedMessage
-            id={`${getDataType(field)}`}
-            defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
+    <FlexContainer alignItems="center">
+      <FlexContainer alignItems="center" gap="xs">
+        {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
+        {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
+          <CheckBox
+            checkboxSize="sm"
+            checked={isFieldSelected}
+            disabled={isDisabled}
+            onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
+            data-testid="sync-field-checkbox"
           />
-        </Text>
+        )}
+        {showTooltip && !isNestedField && (
+          <Tooltip
+            control={
+              <FlexContainer alignItems="center">
+                <CheckBox checkboxSize="sm" disabled checked={isFieldSelected} readOnly />
+              </FlexContainer>
+            }
+          >
+            {renderDisabledReasonMessage()}
+          </Tooltip>
+        )}
       </FlexContainer>
-    </Box>
+      <TextWithOverflowTooltip size="sm">
+        <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
+      </TextWithOverflowTooltip>
+      <Text size="sm" color="grey300">
+        <FormattedMessage
+          id={`${getDataType(field)}`}
+          defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
+        />
+      </Text>
+    </FlexContainer>
   );
 };

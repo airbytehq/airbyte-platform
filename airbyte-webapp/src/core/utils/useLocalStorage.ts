@@ -20,6 +20,7 @@ interface AirbyteLocalStorage {
   "airbyte_workspace-in-title": boolean;
   "airbyte_extended-attempts-stats": boolean;
   "airbyte_connection-additional-details": boolean;
+  "airbyte_ai-assist-enabled-projects": string[];
 }
 
 /*

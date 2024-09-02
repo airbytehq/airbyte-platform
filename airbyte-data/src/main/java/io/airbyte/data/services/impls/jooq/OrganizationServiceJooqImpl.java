@@ -54,7 +54,7 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
   }
 
   @Override
-  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) throws IOException {
+  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) {
     throw new UnsupportedOperationException("Not implemented - use OrganizationServiceDataImpl instead");
   }
 

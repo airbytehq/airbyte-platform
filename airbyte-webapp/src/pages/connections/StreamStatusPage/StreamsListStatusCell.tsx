@@ -36,7 +36,7 @@ export const StatusCell: React.FC<CellContext<UIStreamState, StreamStatusType>> 
       className={styles.statusCell}
       data-testid="streams-list-status-cell-content"
     >
-      <StreamStatusIndicator status={props.cell.getValue()} />
+      <StreamStatusIndicator status={props.cell.getValue()} size="sm" />
       <FormattedMessage id={`connection.stream.status.${props.cell.getValue()}`} />
       {isRateLimited && (
         <>

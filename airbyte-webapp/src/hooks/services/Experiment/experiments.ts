@@ -18,12 +18,11 @@ export interface Experiments {
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
-  "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
-  "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
-  "connectorBuilder.contributeToMarketplace": boolean;
+  "connectorBuilder.contributeEditsToMarketplace": boolean;
+  "connectorBuilder.aiAssist.enabled": boolean;
   "billing.organizationBillingPage": boolean;
 }

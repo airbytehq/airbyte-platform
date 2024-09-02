@@ -5,6 +5,10 @@
   width: 100%;
 }
 
+.headerContainer {
+  margin-bottom: variables.$spacing-sm;
+}
+
 .optionalText {
   display: inline;
   color: colors.$grey-300;

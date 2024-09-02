@@ -9,12 +9,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
 import io.micronaut.security.authentication.Authentication;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Set;
 import okhttp3.Call;
@@ -143,6 +146,24 @@ class KeycloakTokenValidatorTest {
     StepVerifier.create(responsePublisher)
         .expectComplete()
         .verify();
+  }
+
+  @Test
+  void testTokenWithNoRealmIsPassedToNextValidator() throws URISyntaxException {
+    final URI uri = new URI(LOCALHOST + URI_PATH);
+
+    final String blankJWT = JWT.create().sign(Algorithm.none());
+
+    // set up mocked incoming request
+    final HttpRequest<?> httpRequest = mock(HttpRequest.class);
+    final NettyHttpHeaders headers = new NettyHttpHeaders();
+    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + blankJWT);
+    when(httpRequest.getUri()).thenReturn(uri);
+    when(httpRequest.getHeaders()).thenReturn(headers);
+
+    final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(blankJWT, httpRequest);
+    StepVerifier.create(responsePublisher)
+        .verifyComplete();
   }
 
   private boolean matchSuccessfulResponse(final Authentication authentication,

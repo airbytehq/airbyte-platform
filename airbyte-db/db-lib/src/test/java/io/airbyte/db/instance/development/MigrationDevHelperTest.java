@@ -4,22 +4,44 @@
 
 package io.airbyte.db.instance.development;
 
+import static io.airbyte.db.instance.development.MigrationDevHelper.AIRBYTE_VERSION_ENV_VAR;
+import static io.airbyte.db.instance.development.MigrationDevHelper.VERSION_ENV_VAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.airbyte.commons.version.AirbyteVersion;
 import java.util.Optional;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.ClearEnvironmentVariable;
+import org.junitpioneer.jupiter.SetEnvironmentVariable;
 
 @SuppressWarnings({"PMD.AvoidUsingHardCodedIP", "PMD.JUnitTestsShouldIncludeAssert"})
 class MigrationDevHelperTest {
 
   private static final String VERSION_0113_ALPHA = "0.11.3-alpha";
 
+  @SetEnvironmentVariable(key = AIRBYTE_VERSION_ENV_VAR,
+                          value = VERSION_0113_ALPHA)
   @Test
   void testGetCurrentAirbyteVersion() {
     // Test that this method will not throw any exception.
-    MigrationDevHelper.getCurrentAirbyteVersion();
+    assertEquals(VERSION_0113_ALPHA, MigrationDevHelper.getCurrentAirbyteVersion().serialize());
+  }
+
+  @SetEnvironmentVariable(key = VERSION_ENV_VAR,
+                          value = "dev")
+  @Test
+  void testGetCurrentAirbyteVersionFromFallbackEnv() {
+    // Test that this method will not throw any exception.
+    assertEquals("dev", MigrationDevHelper.getCurrentAirbyteVersion().serialize());
+  }
+
+  @ClearEnvironmentVariable(key = AIRBYTE_VERSION_ENV_VAR)
+  @ClearEnvironmentVariable(key = VERSION_ENV_VAR)
+  @Test
+  void testGetCurrentAirbyteVersionFailure() {
+    assertThrows(IllegalStateException.class, () -> MigrationDevHelper.getCurrentAirbyteVersion().toString());
   }
 
   @Test

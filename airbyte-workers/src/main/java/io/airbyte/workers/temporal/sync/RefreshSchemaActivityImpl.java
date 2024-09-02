@@ -19,7 +19,6 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -120,11 +119,6 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     final var workspaceId = input.getWorkspaceId();
     final var sourceId = input.getSourceCatalogId();
     final var connectionId = input.getConnectionId();
-    if (!featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(workspaceId))) {
-      // If we don't want to backfill on new columns, fall back to the original schema refresh.
-      refreshSchema(sourceId, connectionId);
-      return new RefreshSchemaActivityOutput(null);
-    }
     final var sourceDiscoverSchemaRead = discoverSchemaForRefresh(sourceId, connectionId);
     if (sourceDiscoverSchemaRead == null) {
       return new RefreshSchemaActivityOutput(null);

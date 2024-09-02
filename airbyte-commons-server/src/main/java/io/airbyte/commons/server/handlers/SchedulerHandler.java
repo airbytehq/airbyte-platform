@@ -19,7 +19,6 @@ import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
@@ -87,6 +86,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -535,7 +535,8 @@ public class SchedulerHandler {
             diff.getTransforms(),
             sourceAutoPropagateChange.getCatalogId(),
             connectionRead.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
-        connectionsHandler.updateConnection(updateObject);
+        connectionsHandler.updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(),
+            true);
         connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject.getConnectionId(), result);
         LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
@@ -701,29 +702,10 @@ public class SchedulerHandler {
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               CatalogConverter.toConfiguredInternal(currentAirbyteCatalog));
       final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-
-      if (containsBreakingChange) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
-      } else {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
-      }
-
-      final ConnectionUpdate updateObject =
-          new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
-
-      final ConnectionStatus connectionStatus;
-      if (shouldDisableConnection(containsBreakingChange, connectionRead.getNonBreakingChangesPreference(), diff)) {
-        connectionStatus = ConnectionStatus.INACTIVE;
-      } else {
-        connectionStatus = connectionRead.getStatus();
-      }
-      updateObject.status(connectionStatus);
-
-      connectionsHandler.updateConnection(updateObject);
+      final ConnectionRead updatedConnection =
+          connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
-        discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
+        discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(updatedConnection.getStatus());
       }
     }
   }
@@ -747,12 +729,6 @@ public class SchedulerHandler {
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;
-  }
-
-  private boolean shouldDisableConnection(final boolean containsBreakingChange,
-                                          final NonBreakingChangesPreference preference,
-                                          final CatalogDiff diff) {
-    return containsBreakingChange || (preference == NonBreakingChangesPreference.DISABLE && !diff.getTransforms().isEmpty());
   }
 
   private CheckConnectionRead reportConnectionStatus(final SynchronousResponse<StandardCheckConnectionOutput> response) {

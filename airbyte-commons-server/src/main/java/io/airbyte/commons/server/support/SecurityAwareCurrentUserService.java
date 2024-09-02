@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.support;
 
 import io.airbyte.commons.server.errors.AuthException;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
@@ -28,7 +28,7 @@ public class SecurityAwareCurrentUserService implements CurrentUserService {
 
   private final UserPersistence userPersistence;
   private final SecurityService securityService;
-  private User retrievedCurrentUser;
+  private AuthenticatedUser retrievedCurrentUser;
 
   public SecurityAwareCurrentUserService(final UserPersistence userPersistence,
                                          final SecurityService securityService) {
@@ -37,7 +37,7 @@ public class SecurityAwareCurrentUserService implements CurrentUserService {
   }
 
   @Override
-  public User getCurrentUser() {
+  public AuthenticatedUser getCurrentUser() {
     if (this.retrievedCurrentUser == null) {
       try {
         final String authUserId = securityService.username().orElseThrow();

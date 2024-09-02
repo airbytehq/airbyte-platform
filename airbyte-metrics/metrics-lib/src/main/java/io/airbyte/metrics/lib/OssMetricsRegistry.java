@@ -488,7 +488,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SYNC_WITH_EMPTY_CATALOG(MetricEmittingApps.ORCHESTRATOR,
       "sync_with_empty_catalog",
-      "Sync was started with an empty configured catalog.");
+      "Sync was started with an empty configured catalog."),
+
+  CONNECTOR_FAILURE_EXIT_VALUE(MetricEmittingApps.ORCHESTRATOR,
+      "connector_failure_exit_value",
+      "Count of failure exit codes produced by a connector.");
 
   private final MetricEmittingApp application;
   private final String metricName;

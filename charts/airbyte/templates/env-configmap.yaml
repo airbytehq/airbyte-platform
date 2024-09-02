@@ -162,13 +162,8 @@ data:
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
-  {{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.workloadsOptIn true)}}
   WORKLOAD_LAUNCHER_ENABLED: "true"
   WORKLOAD_API_SERVER_ENABLED: "true"
-  {{- else}}
-  WORKLOAD_LAUNCHER_ENABLED: "false"
-  WORKLOAD_API_SERVER_ENABLED: "false"
-  {{- end}}
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""

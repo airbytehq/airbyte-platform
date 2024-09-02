@@ -106,7 +106,7 @@ class DefaultAirbyteDestinationTest {
         WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
         Jsons.serialize(DESTINATION_CONFIG.getDestinationConnectionConfiguration()),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME,
-        Jsons.serialize(DESTINATION_CONFIG.getCatalog())))
+        new DefaultProtocolSerializer().serialize(DESTINATION_CONFIG.getCatalog(), false)))
             .thenReturn(process);
 
     when(process.isAlive()).thenReturn(true);

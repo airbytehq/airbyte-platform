@@ -21,8 +21,6 @@ describe(`${createUserContext.name}`, () => {
       userId: uuidV4(),
       name: "John Doe",
       email: "john.doe@airbyte.io",
-      authUserId: "auth_user_id_string",
-      authProvider: "google_identity_platform",
       defaultWorkspaceId: "123",
       metadata: {},
     };

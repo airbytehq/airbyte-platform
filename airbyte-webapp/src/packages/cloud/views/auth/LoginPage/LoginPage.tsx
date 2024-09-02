@@ -2,7 +2,7 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useSearchParams } from "react-router-dom";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";

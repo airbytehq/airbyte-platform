@@ -7,6 +7,9 @@ import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
+import { nextOpenJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ChartConfig.module.scss";
@@ -105,6 +108,8 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   const { offset, height } = chartState;
   const { top: offsetTop = 0, bottom: offsetBottom = 0 } = offset!;
   const availableHeight = height - offsetTop - offsetBottom;
+  const { openModal } = useModalService();
+  const isTimelineEnabled = useExperiment("connection.timeline", false);
 
   const { connection } = useConnectionEditService();
   const createLink = useCurrentWorkspaceLink();
@@ -120,17 +125,39 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   );
   const hash = jobId.toString();
 
+  const handleOpenLogs = () =>
+    nextOpenJobLogsModal({
+      openModal,
+      jobId,
+      connectionId: connection.connectionId,
+      connectionName: connection.name,
+    });
+
+  if (!isTimelineEnabled) {
+    return (
+      <Link to={`${pathname}#${hash}`}>
+        <rect
+          x={0}
+          y={offsetTop}
+          width="100%"
+          height={availableHeight}
+          fill="transparent"
+          data-testid="streams-graph-to-jobs-link"
+        />
+      </Link>
+    );
+  }
+
   return (
-    <Link to={`${pathname}#${hash}`}>
-      <rect
-        x={0}
-        y={offsetTop}
-        width="100%"
-        height={availableHeight}
-        fill="transparent"
-        data-testid="streams-graph-to-jobs-link"
-      />
-    </Link>
+    <rect
+      x={0}
+      y={offsetTop}
+      width="100%"
+      height={availableHeight}
+      fill="transparent"
+      data-testid="streams-graph-to-job-logs-modal"
+      onClick={handleOpenLogs}
+    />
   );
 };
 ClickToJob.displayName = "Customized"; // must be this to be rendered, via https://github.com/recharts/recharts/blob/e4dd3710642428692e2ebda5a51c0174f3a6f361/src/chart/generateCategoricalChart.tsx#L2336

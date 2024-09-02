@@ -2,7 +2,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import java.util.Properties
 import java.util.zip.ZipFile
 
 plugins {
@@ -80,19 +79,13 @@ dependencies {
   }
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass.set("io.airbyte.connectorSidecar.ApplicationKt")
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
         "MICRONAUT_ENVIRONMENTS" to "test"
       )

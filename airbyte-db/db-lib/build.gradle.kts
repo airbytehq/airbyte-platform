@@ -58,6 +58,16 @@ dependencies {
   testImplementation(libs.json.assert)
 }
 
+tasks.named<Test>("test") {
+  jvmArgs(
+    listOf(
+      // Required to use junit-pioneer @SetEnvironmentVariable
+      "--add-opens=java.base/java.util=ALL-UNNAMED",
+      "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
+  )
+}
+
 tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)

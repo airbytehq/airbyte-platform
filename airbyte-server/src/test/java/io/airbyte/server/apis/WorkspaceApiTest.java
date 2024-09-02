@@ -15,7 +15,7 @@ import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -42,7 +42,7 @@ class WorkspaceApiTest extends BaseControllerTest {
     Mockito.when(workspacesHandler.createWorkspace(Mockito.any()))
         .thenReturn(new WorkspaceRead());
 
-    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new User());
+    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new AuthenticatedUser());
 
     final String path = "/api/v1/workspaces/create";
 
@@ -71,7 +71,7 @@ class WorkspaceApiTest extends BaseControllerTest {
     Mockito.when(workspacesHandler.createWorkspaceIfNotExist(Mockito.any()))
         .thenReturn(new WorkspaceRead());
 
-    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new User());
+    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new AuthenticatedUser());
 
     final String path = "/api/v1/workspaces/create_if_not_exist";
 

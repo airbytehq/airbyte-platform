@@ -10,7 +10,6 @@ import { Text } from "components/ui/Text";
 
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { SimplfiedSchemaChangesFormField } from "./SimplfiedSchemaChangesFormField";
 import { SimplifiedBackfillFormField } from "./SimplifiedBackfillFormField";
@@ -39,7 +38,6 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const canBackfillNewColumns = useExperiment("platform.auto-backfill-on-new-columns", true);
 
   return (
     <Card title={title} className={styles.hideOverflow}>
@@ -92,7 +90,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
             {!isCreating && <SimplifiedDestinationStreamPrefixNameFormField disabled={isDeprecated} />}
             <SimplfiedSchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
             <SimplifiedSchemaChangeNotificationFormField disabled={isDeprecated} />
-            {canBackfillNewColumns && <SimplifiedBackfillFormField disabled={isDeprecated} />}
+            <SimplifiedBackfillFormField disabled={isDeprecated} />
           </FlexContainer>
         </Box>
 

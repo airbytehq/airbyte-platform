@@ -18,6 +18,7 @@ interface CodeEditorProps {
   automaticLayout?: boolean;
   showSuggestions?: boolean;
   paddingTop?: boolean;
+  disabled?: boolean;
   bubbleUpUndoRedo?: boolean;
 }
 
@@ -52,6 +53,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   paddingTop,
   showSuggestions = true,
   bubbleUpUndoRedo,
+  disabled,
 }) => {
   const monaco = useMonaco();
   const { colorValues } = useAirbyteTheme();
@@ -122,7 +124,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       height={height}
       options={{
         lineNumbersMinChars: lineNumberCharacterWidth ?? 2,
-        readOnly: readOnly ?? false,
+        readOnly: (readOnly || disabled) ?? false,
         automaticLayout,
         matchBrackets: "always",
         minimap: {

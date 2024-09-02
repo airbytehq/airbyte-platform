@@ -1,4 +1,5 @@
 import isBoolean from "lodash/isBoolean";
+import pick from "lodash/pick";
 import React, { useCallback, useEffect, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -27,12 +28,14 @@ import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { ModalResult, useModalService } from "hooks/services/Modal";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { ClearDataWarningModal } from "./ClearDataWarningModal";
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -78,6 +81,13 @@ const SchemaChangeMessage: React.FC = () => {
   return null;
 };
 
+const relevantConnectionKeys = [
+  "syncCatalog" as const,
+  "namespaceDefinition" as const,
+  "namespaceFormat" as const,
+  "prefix" as const,
+];
+
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
@@ -87,6 +97,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   const getStateType = useGetStateTypeQuery();
 
   const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
@@ -97,13 +108,14 @@ export const ConnectionReplicationPage: React.FC = () => {
     connection.destination.destinationId
   );
 
-  const validationSchema = useConnectionValidationSchema().pick(["syncCatalog"]);
+  type RelevantConnectionValues = Pick<ConnectionValues, (typeof relevantConnectionKeys)[number]>;
+  const validationSchema = useConnectionValidationSchema().pick(relevantConnectionKeys);
 
   const saveConnection = useCallback(
     async (values: Partial<ConnectionValues>, skipReset: boolean) => {
       await updateConnection({
-        syncCatalog: values.syncCatalog,
         connectionId: connection.connectionId,
+        ...(pick(values, relevantConnectionKeys) as RelevantConnectionValues),
         // required to update the catalog if a schema change w/transforms exists
         sourceCatalogId: connection.catalogId,
         skipReset,
@@ -113,7 +125,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   );
 
   const onFormSubmit = useCallback(
-    async (values: Pick<FormConnectionFormValues, "syncCatalog">) => {
+    async (values: RelevantConnectionValues) => {
       setSubmitError(null);
 
       /**
@@ -131,8 +143,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       // handler for modal -- saves connection w/ modal result taken into account
       async function handleModalResult(
         result: ModalResult<boolean>,
-        values: Pick<FormConnectionFormValues, "syncCatalog">,
-        saveConnection: (values: Pick<ConnectionValues, "syncCatalog">, skipReset: boolean) => Promise<void>
+        values: RelevantConnectionValues,
+        saveConnection: (values: RelevantConnectionValues, skipReset: boolean) => Promise<void>
       ) {
         if (result.type === "completed" && isBoolean(result.reason)) {
           // Save the connection taking into account the correct skipReset value from the dialog choice.
@@ -213,15 +225,34 @@ export const ConnectionReplicationPage: React.FC = () => {
     setScrollElement(ref);
   };
 
+  const onSuccess = () => {
+    registerNotification({
+      id: "connection_settings_change_success",
+      text: formatMessage({ id: "form.changesSaved" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error) => {
+    trackError(e, { connectionName: connection.name });
+    registerNotification({
+      id: "connection_settings_change_error",
+      text: formatMessage({ id: "connection.updateFailed" }),
+      type: "error",
+    });
+  };
+
   const newSyncCatalogV2Form = connection && (
     <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
-      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+      <Form<RelevantConnectionValues>
         defaultValues={initialValues}
         reinitializeDefaultValues
         schema={validationSchema}
         onSubmit={onFormSubmit}
         trackDirtyChanges
         disabled={mode === "readonly"}
+        onError={onError}
+        onSuccess={onSuccess}
       >
         <FlexContainer direction="column">
           <SchemaChangeMessage />
@@ -245,7 +276,7 @@ export const ConnectionReplicationPage: React.FC = () => {
         <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
       </ScrollableContainer>
     ) : !schemaRefreshing && connection ? (
-      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+      <Form<RelevantConnectionValues>
         defaultValues={initialValues}
         schema={validationSchema}
         onSubmit={onFormSubmit}

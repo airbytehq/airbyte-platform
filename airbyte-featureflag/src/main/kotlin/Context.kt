@@ -268,6 +268,10 @@ data class Priority(override val key: String) : Context {
   }
 }
 
+data class UserAgent(override val key: String) : Context {
+  override val kind: String = "user-agent"
+}
+
 // This is aimed to be used with the EnvFeatureFlag
 data object Empty : Context {
   override val kind: String = "empty"

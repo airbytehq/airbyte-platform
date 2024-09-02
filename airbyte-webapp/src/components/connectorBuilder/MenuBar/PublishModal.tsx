@@ -31,7 +31,6 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   useConnectorBuilderFormState,
@@ -39,6 +38,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishModal.module.scss";
+import { useExperiment } from "../../../hooks/services/Experiment";
 import { useBuilderWatch } from "../types";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -57,7 +57,7 @@ export const PublishModal: React.FC<{ onClose: () => void; initialPublishType: P
       {publishType === "workspace" ? (
         <PublishToWorkspace onClose={onClose} setPublishType={setPublishType} />
       ) : (
-        <ContributeToMarketplace onClose={onClose} setPublishType={setPublishType} />
+        <ContributeToAirbyte onClose={onClose} setPublishType={setPublishType} />
       )}
     </Modal>
   );
@@ -88,11 +88,11 @@ const PublishTypeSwitcher: React.FC<{
           },
           {
             value: "marketplace",
-            label: <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.label" />,
-            description: <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.description" />,
+            label: <FormattedMessage id="connectorBuilder.publishModal.toAirbyte.label" />,
+            description: <FormattedMessage id="connectorBuilder.publishModal.toAirbyte.description" />,
             disabled: isMarketplaceContributionActionDisabled,
             tooltipContent: isMarketplaceContributionActionDisabled ? (
-              <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.disabledDescription" />
+              <FormattedMessage id="connectorBuilder.publishModal.toAirbyte.disabledDescription" />
             ) : null,
           },
         ]}
@@ -204,8 +204,6 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
 
-  const isMarketplaceContributionEnabled = useExperiment("connectorBuilder.contributeToMarketplace", false);
-
   if (isLoadingVersions) {
     return (
       <ModalBody>
@@ -230,9 +228,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
     >
       <ModalBody>
         <FlexContainer direction="column" gap="xl">
-          {isMarketplaceContributionEnabled && (
-            <PublishTypeSwitcher selectedPublishType="workspace" setPublishType={setPublishType} />
-          )}
+          <PublishTypeSwitcher selectedPublishType="workspace" setPublishType={setPublishType} />
           <Message
             text={
               <FormattedMessage
@@ -299,15 +295,108 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   );
 };
 
-interface ContributeToMarketplaceFormValues {
+const PublishWarning: React.FC = () => {
+  const [showPublishWarning, setShowPublishWarning] = useLocalStorage("connectorBuilderPublishWarning", true);
+  if (!showPublishWarning) {
+    return null;
+  }
+  return (
+    <Message
+      type="warning"
+      text={<FormattedMessage id="connectorBuilder.warnPublishSecrets" />}
+      onClose={() => {
+        setShowPublishWarning(false);
+      }}
+    />
+  );
+};
+
+interface ContributeToAirbyteFormProps {
+  imageNameError: string | null;
+  setImageNameError: (error: string | null) => void;
+}
+
+const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ imageNameError, setImageNameError }) => {
+  const isEdit = useWatch({ name: "isEditing" });
+  const { formatMessage } = useIntl();
+  return (
+    <FlexContainer direction="column" gap="none">
+      <ConnectorImageNameInput imageNameError={imageNameError} setImageNameError={setImageNameError} />
+      <FormControl<ContributeToAirbyteFormValues>
+        name="name"
+        fieldType="input"
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorName.label" })}
+        containerControlClassName={styles.formControl}
+      />
+      <FormControl<ContributeToAirbyteFormValues>
+        name="description"
+        fieldType="textarea"
+        label={formatMessage({
+          id: isEdit
+            ? "connectorBuilder.contribution.modal.changeDescription.label"
+            : "connectorBuilder.contribution.modal.connectorDescription.label",
+        })}
+        labelTooltip={
+          <LabelInfo
+            label={formatMessage({
+              id: isEdit
+                ? "connectorBuilder.contribution.modal.changeDescription.label"
+                : "connectorBuilder.contribution.modal.connectorDescription.label",
+            })}
+            description={formatMessage({
+              id: isEdit
+                ? "connectorBuilder.contribution.modal.changeDescription.tooltip"
+                : "connectorBuilder.contribution.modal.connectorDescription.tooltip",
+            })}
+          />
+        }
+        containerControlClassName={styles.formControl}
+      />
+      <FormControl<ContributeToAirbyteFormValues>
+        name="githubToken"
+        fieldType="input"
+        type="password"
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.githubToken.label" })}
+        labelTooltip={
+          <LabelInfo
+            label={<FormattedMessage id="connectorBuilder.contribution.modal.githubToken.label" />}
+            description={
+              <ReactMarkdown>
+                {formatMessage({ id: "connectorBuilder.contribution.modal.githubToken.tooltip" })}
+              </ReactMarkdown>
+            }
+          />
+        }
+        containerControlClassName={styles.formControl}
+        description={
+          <FlexContainer justifyContent="space-between" alignItems="center">
+            <Text size="sm" color="grey400">
+              <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.subText" />
+            </Text>
+            <ExternalLink
+              href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic"
+              className={styles.githubTokenLink}
+              variant="primary"
+            >
+              <Icon type="export" />
+              <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.docsLink" />
+            </ExternalLink>
+          </FlexContainer>
+        }
+      />
+    </FlexContainer>
+  );
+};
+
+interface ContributeToAirbyteFormValues {
   name: string;
   connectorImageName: string;
   description?: string;
   githubToken: string;
+  isEditing: boolean;
 }
 
-const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublishType }) => {
-  const { formatMessage } = useIntl();
+const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishType }) => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const formatError = useFormatError();
   const connectorName = useBuilderWatch("name");
@@ -328,11 +417,11 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
     isLoading: isLoadingBaseImage,
   } = useGetBuilderProjectBaseImage({ manifest: jsonManifestWithCorrectedVersion });
 
+  // TODO: Remove image name error related code when editing is no longer behind a feature flag
   const [imageNameError, setImageNameError] = useState<string | null>(null);
   const { mutateAsync: generateContribution, isLoading: isSubmittingContribution } = useBuilderGenerateContribution();
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
-  const [showPublishWarning, setShowPublishWarning] = useLocalStorage("connectorBuilderPublishWarning", true);
 
   if (isLoadingBaseImage) {
     return (
@@ -373,7 +462,7 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
     );
   }
 
-  const handleSubmit = async (values: ContributeToMarketplaceFormValues) => {
+  const handleSubmit = async (values: ContributeToAirbyteFormValues) => {
     unregisterNotificationById(GENERATE_CONTRIBUTION_NOTIFICATION_ID);
 
     const jsonManifestWithDescription = {
@@ -409,9 +498,6 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
       ),
     });
 
-    // push name change upstream so it's updated
-    setValue("name", values.name);
-
     // save description to manifest
     if (mode === "yaml") {
       setValue("yaml", yamlManifest);
@@ -423,12 +509,13 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
   };
 
   return (
-    <Form<ContributeToMarketplaceFormValues>
+    <Form<ContributeToAirbyteFormValues>
       defaultValues={{
         name: connectorName,
         connectorImageName,
         description: jsonManifest.description,
         githubToken: "",
+        isEditing: false,
       }}
       schema={yup.object().shape({
         name: yup.string().required("form.empty.error"),
@@ -444,82 +531,17 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
             }
             return true;
           }),
-        description: yup.string(),
+        description: yup.string().required("form.empty.error"),
         githubToken: yup.string().required("form.empty.error"),
+        isEditing: yup.boolean().required("form.empty.error"),
       })}
       onSubmit={handleSubmit}
     >
       <ModalBody>
         <FlexContainer direction="column" gap="xl">
           <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />
-          {showPublishWarning && (
-            <Message
-              type="warning"
-              text={<FormattedMessage id="connectorBuilder.warnPublishSecrets" />}
-              onClose={() => {
-                setShowPublishWarning(false);
-              }}
-            />
-          )}
-          <FlexContainer direction="column" gap="none">
-            <FormControl<ContributeToMarketplaceFormValues>
-              name="name"
-              fieldType="input"
-              label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorName.label" })}
-              containerControlClassName={styles.formControl}
-            />
-            <ConnectorImageNameInput
-              connectorName={connectorName}
-              imageNameError={imageNameError}
-              setImageNameError={setImageNameError}
-            />
-            <FormControl<ContributeToMarketplaceFormValues>
-              name="description"
-              fieldType="textarea"
-              label={formatMessage({ id: "connectorBuilder.contribution.modal.description.label" })}
-              labelTooltip={
-                <LabelInfo
-                  label={<FormattedMessage id="connectorBuilder.contribution.modal.description.label" />}
-                  description={<FormattedMessage id="connectorBuilder.contribution.modal.description.tooltip" />}
-                  examples={["source-google-sheets", "source-big-query"]}
-                />
-              }
-              optional
-              containerControlClassName={styles.formControl}
-            />
-            <FormControl<ContributeToMarketplaceFormValues>
-              name="githubToken"
-              fieldType="input"
-              type="password"
-              label={formatMessage({ id: "connectorBuilder.contribution.modal.githubToken.label" })}
-              labelTooltip={
-                <LabelInfo
-                  label={<FormattedMessage id="connectorBuilder.contribution.modal.githubToken.label" />}
-                  description={
-                    <ReactMarkdown>
-                      {formatMessage({ id: "connectorBuilder.contribution.modal.githubToken.tooltip" })}
-                    </ReactMarkdown>
-                  }
-                />
-              }
-              containerControlClassName={styles.formControl}
-              description={
-                <FlexContainer justifyContent="space-between" alignItems="center">
-                  <Text size="sm" color="grey400">
-                    <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.subText" />
-                  </Text>
-                  <ExternalLink
-                    href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic"
-                    className={styles.githubTokenLink}
-                    variant="primary"
-                  >
-                    <Icon type="export" />
-                    <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.docsLink" />
-                  </ExternalLink>
-                </FlexContainer>
-              }
-            />
-          </FlexContainer>
+          <PublishWarning />
+          <ContributeToAirbyteForm imageNameError={imageNameError} setImageNameError={setImageNameError} />
         </FlexContainer>
       </ModalBody>
       <ModalFooter>
@@ -554,37 +576,49 @@ const convertConnectorNameToImageName = (connectorName: string) => {
 };
 
 const ConnectorImageNameInput: React.FC<{
-  connectorName: string;
   imageNameError: string | null;
   setImageNameError: (error: string | null) => void;
-}> = ({ connectorName, imageNameError, setImageNameError }) => {
+}> = ({ imageNameError, setImageNameError }) => {
   const { formatMessage } = useIntl();
   const fieldName = "connectorImageName";
 
-  const { trigger } = useFormContext();
+  const { trigger, setValue } = useFormContext();
   const [footer, setFooter] = useState<string | null>(null);
   const { getCachedCheck, fetchContributionCheck } = useBuilderCheckContribution();
+
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
 
   const updateErrorAndFooter = useCallback(
     (contributionCheck: CheckContributionRead) => {
       if (contributionCheck.connector_exists) {
-        setImageNameError(
-          contributionCheck?.connector_name
-            ? formatMessage(
-                { id: "connectorBuilder.contribution.modal.connectorAlreadyExistsWithName" },
-                { name: contributionCheck.connector_name }
-              )
-            : formatMessage({ id: "connectorBuilder.contribution.modal.connectorAlreadyExistsWithoutName" })
-        );
-        setFooter(null);
+        if (isContributeEditsEnabled) {
+          setValue("isEditing", true);
+          // Set the name to match the existing name to avoid unnecessary changes
+          setValue("name", contributionCheck.connector_name);
+          setFooter(
+            formatMessage(
+              { id: "connectorBuilder.contribution.modal.connectorAlreadyExists" },
+              { name: contributionCheck.connector_name }
+            )
+          );
+        } else {
+          setImageNameError(
+            contributionCheck?.connector_name
+              ? formatMessage(
+                  { id: "connectorBuilder.contribution.modal.connectorAlreadyExistsErrorWithName" },
+                  { name: contributionCheck.connector_name }
+                )
+              : formatMessage({ id: "connectorBuilder.contribution.modal.connectorAlreadyExistsErrorWithoutName" })
+          );
+          setFooter(null);
+        }
       } else {
+        setValue("isEditing", false);
         setImageNameError(null);
-        setFooter(
-          formatMessage({ id: "connectorBuilder.contribution.modal.connectorDoesNotExist" }, { name: connectorName })
-        );
+        setFooter(formatMessage({ id: "connectorBuilder.contribution.modal.connectorDoesNotExist" }));
       }
     },
-    [connectorName, formatMessage, setImageNameError]
+    [formatMessage, setImageNameError, isContributeEditsEnabled, setValue]
   );
 
   // An async function that debounces the call to fetchContributionCheck and resolves
@@ -638,7 +672,7 @@ const ConnectorImageNameInput: React.FC<{
   }, [imageNameError, trigger]);
 
   return (
-    <FormControl<ContributeToMarketplaceFormValues>
+    <FormControl<ContributeToAirbyteFormValues>
       name={fieldName}
       fieldType="input"
       label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorImageName.label" })}

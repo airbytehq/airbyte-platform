@@ -5,7 +5,9 @@ import { Box } from "components/ui/Box";
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
 
 import { ClearEventItem } from "./ClearEventItem";
-import styles from "./EventLineItem.module.scss";
+import { ConnectionDisabledEventItem } from "./ConnectionDisabledEventItem";
+import { ConnectionEnabledEventItem } from "./ConnectionEnabledEventItem";
+import { ConnectionSettingsUpdateEventItem } from "./ConnectionSettingsUpdateEventItem";
 import { JobStartEventItem } from "./JobStartEventItem";
 import { RefreshEventItem } from "./RefreshEventItem";
 import { RunningJobItem } from "./RunningJobItem";
@@ -18,10 +20,12 @@ import {
   refreshEventSchema,
   syncEventSchema,
   jobRunningSchema,
+  connectionEnabledEventSchema,
+  connectionDisabledEventSchema,
+  connectionSettingsUpdateEventSchema,
 } from "../types";
 
 export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof jobRunningSchema> }> = ({ event }) => {
-  // streams is only present at the top level on a ConnectionSyncProgressRead, not on the ConnectionEvent items
   if (jobRunningSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
     return (
       <Box py="lg" key={event.id}>
@@ -43,7 +47,7 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
   } else if (refreshEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
     return (
       <Box py="lg" key={event.id}>
-        <RefreshEventItem refreshEvent={event} key={event.id} />
+        <RefreshEventItem refreshEvent={event} />
       </Box>
     );
   } else if (clearEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
@@ -58,9 +62,24 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
         <JobStartEventItem jobStartEvent={event} />
       </Box>
     );
+  } else if (connectionEnabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionEnabledEventItem event={event} />
+      </Box>
+    );
+  } else if (connectionDisabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionDisabledEventItem event={event} />
+      </Box>
+    );
+  } else if (connectionSettingsUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionSettingsUpdateEventItem event={event} />
+      </Box>
+    );
   }
-  // virtuoso cannot gracefully handle a <1px item inside an li, so we need to return a 1px tall empty item
-  // https://virtuoso.dev/troubleshooting/#i-get-error-zero-sized-element-this-should-not-happen
-  // https://github.com/petyosi/react-virtuoso/issues/35
-  return <span className={styles.emptyItem} />;
+  return null;
 };

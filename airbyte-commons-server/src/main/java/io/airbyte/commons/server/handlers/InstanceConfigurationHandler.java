@@ -17,10 +17,10 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -147,7 +147,8 @@ public class InstanceConfigurationHandler {
   }
 
   private void updateDefaultUser(final InstanceConfigurationSetupRequestBody requestBody) throws IOException {
-    final User defaultUser = userPersistence.getDefaultUser().orElseThrow(() -> new IllegalStateException("Default user does not exist."));
+    final AuthenticatedUser defaultUser =
+        userPersistence.getDefaultUser().orElseThrow(() -> new IllegalStateException("Default user does not exist."));
     // email is a required request property, so always set it.
     defaultUser.setEmail(requestBody.getEmail());
 
@@ -156,7 +157,7 @@ public class InstanceConfigurationHandler {
       defaultUser.setName(requestBody.getUserName());
     }
 
-    userPersistence.writeUser(defaultUser);
+    userPersistence.writeAuthenticatedUser(defaultUser);
   }
 
   private Organization getDefaultOrganization() throws IOException {

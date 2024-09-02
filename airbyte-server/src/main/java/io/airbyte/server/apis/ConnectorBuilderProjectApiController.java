@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
@@ -97,7 +98,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/get_base_image")
   @Status(HttpStatus.OK)
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({AUTHENTICATED_USER})
   public DeclarativeManifestBaseImageRead getDeclarativeManifestBaseImage(@Body final DeclarativeManifestRequestBody requestBody) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody));
   }

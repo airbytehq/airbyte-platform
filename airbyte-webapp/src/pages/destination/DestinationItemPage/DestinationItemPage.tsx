@@ -3,10 +3,10 @@ import { useIntl } from "react-intl";
 import { Outlet, useParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
 import { StepsTypes } from "components/ConnectorBlocks";
+import { HeadTitle } from "components/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useGetDestinationFromParams } from "area/connector/utils";

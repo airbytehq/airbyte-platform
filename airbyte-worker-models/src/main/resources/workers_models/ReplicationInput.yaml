@@ -78,3 +78,7 @@ properties:
   taskQueue:
     description: the temporal task queue this replication will use
     type: string
+  destinationSupportsRefreshes:
+    description: whether the destination supports refreshes
+    type: boolean
+    default: false

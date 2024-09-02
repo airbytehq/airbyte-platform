@@ -33,10 +33,6 @@ object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
-object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = true)
-
-object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
-
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -60,8 +56,6 @@ object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakin
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
-
-object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
@@ -117,8 +111,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
     }
   }
 
-  object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
-
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
@@ -153,8 +145,6 @@ object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-s
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
 
 object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = false)
-
-object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
@@ -194,4 +184,19 @@ object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connecto
 
 object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
 
+object RefreshConfigBeforeSecretHydrationInitContainer : Temporary<Boolean>(
+  key = "platform.refresh-config-before-secret-hydration-init-container",
+  default = false,
+)
+
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
+
+object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
+
+object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = false)
+
+object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
+
+object ReplicationMonoPodMemoryTolerance : Temporary<Int>(key = "platform.replication-mono-pod-memory-tolerance-gb", default = 6)
+
+object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)

@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";

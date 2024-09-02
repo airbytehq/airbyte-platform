@@ -20,6 +20,7 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.guava)
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-protocol"))

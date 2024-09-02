@@ -6,8 +6,7 @@ package io.airbyte.container_orchestrator.orchestrator;
 
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.workers.process.KubePodProcess;
-import io.airbyte.workers.sync.OrchestratorConstants;
+import io.airbyte.workers.pod.FileConstants;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -23,7 +22,7 @@ public interface JobOrchestrator<INPUT> {
   Class<INPUT> getInputClass();
 
   default Path getConfigDir() {
-    return Path.of(KubePodProcess.CONFIG_DIR);
+    return Path.of(FileConstants.CONFIG_DIR);
   }
 
   /**
@@ -34,7 +33,7 @@ public interface JobOrchestrator<INPUT> {
    */
   default INPUT readInput() throws IOException {
     return Jsons.deserialize(
-        getConfigDir().resolve(OrchestratorConstants.INIT_FILE_INPUT).toFile(),
+        getConfigDir().resolve(FileConstants.INIT_INPUT_FILE).toFile(),
         getInputClass());
   }
 

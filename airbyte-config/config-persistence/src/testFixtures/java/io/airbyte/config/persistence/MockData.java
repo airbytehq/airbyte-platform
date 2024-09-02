@@ -20,6 +20,7 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
@@ -239,8 +240,8 @@ public class MockData {
       .withOrganizationId(DEFAULT_ORGANIZATION_ID)
       .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
-  public static List<User> users() {
-    final User user1 = new User()
+  public static List<AuthenticatedUser> users() {
+    final AuthenticatedUser user1 = new AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_1)
         .withName("user-1")
         .withAuthUserId(CREATOR_USER_ID_1.toString())
@@ -252,7 +253,7 @@ public class MockData {
         .withNews(true)
         .withUiMetadata(null);
 
-    final User user2 = new User()
+    final AuthenticatedUser user2 = new AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_2)
         .withName("user-2")
         .withAuthUserId(CREATOR_USER_ID_2.toString())
@@ -264,7 +265,7 @@ public class MockData {
         .withNews(false)
         .withUiMetadata(null);
 
-    final User user3 = new User()
+    final AuthenticatedUser user3 = new AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_3)
         .withName("user-3")
         .withAuthUserId(CREATOR_USER_ID_3.toString())
@@ -276,7 +277,7 @@ public class MockData {
         .withNews(true)
         .withUiMetadata(null);
 
-    final User user4 = new User()
+    final AuthenticatedUser user4 = new AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_4)
         .withName("user-4")
         .withAuthUserId(CREATOR_USER_ID_4.toString())
@@ -288,7 +289,7 @@ public class MockData {
         .withNews(true)
         .withUiMetadata(null);
 
-    final User user5 = new User()
+    final AuthenticatedUser user5 = new AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_5)
         .withName("user-5")
         .withAuthUserId(CREATOR_USER_ID_5.toString())
