@@ -70,6 +70,7 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
+  testImplementation(libs.jakarta.ws.rs.api)
 }
 
 airbyte {

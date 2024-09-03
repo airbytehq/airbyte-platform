@@ -64,7 +64,7 @@ export const JobStats: React.FC<JobStatsProps> = ({
   );
 };
 
-const StatSeparator = () => (
+export const StatSeparator = () => (
   <Text as="span" color="grey400" size="sm">
     |
   </Text>

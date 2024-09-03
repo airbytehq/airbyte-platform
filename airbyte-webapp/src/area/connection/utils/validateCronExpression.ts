@@ -2,7 +2,7 @@ const CRON_REGEX_MAP = [
   /^(([0-9]|,|-|\*|\/)+)$/, // seconds
   /^(([0-9]|,|-|\*|\/)+)$/, // minutes
   /^(([0-9]|,|-|\*|\/)+)$/, // hours
-  /^(([1-9]|,|-|\*|\/|\?|L|W)+)$/, // day of month
+  /^(([0-9]|,|-|\*|\/|\?|L|W)+)$/, // day of month
   /^(([1-9]|,|-|\*|\/|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)+)$/, // month
   /^(([1-7]|,|-|\*|\/|\?|L|#|SUN|MON|TUE|WED|THU|FRI|SAT|SUN)+)$/, // day of week
   /^(([0-9]|,|-|\*|\/)+)/, // year

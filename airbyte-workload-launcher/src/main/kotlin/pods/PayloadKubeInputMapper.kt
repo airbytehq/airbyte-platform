@@ -11,7 +11,6 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -85,8 +84,6 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildSyncFileMap(input)
-
     val runtimeEnvVars =
       listOf(
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
@@ -101,7 +98,6 @@ class PayloadKubeInputMapper(
       labeler.getDestinationLabels() + sharedLabels,
       nodeSelectors,
       orchestratorPodInfo,
-      fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
       runtimeEnvVars,
@@ -341,16 +337,6 @@ class PayloadKubeInputMapper(
     }
   }
 
-  private fun buildSyncFileMap(input: ReplicationInput): Map<String, String> {
-    val ffContext = Multi(listOf(Connection(input.connectionId), Workspace(input.workspaceId)))
-
-    return buildMap {
-      if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)) {
-        put(FileConstants.INIT_INPUT_FILE, serializer.serialize(input))
-      }
-    }
-  }
-
   private fun buildCheckFileMap(
     workloadId: String,
     input: CheckConnectionInput,
@@ -457,7 +443,6 @@ data class OrchestratorKubeInput(
   val destinationLabels: Map<String, String>,
   val nodeSelectors: Map<String, String>,
   val kubePodInfo: KubePodInfo,
-  val fileMap: Map<String, String>,
   val resourceReqs: AirbyteResourceRequirements?,
   val annotations: Map<String, String>,
   val extraEnv: List<EnvVar>,

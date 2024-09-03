@@ -23,6 +23,7 @@ dependencies {
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.http)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.flyway)
