@@ -9,7 +9,6 @@ import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.ReplicationMonoPod
 import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.Workspace
@@ -87,13 +86,6 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
-    // Whether we should kube cp init files over or let the init container fetch itself
-    // if true the init container will fetch, if false we copy over the files
-    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
-    // so we check the value here and pass it down.
-    val ffContext = Multi(listOf(Connection(replicationInput.connectionId), Workspace(replicationInput.workspaceId)))
-    val useFetchingInit = featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)
-
     var pod =
       orchestratorPodFactory.create(
         replicationInput.connectionId,
@@ -103,7 +95,6 @@ class KubePodClient(
         kubeInput.kubePodInfo,
         kubeInput.annotations,
         kubeInput.extraEnv,
-        useFetchingInit,
       )
     try {
       pod =
@@ -118,13 +109,7 @@ class KubePodClient(
       )
     }
 
-    if (!useFetchingInit) {
-      waitOrchestratorPodInit(pod)
-
-      copyFileToOrchestrator(kubeInput, pod)
-    } else {
-      waitForPodInitComplete(pod, PodType.ORCHESTRATOR.toString())
-    }
+    waitForPodInitComplete(pod, PodType.ORCHESTRATOR.toString())
 
     waitForOrchestratorStart(pod)
 
@@ -179,40 +164,6 @@ class KubePodClient(
     // If it blocks until it moves from PENDING, then we are good. Otherwise, we
     // need this or something similar to wait for the pod to be running on the node.
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
-  }
-
-  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
-  fun waitOrchestratorPodInit(orchestratorPod: Pod) {
-    try {
-      kubePodLauncher.waitForPodInitStartup(orchestratorPod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Init container of orchestrator pod failed to start within allotted timeout of ${POD_INIT_TIMEOUT_VALUE.seconds} seconds. " +
-          "(${e.message})",
-        e,
-        KubeCommandType.WAIT_INIT,
-        PodType.ORCHESTRATOR,
-      )
-    }
-  }
-
-  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
-  fun copyFileToOrchestrator(
-    kubeInput: OrchestratorKubeInput,
-    pod: Pod,
-  ) {
-    try {
-      kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}. (${e.message})",
-        e,
-        KubeCommandType.COPY,
-        PodType.ORCHESTRATOR,
-      )
-    }
   }
 
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
@@ -451,7 +402,7 @@ class KubePodClient(
 
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
-    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(1)
+    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(2)
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
     private const val BYTES_PER_GB = 1024 * 1024 * 1024

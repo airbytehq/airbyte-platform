@@ -51,7 +51,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -183,12 +182,9 @@ public class DestinationDefinitionsHandler {
                 new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = new HashMap<>();
-    for (final var definition : shownDestinationDefs) {
-      destinationDefVersionMap.put(definition.getDestinationDefinitionId(),
-          actorDefinitionVersionHelper.getDestinationVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
-    }
-    return toDestinationDefinitionReadList(shownDestinationDefs, destinationDefVersionMap);
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
+        actorDefinitionVersionHelper.getDestinationVersions(shownDestinationDefs, workspaceIdRequestBody.getWorkspaceId());
+    return toDestinationDefinitionReadList(shownDestinationDefs, sourceDefVersionMap);
   }
 
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)

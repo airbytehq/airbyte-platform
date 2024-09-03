@@ -13,6 +13,18 @@ enum class FieldType(val type: String, val format: String? = null, val airbyteTy
   ARRAY("array"),
   OBJECT("object"),
   MULTI("oneOf"),
+  ;
+
+  fun toMap(): Map<String, String> {
+    val result =
+      mutableMapOf(
+        "type" to type,
+      )
+    format?.let { result["format"] = it }
+    airbyteType?.let { result["airbyteType"] = it }
+
+    return result
+  }
 }
 
 /**

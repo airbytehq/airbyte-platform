@@ -16,7 +16,22 @@ import { isSameSyncStream } from "../utils";
 
 // Streams
 /**
- * Prepare all levels of rows: stream => fields => nestedFields
+ * Group streams by namespace
+ * @param streams Array of stream nodes
+ */
+const groupStreamsByNamespace = (streams: SyncStreamFieldWithId[]) => {
+  return streams.reduce((acc: Record<string, SyncStreamFieldWithId[]>, stream) => {
+    const namespace = stream.stream?.namespace || ""; // Use empty string if namespace is undefined
+    if (!acc[namespace]) {
+      acc[namespace] = [];
+    }
+    acc[namespace].push(stream);
+    return acc;
+  }, {});
+};
+
+/**
+ * Prepare all levels of rows: namespace => stream => fields => nestedFields
  * @param streams
  * @param initialStreams
  * @param prefix
@@ -25,41 +40,52 @@ export const getSyncCatalogRows = (
   streams: SyncStreamFieldWithId[],
   initialStreams: FormConnectionFormValues["syncCatalog"]["streams"],
   prefix?: string
-) =>
-  streams.map((streamNode) => {
-    const traversedFields = traverseSchemaToField(streamNode.stream?.jsonSchema, streamNode.stream?.name);
+) => {
+  const namespaceGroups = groupStreamsByNamespace(streams);
 
-    const initialStreamNode = initialStreams.find((item) =>
-      isSameSyncStream(item, streamNode.stream?.name, streamNode.stream?.namespace)
-    );
+  return Object.entries(namespaceGroups).map(([namespace, groupedStreams]) => ({
+    rowType: "namespace" as const,
+    name: namespace,
+    subRows: groupedStreams.map((streamNode) => {
+      const traversedFields = traverseSchemaToField(streamNode.stream?.jsonSchema, streamNode.stream?.name);
 
-    return {
-      streamNode,
-      initialStreamNode,
-      name: `${prefix ? prefix : ""}${streamNode.stream?.name || ""}`,
-      namespace: streamNode.stream?.namespace || "",
-      isEnabled: streamNode.config?.selected,
-      traversedFields, // we need all traversed fields for updating field
-      subRows: traversedFields.map((rowField) => ({
+      const initialStreamNode = initialStreams.find((item) =>
+        isSameSyncStream(item, streamNode.stream?.name, streamNode.stream?.namespace)
+      );
+
+      return {
+        rowType: "stream" as const,
         streamNode,
         initialStreamNode,
-        name: getFieldPathDisplayName(rowField.path),
-        field: rowField,
-        traversedFields,
-        subRows:
-          rowField?.fields &&
-          flattenSyncSchemaFields(rowField?.fields)?.map((nestedField) => ({
-            streamNode,
-            initialStreamNode,
-            name: getFieldPathDisplayName(nestedField.path),
-            field: nestedField,
-            traversedFields,
-          })),
-      })),
-    };
-  });
+        name: `${prefix ? prefix : ""}${streamNode.stream?.name || ""}`,
+        namespace: streamNode.stream?.namespace || "",
+        isEnabled: streamNode.config?.selected,
+        traversedFields, // we need all traversed fields for updating field
+        subRows: traversedFields.map((rowField) => ({
+          rowType: "field" as const,
+          streamNode,
+          initialStreamNode,
+          name: getFieldPathDisplayName(rowField.path),
+          field: rowField,
+          traversedFields,
+          subRows:
+            rowField?.fields &&
+            flattenSyncSchemaFields(rowField?.fields)?.map((nestedField) => ({
+              rowType: "nestedField" as const,
+              streamNode,
+              initialStreamNode,
+              name: getFieldPathDisplayName(nestedField.path),
+              field: nestedField,
+              traversedFields,
+            })),
+        })),
+      };
+    }),
+  }));
+};
 
-export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0;
+export const isNamespaceRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0 && row.original.rowType === "namespace";
+export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 1 && row.original.rowType === "stream";
 
 // Stream  Fields
 /*
@@ -174,7 +200,7 @@ export const getFieldChangeStatus = (
 export const getRowChangeStatus = (row: Row<SyncCatalogUIModel>) => {
   const { streamNode, initialStreamNode, field } = row.original;
 
-  if (!initialStreamNode) {
+  if (!initialStreamNode || !streamNode) {
     return {
       rowChangeStatus: "unchanged",
     };

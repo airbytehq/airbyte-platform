@@ -144,7 +144,6 @@ class ReplicationWorkerHelper(
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
-        Thread.sleep(heartbeatInterval.toMillis())
         ctx?.let {
           try {
             if (workloadId.isEmpty) {
@@ -162,6 +161,7 @@ class ReplicationWorkerHelper(
              * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
              */
             if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
+              logger.warn(e) { "Cancelling sync, workload is in a terminal state" }
               metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
@@ -176,6 +176,7 @@ class ReplicationWorkerHelper(
             logger.warn(e) { "Error while trying to heartbeat, re-trying" }
           }
         }
+        Thread.sleep(heartbeatInterval.toMillis())
       } while (true)
     }
   }

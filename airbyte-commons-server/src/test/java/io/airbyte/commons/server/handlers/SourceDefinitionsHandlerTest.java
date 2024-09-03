@@ -284,9 +284,11 @@ class SourceDefinitionsHandlerTest {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
-        .thenReturn(sourceDefinitionVersion2);
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(sourceDefinition, sourceDefinition2), workspaceId))
+        .thenReturn(
+            Map.of(
+                sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
+                sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -341,9 +343,10 @@ class SourceDefinitionsHandlerTest {
 
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(hiddenSourceDefinition, sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
-        .thenReturn(sourceDefinitionVersion2);
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(sourceDefinition, sourceDefinition2), workspaceId))
+        .thenReturn(Map.of(
+            sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
+            sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
         sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));

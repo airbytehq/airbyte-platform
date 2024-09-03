@@ -6,7 +6,9 @@ exports[`CreateConnectionForm should render 1`] = `
     <div
       class="<removed-for-snapshot-test>"
     >
-      <form>
+      <form
+        class="<removed-for-snapshot-test>"
+      >
         <fieldset
           class="<removed-for-snapshot-test>"
         >
@@ -1038,10 +1040,10 @@ exports[`CreateConnectionForm should render 1`] = `
         </fieldset>
       </form>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -1083,10 +1085,10 @@ This should take less than a minute, but may take a few minutes on slow internet
         </p>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -1154,9 +1156,9 @@ exports[`CreateConnectionForm should render with an error 1`] = `
         </div>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;

@@ -24,9 +24,12 @@ interface NextPKCellProps {
 }
 
 export const PKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) => {
-  const { config, stream } = row.original.streamNode;
   const { errors } = useFormState<FormConnectionFormValues>();
 
+  if (!row.original.streamNode) {
+    return null;
+  }
+  const { config, stream } = row.original.streamNode;
   const { pkRequired, shouldDefinePk } = checkCursorAndPKRequirements(config!, stream!);
   const pkType = getFieldPathType(pkRequired, shouldDefinePk);
 
@@ -50,7 +53,7 @@ export const PKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) =>
       selectedPKs.map((pk) => [pk]),
       numberOfFieldsInStream
     );
-    updateStreamField(row.original.streamNode, updatedConfig);
+    updateStreamField(row.original.streamNode!, updatedConfig);
   };
 
   return config?.selected && pkType ? (

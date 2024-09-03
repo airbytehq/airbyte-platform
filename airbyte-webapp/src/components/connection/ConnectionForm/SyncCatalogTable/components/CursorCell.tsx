@@ -26,8 +26,12 @@ interface NextCursorCellProps {
 }
 
 export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamField }) => {
-  const { config, stream } = row.original.streamNode;
   const { errors } = useFormState<FormConnectionFormValues>();
+
+  if (!row.original?.streamNode) {
+    return null;
+  }
+  const { config, stream } = row.original.streamNode;
 
   const { cursorRequired, shouldDefineCursor } = checkCursorAndPKRequirements(config!, stream!);
   const cursorType = getFieldPathType(cursorRequired, shouldDefineCursor);
@@ -54,7 +58,7 @@ export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamFie
   const onChange = (cursor: string) => {
     const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
     const updatedConfig = updateCursorField(config!, [cursor], numberOfFieldsInStream);
-    updateStreamField(row.original.streamNode, updatedConfig);
+    updateStreamField(row.original.streamNode!, updatedConfig);
   };
 
   return config?.selected && cursorType ? (

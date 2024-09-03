@@ -39,7 +39,7 @@ export const useInitialRowIndex = (rows: Array<Row<SyncCatalogUIModel>>): FlatIn
 
     return {
       index: rows.findIndex((row) =>
-        isSameSyncStream(row.original.streamNode, locationState?.streamName, locationState?.namespace)
+        isSameSyncStream(row.original.streamNode!, locationState?.streamName, locationState?.namespace)
       ),
       align: "center",
     };

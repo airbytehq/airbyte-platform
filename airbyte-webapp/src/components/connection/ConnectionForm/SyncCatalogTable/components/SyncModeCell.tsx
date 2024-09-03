@@ -1,5 +1,5 @@
 import { Row } from "@tanstack/react-table";
-import React, { useCallback } from "react";
+import React from "react";
 
 import { useGetDestinationDefinitionSpecification } from "core/api";
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
@@ -22,19 +22,20 @@ export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamFie
     connection.destination.destinationId
   );
 
+  if (!row.original.streamNode) {
+    return null;
+  }
+
   const { stream, config } = row.original.streamNode;
 
-  const onSelectSyncMode = useCallback(
-    (syncMode: SyncModeValue) => {
-      if (!stream || !config) {
-        return;
-      }
+  const onSelectSyncMode = (syncMode: SyncModeValue) => {
+    if (!stream || !config) {
+      return;
+    }
 
-      const updatedConfig = updateStreamSyncMode(stream, config, syncMode);
-      updateStreamField(row.original.streamNode, updatedConfig);
-    },
-    [config, row.original, stream, updateStreamField]
-  );
+    const updatedConfig = updateStreamSyncMode(stream, config, syncMode);
+    updateStreamField(row.original.streamNode!, updatedConfig);
+  };
 
   const availableSyncModes: SyncModeValue[] = SUPPORTED_MODES.filter(
     ([syncMode, destinationSyncMode]) =>

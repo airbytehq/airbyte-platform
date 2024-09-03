@@ -57,6 +57,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
     return validateTokenWithKeycloak(token)
         .flatMap(valid -> {
           if (valid) {
+            log.debug("Token is valid, will now getAuthentication for token: {}", token);
             return Mono.just(getAuthentication(token, request));
           } else {
             // pass to the next validator, if one exists
@@ -102,10 +103,19 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       log.error("Failed to parse realm from JWT token: {}", token, e);
       return Mono.just(false);
     }
+
+    if (realm == null) {
+      log.debug("Unable to extract realm from token {}", token);
+      return Mono.just(false);
+    }
+
+    final String userInfoEndpoint = keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm);
+    log.debug("Validating token with Keycloak userinfo endpoint: {}", userInfoEndpoint);
+
     final okhttp3.Request request = new Request.Builder()
         .addHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, "application/json")
         .addHeader(org.apache.http.HttpHeaders.AUTHORIZATION, "Bearer " + token)
-        .url(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm))
+        .url(userInfoEndpoint)
         .get()
         .build();
 
@@ -113,6 +123,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       if (response.isSuccessful()) {
         assert response.body() != null;
         final String responseBody = response.body().string();
+        log.debug("Response from userinfo endpoint: {}", responseBody);
         return validateUserInfo(responseBody);
       } else {
         log.warn("Non-200 response from userinfo endpoint: {}", response.code());

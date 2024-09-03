@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==4.6.1
+airbyte-cdk==4.6.2
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
@@ -82,7 +82,9 @@ markupsafe==2.1.5
 nltk==3.8.1
     # via airbyte-cdk
 orjson==3.10.7
-    # via langsmith
+    # via
+    #   airbyte-cdk
+    #   langsmith
 packaging==23.2
     # via langchain-core
 pendulum==2.1.2

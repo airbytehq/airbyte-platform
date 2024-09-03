@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.ClosableLinkedBlockingQueue;
 import io.airbyte.commons.concurrency.ClosableQueue;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
@@ -355,15 +356,16 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         source.cancel();
       }
 
-      if (source.getExitValue() == 0) {
+      final int exitValue = source.getExitValue();
+      if (exitValue == 0) {
         replicationWorkerHelper.endOfSource();
       } else {
         recordErrorExitValue(
             replicationInput.getConnectionId().toString(),
             "source",
             replicationInput.getSourceLauncherConfig().getDockerImage(),
-            String.valueOf(source.getExitValue()));
-        throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
+            String.valueOf(exitValue));
+        throw new SourceException("Source process exited with non-zero exit code " + exitValue);
       }
     } catch (final SourceException e) {
       LOGGER.info("readFromSource: source exception", e);
@@ -477,13 +479,15 @@ public class BufferedReplicationWorker implements ReplicationWorker {
           }
         }
       }
-      if (destination.getExitValue() != 0) {
+
+      final int exitValue = destination.getExitValue();
+      if (exitValue != 0) {
         recordErrorExitValue(
             replicationInput.getConnectionId().toString(),
             "destination",
             replicationInput.getDestinationLauncherConfig().getDockerImage(),
-            String.valueOf(source.getExitValue()));
-        throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
+            String.valueOf(exitValue));
+        throw new DestinationException("Destination process exited with non-zero exit code " + exitValue);
       } else {
         replicationWorkerHelper.endOfDestination();
       }
@@ -543,7 +547,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         new MetricAttribute("connection_id", connectionId),
         new MetricAttribute("connector", connectorType),
         new MetricAttribute("image", connectorImage),
-        new MetricAttribute("exit_value", exitValue));
+        new MetricAttribute("exit_value", exitValue),
+        new MetricAttribute("execution_mode", Boolean.parseBoolean(EnvVar.MONO_POD.fetch(Boolean.FALSE.toString())) ? "mono-pod" : "triplet"));
   }
 
 }

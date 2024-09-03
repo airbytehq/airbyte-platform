@@ -28,12 +28,14 @@ import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { ModalResult, useModalService } from "hooks/services/Modal";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { ClearDataWarningModal } from "./ClearDataWarningModal";
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -95,6 +97,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   const getStateType = useGetStateTypeQuery();
 
   const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
@@ -222,6 +225,23 @@ export const ConnectionReplicationPage: React.FC = () => {
     setScrollElement(ref);
   };
 
+  const onSuccess = () => {
+    registerNotification({
+      id: "connection_settings_change_success",
+      text: formatMessage({ id: "form.changesSaved" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error) => {
+    trackError(e, { connectionName: connection.name });
+    registerNotification({
+      id: "connection_settings_change_error",
+      text: formatMessage({ id: "connection.updateFailed" }),
+      type: "error",
+    });
+  };
+
   const newSyncCatalogV2Form = connection && (
     <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
       <Form<RelevantConnectionValues>
@@ -231,6 +251,8 @@ export const ConnectionReplicationPage: React.FC = () => {
         onSubmit={onFormSubmit}
         trackDirtyChanges
         disabled={mode === "readonly"}
+        onError={onError}
+        onSuccess={onSuccess}
       >
         <FlexContainer direction="column">
           <SchemaChangeMessage />

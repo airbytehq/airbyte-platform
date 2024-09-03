@@ -3,13 +3,8 @@ package {{package}};
 {{#imports}}import {{import}};
 {{/imports}}
 
-import io.micronaut.http.annotation.Body;
-import io.micronaut.http.annotation.RequestAttribute;
-import io.micronaut.http.annotation.Body;
-
 import {{javaxPackage}}.ws.rs.*;
 import {{javaxPackage}}.ws.rs.core.Response;
-import {{javaxPackage}}.annotation.Nullable;
 
 {{#useSwaggerAnnotations}}
 import io.swagger.annotations.*;
@@ -25,12 +20,14 @@ import java.util.List;
 {{#useBeanValidation}}import {{javaxPackage}}.validation.constraints.*;
 import {{javaxPackage}}.validation.Valid;{{/useBeanValidation}}
 
+/**
+* Represents a collection of functions to interact with the API endpoints.
+*/
 @Path("{{contextPath}}{{commonPath}}"){{#useSwaggerAnnotations}}
 @Api(description = "the {{{baseName}}} API"){{/useSwaggerAnnotations}}{{#hasConsumes}}
 @Consumes({ {{#consumes}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/consumes}} }){{/hasConsumes}}{{#hasProduces}}
 @Produces({ {{#produces}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/produces}} }){{/hasProduces}}
 {{>generatedAnnotation}}
-
 public {{#interfaceOnly}}interface{{/interfaceOnly}}{{^interfaceOnly}}class{{/interfaceOnly}} {{classname}} {
 {{#operations}}
 {{#operation}}

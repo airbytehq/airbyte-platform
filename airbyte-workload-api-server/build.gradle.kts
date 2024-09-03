@@ -27,6 +27,7 @@ dependencies {
   implementation(libs.bundles.temporal.telemetry)
   implementation(libs.log4j.impl)
   implementation(libs.micronaut.jaxrs.server)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.okhttp)
   implementation(libs.v3.swagger.annotations)

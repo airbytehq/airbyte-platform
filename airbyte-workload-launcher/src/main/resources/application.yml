@@ -191,6 +191,9 @@ airbyte:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
       value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    keycloak-auth-client:
+      secret-name: ${KEYCLOAK_AUTH_CLIENT_SECRET_NAME:}
+      secret-key: ${KEYCLOAK_AUTH_CLIENT_SECRET_KEY:}
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
