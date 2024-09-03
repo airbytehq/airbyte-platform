@@ -178,11 +178,7 @@ object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
 
-object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator-fetches-from-init", default = false)
-
 object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
-
-object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
 
 object RefreshConfigBeforeSecretHydrationInitContainer : Temporary<Boolean>(
   key = "platform.refresh-config-before-secret-hydration-init-container",

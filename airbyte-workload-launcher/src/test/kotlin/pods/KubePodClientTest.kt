@@ -11,7 +11,6 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.ReplicationMonoPod
 import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.TestClient
@@ -164,8 +163,6 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
 
-    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns true
-
     every {
       orchestratorPodFactory.create(
         any(),
@@ -175,7 +172,6 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
-        any(),
       )
     } returns pod
 
@@ -202,11 +198,8 @@ class KubePodClientTest {
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
   }
 
-  @ValueSource(booleans = [true, false])
-  @ParameterizedTest
-  fun `launchReplication starts an orchestrator and waits on all 3 pods`(useFetchingInit: Boolean) {
-    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns useFetchingInit
-
+  @Test
+  fun `launchReplication starts an orchestrator and waits on all 3 pods`() {
     val orchestrator =
       PodBuilder()
         .withNewMetadata()
@@ -223,7 +216,6 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
-        useFetchingInit,
       )
     } returns orchestrator
 
@@ -231,14 +223,11 @@ class KubePodClientTest {
 
     verify { launcher.create(orchestrator) }
 
-    val expectedTimesForKubeCpCalls = if (useFetchingInit) 0 else 1
-    val expectedTimesForInitCompleteWaitCalls = if (useFetchingInit) 1 else 0
+    verify(exactly = 0) { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
 
-    verify(exactly = expectedTimesForKubeCpCalls) { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
+    verify(exactly = 0) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, any()) }
 
-    verify(exactly = expectedTimesForKubeCpCalls) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, replKubeInput.fileMap) }
-
-    verify(exactly = expectedTimesForInitCompleteWaitCalls) { launcher.waitForPodInitComplete(orchestrator, POD_INIT_TIMEOUT_VALUE) }
+    verify(exactly = 1) { launcher.waitForPodInitComplete(orchestrator, POD_INIT_TIMEOUT_VALUE) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
@@ -249,8 +238,6 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication starts an orchestrator and waits on all 2 pods for resets`() {
-    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
-
     val orchestrator =
       PodBuilder()
         .withNewMetadata()
@@ -267,15 +254,14 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
-        false,
       )
     } returns orchestrator
 
     client.launchReplication(resetInput, replLauncherInput)
 
-    verify { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
+    verify(exactly = 0) { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
 
-    verify { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, replKubeInput.fileMap) }
+    verify(exactly = 0) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, any()) }
 
     verify(exactly = 0) { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
@@ -297,28 +283,6 @@ class KubePodClientTest {
   @Test
   fun `launchReplication propagates orchestrator creation error`() {
     every { launcher.create(any()) } throws RuntimeException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchReplication(replInput, replLauncherInput)
-    }
-  }
-
-  // TODO: delete once OrchestratorFetchesInputFromInit rolled out
-  @Test
-  fun `launchReplication propagates orchestrator wait for init error`() {
-    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
-    every { launcher.waitForPodInitStartup(pod, POD_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchReplication(replInput, replLauncherInput)
-    }
-  }
-
-  // TODO: delete once OrchestratorFetchesInputFromInit rolled out
-  @Test
-  fun `launchReplication propagates orchestrator copy file map error`() {
-    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
-    every { launcher.copyFilesToKubeConfigVolumeMain(any(), replKubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
       client.launchReplication(replInput, replLauncherInput)
@@ -664,7 +628,6 @@ class KubePodClientTest {
         any(),
         kubeInput.annotations,
         kubeInput.orchestratorRuntimeEnvVars,
-        any(),
       )
     } returns pod
 
@@ -673,7 +636,7 @@ class KubePodClientTest {
       launcherInput = replLauncherInput,
     )
 
-    verify(exactly = 1) { orchestratorPodFactory.create(any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { orchestratorPodFactory.create(any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { launcher.create(pod) }
     verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
   }
@@ -722,7 +685,6 @@ class KubePodClientTest {
         mapOf("test-dest-label" to "val3"),
         mapOf("test-selector" to "val4"),
         KubePodInfo("test-namespace", "test-name", null),
-        mapOf("test-file" to "val5"),
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
         mapOf("test-annotation" to "val6"),
         listOf(EnvVar("extra-env", "val7", null)),

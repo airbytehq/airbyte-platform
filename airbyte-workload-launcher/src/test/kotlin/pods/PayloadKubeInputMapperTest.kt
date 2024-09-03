@@ -13,7 +13,6 @@ import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -57,9 +56,6 @@ class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a replication payload (orchestrator)`(customConnector: Boolean) {
-    // I'm overloading this parameter to exercise the FF. The FF check will be removed shortly
-    val shouldKubeCpInput = customConnector
-
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
@@ -77,7 +73,6 @@ class PayloadKubeInputMapperTest {
     every { replConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value2")
     val ffClient: TestClient = mockk()
     every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
-    every { ffClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns !shouldKubeCpInput
 
     val mapper =
       PayloadKubeInputMapper(
@@ -129,14 +124,6 @@ class PayloadKubeInputMapperTest {
     assert(result.destinationLabels == destinationLabels + sharedLabels)
     assert(result.nodeSelectors == if (customConnector) replCustomSelectors else replSelectors)
     assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
-    val expectedFileMap: Map<String, String> =
-      buildMap {
-        if (shouldKubeCpInput) {
-          put(FileConstants.INIT_INPUT_FILE, mockSerializedOutput)
-        }
-      }
-
-    assert(result.fileMap == expectedFileMap)
     assert(result.resourceReqs == resourceReqs)
     assert(
       result.extraEnv ==
