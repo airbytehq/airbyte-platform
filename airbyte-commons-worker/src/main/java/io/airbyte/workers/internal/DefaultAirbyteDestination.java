@@ -21,7 +21,12 @@ import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableMappers;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
@@ -71,11 +76,15 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
   private final DestinationTimeoutMonitor destinationTimeoutMonitor;
+  private final DestinationCatalogGenerator destinationCatalogGenerator;
+  private final FeatureFlagClient featureFlagClient;
 
   @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final MetricClient metricClient) {
+                                   final MetricClient metricClient,
+                                   final DestinationCatalogGenerator destinationCatalogGenerator,
+                                   final FeatureFlagClient featureFlagClient) {
     this(integrationLauncher,
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
             LOGGER,
@@ -85,7 +94,9 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
         destinationTimeoutMonitor,
-        metricClient);
+        metricClient,
+        destinationCatalogGenerator,
+        featureFlagClient);
   }
 
   @SuppressWarnings({"PMD.ArrayIsStoredDirectly", "PMD.UseVarargs"})
@@ -94,13 +105,17 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
                                    final ProtocolSerializer protocolSerializer,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final MetricClient metricClient) {
+                                   final MetricClient metricClient,
+                                   final DestinationCatalogGenerator destinationCatalogGenerator,
+                                   final FeatureFlagClient featureFlagClient) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.messageWriterFactory = messageWriterFactory;
     this.protocolSerializer = protocolSerializer;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
     this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
+    this.destinationCatalogGenerator = destinationCatalogGenerator;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Override
@@ -111,6 +126,15 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
       messageMetricsTracker.trackConnectionId(destinationConfig.getConnectionId());
     }
 
+    final boolean usesMapper = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(destinationConfig.getConnectionId()));
+
+    if (usesMapper) {
+      LOGGER.info("Applying mapper transformation to destination catalog.");
+    }
+    final ConfiguredAirbyteCatalog catalogToSendToDestination =
+        usesMapper ? destinationCatalogGenerator.generateDestinationCatalog(destinationConfig.getCatalog())
+            : destinationConfig.getCatalog();
+
     LOGGER.info("Running destination...");
     destinationProcess = integrationLauncher.write(
         jobRoot,
@@ -118,7 +142,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
         Jsons.serialize(destinationConfig.getDestinationConnectionConfiguration()),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME,
         // TODO feature flag applyTransformations
-        protocolSerializer.serialize(destinationConfig.getCatalog(), destinationConfig.getSupportRefreshes()));
+        protocolSerializer.serialize(catalogToSendToDestination, destinationConfig.getSupportRefreshes()));
     // stdout logs are logged elsewhere since stdout also contains data
     LineGobbler.gobble(destinationProcess.getErrorStream(), LOGGER::error, "airbyte-destination", CONTAINER_LOG_MDC_BUILDER);
 

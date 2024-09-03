@@ -17,6 +17,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
@@ -26,7 +27,14 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.featureflag.EnableMappers;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.WorkerUtils;
@@ -88,6 +96,8 @@ class DefaultAirbyteDestinationTest {
   private ByteArrayOutputStream outputStream;
   private DestinationTimeoutMonitor destinationTimeoutMonitor;
   private MetricClient metricClient;
+  private DestinationCatalogGenerator destinationCatalogGenerator;
+  private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
   void setup() throws IOException, WorkerException {
@@ -117,6 +127,10 @@ class DefaultAirbyteDestinationTest {
     streamFactory = noop -> MESSAGES.stream();
     messageWriterFactory = new DefaultAirbyteMessageBufferedWriterFactory();
     metricClient = mock(MetricClient.class);
+
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
   }
 
   @AfterEach
@@ -134,7 +148,7 @@ class DefaultAirbyteDestinationTest {
   void testSuccessfulLifecycle() throws Exception {
     final AirbyteDestination destination =
         new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
-            metricClient);
+            metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     // Making sure we are calling the serializer in order to convert internal catalog into protocol
@@ -179,7 +193,7 @@ class DefaultAirbyteDestinationTest {
 
     final AirbyteDestination destination =
         new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
-            metricClient);
+            metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
@@ -207,7 +221,8 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testCloseNotifiesLifecycle() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     verify(outputStream, never()).close();
@@ -219,7 +234,8 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testNonzeroExitCodeThrowsException() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);
@@ -229,7 +245,8 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testIgnoredExitCodes() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
     when(process.isAlive()).thenReturn(false);
 
@@ -241,7 +258,8 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testGetExitValue() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient, destinationCatalogGenerator, featureFlagClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);
@@ -258,7 +276,7 @@ class DefaultAirbyteDestinationTest {
   void testSupportRefreshIsPassedToTheSerializer(final boolean supportRefreshes) throws Exception {
     final AirbyteDestination destination =
         new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
-            metricClient);
+            metricClient, destinationCatalogGenerator, featureFlagClient);
     final WorkerDestinationConfig config = Jsons.clone(DESTINATION_CONFIG);
     config.setSupportRefreshes(supportRefreshes);
 
@@ -269,6 +287,34 @@ class DefaultAirbyteDestinationTest {
     destination.close();
 
     verify(protocolSerializer).serialize(any(), eq(supportRefreshes));
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testApplyTheMapperCatalogGeneration(final boolean mappersEnabled) throws Exception {
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
+            metricClient, destinationCatalogGenerator, featureFlagClient);
+    final WorkerDestinationConfig config = Jsons.clone(DESTINATION_CONFIG);
+
+    when(process.isAlive()).thenReturn(false);
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(mappersEnabled);
+    ConfiguredAirbyteCatalog modifiedCatalog = new ConfiguredAirbyteCatalog();
+    modifiedCatalog.setStreams(List.of(new ConfiguredAirbyteStream(
+        new AirbyteStream("testName", Jsons.emptyObject(), List.of()))));
+
+    if (mappersEnabled) {
+      when(destinationCatalogGenerator.generateDestinationCatalog(config.getCatalog())).thenReturn(modifiedCatalog);
+    }
+    destination.start(config, jobRoot);
+
+    if (mappersEnabled) {
+      verify(destinationCatalogGenerator).generateDestinationCatalog(config.getCatalog());
+      verify(protocolSerializer).serialize(modifiedCatalog, false);
+    } else {
+      verifyNoInteractions(destinationCatalogGenerator);
+      verify(protocolSerializer).serialize(config.getCatalog(), false);
+    }
   }
 
 }

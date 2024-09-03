@@ -7,7 +7,7 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
-import io.airbyte.config.MapperSpecification
+import io.airbyte.mappers.mocks.TestMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -17,25 +17,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
 class DestinationCatalogGeneratorTest {
-  private class TestMapper : Mapper {
-    override val name: String = "test"
-
-    override fun spec(): MapperSpecification = MapperSpecification("test", "", mapOf())
-
-    override fun schema(
-      config: ConfiguredMapper,
-      streamFields: List<Field>,
-    ): List<Field> =
-      streamFields.map {
-        it.copy(it.name + "_test", FieldType.STRING)
-      }
-
-    override fun map(
-      config: ConfiguredMapper,
-      record: Record,
-    ): Record = record
-  }
-
   private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf())
   private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()))
 

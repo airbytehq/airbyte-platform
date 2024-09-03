@@ -58,6 +58,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)

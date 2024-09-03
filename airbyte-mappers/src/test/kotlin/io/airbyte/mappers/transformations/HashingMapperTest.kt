@@ -104,12 +104,13 @@ class HashingMapperTest {
     every { hashingMapper.hashAndEncodeData(HashingMapper.SHA256, "value1".toByteArray()) } returns "hashed_value"
 
     val record = Record(testObject)
-    val result = hashingMapper.map(config, record)
-    assertTrue(result.data.has("field1_hashed"))
-    assertEquals("hashed_value", result.data.get("field1_hashed").asText())
-    assertFalse(result.data.has("field1"))
-    assertTrue(result.data.has("field2"))
-    assertEquals("value2", result.data.get("field2").asText())
+    hashingMapper.map(config, record)
+
+    assertTrue(record.data.has("field1_hashed"))
+    assertEquals("hashed_value", record.data.get("field1_hashed").asText())
+    assertFalse(record.data.has("field1"))
+    assertTrue(record.data.has("field2"))
+    assertEquals("value2", record.data.get("field2").asText())
   }
 
   @Test

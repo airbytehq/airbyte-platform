@@ -99,7 +99,7 @@ class HashingMapper : Mapper {
   override fun map(
     config: ConfiguredMapper,
     record: Record,
-  ): Record {
+  ) {
     val (targetField, method, fieldNameSuffix) = getConfigValues(config.config)
 
     if (record.data.hasNonNull(targetField)) {
@@ -109,8 +109,6 @@ class HashingMapper : Mapper {
       record.data.put(targetField + fieldNameSuffix, hashedAndEncodeValue)
       record.data.remove(targetField)
     }
-
-    return record
   }
 
   internal fun hashAndEncodeData(

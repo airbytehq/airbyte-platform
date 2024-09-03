@@ -60,7 +60,10 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.featureflag.EnableMappers;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
@@ -197,6 +200,8 @@ abstract class ReplicationWorkerTest {
   protected StreamStatusCompletionTracker streamStatusCompletionTracker;
   protected ActorDefinitionVersionApi actorDefinitionVersionApi;
   protected StreamStatusTrackerFactory streamStatusTrackerFactory;
+  protected RecordMapper recordMapper;
+  protected FeatureFlagClient featureFlagClient;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -298,6 +303,10 @@ abstract class ReplicationWorkerTest {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(
         new ReplicationFeatureFlags(false, 60, 4, false, false, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
+
+    recordMapper = mock(RecordMapper.class);
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
   }
 
   @AfterEach
@@ -315,6 +324,8 @@ abstract class ReplicationWorkerTest {
     verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(onReplicationRunning).call();
+    verify(replicationWorkerHelper).applyTransformationMappers(RECORD_MESSAGE1.getRecord());
+    verify(replicationWorkerHelper).applyTransformationMappers(RECORD_MESSAGE2.getRecord());
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();

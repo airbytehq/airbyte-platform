@@ -6,6 +6,7 @@ package io.airbyte.workers.general
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ActorType
@@ -17,14 +18,21 @@ import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.State
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnableMappers
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.mappers.application.RecordMapper
+import io.airbyte.mappers.transformations.Record
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
@@ -34,6 +42,7 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
+import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
@@ -97,6 +106,8 @@ class ReplicationWorkerHelper(
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
+  private val recordMapper: RecordMapper,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -118,6 +129,8 @@ class ReplicationWorkerHelper(
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<ConfiguredMapper>>
+  private var mapperEnabled by Delegates.notNull<Boolean>()
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -227,6 +240,13 @@ class ReplicationWorkerHelper(
     if (configuredAirbyteCatalog.streams.isEmpty()) {
       metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
     }
+
+    mappersPerStreamDescriptor =
+      configuredAirbyteCatalog.streams.map { stream ->
+        stream.streamDescriptor to stream.mappers
+      }.toMap()
+
+    mapperEnabled = featureFlagClient.boolVariation(EnableMappers, Connection(ctx!!.connectionId))
   }
 
   fun startDestination(
@@ -389,6 +409,10 @@ class ReplicationWorkerHelper(
       recordStateStatsMetrics(metricClient, sourceRawMessage.state, AirbyteMessageOrigin.SOURCE, ctx!!)
     }
 
+    if (sourceRawMessage.type == Type.RECORD) {
+      applyTransformationMappers(sourceRawMessage.record)
+    }
+
     return sourceRawMessage
   }
 
@@ -446,6 +470,15 @@ class ReplicationWorkerHelper(
 
   fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
     return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
+  }
+
+  fun applyTransformationMappers(message: AirbyteRecordMessage) {
+    if (mapperEnabled) {
+      val mappersForStream: List<ConfiguredMapper> =
+        mappersPerStreamDescriptor[StreamDescriptor().withName(message.stream).withNamespace(message.namespace)] ?: listOf()
+
+      recordMapper.applyMappers(Record(message.data as ObjectNode), mappersForStream)
+    }
   }
 
   private fun getTotalStats(
