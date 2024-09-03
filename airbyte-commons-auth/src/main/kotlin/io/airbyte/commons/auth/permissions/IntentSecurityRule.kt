@@ -28,23 +28,28 @@ class IntentSecurityRule : SecurityRule<HttpRequest<*>> {
     authentication: @Nullable Authentication?,
   ): Publisher<SecurityRuleResult> {
     val routeMatch = request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java).orElse(null)
-    if (!routeMatch.isAnnotationPresent(RequiresIntent::class.java)) {
-      logger.debug { "[$routeMatch] RequiresIntent annotation not found on request, returning UNKNOWN" }
-      return Flux.just(SecurityRuleResult.UNKNOWN)
-    }
-    val userRoles = authentication?.roles ?: return Flux.just(SecurityRuleResult.UNKNOWN)
-    val intentName = routeMatch.getAnnotation(RequiresIntent::class.java).stringValue().orElseThrow()
-    val intent = Intent.valueOf(intentName)
+    routeMatch?.let {
+      if (!routeMatch.isAnnotationPresent(RequiresIntent::class.java)) {
+        logger.debug { "[$routeMatch] RequiresIntent annotation not found on request, returning UNKNOWN" }
+        return Flux.just(SecurityRuleResult.UNKNOWN)
+      }
+      val userRoles = authentication?.roles ?: return Flux.just(SecurityRuleResult.UNKNOWN)
+      val intentName = routeMatch.getAnnotation(RequiresIntent::class.java).stringValue().orElseThrow()
+      val intent = Intent.valueOf(intentName)
 
-    if (intent.roles.isEmpty()) {
-      logger.debug { "[$routeMatch] No roles found for intent $intent, rejecting request" }
+      if (intent.roles.isEmpty()) {
+        logger.debug { "[$routeMatch] No roles found for intent $intent, rejecting request" }
+        return Flux.just(SecurityRuleResult.REJECTED)
+      }
+
+      if (userRoles.any { userRole: String? -> intent.roles.contains(userRole) }) {
+        return Flux.just(SecurityRuleResult.ALLOWED)
+      }
+
       return Flux.just(SecurityRuleResult.REJECTED)
     }
 
-    if (userRoles.any { it: String? -> intent.roles.contains(it) }) {
-      return Flux.just(SecurityRuleResult.ALLOWED)
-    }
-
-    return Flux.just(SecurityRuleResult.REJECTED)
+    logger.debug { "No route match attribute for uri ${request.uri}" }
+    return Flux.just(SecurityRuleResult.UNKNOWN)
   }
 }
