@@ -8,6 +8,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.micronaut.context.annotation.Value
@@ -80,9 +81,9 @@ class OrchestratorEnvSingleton(
   ) {
     val injectedJavaOpts: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(connectionId))
     if (injectedJavaOpts.isNotEmpty()) {
-      envMap[EnvVarConfigBeanFactory.JAVA_OPTS_ENV_VAR] = injectedJavaOpts.trim()
+      envMap[EnvVarConstants.JAVA_OPTS_ENV_VAR] = injectedJavaOpts.trim()
     } else {
-      envMap[EnvVarConfigBeanFactory.JAVA_OPTS_ENV_VAR] = containerOrchestratorJavaOpts
+      envMap[EnvVarConstants.JAVA_OPTS_ENV_VAR] = containerOrchestratorJavaOpts
     }
   }
 

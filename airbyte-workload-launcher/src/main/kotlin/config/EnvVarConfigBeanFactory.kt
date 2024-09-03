@@ -12,7 +12,9 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
-import io.airbyte.workers.workload.WorkloadConstants
+import io.airbyte.workload.launcher.constants.EnvVarConstants
+import io.airbyte.workload.launcher.model.toEnvVarList
+import io.airbyte.workload.launcher.model.toRefEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
@@ -26,7 +28,8 @@ import java.util.function.Consumer
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 /**
- * Provides and configures the environment variables for the containers we launch.
+ * Provides and configures the static environment variables for the containers we launch.
+ * For dynamic configuration see RuntimeEnvVarFactory.
  */
 @Factory
 class EnvVarConfigBeanFactory {
@@ -66,15 +69,11 @@ class EnvVarConfigBeanFactory {
     // Add db env vars for local deployments if applicable
     envMap.putAll(dbEnvMap)
 
-    val envVars =
-      envMap
-        .map { EnvVar(it.key, it.value, null) }
-        .toList()
+    val envVars = envMap.toEnvVarList()
 
     val secretEnvVars =
       (secretsEnvMap + secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv)
-        .map { EnvVar(it.key, null, it.value) }
-        .toList()
+        .toRefEnvVarList()
 
     return envVars + secretEnvVars
   }
@@ -108,15 +107,9 @@ class EnvVarConfigBeanFactory {
     // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
 
-    val envVars =
-      envMap
-        .map { EnvVar(it.key, it.value, null) }
-        .toList()
+    val envVars = envMap.toEnvVarList()
 
-    val secretEnvVars =
-      secretsEnvMap
-        .map { EnvVar(it.key, null, it.value) }
-        .toList()
+    val secretEnvVars = secretsEnvMap.toRefEnvVarList()
 
     return envVars + secretEnvVars
   }
@@ -156,9 +149,7 @@ class EnvVarConfigBeanFactory {
   fun checkEnvVars(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<EnvVar> {
-    return workerConfigs.envMap
-      .map { EnvVar(it.key, it.value, null) }
-      .toList()
+    return workerConfigs.envMap.toEnvVarList()
   }
 
   /**
@@ -169,9 +160,7 @@ class EnvVarConfigBeanFactory {
   fun discoverEnvVars(
     @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<EnvVar> {
-    return workerConfigs.envMap
-      .map { EnvVar(it.key, it.value, null) }
-      .toList()
+    return workerConfigs.envMap.toEnvVarList()
   }
 
   /**
@@ -182,9 +171,31 @@ class EnvVarConfigBeanFactory {
   fun specEnvVars(
     @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<EnvVar> {
-    return workerConfigs.envMap
-      .map { EnvVar(it.key, it.value, null) }
-      .toList()
+    return workerConfigs.envMap.toEnvVarList()
+  }
+
+  /**
+   * The list of env vars to be passed to the connector container we are reading from (the source).
+   */
+  @Singleton
+  @Named("readEnvVars")
+  fun readEnvVars(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+  ): List<EnvVar> {
+    return workerConfigs.envMap.toEnvVarList() + ffEnvVars.toEnvVarList()
+  }
+
+  /**
+   * The list of env vars to be passed to the connector container we are writing to (the destination).
+   */
+  @Singleton
+  @Named("writeEnvVars")
+  fun writeEnvVars(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+  ): List<EnvVar> {
+    return workerConfigs.envMap.toEnvVarList() + ffEnvVars.toEnvVarList()
   }
 
   @Singleton
@@ -197,10 +208,10 @@ class EnvVarConfigBeanFactory {
   ): Map<String, EnvVarSource> {
     return buildMap {
       if (bearerTokenSecretName.isNotBlank()) {
-        put(WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+        put(EnvVarConstants.WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
       }
       if (keycloakAuthSecretName.isNotBlank()) {
-        put(KEYCLOAK_CLIENT_SECRET_ENV_VAR, createEnvVarSource(keycloakAuthSecretName, keycloakAuthSecretKey))
+        put(EnvVarConstants.KEYCLOAK_CLIENT_SECRET_ENV_VAR, createEnvVarSource(keycloakAuthSecretName, keycloakAuthSecretKey))
       }
     }
   }
@@ -217,8 +228,8 @@ class EnvVarConfigBeanFactory {
   ): Map<String, EnvVarSource> {
     return buildMap {
       if (awsAssumedRoleSecretName.isNotBlank()) {
-        put(AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleAccessKey))
-        put(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleSecretKey))
+        put(EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleAccessKey))
+        put(EnvVarConstants.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleSecretKey))
       }
     }
   }
@@ -295,17 +306,17 @@ class EnvVarConfigBeanFactory {
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
 
-    envMap[INTERNAL_API_HOST_ENV_VAR] = internalApiHost
-    envMap[AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = apiAuthHeaderName
-    envMap[AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = apiAuthHeaderValue
-    envMap[CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint
-    envMap[DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR] = dataPlaneServiceAccountEmail
-    envMap[DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR] = dataPlaneServiceAccountCredentialsPath
-    envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
+    envMap[EnvVarConstants.INTERNAL_API_HOST_ENV_VAR] = internalApiHost
+    envMap[EnvVarConstants.AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = apiAuthHeaderName
+    envMap[EnvVarConstants.AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = apiAuthHeaderValue
+    envMap[EnvVarConstants.CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint
+    envMap[EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR] = dataPlaneServiceAccountEmail
+    envMap[EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR] = dataPlaneServiceAccountCredentialsPath
+    envMap[EnvVarConstants.ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
 
     // Expected to be present in Cloud for internal api auth
-    envMap[KEYCLOAK_CLIENT_ID_ENV_VAR] = keycloakAuthClientId
-    envMap[KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR] = keycloakAuthOpenIdIssuer
+    envMap[EnvVarConstants.KEYCLOAK_CLIENT_ID_ENV_VAR] = keycloakAuthClientId
+    envMap[EnvVarConstants.KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR] = keycloakAuthOpenIdIssuer
 
     return envMap
   }
@@ -320,9 +331,9 @@ class EnvVarConfigBeanFactory {
     val envMap: MutableMap<String, String> = HashMap()
 
     if (System.getenv(Environment.ENVIRONMENTS_ENV) != null) {
-      envMap[Environment.ENVIRONMENTS_ENV] = "$WORKER_V2_MICRONAUT_ENV,${System.getenv(Environment.ENVIRONMENTS_ENV)}"
+      envMap[Environment.ENVIRONMENTS_ENV] = "${EnvVarConstants.WORKER_V2_MICRONAUT_ENV},${System.getenv(Environment.ENVIRONMENTS_ENV)}"
     } else {
-      envMap[Environment.ENVIRONMENTS_ENV] = WORKER_V2_MICRONAUT_ENV
+      envMap[Environment.ENVIRONMENTS_ENV] = EnvVarConstants.WORKER_V2_MICRONAUT_ENV
     }
 
     return envMap
@@ -338,19 +349,21 @@ class EnvVarConfigBeanFactory {
     @Value("\${datadog.agent.port}") dataDogStatsdPort: String,
     @Value("\${airbyte.metric.client}") metricClient: String,
     @Value("\${airbyte.metric.should-publish}") shouldPublishMetrics: String,
+    @Value("\${airbyte.metric.otel-collector-endpoint}") otelCollectorEndPoint: String,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[METRIC_CLIENT_ENV_VAR] = metricClient
-    envMap[DD_AGENT_HOST_ENV_VAR] = dataDogAgentHost
-    envMap[DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
-    envMap[DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
-    envMap[PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
-    if (System.getenv(DD_ENV_ENV_VAR) != null) {
-      envMap[DD_ENV_ENV_VAR] = System.getenv(DD_ENV_ENV_VAR)
+    envMap[EnvVarConstants.METRIC_CLIENT_ENV_VAR] = metricClient
+    envMap[EnvVarConstants.DD_AGENT_HOST_ENV_VAR] = dataDogAgentHost
+    envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
+    envMap[EnvVarConstants.DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
+    envMap[EnvVarConstants.PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
+    envMap[EnvVarConstants.OTEL_COLLECTOR_ENDPOINT_ENV_VAR] = otelCollectorEndPoint
+    if (System.getenv(EnvVarConstants.DD_ENV_ENV_VAR) != null) {
+      envMap[EnvVarConstants.DD_ENV_ENV_VAR] = System.getenv(EnvVarConstants.DD_ENV_ENV_VAR)
     }
-    if (System.getenv(DD_VERSION_ENV_VAR) != null) {
-      envMap[DD_VERSION_ENV_VAR] = System.getenv(DD_VERSION_ENV_VAR)
+    if (System.getenv(EnvVarConstants.DD_VERSION_ENV_VAR) != null) {
+      envMap[EnvVarConstants.DD_VERSION_ENV_VAR] = System.getenv(EnvVarConstants.DD_VERSION_ENV_VAR)
     }
 
     // Disable DD agent integrations based on the configuration
@@ -358,7 +371,7 @@ class EnvVarConfigBeanFactory {
       listOf(*disabledIntegrations.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
         .forEach(
           Consumer { e: String ->
-            envMap[String.format(DD_INTEGRATION_ENV_VAR_FORMAT, e.trim { it <= ' ' })] = java.lang.Boolean.FALSE.toString()
+            envMap[String.format(EnvVarConstants.DD_INTEGRATION_ENV_VAR_FORMAT, e.trim { it <= ' ' })] = java.lang.Boolean.FALSE.toString()
           },
         )
     }
@@ -382,13 +395,13 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.vault.prefix}") vaultPrefix: String,
   ): Map<String, String> {
     return buildMap {
-      put(SECRET_PERSISTENCE, persistenceType)
-      put(SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
-      put(AWS_SECRET_MANAGER_REGION, awsRegion)
-      put(AWS_KMS_KEY_ARN, awsKmsKeyArn)
-      put(AWS_SECRET_MANAGER_SECRET_TAGS, awsTags)
-      put(VAULT_ADDRESS, vaultAddress)
-      put(VAULT_PREFIX, vaultPrefix)
+      put(EnvVarConstants.SECRET_PERSISTENCE, persistenceType)
+      put(EnvVarConstants.SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
+      put(EnvVarConstants.AWS_SECRET_MANAGER_REGION, awsRegion)
+      put(EnvVarConstants.AWS_KMS_KEY_ARN, awsKmsKeyArn)
+      put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_TAGS, awsTags)
+      put(EnvVarConstants.VAULT_ADDRESS, vaultAddress)
+      put(EnvVarConstants.VAULT_PREFIX, vaultPrefix)
     }
   }
 
@@ -413,16 +426,16 @@ class EnvVarConfigBeanFactory {
     return buildMap {
       // Note: If any of the secret ref names or keys are blank kube will fail to create the pod, so we have to manually exclude empties
       if (gcpCredsRefName.isNotBlank() && gcpCredsRefKey.isNotBlank()) {
-        put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpCredsRefName, gcpCredsRefKey))
+        put(EnvVarConstants.SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpCredsRefName, gcpCredsRefKey))
       }
       if (awsAccessKeyRefName.isNotBlank() && awsAccessKeyRefKey.isNotBlank()) {
-        put(AWS_SECRET_MANAGER_ACCESS_KEY_ID, createEnvVarSource(awsAccessKeyRefName, awsAccessKeyRefKey))
+        put(EnvVarConstants.AWS_SECRET_MANAGER_ACCESS_KEY_ID, createEnvVarSource(awsAccessKeyRefName, awsAccessKeyRefKey))
       }
       if (awsSecretKeyRefName.isNotBlank() && awsSecretKeyRefKey.isNotBlank()) {
-        put(AWS_SECRET_MANAGER_SECRET_ACCESS_KEY, createEnvVarSource(awsSecretKeyRefName, awsSecretKeyRefKey))
+        put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_ACCESS_KEY, createEnvVarSource(awsSecretKeyRefName, awsSecretKeyRefKey))
       }
       if (vaultTokenRefName.isNotBlank() && vaultTokenRefKey.isNotBlank()) {
-        put(VAULT_AUTH_TOKEN, createEnvVarSource(vaultTokenRefName, vaultTokenRefKey))
+        put(EnvVarConstants.VAULT_AUTH_TOKEN, createEnvVarSource(vaultTokenRefName, vaultTokenRefKey))
       }
     }
   }
@@ -440,11 +453,11 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[WORKLOAD_API_HOST_ENV_VAR] = workloadApiBasePath
-    envMap[WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR] = workloadApiConnectTimeoutSeconds
-    envMap[WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR] = workloadApiReadTimeoutSeconds
-    envMap[WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR] = workloadApiRetriesDelaySeconds
-    envMap[WORKLOAD_API_MAX_RETRIES_ENV_VAR] = workloadApiRetriesMax
+    envMap[EnvVarConstants.WORKLOAD_API_HOST_ENV_VAR] = workloadApiBasePath
+    envMap[EnvVarConstants.WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR] = workloadApiConnectTimeoutSeconds
+    envMap[EnvVarConstants.WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR] = workloadApiReadTimeoutSeconds
+    envMap[EnvVarConstants.WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR] = workloadApiRetriesDelaySeconds
+    envMap[EnvVarConstants.WORKLOAD_API_MAX_RETRIES_ENV_VAR] = workloadApiRetriesMax
 
     return envMap
   }
@@ -467,49 +480,5 @@ class EnvVarConfigBeanFactory {
       AirbyteEnvVar.DATABASE_USER.toString() to dbUsername,
       AirbyteEnvVar.DATABASE_PASSWORD.toString() to dbPassword,
     )
-  }
-
-  companion object {
-    private const val METRIC_CLIENT_ENV_VAR = "METRIC_CLIENT"
-    private const val DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST"
-    private const val DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT"
-    private const val DD_ENV_ENV_VAR = "DD_ENV"
-    private const val DD_SERVICE_ENV_VAR = "DD_SERVICE"
-    private const val DD_VERSION_ENV_VAR = "DD_VERSION"
-    const val JAVA_OPTS_ENV_VAR = "JAVA_OPTS"
-    private const val PUBLISH_METRICS_ENV_VAR = "PUBLISH_METRICS"
-    private const val CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR = "CONTROL_PLANE_AUTH_ENDPOINT"
-    private const val DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR = "DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH"
-    private const val DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR = "DATA_PLANE_SERVICE_ACCOUNT_EMAIL"
-    private const val AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_NAME"
-    private const val AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_VALUE"
-    private const val KEYCLOAK_CLIENT_ID_ENV_VAR = "KEYCLOAK_CLIENT_ID"
-    private const val KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR = "KEYCLOAK_INTERNAL_REALM_ISSUER"
-    private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
-    private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
-    private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
-    private const val WORKER_V2_MICRONAUT_ENV = WorkloadConstants.WORKER_V2_MICRONAUT_ENV
-    private const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
-    private const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"
-    private const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"
-    private const val WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR = "WORKLOAD_API_RETRY_DELAY_SECONDS"
-    private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
-    private const val SECRET_PERSISTENCE = "SECRET_PERSISTENCE"
-    private const val SECRET_STORE_GCP_PROJECT_ID = "SECRET_STORE_GCP_PROJECT_ID"
-    private const val AWS_SECRET_MANAGER_REGION = "AWS_SECRET_MANAGER_REGION"
-    private const val AWS_KMS_KEY_ARN = "AWS_KMS_KEY_ARN"
-    private const val AWS_SECRET_MANAGER_SECRET_TAGS = "AWS_SECRET_MANAGER_SECRET_TAGS"
-    private const val VAULT_ADDRESS = "VAULT_ADDRESS"
-    private const val VAULT_PREFIX = "VAULT_PREFIX"
-
-    // secrets
-    const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
-    const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
-    const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
-    const val KEYCLOAK_CLIENT_SECRET_ENV_VAR = "KEYCLOAK_CLIENT_SECRET"
-    private const val SECRET_STORE_GCP_CREDENTIALS = "SECRET_STORE_GCP_CREDENTIALS"
-    private const val AWS_SECRET_MANAGER_ACCESS_KEY_ID = "AWS_SECRET_MANAGER_ACCESS_KEY_ID"
-    private const val AWS_SECRET_MANAGER_SECRET_ACCESS_KEY = "AWS_SECRET_MANAGER_SECRET_ACCESS_KEY"
-    private const val VAULT_AUTH_TOKEN = "VAULT_AUTH_TOKEN"
   }
 }
