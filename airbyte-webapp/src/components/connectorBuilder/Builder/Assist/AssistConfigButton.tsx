@@ -71,7 +71,7 @@ const AssistTitle = () => {
     <FlexContainer direction="row" alignItems="center" gap="sm">
       <Icon type="aiStars" color={assistEnabled ? "magic" : "disabled"} size="md" />
       <Heading as="h3" size="sm" className={styles.assistTitle}>
-        {formatMessage({ id: "connectorBuilder.assist.configModal.title" })}
+        {formatMessage({ id: "connectorBuilder.assist.config.title" })}
       </Heading>
     </FlexContainer>
   );
