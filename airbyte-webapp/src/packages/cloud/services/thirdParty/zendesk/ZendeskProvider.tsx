@@ -29,10 +29,12 @@ export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ ch
   });
 
   useEffect(() => {
-    window.zE?.("webWidget", "prefill", {
-      name: { value: user?.name },
-      email: { value: user?.email },
-    });
+    try {
+      window.zE?.("webWidget", "prefill", {
+        name: { value: user?.name },
+        email: { value: user?.email },
+      });
+    } catch (e) {}
   }, [user]);
 
   useEffect(() => {
@@ -45,10 +47,12 @@ export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ ch
         },
       },
     };
-    // Set settings to be read by ZenDesk when initially loaded
-    window.zESettings = config;
-    // Update settings in case ZenDesk already has loaded
-    window.zE?.("webWidget", "updateSettings", config);
+    try {
+      // Set settings to be read by ZenDesk when initially loaded
+      window.zESettings = config;
+      // Update settings in case ZenDesk already has loaded
+      window.zE?.("webWidget", "updateSettings", config);
+    } catch (e) {}
   }, [workspaceId]);
 
   return <>{children}</>;
