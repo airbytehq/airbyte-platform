@@ -1,5 +1,7 @@
+@use "sass:map";
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/mixins";
 
 @keyframes spinning {
   from {
@@ -12,15 +14,37 @@
 }
 
 $colorMap: (
-  "primary": colors.$blue,
-  "disabled": colors.$grey,
-  "action": colors.$grey,
-  "success": colors.$green,
-  "error": colors.$red,
-  "warning": colors.$yellow,
-  "affordance": colors.$dark-blue,
-  "foreground": colors.$foreground,
-  "highlight": colors.$yellow-500,
+  "primary": (
+    color: colors.$blue,
+  ),
+  "disabled": (
+    color: colors.$grey,
+  ),
+  "action": (
+    color: colors.$grey,
+  ),
+  "success": (
+    color: colors.$green,
+  ),
+  "error": (
+    color: colors.$red,
+  ),
+  "warning": (
+    color: colors.$yellow,
+  ),
+  "affordance": (
+    color: colors.$dark-blue,
+  ),
+  "foreground": (
+    color: colors.$foreground,
+  ),
+  "magic": (
+    // Note: The icon must support a gradient
+    // so we fallback to the start color
+    color: colors.$gradient-primary-start,
+    --start-color: #{colors.$gradient-primary-start},
+    --stop-color: #{colors.$gradient-primary-stop},
+  ),
 );
 
 $iconClassname: "icon";
@@ -40,12 +64,14 @@ $iconClassname: "icon";
     background-color: colors.$inverse; // default if color isn't specified
   }
 
-  @each $name, $color in $colorMap {
+  @each $name, $rules in $colorMap {
     &--#{$name} {
-      color: $color;
+      @each $property, $value in $rules {
+        #{$property}: $value;
+      }
 
       &.#{$iconClassname}--withBackground {
-        background-color: $color;
+        background-color: map.get($rules, color);
       }
     }
   }

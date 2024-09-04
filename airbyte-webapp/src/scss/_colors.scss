@@ -1,4 +1,6 @@
 /* stylelint-disable color-no-hex, color-hex-length  */
+@use "sass:color";
+
 $blue-30: var(--color-blue-30);
 $blue-40: var(--color-blue-40);
 $blue-50: var(--color-blue-50);
@@ -115,6 +117,14 @@ $ansi-red-fg: var(--color-ansi-red-fg);
 $loading-skeleton-base: var(--color-loading-skeleton-base);
 $loading-skeleton-stop-1: var(--color-loading-skeleton-gradient-stop-1);
 $loading-skeleton-stop-2: var(--color-loading-skeleton-gradient-stop-2);
+
+$gradient-primary-start: #{var(--color-blue-400)};
+$gradient-primary-stop: #{var(--color-orange-400)};
+$gradient-primary: linear-gradient(90deg, $gradient-primary-start, $gradient-primary-stop);
+
+$gradient-secondary-start: #{var(--color-blue-50)};
+$gradient-secondary-stop: #{var(--color-orange-50)};
+$gradient-secondary: linear-gradient(90deg, $gradient-secondary-start, $gradient-secondary-stop);
 
 // LEGACY - DEPRECATED
 

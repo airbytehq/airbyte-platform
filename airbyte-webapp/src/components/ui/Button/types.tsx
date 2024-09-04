@@ -7,7 +7,7 @@ export type ButtonVariant =
   | "primary"
   | "secondary"
   | "danger"
-  | "highlight"
+  | "magic"
   | "light"
   | "clear"
   | "clearDark"

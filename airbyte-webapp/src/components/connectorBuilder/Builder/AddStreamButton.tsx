@@ -153,7 +153,7 @@ const getStreamOptions = (currentStreams: BuilderStream[], data: BuilderAssistFi
     .sort() // sort by name
     .map((stream) => ({
       value: stream,
-      iconRight: <Icon type="aiStars" color="highlight" size="sm" />,
+      iconRight: <Icon type="aiStars" color="magic" size="sm" />,
     }));
 };
 
@@ -385,7 +385,7 @@ const AssistLoadingMessage = () => {
   return (
     <FlexContainer gap="sm" direction="row" alignItems="center">
       {formatMessage({ id: "connectorBuilder.assist.addStream.fetching" })}
-      <Icon type="aiStars" color="highlight" size="sm" />
+      <Icon type="aiStars" color="magic" size="sm" />
     </FlexContainer>
   );
 };

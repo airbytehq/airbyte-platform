@@ -67,7 +67,7 @@ const AssistTitle = () => {
 
   return (
     <FlexContainer direction="row" alignItems="center" gap="sm">
-      <Icon type="aiStars" color={assistEnabled ? "highlight" : "disabled"} size="md" />
+      <Icon type="aiStars" color={assistEnabled ? "magic" : "disabled"} size="md" />
       <Heading as="h3" size="sm" className={styles.assistTitle}>
         {formatMessage({ id: "connectorBuilder.assist.configModal.title" })}
       </Heading>
@@ -106,7 +106,7 @@ const AIButton = (props: ButtonProps) => {
   const { formatMessage } = useIntl();
   const { assistEnabled } = useConnectorBuilderFormState();
 
-  const variant = assistEnabled ? "highlight" : "secondary";
+  const variant = assistEnabled ? "magic" : "secondary";
 
   return (
     <Button variant={variant} icon="aiStars" {...props} type="button">
