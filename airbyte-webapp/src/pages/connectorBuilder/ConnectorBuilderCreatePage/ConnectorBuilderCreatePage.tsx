@@ -21,6 +21,7 @@ import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
@@ -49,6 +50,8 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
+
+  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {
@@ -176,7 +179,11 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
               actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
-            createAndNavigate({ name: getConnectorName() });
+            if (isAIFeatureEnabled) {
+              navigate(`../${ConnectorBuilderRoutePaths.Generate}`);
+            } else {
+              createAndNavigate({ name: DEFAULT_CONNECTOR_NAME });
+            }
           }}
           dataTestId="start-from-scratch"
         />

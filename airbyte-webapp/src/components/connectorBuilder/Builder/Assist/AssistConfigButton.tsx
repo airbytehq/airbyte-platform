@@ -27,16 +27,18 @@ export const AssistForm: React.FC = () => {
       <BuilderField
         type="string"
         optional
-        label={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.docsUrl" })}
-        placeholder={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.docsUrl.placeholder" })}
+        label={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.label" })}
+        placeholder={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.placeholder" })}
+        tooltip={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.tooltip" })}
         manifestPath="metadata.assist.docsUrl"
         path="formValues.assist.docsUrl"
       />
       <BuilderField
         type="string"
         optional
-        label={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.openApiSpecUrl" })}
-        placeholder={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.openApiSpecUrl.placeholder" })}
+        label={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.label" })}
+        placeholder={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.placeholder" })}
+        tooltip={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.tooltip" })}
         manifestPath="metadata.assist.openApiSpecUrl"
         path="formValues.assist.openApiSpecUrl"
       />
@@ -95,7 +97,7 @@ const AssistConfigPanel = () => {
         <AssistSwitch />
       </FlexContainer>
       <Text as="span" color="grey400" size="sm">
-        {formatMessage({ id: "connectorBuilder.assist.configModal.description" })}
+        {formatMessage({ id: "connectorBuilder.assist.config.description" })}
       </Text>
       <AssistForm />
     </FlexContainer>
@@ -110,7 +112,7 @@ const AIButton = (props: ButtonProps) => {
 
   return (
     <Button variant={variant} icon="aiStars" {...props} type="button">
-      {formatMessage({ id: "connectorBuilder.assist.configModal.button" })}
+      {formatMessage({ id: "connectorBuilder.assist.config.button" })}
     </Button>
   );
 };
