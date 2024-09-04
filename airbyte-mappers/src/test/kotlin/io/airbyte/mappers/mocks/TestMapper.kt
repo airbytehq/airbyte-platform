@@ -4,8 +4,8 @@ import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperSpecification
+import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.Mapper
-import io.airbyte.mappers.transformations.Record
 
 class TestMapper : Mapper {
   override val name: String = "test"
@@ -22,11 +22,10 @@ class TestMapper : Mapper {
 
   override fun map(
     config: ConfiguredMapper,
-    record: Record,
+    record: AirbyteRecord,
   ) {
-    record.data.properties().forEach {
-      record.data.putIfAbsent(it.key + "_test", it.value)
-      record.data.remove(it.key)
-    }
+    val targetField = config.config["target"] ?: throw IllegalArgumentException("target is not defined")
+    record.set("${targetField}_test", record.get(targetField).asString())
+    record.remove(targetField)
   }
 }

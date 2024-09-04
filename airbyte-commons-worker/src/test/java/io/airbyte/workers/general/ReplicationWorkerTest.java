@@ -60,6 +60,7 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter;
 import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -324,8 +325,8 @@ abstract class ReplicationWorkerTest {
     verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(onReplicationRunning).call();
-    verify(replicationWorkerHelper).applyTransformationMappers(RECORD_MESSAGE1.getRecord());
-    verify(replicationWorkerHelper).applyTransformationMappers(RECORD_MESSAGE2.getRecord());
+    verify(replicationWorkerHelper).applyTransformationMappers(new AirbyteJsonRecordAdapter(RECORD_MESSAGE1));
+    verify(replicationWorkerHelper).applyTransformationMappers(new AirbyteJsonRecordAdapter(RECORD_MESSAGE2));
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();

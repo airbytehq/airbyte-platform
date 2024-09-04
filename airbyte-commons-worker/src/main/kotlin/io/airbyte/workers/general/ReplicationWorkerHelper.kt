@@ -6,7 +6,6 @@ package io.airbyte.workers.general
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ActorType
@@ -28,11 +27,12 @@ import io.airbyte.config.State
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
+import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableMappers
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.application.RecordMapper
-import io.airbyte.mappers.transformations.Record
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
@@ -42,7 +42,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
@@ -410,7 +409,7 @@ class ReplicationWorkerHelper(
     }
 
     if (sourceRawMessage.type == Type.RECORD) {
-      applyTransformationMappers(sourceRawMessage.record)
+      applyTransformationMappers(AirbyteJsonRecordAdapter(sourceRawMessage))
     }
 
     return sourceRawMessage
@@ -472,12 +471,12 @@ class ReplicationWorkerHelper(
     return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
   }
 
-  fun applyTransformationMappers(message: AirbyteRecordMessage) {
+  fun applyTransformationMappers(message: AirbyteRecord) {
     if (mapperEnabled) {
       val mappersForStream: List<ConfiguredMapper> =
-        mappersPerStreamDescriptor[StreamDescriptor().withName(message.stream).withNamespace(message.namespace)] ?: listOf()
+        mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
 
-      recordMapper.applyMappers(Record(message.data as ObjectNode), mappersForStream)
+      recordMapper.applyMappers(message, mappersForStream)
     }
   }
 

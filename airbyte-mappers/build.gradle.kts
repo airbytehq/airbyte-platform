@@ -17,6 +17,7 @@ dependencies {
   implementation(libs.kotlin.logging)
 
   testImplementation(project(":oss:airbyte-commons"))
+  testImplementation(libs.airbyte.protocol)
   testImplementation(libs.mockito.core)
   testImplementation(libs.mockk)
 }

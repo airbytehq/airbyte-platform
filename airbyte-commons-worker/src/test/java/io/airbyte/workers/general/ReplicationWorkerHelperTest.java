@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
@@ -33,12 +32,12 @@ import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.State;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
-import io.airbyte.mappers.transformations.Record;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
@@ -312,12 +311,13 @@ class ReplicationWorkerHelperTest {
         mock(ConfiguredAirbyteCatalog.class),
         mock(State.class));
 
-    final AirbyteRecordMessage recordMessage = new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value")));
-    final AirbyteRecordMessage copiedRecordMessage = Jsons.clone(recordMessage);
+    final AirbyteMessage recordMessage = new AirbyteMessage().withType(Type.RECORD)
+        .withRecord(new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value"))));
+    final AirbyteMessage copiedRecordMessage = Jsons.clone(recordMessage);
 
     when(featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(replicationContext.getConnectionId()))).thenReturn(mappersEnabled);
 
-    replicationWorkerHelper.applyTransformationMappers(recordMessage);
+    replicationWorkerHelper.applyTransformationMappers(new AirbyteJsonRecordAdapter(recordMessage));
 
     assertEquals(copiedRecordMessage, recordMessage);
     verifyNoInteractions(recordMapper);
@@ -344,14 +344,14 @@ class ReplicationWorkerHelperTest {
         catalog,
         mock(State.class));
 
-    final AirbyteRecordMessage recordMessage =
-        new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value")));
+    final AirbyteMessage recordMessage =
+        new AirbyteMessage().withType(Type.RECORD)
+            .withRecord(new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value"))));
+    final AirbyteJsonRecordAdapter recordAdapter = new AirbyteJsonRecordAdapter(recordMessage);
 
-    Record record = new Record((ObjectNode) recordMessage.getData());
+    replicationWorkerHelper.applyTransformationMappers(recordAdapter);
 
-    replicationWorkerHelper.applyTransformationMappers(recordMessage);
-
-    verify(recordMapper).applyMappers(record, mappers);
+    verify(recordMapper).applyMappers(recordAdapter, mappers);
   }
 
   private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {

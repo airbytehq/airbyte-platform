@@ -1,8 +1,8 @@
 package io.airbyte.mappers.application
 
 import io.airbyte.config.ConfiguredMapper
+import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.Mapper
-import io.airbyte.mappers.transformations.Record
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 
@@ -13,7 +13,7 @@ class RecordMapper(private val mappers: List<Mapper>) {
   private val mappersByName: Map<String, Mapper> = mappers.associateBy { it.name }
 
   fun applyMappers(
-    record: Record,
+    record: AirbyteRecord,
     configuredMappers: List<ConfiguredMapper>,
   ) {
     try {

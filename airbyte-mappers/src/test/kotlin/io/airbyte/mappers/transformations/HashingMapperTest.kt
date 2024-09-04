@@ -1,10 +1,10 @@
 package io.airbyte.mappers.transformations
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.mappers.transformations.HashingMapper.Companion.supportedMethods
 import io.mockk.every
 import io.mockk.spyk
@@ -19,16 +19,6 @@ import java.security.Security
 
 class HashingMapperTest {
   private val hashingMapper = spyk(HashingMapper())
-
-  private val testObject =
-    Jsons.deserialize(
-      """
-    {
-      "field1": "value1",
-      "field2": "value2"
-    }
-  """,
-    ) as ObjectNode
 
   @Test
   fun specReturnsCorrectSpecification() {
@@ -103,14 +93,14 @@ class HashingMapperTest {
 
     every { hashingMapper.hashAndEncodeData(HashingMapper.SHA256, "value1".toByteArray()) } returns "hashed_value"
 
-    val record = Record(testObject)
+    val record = TestRecordAdapter(StreamDescriptor().withName("stream"), mapOf("field1" to "value1", "field2" to "value2"))
     hashingMapper.map(config, record)
 
-    assertTrue(record.data.has("field1_hashed"))
-    assertEquals("hashed_value", record.data.get("field1_hashed").asText())
-    assertFalse(record.data.has("field1"))
-    assertTrue(record.data.has("field2"))
-    assertEquals("value2", record.data.get("field2").asText())
+    assertTrue(record.has("field1_hashed"))
+    assertEquals("hashed_value", record.get("field1_hashed").asString())
+    assertFalse(record.has("field1"))
+    assertTrue(record.has("field2"))
+    assertEquals("value2", record.get("field2").asString())
   }
 
   @Test
@@ -124,9 +114,9 @@ class HashingMapperTest {
           HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
         ),
       )
-    val record = Record(testObject)
+
     assertThrows(IllegalArgumentException::class.java) {
-      hashingMapper.map(config, record)
+      hashingMapper.map(config, TestRecordAdapter(StreamDescriptor().withName("any"), mapOf("field1" to "anything")))
     }
   }
 
