@@ -41,7 +41,7 @@ describe("Connection Timeline", () => {
     setFeatureFlags({});
   });
 
-  it("Should show correct events for empty, started, running, and cancelled jobs", () => {
+  it("Should list events and interact with job logs modal and links", () => {
     cy.visit("/");
 
     createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
@@ -52,7 +52,32 @@ describe("Connection Timeline", () => {
     cy.contains("No events to display").should("exist");
 
     startManualSync();
-
     cy.contains("manually started a sync").should("exist");
+    cy.contains("Sync running").should("exist");
+
+    cy.get('[data-testid="cancel-sync-button"]').click();
+    cy.contains("Yes, cancel sync").click();
+    cy.contains("Sync cancelled").should("exist");
+    // copying link from timeline works
+    cy.get('[data-testid="job-event-menu"]').should("exist").find("button").should("exist").click();
+    cy.get('[data-testid="copy-link-to-event"]').click({ force: true });
+
+    cy.window().then((win) => {
+      return win.navigator.clipboard.readText().then((result: string) => cy.visit(result));
+    });
+    cy.get('[data-testid="job-logs-modal"]', { timeout: 30000 }).should("exist");
+    cy.get('[data-testid="close-modal-button"]').click();
+
+    // view logs from menu + copying link from modal works
+    cy.get('[data-testid="job-event-menu"]').should("exist").find("button").should("exist").click();
+    cy.get('[data-testid="view-logs"]').click();
+    cy.get('[data-testid="job-logs-modal"]').should("exist");
+    cy.get('[data-testid="copy-link-to-attempt-button"]').click();
+    cy.get('[data-testid="close-modal-button"]').click();
+    cy.window().then((win) => {
+      return win.navigator.clipboard.readText().then((result: string) => cy.visit(result));
+    });
+    cy.get('[data-testid="job-logs-modal"]', { timeout: 30000 }).should("exist");
+    cy.get('[data-testid="close-modal-button"]').click();
   });
 });

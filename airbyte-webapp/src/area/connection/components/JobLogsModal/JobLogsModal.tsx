@@ -198,7 +198,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({
   }, [inputValue]);
 
   return (
-    <FlexContainer direction="column" style={{ height: "100%" }}>
+    <FlexContainer direction="column" style={{ height: "100%" }} data-testid="job-logs-modal">
       <Box p="md" pb="none">
         <FlexContainer alignItems="center">
           <div className={styles.attemptDropdown}>
