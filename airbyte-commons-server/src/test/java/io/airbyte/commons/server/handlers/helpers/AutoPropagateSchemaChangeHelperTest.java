@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +23,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -457,6 +460,114 @@ class AutoPropagateSchemaChangeHelperTest {
         new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithBreakingAttributeTransform)));
 
     assertTrue(AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff3));
+  }
+
+  @Nested
+  class FieldSelectionInteractions {
+
+    final AirbyteCatalog oldCatalog = new AirbyteCatalog()
+        .streams(List.of(
+            new AirbyteStreamAndConfiguration()
+                .stream(new AirbyteStream()
+                    .name("users")
+                    .namespace("public"))
+                .config(new AirbyteStreamConfiguration()
+                    .selected(true)
+                    .fieldSelectionEnabled(true)
+                    .selectedFields(List.of(
+                        new SelectedFieldInfo().fieldPath(List.of("id")),
+                        new SelectedFieldInfo().fieldPath(List.of("address")))))));
+    final AirbyteCatalog newCatalog = new AirbyteCatalog()
+        .streams(List.of(
+            new AirbyteStreamAndConfiguration()
+                .stream(new AirbyteStream()
+                    .name("users")
+                    .namespace("public"))
+                .config(new AirbyteStreamConfiguration().selected(true).fieldSelectionEnabled(true))));
+
+    private int fieldIsSelected(final AirbyteCatalog catalog, final List<String> path) {
+      return catalog.getStreams().get(0).getConfig().getSelectedFields().stream()
+          .filter(selected -> selected.equals(new SelectedFieldInfo().fieldPath(path))).toList().size();
+    }
+
+    @Test
+    void testPropagateChangesDoesNotRemoveAlreadySelectedFields() {
+
+      final List<StreamTransform> transformations = List.of(
+          new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().name("users").namespace("public"))
+              .updateStream(new StreamTransformUpdateStream().fieldTransforms(
+                  List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                      .fieldName(List.of("ssn"))))));
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+          transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
+      assertEquals(1, fieldIsSelected(result.catalog(), List.of("id")));
+      assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
+    }
+
+    @Test
+    void testPropagateChangesNewFieldIsSelected() {
+
+      final List<StreamTransform> transformations = List.of(
+          new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().name("users").namespace("public"))
+              .updateStream(new StreamTransformUpdateStream().fieldTransforms(
+                  List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                      .fieldName(List.of("ssn"))))));
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+          transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
+      assertEquals(1, fieldIsSelected(result.catalog(), List.of("ssn")));
+    }
+
+    @Test
+    void testNewSubfieldAlreadySelected() {
+      final List<StreamTransform> transformations = List.of(
+          new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().name("users").namespace("public"))
+              .updateStream(new StreamTransformUpdateStream().fieldTransforms(
+                  List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                      .fieldName(List.of("address", "zip"))))));
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+          transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
+      assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
+    }
+
+    @Test
+    void testNewSubfieldNotSelected() {
+      final List<StreamTransform> transformations = List.of(
+          new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().name("users").namespace("public"))
+              .updateStream(new StreamTransformUpdateStream().fieldTransforms(
+                  List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                      .fieldName(List.of("username", "domain"))))));
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+          transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
+      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username")));
+      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));
+    }
+
+    @Test
+    void testNewFieldAndSubField() {
+      final List<StreamTransform> transformations = List.of(
+          new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().name("users").namespace("public"))
+              .updateStream(new StreamTransformUpdateStream().fieldTransforms(
+                  List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                      .fieldName(List.of("username", "domain")),
+                      new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                          .fieldName(List.of("username"))))));
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+          transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
+      assertEquals(1, fieldIsSelected(result.catalog(), List.of("username")));
+      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));
+
+    }
+
   }
 
 }
