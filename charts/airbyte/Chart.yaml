@@ -41,6 +41,10 @@ dependencies:
     name: temporal
     repository: https://airbytehq.github.io/helm-charts/
     version: 0.524.0
+  - condition: temporal-ui.enabled
+    name: temporal-ui
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.1.0
   - condition: webapp.enabled
     name: webapp
     repository: https://airbytehq.github.io/helm-charts/
