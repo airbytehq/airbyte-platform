@@ -130,7 +130,7 @@ const IconConverterInner = () => {
       "warning",
       "affordance",
       "foreground",
-      "highlight",
+      "magic",
     ];
 
     return output ? (

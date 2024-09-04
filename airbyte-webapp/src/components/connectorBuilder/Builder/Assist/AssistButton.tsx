@@ -257,7 +257,7 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
   const button = (
     <Button
       type="button"
-      variant="highlight"
+      variant="magic"
       onClick={onClick}
       icon="aiStars"
       disabled={assistButtonState.disabled}
@@ -385,7 +385,7 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
   const button = (
     <Button
       type="button"
-      variant="highlight"
+      variant="magic"
       onClick={buttonClickHandler}
       icon="aiStars"
       disabled={assistButtonState.disabled}

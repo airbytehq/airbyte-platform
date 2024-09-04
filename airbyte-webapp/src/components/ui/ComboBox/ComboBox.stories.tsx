@@ -117,7 +117,7 @@ WithIcons.args = {
     },
     {
       value: "error",
-      iconRight: <Icon type="aiStars" size="sm" color="highlight" />,
+      iconRight: <Icon type="aiStars" size="sm" color="magic" />,
     },
   ],
   value: "",
