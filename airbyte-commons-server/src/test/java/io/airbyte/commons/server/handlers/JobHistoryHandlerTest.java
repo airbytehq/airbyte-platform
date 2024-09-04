@@ -75,6 +75,7 @@ import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.JobService;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
@@ -211,6 +212,7 @@ class JobHistoryHandlerTest {
   private FeatureFlagClient featureFlagClient;
   private JobHistoryHandler jobHistoryHandler;
   private TemporalClient temporalClient;
+  private JobService jobService;
 
   private static JobRead toJobInfo(final Job job) {
     return new JobRead().id(job.getId())
@@ -269,6 +271,7 @@ class JobHistoryHandlerTest {
     final SourceDefinitionsHandler sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     final DestinationDefinitionsHandler destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
+    jobService = mock(JobService.class);
     jobHistoryHandler = new JobHistoryHandler(
         jobPersistence,
         connectionService,
@@ -279,7 +282,8 @@ class JobHistoryHandlerTest {
         airbyteVersion,
         temporalClient,
         featureFlagClient,
-        mock(LogClientManager.class));
+        mock(LogClientManager.class),
+        jobService);
   }
 
   @Nested
@@ -303,7 +307,7 @@ class JobHistoryHandlerTest {
           new Job(jobId2, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING,
               null, createdAt2, createdAt2);
 
-      when(jobPersistence.listJobs(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))),
+      when(jobService.listJobs(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))),
           eq(JOB_CONFIG_ID),
           eq(pagesize),
           eq(rowOffset),
@@ -393,7 +397,7 @@ class JobHistoryHandlerTest {
       final var latestJob =
           new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3);
 
-      when(jobPersistence.listJobs(eq(configTypes), eq(JOB_CONFIG_ID), eq(pagesize), eq(rowOffset), any(), any(), any(), any(), any(), any(), any()))
+      when(jobService.listJobs(eq(configTypes), eq(JOB_CONFIG_ID), eq(pagesize), eq(rowOffset), any(), any(), any(), any(), any(), any(), any()))
           .thenReturn(List.of(latestJob, secondJob, firstJob));
       when(jobPersistence.getJobCount(eq(configTypes), eq(JOB_CONFIG_ID), any(), any(), any(), any(), any())).thenReturn(3L);
       when(jobPersistence.getAttemptStats(List.of(300L, 200L, 100L))).thenReturn(Map.of(

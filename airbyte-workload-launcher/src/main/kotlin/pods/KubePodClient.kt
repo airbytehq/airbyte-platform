@@ -402,7 +402,7 @@ class KubePodClient(
 
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
-    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(1)
+    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(2)
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
     private const val BYTES_PER_GB = 1024 * 1024 * 1024

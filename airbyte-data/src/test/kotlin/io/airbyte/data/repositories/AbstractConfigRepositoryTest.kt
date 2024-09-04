@@ -88,6 +88,7 @@ abstract class AbstractConfigRepositoryTest {
   val userInvitationRepository = context.getBean(UserInvitationRepository::class.java)!!
   val organizationEmailDomainRepository = context.getBean(OrganizationEmailDomainRepository::class.java)!!
   val authRefreshTokenRepository = context.getBean(AuthRefreshTokenRepository::class.java)!!
+  val jobsWithAttemptsRepository = context.getBean(JobsWithAttemptsRepository::class.java)!!
   val organizationRepository = context.getBean(OrganizationRepository::class.java)!!
   val workspaceRepository = context.getBean(WorkspaceRepository::class.java)!!
   val organizationPaymentConfigRepository = context.getBean(OrganizationPaymentConfigRepository::class.java)!!

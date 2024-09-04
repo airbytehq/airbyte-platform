@@ -8,14 +8,17 @@ import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
@@ -23,14 +26,25 @@ import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.State;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableMappers;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.application.RecordMapper;
+import io.airbyte.mappers.transformations.Record;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
@@ -51,6 +65,8 @@ import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -75,8 +91,10 @@ class ReplicationWorkerHelperTest {
   private WorkloadApiClient workloadApiClient;
   private AirbyteApiClient airbyteApiClient;
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
-
   private ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
+  private RecordMapper recordMapper;
+  private FeatureFlagClient featureFlagClient;
+
   private final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
       1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
 
@@ -100,6 +118,9 @@ class ReplicationWorkerHelperTest {
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     when(streamStatusTrackerFactory.create(any())).thenReturn(streamStatusTracker);
+    recordMapper = mock(RecordMapper.class);
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(FieldSelector.class),
         mapper,
@@ -114,7 +135,9 @@ class ReplicationWorkerHelperTest {
         Optional.empty(),
         airbyteApiClient,
         streamStatusCompletionTracker,
-        streamStatusTrackerFactory));
+        streamStatusTrackerFactory,
+        recordMapper,
+        featureFlagClient));
   }
 
   @AfterEach
@@ -275,6 +298,60 @@ class ReplicationWorkerHelperTest {
 
     verify(destination).start(configCaptor.capture(), any());
     assertEquals(supportRefreshes, configCaptor.getValue().getSupportRefreshes());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testApplyTransformationFlagDisableOrNoMapper(final boolean mappersEnabled) throws IOException {
+    mockSupportRefreshes(false);
+    // Need to pass in a replication context
+    replicationWorkerHelper.initialize(
+        replicationContext,
+        mock(ReplicationFeatureFlags.class),
+        mock(Path.class),
+        mock(ConfiguredAirbyteCatalog.class),
+        mock(State.class));
+
+    final AirbyteRecordMessage recordMessage = new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value")));
+    final AirbyteRecordMessage copiedRecordMessage = Jsons.clone(recordMessage);
+
+    when(featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(replicationContext.getConnectionId()))).thenReturn(mappersEnabled);
+
+    replicationWorkerHelper.applyTransformationMappers(recordMessage);
+
+    assertEquals(copiedRecordMessage, recordMessage);
+    verifyNoInteractions(recordMapper);
+  }
+
+  @Test
+  void testApplyTransformationMapper() throws IOException {
+    mockSupportRefreshes(false);
+
+    final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
+    final ConfiguredAirbyteStream stream = mock(ConfiguredAirbyteStream.class);
+    final List<ConfiguredMapper> mappers = List.of(new ConfiguredMapper("test", Map.of()));
+
+    when(stream.getStreamDescriptor()).thenReturn(new StreamDescriptor().withName("stream"));
+    when(stream.getMappers()).thenReturn(mappers);
+    when(catalog.getStreams()).thenReturn(List.of(stream));
+    when(featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(replicationContext.getConnectionId()))).thenReturn(true);
+
+    // Need to pass in a replication context
+    replicationWorkerHelper.initialize(
+        replicationContext,
+        mock(ReplicationFeatureFlags.class),
+        mock(Path.class),
+        catalog,
+        mock(State.class));
+
+    final AirbyteRecordMessage recordMessage =
+        new AirbyteRecordMessage().withStream("stream").withData(Jsons.jsonNode(Map.of("column", "value")));
+
+    Record record = new Record((ObjectNode) recordMessage.getData());
+
+    replicationWorkerHelper.applyTransformationMappers(recordMessage);
+
+    verify(recordMapper).applyMappers(record, mappers);
   }
 
   private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {

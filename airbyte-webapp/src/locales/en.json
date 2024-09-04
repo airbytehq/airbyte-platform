@@ -1817,6 +1817,8 @@
   "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
   "login.failed": "Invalid username or password",
+  "login.likelyMissingCookie": "Your credentials were correct, but the server failed to set a cookie. You appear to have deployed over HTTP. Make sure you have <link>disabled secure cookies</link>.",
+  "login.getUserFailed": "Failed to get user after login. Check the network tab for more details.",
   "login.signup": "Sign up",
   "login.returnToLogin": "Return to login",
   "login.loginTitle": "Log in to Airbyte",

@@ -56,6 +56,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.JobService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
 import io.airbyte.featureflag.Workspace;
@@ -99,6 +100,7 @@ public class JobHistoryHandler {
   private final AirbyteVersion airbyteVersion;
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
+  private final JobService jobService;
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final ConnectionService connectionService,
@@ -109,8 +111,10 @@ public class JobHistoryHandler {
                            final AirbyteVersion airbyteVersion,
                            final TemporalClient temporalClient,
                            final FeatureFlagClient featureFlagClient,
-                           final LogClientManager logClientManager) {
+                           final LogClientManager logClientManager,
+                           final JobService jobService) {
     this.featureFlagClient = featureFlagClient;
+    this.jobService = jobService;
     jobConverter = new JobConverter(logClientManager);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
@@ -153,9 +157,9 @@ public class JobHistoryHandler {
           request.getIncludingJobId(),
           pageSize);
     } else {
-      jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
+      jobs = jobService.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+          CollectionUtils.isEmpty(request.getStatuses()) ? Collections.emptyList() : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),

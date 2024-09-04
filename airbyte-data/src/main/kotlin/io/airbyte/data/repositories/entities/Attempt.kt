@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories.entities
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -7,6 +11,7 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 
@@ -34,3 +39,36 @@ open class Attempt(
   @field:TypeDef(type = DataType.JSON)
   var attemptSyncConfig: JsonNode? = null,
 )
+
+@MappedEntity("attempts")
+class AttemptWithAssociations(
+  id: Long? = null,
+  jobId: Long? = null,
+  attemptNumber: Long? = null,
+  logPath: String? = null,
+  output: JsonNode? = null,
+  status: AttemptStatus? = null,
+  createdAt: java.time.OffsetDateTime? = null,
+  updatedAt: java.time.OffsetDateTime? = null,
+  endedAt: java.time.OffsetDateTime? = null,
+  temporalWorkflowId: String? = null,
+  failureSummary: JsonNode? = null,
+  processingTaskQueue: String? = null,
+  attemptSyncConfig: JsonNode? = null,
+  @Relation(value = Relation.Kind.MANY_TO_ONE)
+  val job: JobWithAttempts? = null,
+) : Attempt(
+    id = id,
+    jobId = jobId,
+    attemptNumber = attemptNumber,
+    logPath = logPath,
+    output = output,
+    status = status,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    endedAt = endedAt,
+    temporalWorkflowId = temporalWorkflowId,
+    failureSummary = failureSummary,
+    processingTaskQueue = processingTaskQueue,
+    attemptSyncConfig = attemptSyncConfig,
+  )

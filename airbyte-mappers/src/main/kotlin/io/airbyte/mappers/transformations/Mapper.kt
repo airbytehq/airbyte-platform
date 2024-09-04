@@ -17,5 +17,5 @@ interface Mapper {
   fun map(
     config: ConfiguredMapper,
     record: Record,
-  ): Record
+  )
 }

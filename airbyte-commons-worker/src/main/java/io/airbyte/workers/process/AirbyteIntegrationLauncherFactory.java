@@ -18,6 +18,7 @@ import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.helper.GsonPksExtractor;
@@ -52,19 +53,22 @@ public class AirbyteIntegrationLauncherFactory {
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
   private final MetricClient metricClient;
+  private final DestinationCatalogGenerator destinationCatalogGenerator;
 
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlagClient featureFlagClient,
                                            final GsonPksExtractor gsonPksExtractor,
-                                           final MetricClient metricClient) {
+                                           final MetricClient metricClient,
+                                           final DestinationCatalogGenerator destinationCatalogGenerator) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
     this.metricClient = metricClient;
+    this.destinationCatalogGenerator = destinationCatalogGenerator;
   }
 
   /**
@@ -163,7 +167,9 @@ public class AirbyteIntegrationLauncherFactory {
           messageWriterFactory,
           getProtocolSerializer(destinationLauncherConfig),
           destinationTimeoutMonitor,
-          metricClient);
+          metricClient,
+          destinationCatalogGenerator,
+          featureFlagClient);
     }
   }
 

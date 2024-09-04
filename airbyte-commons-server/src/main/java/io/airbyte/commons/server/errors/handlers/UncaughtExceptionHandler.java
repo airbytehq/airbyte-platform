@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.errors.handlers;
 
 import io.airbyte.commons.server.errors.KnownException;
+import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 @Produces
 @Singleton
 @Requires(classes = Throwable.class)
+@Primary
 public class UncaughtExceptionHandler implements ExceptionHandler<Throwable, HttpResponse> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(UncaughtExceptionHandler.class);
