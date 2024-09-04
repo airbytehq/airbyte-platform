@@ -265,7 +265,7 @@
 
   &.typeMagic {
     color: colors.$inverse;
-    @include mixins.gradient-border(1px, colors.$gradient-primary, colors.$gradient-secondary);
+    @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
 
     & .buttonIcon {
       // Note: The icon must support a gradient

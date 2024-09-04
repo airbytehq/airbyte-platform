@@ -7,7 +7,7 @@
   z-index: z-indices.$modal;
   border-radius: variables.$border-radius-md;
   box-shadow: variables.$box-shadow-popup;
-  @include mixins.gradient-border(1px, colors.$gradient-primary);
+  @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary);
 }
 
 .assistConfigPanel {
