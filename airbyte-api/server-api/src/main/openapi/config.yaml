@@ -4840,6 +4840,98 @@ paths:
       tags:
         - scoped_configuration
 
+  # Connector Rollouts
+  /v1/connector_rollout/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutListRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getConnectorRolloutsList
+      summary: Get all connector rollouts matching the provided state
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+      responses:
+        "200":
+          description: Newly created connector rollout entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: createConnectorRollout
+      summary: Create a new connector rollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/get:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutReadRequestBody"
+
+      responses:
+        "200":
+          description: A connector rollout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutReadResponse"
+
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Get a connector rollout by actor definition ID and version
+      operationId: getConnectorRolloutById
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/update:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutUpdateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update a connector rollout by ID
+      operationId: updateConnectorRollout
+      tags:
+        - connector_rollout
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -6788,6 +6880,195 @@ components:
         scopedConfigurationId:
           type: string
           format: uuid
+
+    # Connector Rollouts
+    ConnectorRolloutRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor_definition_id:
+          type: string
+          format: uuid
+        release_candidate_version_id:
+          type: string
+          format: uuid
+        initial_version_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutState"
+        initial_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        current_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        final_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        has_breaking_changes:
+          type: boolean
+        max_step_wait_time_mins:
+          type: integer
+          minimum: 0
+        updated_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutState:
+      type: string
+      enum:
+        - initialized
+        - in_progress
+        - paused
+        - finalizing
+        - succeeded
+        - errored
+        - failed_rolled_back
+        - canceled_rolled_back
+
+    ConnectorRolloutStrategy:
+      type: string
+      enum:
+        - manual
+        - automated
+        - overridden
+
+    ConnectorRolloutListRequestBody:
+      type: object
+      required:
+        - sourceDefinitionId
+        - dockerImageTag
+      properties:
+        sourceDefinitionId:
+          type: string
+          format: UUID
+        dockerImageTag:
+          type: string
+
+    ConnectorRolloutListResponse:
+      type: object
+      properties:
+        connectorRollouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutCreateRequestBody:
+      type: object
+      required:
+        - id
+        - actor_definition_id
+        - release_candidate_version_id
+        - state
+        - initial_rollout_pct
+        - final_target_rollout_pct
+        - has_breaking_changes
+        - max_step_wait_time_mins
+        - expires_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor_definition_id:
+          type: string
+          format: uuid
+        release_candidate_version_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutState"
+        initial_rollout_pct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        current_target_rollout_pct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        final_target_rollout_pct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        has_breaking_changes:
+          type: boolean
+        max_step_wait_time_mins:
+          type: integer
+          minimum: 0
+        updated_by:
+          type: string
+          format: uuid
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        expires_at:
+          type: string
+          format: date-time
+
+    ConnectorRolloutCreateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutReadRequestBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutReadResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutUpdateRequestBody:
+      type: object
+      required:
+        - id
+        - data
+      properties:
+        id:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+
+    ConnectorRolloutUpdateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
 
     # WORKSPACE
     WorkspaceId:
