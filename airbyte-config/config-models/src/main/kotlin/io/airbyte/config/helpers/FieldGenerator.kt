@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+
+val log = KotlinLogging.logger {}
 
 @Singleton
 class FieldGenerator {
@@ -29,16 +32,16 @@ class FieldGenerator {
       return FieldType.MULTI
     }
     val type = node.get("type")
-    if (type.isArray) {
+    return if (type.isArray) {
       val curatedArray = removeNullFromArray(type as ArrayNode)
 
       if (curatedArray.size == 1) {
-        return getFieldTypeFromSchemaType(curatedArray[0], node)
+        getFieldTypeFromSchemaType(curatedArray[0], node)
       } else {
-        return FieldType.MULTI
+        FieldType.MULTI
       }
     } else {
-      return getFieldTypeFromSchemaType(type.asText(), node)
+      getFieldTypeFromSchemaType(type.asText(), node)
     }
   }
 
@@ -84,11 +87,13 @@ class FieldGenerator {
         } else if (format == "time" && airbyteType == "time_with_timezone") {
           return FieldType.TIME_WITH_TIMEZONE
         } else {
-          throw IllegalStateException("Unexpected format: $format and airbyteType: $airbyteType")
+          log.warn { "Unknown string schema: $node" }
+          return FieldType.UNKNOWN
         }
       }
       else -> {
-        throw IllegalStateException("Unexpected schema type: $schemaType")
+        log.warn { "Unknown schema: $node" }
+        return FieldType.UNKNOWN
       }
     }
   }

@@ -7,7 +7,6 @@ import io.airbyte.config.FieldType
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -246,12 +245,14 @@ class FieldGeneratorTest {
 
   @Test
   fun `test invalid type`() {
-    assertThrows<IllegalStateException> { fieldGenerator.getFieldTypeFromSchemaType("not_supported", Jsons.emptyObject()) }
+    val result = fieldGenerator.getFieldTypeFromSchemaType("not_supported", Jsons.emptyObject())
+
+    assertEquals(FieldType.UNKNOWN, result)
   }
 
   @Test
   fun `test invalid string type`() {
-    assertThrows<IllegalStateException> {
+    val result =
       fieldGenerator.getFieldTypeFromSchemaType(
         "string",
         Jsons.deserialize(
@@ -260,7 +261,8 @@ class FieldGeneratorTest {
           """.trimIndent(),
         ),
       )
-    }
+
+    assertEquals(FieldType.UNKNOWN, result)
   }
 
   @Test

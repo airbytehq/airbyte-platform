@@ -29,6 +29,7 @@ dependencies {
   implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
   implementation(libs.commons.io)
+  implementation(libs.kotlin.logging)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

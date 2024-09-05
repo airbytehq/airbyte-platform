@@ -54,24 +54,13 @@ class DestinationCatalogGenerator(val mappers: List<Mapper>) {
       }
   }
 
-  internal fun fieldSerialization(
-    field: Field,
-    jsonSchema: JsonNode,
-  ): String {
-    return if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI).contains(field.type)) {
-      jsonSchema.get(field.name).toString()
-    } else {
-      Jsons.serialize(field.type.toMap())
-    }
-  }
-
   internal fun generateJsonSchemaFromFields(
     fields: List<Field>,
     jsonSchema: JsonNode,
   ): String {
     return Jsons.serialize(
       fields.associate {
-        if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI).contains(it.type)) {
+        if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
           Pair(it.name, jsonSchema.get(it.name))
         } else {
           Pair(it.name, Jsons.jsonNode(it.type.toMap()))
