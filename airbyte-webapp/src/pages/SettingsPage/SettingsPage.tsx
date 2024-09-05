@@ -19,6 +19,8 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const { formatMessage } = useIntl();
@@ -85,11 +87,20 @@ export const SettingsPage: React.FC = () => {
         {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
             {multiWorkspaceUI && canViewOrganizationSettings && (
-              <SettingsLink
-                iconType="community"
-                name={formatMessage({ id: "settings.general" })}
-                to={SettingsRoutePaths.Organization}
-              />
+              <>
+                <SettingsLink
+                  iconType="gear"
+                  name={formatMessage({ id: "settings.general" })}
+                  to={SettingsRoutePaths.Organization}
+                />
+                {isAccessManagementEnabled && displayOrganizationUsers && (
+                  <SettingsLink
+                    iconType="community"
+                    name={formatMessage({ id: "settings.members" })}
+                    to={SettingsRoutePaths.OrganizationMembers}
+                  />
+                )}
+              </>
             )}
             {multiWorkspaceUI && canViewWorkspaceSettings && (
               <>

@@ -995,6 +995,7 @@
   "settings.workspace.general.title": "General workspace settings",
   "settings.workspace.usage.title": "Workspace usage",
   "settings.organization.general.title": "General organization settings",
+  "settings.organization.members.title": "Organization members",
   "settings.organization.billing.notSetUp": "Billing has not yet been set up for this organization. Start by adding a payment method.",
   "settings.organization.billing.title": "Billing",
   "settings.organization.billing.billingInformation": "Billing information",

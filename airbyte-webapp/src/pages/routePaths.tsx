@@ -47,6 +47,7 @@ export enum SettingsRoutePaths {
   DataResidency = "data-residency",
   Workspace = "workspace",
   Organization = "organization",
+  OrganizationMembers = "organizationMembers",
   AccessManagement = "access-management",
   Applications = "applications",
 }

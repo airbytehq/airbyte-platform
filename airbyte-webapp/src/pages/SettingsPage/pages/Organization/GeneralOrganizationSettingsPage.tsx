@@ -4,21 +4,16 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Separator } from "components/ui/Separator";
 
 import { useCurrentWorkspace } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
 
-import { OrganizationAccessManagementSection } from "./pages/AccessManagementPage/OrganizationAccessManagementSection";
-import { UpdateOrganizationSettingsForm } from "./UpdateOrganizationSettingsForm";
+import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettingsForm";
 
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
   const { formatMessage } = useIntl();
   const { organizationId } = useCurrentWorkspace();
-  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -38,13 +33,6 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
         </CopyButton>
       </FlexContainer>
       <UpdateOrganizationSettingsForm />
-
-      {isAccessManagementEnabled && displayOrganizationUsers && (
-        <>
-          <Separator />
-          <OrganizationAccessManagementSection />
-        </>
-      )}
     </FlexContainer>
   );
 };

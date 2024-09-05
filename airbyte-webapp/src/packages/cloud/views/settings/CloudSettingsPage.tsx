@@ -106,9 +106,14 @@ export const CloudSettingsPage: React.FC = () => {
         {canViewOrgSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
             <SettingsLink
-              iconType="community"
+              iconType="gear"
               name={formatMessage({ id: "settings.general" })}
               to={CloudSettingsRoutePaths.Organization}
+            />
+            <SettingsLink
+              iconType="community"
+              name={formatMessage({ id: "settings.members" })}
+              to={CloudSettingsRoutePaths.OrganizationMembers}
             />
             {isBillingInArrearsActive && canManageOrganizationBilling && (
               <SettingsLink
