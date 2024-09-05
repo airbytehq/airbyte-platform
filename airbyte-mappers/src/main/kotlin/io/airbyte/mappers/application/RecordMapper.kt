@@ -1,5 +1,6 @@
 package io.airbyte.mappers.application
 
+import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.Mapper
@@ -10,7 +11,9 @@ private val log = KotlinLogging.logger {}
 
 @Singleton
 class RecordMapper(private val mappers: List<Mapper>) {
-  private val mappersByName: Map<String, Mapper> = mappers.associateBy { it.name }
+  private data class MapperStopwatch(val mapper: Mapper, val stopwatch: Stopwatch = Stopwatch())
+
+  private val mappersByName: Map<String, MapperStopwatch> = mappers.map { MapperStopwatch(it) }.associateBy { it.mapper.name }
 
   fun applyMappers(
     record: AirbyteRecord,
@@ -18,11 +21,10 @@ class RecordMapper(private val mappers: List<Mapper>) {
   ) {
     try {
       configuredMappers.fold(record) { acc, configuredMapper ->
-        val mapper =
-          mappersByName[configuredMapper.name]
-
-        if (mapper != null) {
-          mapper.map(configuredMapper, acc)
+        mappersByName[configuredMapper.name]?.let { (mapper, stopwatch) ->
+          stopwatch.time {
+            mapper.map(configuredMapper, acc)
+          }
         }
         acc
       }
@@ -30,4 +32,9 @@ class RecordMapper(private val mappers: List<Mapper>) {
       log.debug { "Error applying mappers: ${e.message}" }
     }
   }
+
+  fun collectStopwatches(): Map<String, Stopwatch> =
+    mappersByName
+      .filterValues { it.stopwatch.getExecutionCount() > 0 }
+      .map { Pair(it.key, it.value.stopwatch) }.toMap()
 }

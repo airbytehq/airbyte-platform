@@ -354,7 +354,7 @@ class ReplicationWorkerHelper(
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.replicationStartTime)
         .withEndTime(System.currentTimeMillis())
-        .withPerformanceMetrics(performanceMetrics)
+        .withPerformanceMetrics(buildPerformanceMetrics(performanceMetrics))
 
     val output =
       ReplicationOutput()
@@ -379,6 +379,18 @@ class ReplicationWorkerHelper(
 
     LineGobbler.endSection("REPLICATION")
     return output
+  }
+
+  private fun buildPerformanceMetrics(performanceMetrics: PerformanceMetrics?): PerformanceMetrics {
+    val finalMetrics = PerformanceMetrics()
+    performanceMetrics?.let {
+      it.additionalProperties.map { (key, value) -> finalMetrics.setAdditionalProperty(key, value) }
+    }
+    val mapperMetrics = recordMapper.collectStopwatches()
+    if (mapperMetrics.isNotEmpty()) {
+      finalMetrics.setAdditionalProperty("mappers", mapperMetrics)
+    }
+    return finalMetrics
   }
 
   @VisibleForTesting
