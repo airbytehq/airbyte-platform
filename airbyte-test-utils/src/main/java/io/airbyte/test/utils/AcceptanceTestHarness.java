@@ -303,7 +303,6 @@ public class AcceptanceTestHarness {
         true,
         null,
         List.of(),
-        List.of(),
         null,
         null,
         null);
@@ -742,8 +741,7 @@ public class AcceptanceTestHarness {
             null));
   }
 
-  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, final UUID sourceCatalogId)
-      throws IOException, InterruptedException {
+  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) throws IOException, InterruptedException {
     return updateConnection(
         new ConnectionUpdate(
             connectionId,
@@ -1316,7 +1314,7 @@ public class AcceptanceTestHarness {
         .get(() -> apiClient.getWebBackendApi().webBackendGetConnection(new WebBackendConnectionRequestBody(connectionId, true)));
   }
 
-  public void createWorkspaceWithId(final UUID workspaceId) {
+  public void createWorkspaceWithId(UUID workspaceId) {
     Failsafe.with(retryPolicy).run(() -> apiClient.getWorkspaceApi()
         .createWorkspaceIfNotExist(
             new WorkspaceCreateWithId(
@@ -1334,7 +1332,7 @@ public class AcceptanceTestHarness {
                 null)));
   }
 
-  public StreamStatusReadList getStreamStatuses(final UUID connectionId, final Long jobId, final Integer attempt, final UUID workspaceId) {
+  public StreamStatusReadList getStreamStatuses(UUID connectionId, Long jobId, Integer attempt, UUID workspaceId) {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getStreamStatusesApi().getStreamStatuses(
         new StreamStatusListRequestBody(
             new Pagination(100, 0),
@@ -1359,7 +1357,6 @@ public class AcceptanceTestHarness {
             stream.getConfig().getSuggested(),
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
-            stream.getConfig().getHashedFields(),
             stream.getConfig().getMinimumGenerationId(),
             stream.getConfig().getGenerationId(),
             stream.getConfig().getSyncId())))

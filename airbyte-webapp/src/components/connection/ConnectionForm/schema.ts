@@ -98,10 +98,6 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .array()
     .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
     .optional(),
-  hashedFields: yup
-    .array()
-    .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
-    .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   minimumGenerationId: yup.number().optional(),

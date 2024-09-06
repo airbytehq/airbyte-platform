@@ -22,7 +22,6 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.helpers.CatalogHelpers;
-import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -81,7 +80,6 @@ public abstract class ReplicationWorkerPerformanceTest {
   private static final Logger log = LoggerFactory.getLogger(ReplicationWorkerPerformanceTest.class);
 
   public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.ofMillis(1);
-  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
 
   public abstract ReplicationWorker getReplicationWorker(final String jobId,
                                                          final int attempt,
@@ -231,7 +229,7 @@ public abstract class ReplicationWorkerPerformanceTest {
             // The stream fields here are intended to match the records emitted by the
             // LimitedFatRecordSourceProcess
             // class.
-            catalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
+            CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
             .withWorkspaceId(UUID.randomUUID());
         output.set(worker.run(testInput, ignoredPath));
       } catch (final WorkerException e) {

@@ -8,11 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.SelectedFieldInfo;
 import io.airbyte.commons.text.Names;
-import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -26,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 class CatalogClientConvertersTest {
 
-  private static final FieldGenerator fieldGenerator = new FieldGenerator();
   public static final String ID_FIELD_NAME = "id";
   private static final String STREAM_NAME = "users-data";
   private static final AirbyteStream STREAM = new AirbyteStream()
@@ -62,7 +57,6 @@ class CatalogClientConvertersTest {
           null,
           null,
           null,
-          null,
           null);
 
   private static final AirbyteCatalog BASIC_MODEL_CATALOG = new AirbyteCatalog().withStreams(
@@ -85,38 +79,6 @@ class CatalogClientConvertersTest {
   void testConvertToProtocol() {
     assertEquals(BASIC_MODEL_CATALOG,
         CatalogClientConverters.toAirbyteProtocol(EXPECTED_CLIENT_CATALOG));
-  }
-
-  @Test
-  void testConvertInternalWithMapping() {
-    final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
-        io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
-        io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
-        List.of(ID_FIELD_NAME),
-        List.of(),
-        Names.toAlphanumericAndUnderscore(STREAM_NAME),
-        true,
-        null,
-        null,
-        null,
-        List.of(new SelectedFieldInfo(List.of(ID_FIELD_NAME))),
-        null,
-        null,
-        null);
-    final io.airbyte.api.client.model.generated.AirbyteCatalog clientCatalog =
-        new io.airbyte.api.client.model.generated.AirbyteCatalog(
-            List.of(
-                new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration(
-                    CLIENT_STREAM,
-                    streamConfig)));
-
-    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog);
-    final var stream = configuredCatalog.getStreams().getFirst();
-    assertEquals(STREAM_NAME, stream.getStream().getName());
-    assertEquals(1, stream.getFields().size());
-    assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
-    assertEquals(1, stream.getMappers().size());
-    assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
   }
 
   @Test
@@ -153,7 +115,6 @@ class CatalogClientConvertersTest {
           List.of(),
           Names.toAlphanumericAndUnderscore(STREAM_NAME),
           true,
-          null,
           null,
           null,
           null,

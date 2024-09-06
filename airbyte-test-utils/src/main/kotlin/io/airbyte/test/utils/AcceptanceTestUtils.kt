@@ -154,7 +154,6 @@ object AcceptanceTestUtils {
             config.suggested,
             replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
             replacementSelectedFields.orElse(config.selectedFields),
-            config.hashedFields,
             replacementMinimumGenerationId.orElse(config.minimumGenerationId),
             replacementGenerationId.orElse(config.generationId),
             replacementSyncId.orElse(config.syncId),

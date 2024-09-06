@@ -14,7 +14,7 @@ val log = KotlinLogging.logger {}
 class FieldGenerator {
   fun getFieldsFromSchema(schema: JsonNode): List<Field> {
     val properties = schema.get("properties")
-    if (properties != null && properties.isObject) {
+    if (properties.isObject) {
       val arrProperties = properties as ObjectNode
       return arrProperties.properties().map { (key, value) ->
         Field(
