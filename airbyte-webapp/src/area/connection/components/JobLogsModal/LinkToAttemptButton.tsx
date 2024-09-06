@@ -61,6 +61,7 @@ export const LinkToAttemptButton: React.FC<Props> = ({
           onClick={onCopyLink}
           aria-label={formatMessage({ id: "connection.copyLogLink" })}
           icon="link"
+          data-testid="copy-link-to-attempt-button"
         />
       }
     >

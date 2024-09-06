@@ -419,6 +419,7 @@ airbyte:
     client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
     client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
     realm: ${KEYCLOAK_REALM:master}
+    internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
     password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
 

@@ -7,11 +7,11 @@ package config
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
-import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
-import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
-import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.KEYCLOAK_CLIENT_SECRET_ENV_VAR
-import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.WORKLOAD_API_BEARER_TOKEN_ENV_VAR
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
+import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
+import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
+import io.airbyte.workload.launcher.constants.EnvVarConstants.KEYCLOAK_CLIENT_SECRET_ENV_VAR
+import io.airbyte.workload.launcher.constants.EnvVarConstants.WORKLOAD_API_BEARER_TOKEN_ENV_VAR
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
 import io.mockk.every

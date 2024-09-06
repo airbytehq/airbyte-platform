@@ -18,6 +18,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
@@ -149,5 +150,10 @@ class ApplicationBeanFactory {
     } else {
       listOf(Geography(geography), PlaneName(dataPlaneName))
     }
+  }
+
+  @Singleton
+  fun connectorApmSupportHelper(): ConnectorApmSupportHelper {
+    return ConnectorApmSupportHelper()
   }
 }

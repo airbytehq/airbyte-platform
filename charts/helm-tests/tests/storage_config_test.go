@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultStorageSecretName = "airbyte-config-secrets"
+	defaultStorageSecretName = "airbyte-airbyte-secrets"
 )
 
 func TestBasicStorageConfiguration(t *testing.T) {
@@ -73,8 +73,10 @@ func TestBasicStorageConfiguration(t *testing.T) {
 				},
 			},
 			{
-				Type:      "s3",
-				SetValues: map[string]string{},
+				Type: "s3",
+				SetValues: map[string]string{
+					"global.storage.s3.authenticationType": "credentials",
+				},
 				ExpectedConfigMapValues: map[string]string{
 					"AWS_DEFAULT_REGION":              "",
 					"LOG4J_CONFIGURATION_FILE":        "log4j2-s3.xml",
@@ -205,7 +207,7 @@ func TestS3StorageConfigurationSecrets(t *testing.T) {
 		t.Run("user-defined storageSecretName", func(t *testing.T) {
 			helmOpts := baseHelmOptionsForStorageType("s3")
 			helmOpts.SetValues["global.storage.s3.authenticationType"] = "credentials"
-			helmOpts.SetValues["global.storage.storageSecretName"] = "user-defined-secret"
+			helmOpts.SetValues["global.storage.secretName"] = "user-defined-secret"
 
 			expectedEnvVarKeys := map[string]expectedEnvVar{
 				"AWS_ACCESS_KEY_ID":     expectedSecretVar().RefName("user-defined-secret").RefKey("s3-access-key-id"),

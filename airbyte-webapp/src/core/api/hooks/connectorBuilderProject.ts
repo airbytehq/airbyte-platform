@@ -100,8 +100,8 @@ export const useListBuilderProjectVersions = (project?: BuilderProject) => {
 };
 
 export type CreateProjectContext =
-  | { name: string; manifest?: DeclarativeComponentSchema }
-  | { name: string; forkProjectId: string; version?: "draft" | number };
+  | { name: string; assistEnabled?: boolean; manifest?: DeclarativeComponentSchema }
+  | { name: string; assistEnabled?: boolean; forkProjectId: string; version?: "draft" | number };
 
 export const useCreateBuilderProject = () => {
   const requestOptions = useRequestOptions();

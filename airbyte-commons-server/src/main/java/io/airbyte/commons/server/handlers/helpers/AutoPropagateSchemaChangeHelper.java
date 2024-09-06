@@ -12,15 +12,19 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import jakarta.ws.rs.NotSupportedException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -128,6 +132,25 @@ public class AutoPropagateSchemaChangeHelper {
           if (oldCatalogPerStream.containsKey(streamDescriptor)) {
             oldCatalogPerStream.get(streamDescriptor)
                 .stream(newCatalogPerStream.get(streamDescriptor).getStream());
+            final var streamConfig = oldCatalogPerStream.get(streamDescriptor).getConfig();
+            if (Boolean.TRUE == streamConfig.getFieldSelectionEnabled()) {
+              final Set<String> selectedFields =
+                  streamConfig.getSelectedFields().stream().map(i -> i.getFieldPath().get(0)).collect(Collectors.toSet());
+              final Set<String> newlySelectedFields = new HashSet<>();
+              for (final var fieldTransform : transformation.getUpdateStream().getFieldTransforms()) {
+                if (fieldTransform.getTransformType().equals(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                    && fieldTransform.getFieldName().size() == 1) {
+                  final String newTopLevelField = fieldTransform.getFieldName().get(0);
+                  if (!selectedFields.contains(newTopLevelField)) {
+                    newlySelectedFields.add(fieldTransform.getFieldName().get(0));
+                  }
+                }
+              }
+              final var allSelectedFields = Stream.concat(
+                  streamConfig.getSelectedFields().stream(),
+                  newlySelectedFields.stream().map(field -> new SelectedFieldInfo().fieldPath(List.of(field)))).toList();
+              streamConfig.setSelectedFields(allSelectedFields);
+            }
             changes.add(staticFormatDiff(transformation));
             appliedDiff.addTransformsItem(transformation);
           }

@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 
 .button {
   display: inline-flex;
@@ -262,21 +263,24 @@
     }
   }
 
-  &.typeHighlight {
-    background-color: colors.$yellow-25;
-    border: 1px solid colors.$yellow-300;
+  &.typeMagic {
     color: colors.$inverse;
+    @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
 
     & .buttonIcon {
-      color: colors.$yellow-500;
+      // Note: The icon must support a gradient
+      // so we fallback to the start color
+      color: colors.$gradient-primary-start;
+      --start-color: #{colors.$gradient-primary-start};
+      --stop-color: #{colors.$gradient-primary-stop};
     }
 
     &:hover {
-      background-color: colors.$yellow-50;
+      filter: brightness(0.9);
     }
 
     &:active {
-      background-color: colors.$yellow-100;
+      filter: brightness(0.8);
     }
   }
 

@@ -90,6 +90,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
                       className={styles.card__closeButton}
                       onClick={onModalCancel}
                       aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
+                      data-testid="close-modal-button"
                     >
                       <Icon type="cross" />
                     </button>

@@ -7,19 +7,25 @@ package io.airbyte.commons.server.authorization;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
 import io.micronaut.security.authentication.Authentication;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -35,6 +41,7 @@ class KeycloakTokenValidatorTest {
 
   private static final String LOCALHOST = "http://localhost";
   private static final String URI_PATH = "/some/path";
+  private static final String INTERNAL_REALM_NAME = "_internal";
 
   // Note that this token was specifically constructed to include an underscore, which was a bug in
   // production
@@ -73,6 +80,7 @@ class KeycloakTokenValidatorTest {
 
     keycloakConfiguration = mock(AirbyteKeycloakConfiguration.class);
     when(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(any())).thenReturn(LOCALHOST + URI_PATH);
+    when(keycloakConfiguration.getInternalRealm()).thenReturn(INTERNAL_REALM_NAME);
     tokenRoleResolver = mock(TokenRoleResolver.class);
 
     keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, tokenRoleResolver);
@@ -80,28 +88,9 @@ class KeycloakTokenValidatorTest {
 
   @Test
   void testValidateToken() throws Exception {
-    final URI uri = new URI(LOCALHOST + URI_PATH);
     final String expectedUserId = "0f0cbf9a-24c2-46cc-b582-d1ff2c0d5ef5";
-
-    // set up mocked incoming request
-    final HttpRequest<?> httpRequest = mock(HttpRequest.class);
-    final NettyHttpHeaders headers = new NettyHttpHeaders();
-    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_ACCESS_TOKEN);
-    when(httpRequest.getUri()).thenReturn(uri);
-    when(httpRequest.getHeaders()).thenReturn(headers);
-
-    // set up mock http response from Keycloak
     final String responseBody = "{\"sub\":\"0f0cbf9a-24c2-46cc-b582-d1ff2c0d5ef5\",\"preferred_username\":\"airbyte\"}";
-    final Response userInfoResponse = mock(Response.class);
-    final ResponseBody userInfoResponseBody = mock(ResponseBody.class);
-    when(userInfoResponseBody.string()).thenReturn(responseBody);
-    when(userInfoResponse.body()).thenReturn(userInfoResponseBody);
-    when(userInfoResponse.code()).thenReturn(200);
-    when(userInfoResponse.isSuccessful()).thenReturn(true);
-
-    final Call call = mock(Call.class);
-    when(call.execute()).thenReturn(userInfoResponse);
-    when(httpClient.newCall(any(Request.class))).thenReturn(call);
+    final HttpRequest<?> httpRequest = mockRequests(VALID_ACCESS_TOKEN, responseBody);
 
     final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest);
 
@@ -117,28 +106,27 @@ class KeycloakTokenValidatorTest {
   }
 
   @Test
+  void testInternalServiceAccountIsInstanceAdmin() throws Exception {
+    final String sub = UUID.randomUUID().toString();
+    final String issuer = "/auth/realms/" + INTERNAL_REALM_NAME;
+    final String clientName = "airbyte-workload-client";
+    final String accessToken = JWT.create().withSubject(sub).withIssuer(issuer).withClaim("azp", clientName).sign(Algorithm.none());
+
+    final String responseBody = Jsons.serialize(Map.of("sub", sub, "iss", issuer, "azp", clientName));
+    final HttpRequest<?> httpRequest = mockRequests(accessToken, responseBody);
+
+    final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(accessToken, httpRequest);
+
+    verifyNoInteractions(tokenRoleResolver);
+
+    StepVerifier.create(responsePublisher)
+        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, RbacRoleHelper.getInstanceAdminRoles()))
+        .verifyComplete();
+  }
+
+  @Test
   void testKeycloakValidationFailureNoSubClaim() throws Exception {
-    final URI uri = new URI(LOCALHOST + URI_PATH);
-
-    // set up mocked incoming request
-    final HttpRequest<?> httpRequest = mock(HttpRequest.class);
-    final NettyHttpHeaders headers = new NettyHttpHeaders();
-    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_ACCESS_TOKEN);
-    when(httpRequest.getUri()).thenReturn(uri);
-    when(httpRequest.getHeaders()).thenReturn(headers);
-
-    // set up mock http response from Keycloak that lacks a `sub` claim
-    final String responseBody = "{\"preferred_username\":\"airbyte\"}";
-    final Response userInfoResponse = mock(Response.class);
-    final ResponseBody userInfoResponseBody = mock(ResponseBody.class);
-    when(userInfoResponseBody.string()).thenReturn(responseBody);
-    when(userInfoResponse.body()).thenReturn(userInfoResponseBody);
-    when(userInfoResponse.code()).thenReturn(200);
-    when(userInfoResponse.isSuccessful()).thenReturn(true);
-
-    final Call call = mock(Call.class);
-    when(call.execute()).thenReturn(userInfoResponse);
-    when(httpClient.newCall(any(Request.class))).thenReturn(call);
+    final HttpRequest<?> httpRequest = mockRequests(VALID_ACCESS_TOKEN, "{\"preferred_username\":\"airbyte\"}");
 
     final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest);
 
@@ -164,6 +152,31 @@ class KeycloakTokenValidatorTest {
     final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(blankJWT, httpRequest);
     StepVerifier.create(responsePublisher)
         .verifyComplete();
+  }
+
+  private HttpRequest<?> mockRequests(final String jwtToken, final String userInfoPayload) throws IOException {
+    final URI uri = URI.create(LOCALHOST + URI_PATH);
+
+    // set up mocked incoming request
+    final HttpRequest<?> httpRequest = mock(HttpRequest.class);
+    final NettyHttpHeaders headers = new NettyHttpHeaders();
+    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken);
+    when(httpRequest.getUri()).thenReturn(uri);
+    when(httpRequest.getHeaders()).thenReturn(headers);
+
+    // set up mock http response from Keycloak
+    final Response userInfoResponse = mock(Response.class);
+    final ResponseBody userInfoResponseBody = mock(ResponseBody.class);
+    when(userInfoResponseBody.string()).thenReturn(userInfoPayload);
+    when(userInfoResponse.body()).thenReturn(userInfoResponseBody);
+    when(userInfoResponse.code()).thenReturn(200);
+    when(userInfoResponse.isSuccessful()).thenReturn(true);
+
+    final Call call = mock(Call.class);
+    when(call.execute()).thenReturn(userInfoResponse);
+    when(httpClient.newCall(any(Request.class))).thenReturn(call);
+
+    return httpRequest;
   }
 
   private boolean matchSuccessfulResponse(final Authentication authentication,

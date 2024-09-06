@@ -28,7 +28,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
-        analyticsMessageTracker, Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory));
+        analyticsMessageTracker, Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
+        recordMapper, featureFlagClient));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,

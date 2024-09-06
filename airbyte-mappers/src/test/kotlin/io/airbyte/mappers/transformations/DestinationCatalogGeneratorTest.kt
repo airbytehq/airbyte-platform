@@ -7,35 +7,12 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
-import io.airbyte.config.MapperSpecification
+import io.airbyte.mappers.mocks.TestMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
 
 class DestinationCatalogGeneratorTest {
-  private class TestMapper : Mapper {
-    override val name: String = "test"
-
-    override fun spec(): MapperSpecification = MapperSpecification("test", "", mapOf())
-
-    override fun schema(
-      config: ConfiguredMapper,
-      streamFields: List<Field>,
-    ): List<Field> =
-      streamFields.map {
-        it.copy(it.name + "_test", FieldType.STRING)
-      }
-
-    override fun map(
-      config: ConfiguredMapper,
-      record: Record,
-    ): Record = record
-  }
-
   private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf())
   private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()))
 
@@ -236,79 +213,93 @@ class DestinationCatalogGeneratorTest {
     )
   }
 
-  @ParameterizedTest
-  @MethodSource("getFieldsAndExpectedOutput")
-  fun `test fieldSerialization`(
-    field: Field,
-    expectedOutput: String,
-  ) {
+  @Test
+  fun `test fieldSerialization`() {
+    val input =
+      listOf(
+        Field("fieldString", FieldType.STRING),
+        Field("fieldBoolean", FieldType.BOOLEAN),
+        Field("fieldInteger", FieldType.INTEGER),
+        Field("fieldNumber", FieldType.NUMBER),
+        Field("fieldDate", FieldType.DATE),
+        Field("fieldTimestampWithoutTimezone", FieldType.TIMESTAMP_WITHOUT_TIMEZONE),
+        Field("fieldTimestampWithTimezone", FieldType.TIMESTAMP_WITH_TIMEZONE),
+        Field("fieldTimeWithoutTimezone", FieldType.TIME_WITHOUT_TIMEZONE),
+        Field("fieldTimeWithTimezone", FieldType.TIME_WITH_TIMEZONE),
+        Field("fieldObject", FieldType.OBJECT),
+        Field("fieldArray", FieldType.OBJECT),
+        Field("fieldMulti", FieldType.OBJECT),
+        Field("fieldUnknown", FieldType.UNKNOWN),
+      )
+    val expectedOutputJson =
+      Jsons.deserialize(
+        """
+      {
+        "fieldString": {
+          "type": "string"
+        },
+        "fieldBoolean": {
+          "type": "boolean"
+        },
+        "fieldInteger": {
+          "type": "integer"
+        },
+        "fieldNumber": {
+          "type": "number"
+        },
+        "fieldDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "fieldTimestampWithoutTimezone": {
+          "type": "string",
+          "format": "date-time",
+          "airbyteType": "timestamp_without_timezone"
+        },
+        "fieldTimestampWithTimezone": {
+          "type": "string",
+          "format": "date-time",
+          "airbyteType": "timestamp_with_timezone"
+        },
+        "fieldTimeWithoutTimezone": {
+          "type": "string",
+          "format": "time",
+          "airbyteType": "time_without_timezone"
+        },
+        "fieldTimeWithTimezone": {
+          "type": "string",
+          "format": "time",
+          "airbyteType": "time_with_timezone"
+        },
+        "fieldObject": {
+          "type": "object"
+        },
+        "fieldArray": {
+          "type": "array"
+        },
+        "fieldMulti": {
+          "type": "oneOf"
+        },
+        "fieldUnknown": {
+          "I": "don't",
+          "follow": "specs"
+        }
+      }
+    """,
+      )
+
     val result =
-      destinationCatalogGeneratorWithoutMapper.fieldSerialization(
-        field,
+      destinationCatalogGeneratorWithoutMapper.generateJsonSchemaFromFields(
+        input,
         Jsons.jsonNode(
           mapOf(
             "fieldObject" to mapOf("type" to "object"),
             "fieldArray" to mapOf("type" to "array"),
             "fieldMulti" to mapOf("type" to "oneOf"),
+            "fieldUnknown" to mapOf("I" to "don't", "follow" to "specs"),
           ),
         ),
       )
-    assertEquals(expectedOutput, result)
-  }
-
-  companion object {
-    @JvmStatic
-    private fun getFieldsAndExpectedOutput(): Stream<Arguments> {
-      return Stream.of(
-        Arguments.of(
-          Field("fieldString", FieldType.STRING),
-          """{"type":"string"}""",
-        ),
-        Arguments.of(
-          Field("fieldBoolean", FieldType.BOOLEAN),
-          """{"type":"boolean"}""",
-        ),
-        Arguments.of(
-          Field("fieldInteger", FieldType.INTEGER),
-          """{"type":"integer"}""",
-        ),
-        Arguments.of(
-          Field("fieldNumber", FieldType.NUMBER),
-          """{"type":"number"}""",
-        ),
-        Arguments.of(
-          Field("fieldDate", FieldType.DATE),
-          """{"type":"string","format":"date"}""",
-        ),
-        Arguments.of(
-          Field("fieldTimestampWithoutTimezone", FieldType.TIMESTAMP_WITHOUT_TIMEZONE),
-          """{"type":"string","format":"date-time","airbyteType":"timestamp_without_timezone"}""",
-        ),
-        Arguments.of(
-          Field("fieldTimestampWithTimezone", FieldType.TIMESTAMP_WITH_TIMEZONE),
-          """{"type":"string","format":"date-time","airbyteType":"timestamp_with_timezone"}""",
-        ),
-        Arguments.of(
-          Field("fieldTimeWithoutTimezone", FieldType.TIME_WITHOUT_TIMEZONE),
-          """{"type":"string","format":"time","airbyteType":"time_without_timezone"}""",
-        ),
-        Arguments.of(
-          Field("fieldTimeWithTimezone", FieldType.TIME_WITH_TIMEZONE),
-          """{"type":"string","format":"time","airbyteType":"time_with_timezone"}""",
-        ),
-        Arguments.of(
-          Field("fieldObject", FieldType.OBJECT),
-          """{"type":"object"}""",
-        ),
-        Arguments.of(
-          Field("fieldArray", FieldType.OBJECT),
-          """{"type":"array"}""",
-        ),
-        Arguments.of(
-          Field("fieldMulti", FieldType.OBJECT),
-          """{"type":"oneOf"}""",
-        ),
-      )
-    }
+    assertEquals(expectedOutputJson, Jsons.deserialize(result))
   }
 }

@@ -13,6 +13,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -20,6 +21,8 @@ import java.util.UUID
 class ReplicationContainerFactory(
   private val orchestratorEnvFactory: OrchestratorEnvSingleton,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
+  @Named("readEnvVars") private val sourceEnvVars: List<EnvVar>,
+  @Named("writeEnvVars") private val destinationEnvVars: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") private val imagePullPolicy: String,
 ) {
   fun createOrchestrator(
@@ -57,7 +60,7 @@ class ReplicationContainerFactory(
       .withImage(image)
       .withImagePullPolicy(imagePullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(runtimeEnvVars)
+      .withEnv(sourceEnvVars + runtimeEnvVars)
       .withWorkingDir(SOURCE_DIR)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
@@ -78,7 +81,7 @@ class ReplicationContainerFactory(
       .withImage(image)
       .withImagePullPolicy(imagePullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(runtimeEnvVars)
+      .withEnv(destinationEnvVars + runtimeEnvVars)
       .withWorkingDir(DEST_DIR)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())

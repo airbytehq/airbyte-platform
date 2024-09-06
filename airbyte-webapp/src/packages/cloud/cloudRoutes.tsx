@@ -19,12 +19,13 @@ import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
 import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -122,7 +123,10 @@ const MainRoutes: React.FC = () => {
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
           {canViewOrgSettings && (
-            <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+            <>
+              <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
+            </>
           )}
           {isBillingInArrearsActive && (
             <>

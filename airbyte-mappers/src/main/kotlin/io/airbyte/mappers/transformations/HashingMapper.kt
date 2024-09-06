@@ -7,6 +7,7 @@ import io.airbyte.config.MapperOperationName
 import io.airbyte.config.MapperSpecification
 import io.airbyte.config.MapperSpecificationFieldEnum
 import io.airbyte.config.MapperSpecificationFieldString
+import io.airbyte.config.adapters.AirbyteRecord
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.security.MessageDigest
@@ -98,19 +99,17 @@ class HashingMapper : Mapper {
 
   override fun map(
     config: ConfiguredMapper,
-    record: Record,
-  ): Record {
+    record: AirbyteRecord,
+  ) {
     val (targetField, method, fieldNameSuffix) = getConfigValues(config.config)
 
-    if (record.data.hasNonNull(targetField)) {
-      val data = record.data.get(targetField).asText().toByteArray()
+    if (record.has(targetField)) {
+      val data = record.get(targetField).asString().toByteArray()
 
       val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
-      record.data.put(targetField + fieldNameSuffix, hashedAndEncodeValue)
-      record.data.remove(targetField)
+      record.set(targetField + fieldNameSuffix, hashedAndEncodeValue)
+      record.remove(targetField)
     }
-
-    return record
   }
 
   internal fun hashAndEncodeData(

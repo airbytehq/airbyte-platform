@@ -157,7 +157,7 @@ const colorMap: Record<IconColor, string> = {
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
   foreground: styles[`icon--foreground`],
-  highlight: styles[`icon--highlight`],
+  magic: styles[`icon--magic`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {

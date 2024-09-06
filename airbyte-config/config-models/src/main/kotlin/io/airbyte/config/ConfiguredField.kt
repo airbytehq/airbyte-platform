@@ -13,6 +13,10 @@ enum class FieldType(val type: String, val format: String? = null, val airbyteTy
   ARRAY("array"),
   OBJECT("object"),
   MULTI("oneOf"),
+
+  // This type is needed in order to support invalid configuration. The way the destination handles such schema is by storing the records related to
+  // it as a blob. The platform should thus make sure that we don't remove those entries from the catalog.
+  UNKNOWN("unknown"),
   ;
 
   fun toMap(): Map<String, String> {

@@ -177,22 +177,26 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   return (
     <DropdownMenu
       placement="bottom-end"
+      data-testid="job-event-menu"
       options={[
         {
           displayName: formatMessage({
             id: "jobHistory.copyLinkToEvent",
           }),
           value: JobMenuOptions.CopyLinkToEvent,
+          "data-testid": "copy-link-to-event",
         },
         {
           displayName: formatMessage({ id: "jobHistory.viewLogs" }),
           value: JobMenuOptions.OpenLogsModal,
           disabled: attemptCount === 0,
+          "data-testid": "view-logs",
         },
         {
           displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
           value: JobMenuOptions.DownloadLogs,
           disabled: attemptCount === 0,
+          "data-testid": "download-logs",
         },
       ]}
       onChange={onChangeHandler}

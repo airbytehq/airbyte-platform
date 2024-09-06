@@ -22,12 +22,13 @@ import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
-import { GeneralOrganizationSettingsPage } from "./SettingsPage/GeneralOrganizationSettingsPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
+import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -70,6 +71,8 @@ const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -113,7 +116,12 @@ const MainViewRoutes: React.FC = () => {
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
             {multiWorkspaceUI && canViewOrganizationSettings && (
-              <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              <>
+                <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+                {isAccessManagementEnabled && displayOrganizationUsers && (
+                  <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
+                )}
+              </>
             )}
             <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />

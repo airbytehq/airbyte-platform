@@ -187,6 +187,7 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
+    otel-collector-endpoint: ${OTEL_COLLECTOR_ENDPOINT:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

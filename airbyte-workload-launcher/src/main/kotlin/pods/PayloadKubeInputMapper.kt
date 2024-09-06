@@ -4,17 +4,13 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getJobId
@@ -32,11 +28,11 @@ import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
-import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.usesCustomConnector
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.micronaut.context.annotation.Value
@@ -56,11 +52,11 @@ class PayloadKubeInputMapper(
   private val podNameGenerator: PodNameGenerator,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
-  @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
+  private val runTimeEnvVarFactory: RuntimeEnvVarFactory,
   private val featureFlagClient: FeatureFlagClient,
   @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
@@ -128,17 +124,11 @@ class PayloadKubeInputMapper(
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
     val sourceReqs = KubePodProcess.buildResourceRequirements(input.getSourceResourceReqs())
-    val sourceRuntimeEnvVars =
-      input.sourceLauncherConfig.additionalEnvironmentVariables
-        ?.map { EnvVar(it.key, it.value, null) }
-        ?.toList().orEmpty() + getConnectorApmEnvVars(image = sourceImage, context = buildFFContext(workspaceId = input.workspaceId))
+    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
     val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
-    val destinationRuntimeEnvVars =
-      input.destinationLauncherConfig.additionalEnvironmentVariables
-        ?.map { EnvVar(it.key, it.value, null) }
-        ?.toList().orEmpty() + getConnectorApmEnvVars(image = destinationImage, context = buildFFContext(workspaceId = input.workspaceId))
+    val destinationRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig)
 
     val labels =
       labeler.getReplicationLabels(
@@ -204,10 +194,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildCheckFileMap(workloadId, input, logPath)
 
-    val runtimeEnvVars =
-      resolveAwsAssumedRoleEnvVars(input.launcherConfig) +
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+    val runtimeEnvVars = runTimeEnvVarFactory.checkConnectorEnvVars(input.launcherConfig, workloadId)
 
     return ConnectorKubeInput(
       labeler.getCheckLabels() + sharedLabels,
@@ -250,10 +237,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildDiscoverFileMap(workloadId, input, logPath)
 
-    val runtimeEnvVars =
-      resolveAwsAssumedRoleEnvVars(input.launcherConfig) +
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+    val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, workloadId)
 
     return ConnectorKubeInput(
       labeler.getDiscoverLabels() + sharedLabels,
@@ -291,11 +275,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildSpecFileMap(workloadId, input, logPath)
 
-    val runtimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-      )
+    val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(workloadId)
 
     return ConnectorKubeInput(
       labeler.getSpecLabels() + sharedLabels,
@@ -306,24 +286,6 @@ class PayloadKubeInputMapper(
       runtimeEnvVars,
       input.launcherConfig.workspaceId,
     )
-  }
-
-  private fun resolveAwsAssumedRoleEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
-    // Only inject into connectors we own.
-    if (launcherConfig.isCustomConnector) {
-      return listOf()
-    }
-    // Only inject into enabled workspaces.
-    val workspaceEnabled =
-      launcherConfig.workspaceId != null &&
-        this.featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods, Workspace(launcherConfig.workspaceId))
-    if (!workspaceEnabled) {
-      return listOf()
-    }
-
-    val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, launcherConfig.workspaceId.toString(), null)
-
-    return connectorAwsAssumedRoleSecretEnvList + externalIdVar
   }
 
   private fun getNodeSelectors(
@@ -418,22 +380,6 @@ class PayloadKubeInputMapper(
         addAll(contexts)
       },
     )
-  }
-
-  private fun getConnectorApmEnvVars(
-    image: String,
-    context: Context,
-  ): List<EnvVar> {
-    val connectorApmEnvVars = mutableListOf<EnvVar>()
-    if (featureFlagClient.boolVariation(ConnectorApmEnabled, context)) {
-      connectorApmSupportHelper.addApmEnvVars(connectorApmEnvVars)
-      connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, connectorApmEnvVars)
-    }
-    return connectorApmEnvVars.toList()
-  }
-
-  companion object {
-    var connectorApmSupportHelper: ConnectorApmSupportHelper = ConnectorApmSupportHelper()
   }
 }
 

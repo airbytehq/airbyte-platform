@@ -10,6 +10,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { ApiCallOptions } from "../apiCall";
 import {
   assistV1Process,
   readStream,
@@ -120,6 +121,7 @@ export interface BuilderAssistGlobalParams extends BuilderAssistBaseParams {
 export interface BuilderAssistGlobalUrlParams extends BuilderAssistGlobalParams {
   url_base?: string;
 }
+
 export interface BuilderAssistStreamParams extends BuilderAssistGlobalUrlParams {
   stream_name: string;
 }
@@ -152,6 +154,19 @@ export interface BuilderAssistManifestResponse extends BuilderAssistBaseResponse
   manifest_update: ManifestUpdate;
 }
 
+const explicitlyCastedAssistV1Process = <T>(
+  controller: string,
+  params: AssistV1ProcessRequestBody,
+  requestOptions: ApiCallOptions
+) => {
+  // HACK: We need to cast the response from `assistV1Process` to `BuilderAssistManifestResponse`
+  // WHY: Because we intentionally did not implement an explicit response type for the assist endpoints
+  //      due to the assist service being in an experimental state and the response schema being subject to change frequently
+  // TODO: Once the assist service is stable and the response schema is finalized, we should implement explicit response types
+  // ISSUE: https://github.com/airbytehq/airbyte-internal-issues/issues/9398
+  return assistV1Process({ controller, ...params }, requestOptions) as Promise<T>;
+};
+
 const useAssistManifestQuery = <T>(controller: string, enabled: boolean, params: AssistV1ProcessRequestBody) => {
   const requestOptions = useRequestOptions();
   const queryKey = connectorBuilderKeys.assist(controller, params);
@@ -159,12 +174,7 @@ const useAssistManifestQuery = <T>(controller: string, enabled: boolean, params:
 
   return useQuery<T, HttpError<KnownExceptionInfo>>(
     debouncedQueryKey,
-    // HACK: We need to cast the response from `assistV1Process` to `BuilderAssistManifestResponse`
-    // WHY: Because we intentionally did not implement an explicit response type for the assist endpoints
-    //      due to the assist service being in an experimental state and the response schema being subject to change frequently
-    // TODO: Once the assist service is stable and the response schema is finalized, we should implement explicit response types
-    // ISSUE: https://github.com/airbytehq/airbyte-internal-issues/issues/9398
-    () => assistV1Process({ controller, ...params }, requestOptions) as Promise<T>,
+    () => explicitlyCastedAssistV1Process<T>(controller, params, requestOptions),
     {
       enabled,
       keepPreviousData: true,
@@ -240,6 +250,34 @@ export const useBuilderAssistFindStreams = (params: BuilderAssistFindStreamsPara
   const hasRequiredParams = hasOneOf(params, ["docs_url", "openapi_spec_url", "app_name"]);
   const enabled = isEnabled && hasRequiredParams;
   return useAssistManifestQuery<BuilderAssistFindStreamsResponse>("find_streams", enabled, params);
+};
+
+export type BuilderAssistCreateConnectorParams = BuilderAssistStreamParams;
+export interface BuilderAssistCreateConnectorResponse extends BuilderAssistBaseResponse {
+  connector: DeclarativeComponentSchema;
+}
+
+export const CONNECTOR_ASSIST_NOTIFICATION_ID = "connector-assist-notification";
+
+export const useBuilderAssistCreateConnectorMutation = () => {
+  const requestOptions = useRequestOptions();
+  const formatError = useFormatError();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(
+    (params: BuilderAssistCreateConnectorParams) =>
+      explicitlyCastedAssistV1Process<BuilderAssistCreateConnectorResponse>("create_connector", params, requestOptions),
+    {
+      onError: (error: Error) => {
+        const errorMessage = formatError(error);
+        registerNotification({
+          id: CONNECTOR_ASSIST_NOTIFICATION_ID,
+          type: "error",
+          text: errorMessage,
+        });
+      },
+    }
+  );
 };
 
 export const GENERATE_CONTRIBUTION_NOTIFICATION_ID = "generate-contribution-notification";

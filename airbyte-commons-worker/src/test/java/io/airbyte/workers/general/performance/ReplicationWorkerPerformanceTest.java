@@ -5,6 +5,7 @@
 package io.airbyte.workers.general.performance;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,8 +22,10 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.NotImplementedMetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -189,10 +192,16 @@ public abstract class ReplicationWorkerPerformanceTest {
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
 
     final StreamStatusTrackerFactory streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
+
+    final RecordMapper recordMapper = mock(RecordMapper.class);
+
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
+
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false, analyticsMessageTracker,
-            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory);
+            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
+            recordMapper, featureFlagClient);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

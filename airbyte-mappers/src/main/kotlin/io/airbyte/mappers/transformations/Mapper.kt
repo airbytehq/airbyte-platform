@@ -3,6 +3,7 @@ package io.airbyte.mappers.transformations
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.MapperSpecification
+import io.airbyte.config.adapters.AirbyteRecord
 
 interface Mapper {
   val name: String
@@ -16,6 +17,6 @@ interface Mapper {
 
   fun map(
     config: ConfiguredMapper,
-    record: Record,
-  ): Record
+    record: AirbyteRecord,
+  )
 }
