@@ -11,6 +11,7 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
+import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -41,6 +42,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -71,6 +73,7 @@ class PayloadKubeInputMapperTest {
     every { replConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value2")
     val ffClient: TestClient = mockk()
     every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
+    every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
 
     val mapper =
       PayloadKubeInputMapper(
@@ -157,6 +160,7 @@ class PayloadKubeInputMapperTest {
     every { replConfigs.workerKubeAnnotations } returns annotations
     val ffClient: TestClient = mockk()
     every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
+    every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
     every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns false
 
     val mapper =
@@ -613,6 +617,12 @@ class PayloadKubeInputMapperTest {
       }
     assertEquals(expectedFileMap, result.fileMap)
     assertEquals(expectedEnv, result.extraEnv)
+  }
+
+  @Test
+  fun `parses custom node selector strings into a map`() {
+    val result = "node-pool=my-env-pool ; other = value".toNodeSelectorMap()
+    assertEquals(mapOf("node-pool" to "my-env-pool", "other" to "value"), result)
   }
 
   companion object {

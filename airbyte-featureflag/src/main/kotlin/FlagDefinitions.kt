@@ -196,3 +196,5 @@ object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-bu
 object ReplicationMonoPodMemoryTolerance : Temporary<Int>(key = "platform.replication-mono-pod-memory-tolerance-gb", default = 6)
 
 object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
+
+object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
