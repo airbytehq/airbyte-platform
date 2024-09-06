@@ -504,7 +504,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           // Consider only jobs that are in a generally accepted terminal status
           // io/airbyte/persistence/job/models/JobStatus.java:23
           + " WHERE j.status IN ('succeeded', 'cancelled', 'failed')"
-          + " AND j.config_type = 'sync'"
+          + " AND j.config_type IN ('sync', 'refresh')"
           + " AND c.id IS NOT NULL"
           // Keep a job if it was created within 7 days of its connection's creation,
           // OR if it was the first successful sync job of its connection
