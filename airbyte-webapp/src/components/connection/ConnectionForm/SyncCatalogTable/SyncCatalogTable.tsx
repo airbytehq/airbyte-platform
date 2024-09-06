@@ -114,7 +114,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
 
   const debugTable = false;
-  const [expanded, setExpanded] = React.useState<ExpandedState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
   const deferredFilteringValue = useDeferredValue(filtering);
@@ -275,7 +274,17 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     [initialValues.syncCatalog.streams, prefix, streams]
   );
 
-  const { getHeaderGroups, getRowModel, getState } = useReactTable<SyncCatalogUIModel>({
+  /**
+   * Get initial expanded state for all namespaces rows
+   *  { [rowIndex]: boolean }, where rowIndex is the index of the namespace row
+   */
+  const initialExpandedState = useMemo(
+    () => Object.fromEntries(preparedData.map((_, index) => [index, true])),
+    [preparedData]
+  );
+  const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpandedState);
+
+  const { getHeaderGroups, getRowModel, getState, toggleAllRowsExpanded } = useReactTable<SyncCatalogUIModel>({
     columns,
     data: preparedData,
     getSubRows: (row) => row.subRows,
@@ -311,30 +320,17 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   const [isAllStreamRowsExpanded, setIsAllStreamRowsExpanded] = useState(false);
   const toggleAllStreamRowsExpanded = useCallback(
     (expanded: boolean) => {
-      // Expand all stream and field rows
-      rows.forEach((row) => {
-        if (row.depth !== 0) {
-          row.toggleExpanded(expanded);
-          if (row.subRows) {
-            row.subRows.forEach((subRow) => {
-              subRow.toggleExpanded(expanded);
-            });
-          }
-        }
-      });
+      if (!expanded) {
+        setExpanded(initialExpandedState);
+        setIsAllStreamRowsExpanded(expanded);
+        return;
+      }
+
+      toggleAllRowsExpanded(expanded);
       setIsAllStreamRowsExpanded(expanded);
     },
-    [rows]
+    [initialExpandedState, toggleAllRowsExpanded]
   );
-
-  useEffect(() => {
-    // Automatically expand all namespace rows
-    rows.forEach((row) => {
-      if (row.depth === 0) {
-        row.toggleExpanded(true);
-      }
-    });
-  }, [rows]);
 
   useEffect(() => {
     // collapse all rows if global filter is empty and all rows are expanded
