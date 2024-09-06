@@ -53,6 +53,7 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -154,7 +155,8 @@ class JobTrackerTest {
       .put("table_prefix", false)
       .put("operation_count", 0)
       .build();
-  private static final ConfiguredAirbyteCatalog CATALOG = CatalogHelpers
+  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
+  private static final ConfiguredAirbyteCatalog CATALOG = catalogHelpers
       .createConfiguredAirbyteCatalog("stream_name", "stream_namespace",
           Field.of("int_field", JsonSchemaType.NUMBER));
 

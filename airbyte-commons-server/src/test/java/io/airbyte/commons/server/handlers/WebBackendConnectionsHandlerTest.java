@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -96,6 +97,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -164,6 +166,7 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+  private final FieldGenerator fieldGenerator = new FieldGenerator();
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -240,6 +243,7 @@ class WebBackendConnectionsHandlerTest {
         configRepository,
         connectionService,
         actorDefinitionVersionHelper,
+        fieldGenerator,
         featureFlagClient));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -888,7 +892,7 @@ class WebBackendConnectionsHandlerTest {
     when(connectionsHandler.getConnectionAirbyteCatalog(connectionRead.getConnectionId())).thenReturn(Optional.ofNullable(fullAirbyteCatalog));
 
     final AirbyteCatalog expectedCatalogReturned =
-        WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(expected.getSyncCatalog(), expected.getSyncCatalog(),
+        wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(expected.getSyncCatalog(), expected.getSyncCatalog(),
             fullAirbyteCatalog);
     final WebBackendConnectionRead connectionRead = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1232,7 +1236,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1284,7 +1288,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1365,7 +1369,7 @@ class WebBackendConnectionsHandlerTest {
         .selectedFields(List.of());
     expected.getStreams().add(expectedNewStream);
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1384,7 +1388,7 @@ class WebBackendConnectionsHandlerTest {
     discovered.getStreams().getFirst().getConfig()
         .primaryKey(List.of(List.of(FIELD2)));
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     // Use new value for source-defined PK
     assertEquals(List.of(List.of(FIELD2)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
@@ -1399,10 +1403,38 @@ class WebBackendConnectionsHandlerTest {
     final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
     assertNotEquals(original.getStreams().getFirst().getConfig().getPrimaryKey(), discovered.getStreams().getFirst().getConfig().getPrimaryKey());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     // Keep previously-configured PK
     assertEquals(List.of(List.of(FIELD1)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithHashedField() {
+    final List<SelectedFieldInfo> hashedFields = List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME)));
+
+    final AirbyteCatalog original = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    original.getStreams().getFirst().getConfig().setHashedFields(hashedFields);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateApiCatalogWithTwoFields();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Configure hashed fields
+    assertEquals(hashedFields, actual.getStreams().getFirst().getConfig().getHashedFields());
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithRemovedHashedField() {
+    final AirbyteCatalog original = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    original.getStreams().getFirst().getConfig().setHashedFields(List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME))));
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Remove hashed field
+    assertTrue(actual.getStreams().getFirst().getConfig().getHashedFields().isEmpty());
   }
 
   @Test
@@ -1450,7 +1482,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }

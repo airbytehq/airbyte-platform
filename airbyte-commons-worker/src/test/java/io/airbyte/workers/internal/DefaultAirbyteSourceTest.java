@@ -29,6 +29,7 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.Field;
@@ -68,7 +69,8 @@ class DefaultAirbyteSourceTest {
   private static final JsonNode CONFIG = Jsons.jsonNode(Map.of(
       "apiKey", "123",
       "region", "us-east"));
-  private static final ConfiguredAirbyteCatalog CATALOG = CatalogHelpers.createConfiguredAirbyteCatalog(
+  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
+  private static final ConfiguredAirbyteCatalog CATALOG = catalogHelpers.createConfiguredAirbyteCatalog(
       "hudi:latest",
       NAMESPACE,
       Field.of(FIELD_NAME, JsonSchemaType.STRING));

@@ -8,11 +8,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.SelectedFieldInfo;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredMapper;
+import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +31,9 @@ import java.util.stream.Collectors;
  * place we have to take care of the other one too.
  */
 public class CatalogClientConverters {
+
+  // TODO(pedro): This should be refactored to use dependency injection.
+  private static final FieldGenerator fieldGenerator = new FieldGenerator();
 
   /**
    * Convert to api model to airbyte protocol model.
@@ -187,18 +195,34 @@ public class CatalogClientConverters {
             .withIsResumable(stream.isResumable());
   }
 
+  private static List<ConfiguredMapper> toConfiguredHashingMappers(final @Nullable List<SelectedFieldInfo> hashedFields) {
+    if (hashedFields == null) {
+      return Collections.emptyList();
+    }
+
+    // FIXME(pedro): See https://github.com/airbytehq/airbyte-internal-issues/issues/9718
+    // We shouldn't have to rebuild these here, and can potentially lead to losing configuration that's
+    // actually stored in the db.
+    return hashedFields.stream().map(f -> MapperHelperKt.createHashingMapper(f.getFieldPath().getFirst()) // We don't support nested fields for now.
+    ).toList();
+  }
+
   private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
                                                                     final AirbyteStreamConfiguration config)
       throws JsonValidationException {
-    return new ConfiguredAirbyteStream(
-        toStreamInternal(stream, config),
-        Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class),
-        Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
-            .withPrimaryKey(config.getPrimaryKey())
-            .withCursorField(config.getCursorField())
-            .withGenerationId(config.getGenerationId())
-            .withMinimumGenerationId(config.getMinimumGenerationId())
-            .withSyncId(config.getSyncId());
+    final var convertedStream = toStreamInternal(stream, config);
+    return new ConfiguredAirbyteStream.Builder()
+        .stream(convertedStream)
+        .syncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class))
+        .destinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
+        .primaryKey(config.getPrimaryKey())
+        .cursorField(config.getCursorField())
+        .generationId(config.getGenerationId())
+        .minimumGenerationId(config.getMinimumGenerationId())
+        .syncId(config.getSyncId())
+        .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
+        .mappers(toConfiguredHashingMappers(config.getHashedFields()))
+        .build();
   }
 
   /**
@@ -225,6 +249,7 @@ public class CatalogClientConverters {
         stream.getSourceDefinedPrimaryKey(),
         Names.toAlphanumericAndUnderscore(stream.getName()),
         true,
+        null,
         null,
         null,
         null,

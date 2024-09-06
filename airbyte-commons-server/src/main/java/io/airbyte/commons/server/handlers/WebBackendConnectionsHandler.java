@@ -59,10 +59,12 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.Field;
 import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -110,6 +112,7 @@ public class WebBackendConnectionsHandler {
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
+  private final FieldGenerator fieldGenerator;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
@@ -123,6 +126,7 @@ public class WebBackendConnectionsHandler {
                                       final ConfigRepository configRepositoryDoNotUse,
                                       final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                      final FieldGenerator fieldGenerator,
                                       final FeatureFlagClient featureFlagClient) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
@@ -136,6 +140,7 @@ public class WebBackendConnectionsHandler {
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
     this.connectionService = connectionService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.fieldGenerator = fieldGenerator;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -479,9 +484,9 @@ public class WebBackendConnectionsHandler {
    *         catalog
    */
   @VisibleForTesting
-  protected static AirbyteCatalog updateSchemaWithRefreshedDiscoveredCatalog(final AirbyteCatalog originalConfigured,
-                                                                             final AirbyteCatalog originalDiscovered,
-                                                                             final AirbyteCatalog discovered) {
+  protected AirbyteCatalog updateSchemaWithRefreshedDiscoveredCatalog(final AirbyteCatalog originalConfigured,
+                                                                      final AirbyteCatalog originalDiscovered,
+                                                                      final AirbyteCatalog discovered) {
     /*
      * We can't directly use s.getStream() as the key, because it contains a bunch of other fields, so
      * we just define a quick-and-dirty record class.
@@ -535,6 +540,17 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setSelected(originalConfiguredStream.getConfig().getSelected());
         outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
+
+        // Add hashed field configs that are still present in the schema
+        if (originalStreamConfig.getHashedFields() != null && !originalStreamConfig.getHashedFields().isEmpty()) {
+          final List<String> discoveredFields =
+              fieldGenerator.getFieldsFromSchema(stream.getJsonSchema()).stream().map(Field::getName).toList();
+          for (final SelectedFieldInfo hashedField : originalStreamConfig.getHashedFields()) {
+            if (discoveredFields.contains(hashedField.getFieldPath().getFirst())) {
+              outputStreamConfig.addHashedFieldsItem(hashedField);
+            }
+          }
+        }
 
         if (outputStreamConfig.getFieldSelectionEnabled()) {
           // TODO(mfsiega-airbyte): support nested fields.

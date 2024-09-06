@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 
 class FieldGeneratorTest {
-  val fieldGenerator = FieldGenerator()
+  private val fieldGenerator = FieldGenerator()
 
   @ParameterizedTest
   @ValueSource(

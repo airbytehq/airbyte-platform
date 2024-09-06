@@ -8,6 +8,7 @@ import static io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,8 +19,12 @@ import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
+import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.DataType;
+import io.airbyte.config.Field;
 import io.airbyte.config.FieldSelectionData;
+import io.airbyte.config.FieldType;
+import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.List;
@@ -43,6 +48,46 @@ class CatalogConverterTest {
   void testEnumConversion() {
     assertTrue(Enums.isCompatible(io.airbyte.api.model.generated.DataType.class, DataType.class));
     assertTrue(Enums.isCompatible(io.airbyte.config.SyncMode.class, io.airbyte.api.model.generated.SyncMode.class));
+  }
+
+  @Test
+  void testConvertInternalWithMappings() throws JsonValidationException {
+    final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    final var apiStream = apiCatalog.getStreams().getFirst();
+    apiStream.getConfig().setHashedFields(List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME))));
+
+    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog);
+    assertEquals(1, internalCatalog.getStreams().size());
+    final var internalStream = internalCatalog.getStreams().getFirst();
+    final var mappers = internalStream.getMappers();
+    assertEquals(1, mappers.size());
+
+    final ConfiguredMapper expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    assertEquals(expectedMapper, mappers.getFirst());
+  }
+
+  @Test
+  void testConvertToInternalOnlyIncludeSelectedFields() throws JsonValidationException {
+    final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    final var apiStream = apiCatalog.getStreams().getFirst();
+    assertEquals(2, apiStream.getStream().getJsonSchema().get("properties").size());
+
+    apiStream.getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
+
+    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog);
+    assertEquals(1, internalCatalog.getStreams().size());
+
+    final var internalStream = internalCatalog.getStreams().getFirst();
+    final var properties = (ObjectNode) internalStream.getStream().getJsonSchema().get("properties");
+    assertEquals(1, properties.size());
+    assertTrue(properties.has(FIELD_NAME));
+
+    final var fields = internalStream.getFields();
+    assertNotNull(fields);
+    assertEquals(1, fields.size());
+
+    final var expectedField = new Field(FIELD_NAME, FieldType.STRING);
+    assertEquals(expectedField, fields.getFirst());
   }
 
   @Test

@@ -14,6 +14,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
 
   implementation(libs.bundles.jackson)
+  implementation(libs.guava)
   implementation(libs.kotlin.logging)
 
   testImplementation(project(":oss:airbyte-commons"))
