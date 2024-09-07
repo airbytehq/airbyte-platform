@@ -98,7 +98,7 @@ class ClaimedProcessor(
       try {
         return Failsafe.with(
           RetryPolicy.builder<Any>()
-            .withBackoff(Duration.ofSeconds(20), Duration.ofMinutes(10))
+            .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
             .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
             .abortOn { exception ->
               when (exception) {
