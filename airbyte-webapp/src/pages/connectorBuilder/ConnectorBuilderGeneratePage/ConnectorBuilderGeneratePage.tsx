@@ -1,7 +1,8 @@
 import cloneDeep from "lodash/cloneDeep";
 import merge from "lodash/merge";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
 import { AssistWaiting } from "components/connectorBuilder/Builder/Assist/AssistWaiting";
@@ -37,6 +38,8 @@ interface GeneratorFormResponse {
 }
 
 const ConnectorBuilderGeneratePageInner: React.FC = () => {
+  const assistSessionId = useMemo(() => uuid(), []);
+
   const { createAndNavigate, isLoading } = useCreateAndNavigate();
   const { mutateAsync: getAssistValues, isLoading: isAssistLoading } = useBuilderAssistCreateConnectorMutation();
 
@@ -45,7 +48,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
   const projectName = submittedAssistValues?.name || DEFAULT_CONNECTOR_NAME;
 
   const onCancel = useCallback(() => {
-    createAndNavigate({ name: projectName, assistEnabled: false });
+    createAndNavigate({ name: projectName, assistSessionId: undefined });
   }, [createAndNavigate, projectName]);
 
   const onSkip = useCallback(() => {
@@ -61,8 +64,8 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       name: submittedAssistValues?.firstStream,
     });
     manifest.streams = [stream];
-    createAndNavigate({ name: projectName, assistEnabled: true, manifest });
-  }, [createAndNavigate, submittedAssistValues, projectName]);
+    createAndNavigate({ name: projectName, assistSessionId, manifest });
+  }, [createAndNavigate, submittedAssistValues, projectName, assistSessionId]);
 
   const onFormSubmit = useCallback(
     async (values: GeneratorFormResponse) => {
@@ -70,6 +73,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       setSubmittedAssistValues(values);
 
       const assistValues = await getAssistValues({
+        session_id: assistSessionId,
         app_name: values.name,
         docs_url: values.docsUrl,
         openapi_spec_url: values.openApiSpecUrl,
@@ -79,10 +83,10 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       createAndNavigate({
         name: values.name || DEFAULT_CONNECTOR_NAME,
         manifest: assistValues.connector,
-        assistEnabled: true,
+        assistSessionId,
       });
     },
-    [getAssistValues, createAndNavigate, setSubmittedAssistValues]
+    [getAssistValues, createAndNavigate, setSubmittedAssistValues, assistSessionId]
   );
 
   return (

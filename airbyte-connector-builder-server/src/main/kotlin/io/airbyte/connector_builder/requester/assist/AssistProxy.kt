@@ -22,6 +22,8 @@ class AssistProxy(private val proxyConfig: AssistConfiguration) {
       requestMethod = "POST"
       setRequestProperty("Content-Type", "application/json")
       doOutput = true
+      connectTimeout = 1 * 60 * 1000 // 1 minute
+      readTimeout = 10 * 60 * 1000 // 10 minutes
     }
 
     connection.outputStream.use { outputStream ->
