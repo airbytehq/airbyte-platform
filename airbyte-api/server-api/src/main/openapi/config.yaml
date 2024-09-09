@@ -2029,6 +2029,27 @@ paths:
                 $ref: "#/components/schemas/ConnectionRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/update_with_reason:
+    post:
+      tags:
+        - connection
+      summary: Update a connection with reason
+      operationId: updateConnectionWithReason
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionUpdateWithReason"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/list:
     post:
       tags:
@@ -9126,6 +9147,18 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
+    ConnectionUpdateWithReason:
+      type: object
+      required:
+        - connectionUpdate
+      properties:
+        connectionUpdate:
+          $ref: "#/components/schemas/ConnectionUpdate"
+        updateReason:
+          type: string
+        autoUpdate:
+          type: boolean
+          default: false
     WebBackendConnectionUpdate:
       type: object
       description: Used to apply a patch-style update to a connection, which means that null properties remain unchanged

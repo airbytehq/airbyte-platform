@@ -36,6 +36,7 @@ import io.airbyte.api.model.generated.ConnectionStreamRefreshRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.ConnectionUpdateWithReason;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
@@ -127,6 +128,15 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+  }
+
+  @Override
+  @Post(uri = "/update_with_reason")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionRead updateConnectionWithReason(@Body final ConnectionUpdateWithReason connectionUpdateWithReason) {
+    return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdateWithReason.getConnectionUpdate(),
+        connectionUpdateWithReason.getUpdateReason(), connectionUpdateWithReason.getAutoUpdate()));
   }
 
   @Override
