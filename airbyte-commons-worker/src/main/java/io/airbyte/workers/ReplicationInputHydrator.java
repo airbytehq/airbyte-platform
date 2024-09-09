@@ -42,6 +42,7 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
@@ -100,7 +101,7 @@ public class ReplicationInputHydrator {
         .get(supplier);
   }
 
-  private void refreshSecretsReferences(ReplicationActivityInput parsed) {
+  private void refreshSecretsReferences(final ReplicationActivityInput parsed) {
     final Object jobInput = retry(() -> airbyteApiClient.getJobsApi().getJobInput(
         new SyncInput(
             Long.parseLong(parsed.getJobRunConfig().getJobId()),
@@ -158,7 +159,8 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
+    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo, shouldEnableMappers)) {
       streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
@@ -279,7 +281,9 @@ public class ReplicationInputHydrator {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
-    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
+    final ConfiguredAirbyteCatalog catalog =
+        CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog(), shouldEnableMappers);
     return catalog;
   }
 

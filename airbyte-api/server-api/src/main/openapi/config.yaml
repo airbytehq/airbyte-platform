@@ -10685,6 +10685,9 @@ components:
         selectedFields:
           description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
           $ref: "#/components/schemas/SelectedFields"
+        hashedFields:
+          description: Fields that should be hashed before being written to the destination.
+          $ref: "#/components/schemas/SelectedFields"
         minimumGenerationId:
           type: integer
           format: int64

@@ -120,9 +120,12 @@ import io.airbyte.data.services.shared.ConnectionAutoDisabledReason;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -263,7 +266,11 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
-      sync.setCatalog(CatalogConverter.toConfiguredInternal(patch.getSyncCatalog()));
+      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(sync.getConnectionId()));
+      final ConfiguredAirbyteCatalog configuredCatalog = CatalogConverter.toConfiguredInternal(patch.getSyncCatalog(), shouldEnableMappers);
+      MapperHelperKt.validateConfiguredMappers(configuredCatalog);
+
+      sync.setCatalog(configuredCatalog);
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
@@ -552,7 +559,11 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
-      standardSync.withCatalog(CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog()));
+      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionId));
+      final ConfiguredAirbyteCatalog configuredCatalog =
+          CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog(), shouldEnableMappers);
+      MapperHelperKt.validateConfiguredMappers(configuredCatalog);
+      standardSync.withCatalog(configuredCatalog);
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
@@ -687,7 +698,7 @@ public class ConnectionsHandler {
     return metadata;
   }
 
-  public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch, String updateReason, Boolean autoUpdate)
+  public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch, final String updateReason, final Boolean autoUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final UUID connectionId = connectionPatch.getConnectionId();
@@ -830,11 +841,16 @@ public class ConnectionsHandler {
     return buildConnectionRead(connectionId, jobId);
   }
 
-  public CatalogDiff getDiff(final AirbyteCatalog oldCatalog, final AirbyteCatalog newCatalog, final ConfiguredAirbyteCatalog configuredCatalog)
+  public CatalogDiff getDiff(final AirbyteCatalog oldCatalog,
+                             final AirbyteCatalog newCatalog,
+                             final ConfiguredAirbyteCatalog configuredCatalog,
+                             final UUID connectionId)
       throws JsonValidationException {
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionId));
+
     return new CatalogDiff().transforms(CatalogDiffHelpers.getCatalogDiff(
-        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(oldCatalog)),
-        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(newCatalog)), configuredCatalog)
+        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(oldCatalog, shouldEnableMappers)),
+        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(newCatalog, shouldEnableMappers)), configuredCatalog)
         .stream()
         .map(CatalogDiffConverters::streamTransformToApi)
         .toList());
@@ -843,12 +859,12 @@ public class ConnectionsHandler {
   public CatalogDiff getDiff(final ConnectionRead connectionRead, final AirbyteCatalog discoveredCatalog)
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionRead.getConnectionId()));
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
-    final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
-
+    final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated, shouldEnableMappers);
     final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
 
-    return getDiff(rawCatalog.orElse(catalogWithSelectedFieldsAnnotated), discoveredCatalog, configuredCatalog);
+    return getDiff(rawCatalog.orElse(catalogWithSelectedFieldsAnnotated), discoveredCatalog, configuredCatalog, connectionRead.getConnectionId());
   }
 
   /**
@@ -1279,10 +1295,12 @@ public class ConnectionsHandler {
     final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
         getConnectionAirbyteCatalog(connectionId);
     final io.airbyte.api.model.generated.AirbyteCatalog currentCatalog = connection.getSyncCatalog();
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionId));
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
         catalog,
-        CatalogConverter.toConfiguredInternal(currentCatalog));
+        CatalogConverter.toConfiguredInternal(currentCatalog, shouldEnableMappers),
+        connectionId);
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
     final UUID destinationDefinitionId =
