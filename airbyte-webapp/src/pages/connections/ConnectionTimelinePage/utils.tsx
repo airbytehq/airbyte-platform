@@ -180,32 +180,38 @@ const generateEventTypeFilterOption = (value: TimelineFilterValues["eventCategor
   value,
 });
 
-export const statusFilterOptions = [
-  {
-    label: (
-      <Text color="grey" bold>
-        <FormattedMessage id="connection.timeline.filters.allStatuses" />
-      </Text>
-    ),
-    value: "",
-  },
-  generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
-  generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
-  generateStatusFilterOption("incomplete", "connection.timeline.filters.incomplete", "statusWarning"),
-  generateStatusFilterOption("cancelled", "connection.timeline.filters.cancelled", "statusCancelled"),
-];
+export const statusFilterOptions = (filterValues: TimelineFilterValues) => {
+  return [
+    {
+      label: (
+        <Text color={!["sync", "clear", "refresh", ""].includes(filterValues.eventCategory) ? "grey300" : "grey"} bold>
+          <FormattedMessage id="connection.timeline.filters.allStatuses" />
+        </Text>
+      ),
+      value: "",
+    },
+    generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
+    generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
+    generateStatusFilterOption("incomplete", "connection.timeline.filters.incomplete", "statusWarning"),
+    generateStatusFilterOption("cancelled", "connection.timeline.filters.cancelled", "statusCancelled"),
+  ];
+};
 
-export const eventTypeFilterOptions = [
-  {
-    label: (
-      <Text color="grey" bold>
-        <FormattedMessage id="connection.timeline.filters.allEventTypes" />
-      </Text>
-    ),
-    value: "",
-  },
-  generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
-  generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),
-  generateEventTypeFilterOption("clear", "connection.timeline.filters.clear"),
-  generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings"),
-];
+export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
+  return [
+    {
+      label: (
+        <Text color="grey" bold>
+          <FormattedMessage id="connection.timeline.filters.allEventTypes" />
+        </Text>
+      ),
+      value: "",
+    },
+    generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
+    generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),
+    generateEventTypeFilterOption("clear", "connection.timeline.filters.clear"),
+    ...(filterValues.status === ""
+      ? [generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings")]
+      : []),
+  ];
+};
