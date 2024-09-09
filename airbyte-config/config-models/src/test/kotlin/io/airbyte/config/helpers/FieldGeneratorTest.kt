@@ -81,6 +81,19 @@ class FieldGeneratorTest {
           },
           "key14": {
             "type": "array"
+          },
+          "key15": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "key16": {
+            "no": "type"
           }
         }
       }
@@ -228,6 +241,8 @@ class FieldGeneratorTest {
         "key12" -> assertEquals(Field("key12", FieldType.OBJECT), it)
         "key13" -> assertEquals(Field("key13", FieldType.MULTI), it)
         "key14" -> assertEquals(Field("key14", FieldType.ARRAY), it)
+        "key15" -> assertEquals(Field("key15", FieldType.MULTI), it)
+        "key16" -> assertEquals(Field("key16", FieldType.UNKNOWN), it)
         else -> throw IllegalStateException("Unexpected field: ${it.name}")
       }
     }
