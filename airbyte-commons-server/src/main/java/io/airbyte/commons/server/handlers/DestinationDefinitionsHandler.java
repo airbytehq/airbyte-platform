@@ -98,6 +98,14 @@ public class DestinationDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
+  public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+    return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
+  }
+
   @VisibleForTesting
   DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
                                                            final ActorDefinitionVersion destinationVersion) {
@@ -209,10 +217,7 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
-    return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
+    return buildDestinationDefinitionRead(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(

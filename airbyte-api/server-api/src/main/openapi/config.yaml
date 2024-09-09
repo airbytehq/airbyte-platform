@@ -428,6 +428,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_usage:
+    post:
+      tags:
+        - workspace
+        - cloud-only
+      summary: Get usage for a workspace
+      operationId: getWorkspaceUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/tag_feedback_status_as_done:
     post:
       tags:
@@ -7483,6 +7506,85 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+    WorkspaceUsageRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - timeWindow
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+    WorkspaceUsageRead:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionUsageRead"
+    ConnectionUsageRead:
+      type: object
+      required:
+        - connection
+        - source
+        - sourceDefinition
+        - destination
+        - destinationDefinition
+        - usage
+      properties:
+        connection:
+          $ref: "#/components/schemas/ConnectionRead"
+        source:
+          $ref: "#/components/schemas/SourceRead"
+        sourceDefinition:
+          $ref: "#/components/schemas/SourceDefinitionRead"
+        destination:
+          $ref: "#/components/schemas/DestinationRead"
+        destinationDefinition:
+          $ref: "#/components/schemas/DestinationDefinitionRead"
+        usage:
+          type: object
+          required:
+            - free
+            - regular
+            - internal
+          properties:
+            free:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            regular:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            internal:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+    TimeframeUsage:
+      type: object
+      required:
+        - timeframeStart
+        - timeframeEnd
+        - quantity
+      properties:
+        timeframeStart:
+          type: string
+        timeframeEnd:
+          type: string
+        quantity:
+          type: string
+          format: double
+    ConsumptionTimeWindow:
+      type: string
+      enum:
+        - lastMonth
+        - lastSixMonths
+        - lastYear
+      default: lastMonth
     WorkspaceGiveFeedback:
       type: object
       required:

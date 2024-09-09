@@ -469,6 +469,15 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     });
   }
 
+  @Override
+  public List<UUID> listConnectionIdsForWorkspace(final UUID workspaceId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .fetchInto(UUID.class));
+  }
+
   private Set<Long> getEarlySyncJobsFromResult(final Result<Record> result) {
     // Transform the result to a list of early sync job ids
     // the rest of the fields are not used, we aim to keep the set small

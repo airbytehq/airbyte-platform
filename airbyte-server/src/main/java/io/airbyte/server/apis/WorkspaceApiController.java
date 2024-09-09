@@ -34,7 +34,10 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
+import io.airbyte.api.model.generated.WorkspaceUsageRead;
+import io.airbyte.api.model.generated.WorkspaceUsageRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem;
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
@@ -143,6 +146,14 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Override
   public WorkspaceRead getWorkspaceBySlug(@Body final SlugRequestBody slugRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceBySlug(slugRequestBody));
+  }
+
+  @Post("/get_usage")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceUsageRead getWorkspaceUsage(@Body final WorkspaceUsageRequestBody workspaceUsageRequestBody) {
+    throw new ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null);
   }
 
   @Post("/list")

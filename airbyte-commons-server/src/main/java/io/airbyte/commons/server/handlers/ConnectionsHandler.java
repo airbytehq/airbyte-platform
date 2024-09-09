@@ -931,7 +931,7 @@ public class ConnectionsHandler {
     streamRefreshesHandler.deleteRefreshesForConnection(connectionId);
   }
 
-  private ConnectionRead buildConnectionRead(final UUID connectionId)
+  public ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSync standardSync = configRepository.getStandardSync(connectionId);
     return ApiPojoConverters.internalToConnectionRead(standardSync);
