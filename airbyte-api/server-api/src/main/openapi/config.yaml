@@ -11159,6 +11159,8 @@ components:
         - replication
         - persistence
         - airbyte_platform
+        - normalization # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
+        - dbt # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
         - unknown
     FailureType:
       description: Categorizes well known errors into types for programmatic handling. If not set, the type of error is not well known.
