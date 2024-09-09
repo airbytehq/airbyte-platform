@@ -42,10 +42,6 @@ flags:
           - 1bdcfb61-219b-4290-be4f-12f9ac5461be
           - 3851861d-ac0b-440c-bd60-408cf9e7fc0e
         serve: true
-  - name: replication-mono-pod
-    serve: true
-  - name: platform.replication-mono-pod-memory-tolerance-gb
-    serve: 32 # high enough to let everything through
   - name: platform.use-workload-output-doc-store
     serve: false
     context:
