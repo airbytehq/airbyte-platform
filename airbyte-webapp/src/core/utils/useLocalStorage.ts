@@ -6,6 +6,10 @@ import { BuilderState } from "components/connectorBuilder/types";
 
 import { Theme } from "hooks/theme/useAirbyteTheme";
 
+export interface AssistLocalStorageProject {
+  sessionId: string;
+}
+
 // Represents all the data we store in localStorage across the airbyte app
 interface AirbyteLocalStorage {
   connectorBuilderEditorView: BuilderState["mode"];
@@ -20,7 +24,7 @@ interface AirbyteLocalStorage {
   "airbyte_workspace-in-title": boolean;
   "airbyte_extended-attempts-stats": boolean;
   "airbyte_connection-additional-details": boolean;
-  "airbyte_ai-assist-enabled-projects": string[];
+  "airbyte_ai-assist-projects": Record<string, AssistLocalStorageProject>;
 }
 
 /*

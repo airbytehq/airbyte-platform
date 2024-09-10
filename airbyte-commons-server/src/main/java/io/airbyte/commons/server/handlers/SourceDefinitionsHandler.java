@@ -99,6 +99,13 @@ public class SourceDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
+  public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+    return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
+  }
+
   @VisibleForTesting
   SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
                                                  final ActorDefinitionVersion sourceVersion) {
@@ -217,10 +224,7 @@ public class SourceDefinitionsHandler {
 
   public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
-    return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
+    return buildSourceDefinitionRead(sourceDefinitionIdRequestBody.getSourceDefinitionId());
   }
 
   public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)

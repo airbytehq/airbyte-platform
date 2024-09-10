@@ -12,6 +12,8 @@ import java.util.UUID
  */
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface PermissionRepository : PageableRepository<Permission, UUID> {
+  fun find(): List<Permission>
+
   fun findByIdIn(permissionIds: List<UUID>): List<Permission>
 
   fun findByUserId(userId: UUID): List<Permission>

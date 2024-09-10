@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pods
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
@@ -9,6 +10,7 @@ import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
@@ -78,7 +80,7 @@ class PayloadKubeInputMapper(
       )
 
     val orchestratorReqs = input.getOrchestratorResourceReqs()
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val runtimeEnvVars =
       listOf(
@@ -109,7 +111,7 @@ class PayloadKubeInputMapper(
     val attemptId = input.getAttemptId()
 
     val podName = podNameGenerator.getReplicationPodName(jobId, attemptId)
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
     val orchestratorReqs = KubePodProcess.buildResourceRequirements(input.getOrchestratorResourceReqs())
@@ -291,11 +293,26 @@ class PayloadKubeInputMapper(
   private fun getNodeSelectors(
     usesCustomConnector: Boolean,
     workerConfigs: WorkerConfigs,
+    connectionId: UUID? = null,
   ): Map<String, String> {
     return if (usesCustomConnector) {
       workerConfigs.workerIsolatedKubeNodeSelectors.orElse(workerConfigs.getworkerKubeNodeSelectors())
     } else {
-      workerConfigs.getworkerKubeNodeSelectors()
+      getNodeSelectorsOverride(connectionId) ?: workerConfigs.getworkerKubeNodeSelectors()
+    }
+  }
+
+  private fun getNodeSelectorsOverride(connectionId: UUID?): Map<String, String>? {
+    if (contexts.isEmpty() && connectionId == null) {
+      return null
+    }
+
+    val flagContext = Multi(contexts.toMutableList().also { contextList -> connectionId?.let { contextList.add(Connection(it)) } })
+    val nodeSelectorOverride = featureFlagClient.stringVariation(NodeSelectorOverride, flagContext)
+    return if (nodeSelectorOverride.isBlank()) {
+      null
+    } else {
+      nodeSelectorOverride.toNodeSelectorMap()
     }
   }
 
@@ -419,3 +436,11 @@ data class ConnectorKubeInput(
   val extraEnv: List<EnvVar>,
   val workspaceId: UUID,
 )
+
+@VisibleForTesting
+internal fun String.toNodeSelectorMap(): Map<String, String> =
+  split(";")
+    .associate {
+      val (key, value) = it.split("=")
+      key.trim() to value.trim()
+    }

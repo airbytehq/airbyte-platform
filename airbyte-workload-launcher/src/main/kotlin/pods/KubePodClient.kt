@@ -38,7 +38,6 @@ import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeoutException
-import kotlin.time.TimeSource
 
 /**
  * Interface layer between domain and Kube layers.
@@ -272,8 +271,6 @@ class KubePodClient(
     factory: ConnectorPodFactory,
     podLogLabel: String,
   ) {
-    val start = TimeSource.Monotonic.markNow()
-
     // Whether we should kube cp init files over or let the init container fetch itself
     // if true the init container will fetch, if false we copy over the files
     // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
@@ -343,8 +340,6 @@ class KubePodClient(
         KubeCommandType.WAIT_MAIN,
       )
     }
-
-    println("ELAPSED TIME (SIDECAR): ${start.elapsedNow()}")
   }
 
   fun deleteMutexPods(mutexKey: String): Boolean {

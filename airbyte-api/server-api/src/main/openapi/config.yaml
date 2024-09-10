@@ -428,6 +428,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_usage:
+    post:
+      tags:
+        - workspace
+        - cloud-only
+      summary: Get usage for a workspace
+      operationId: getWorkspaceUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/tag_feedback_status_as_done:
     post:
       tags:
@@ -2019,6 +2042,27 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ConnectionUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/update_with_reason:
+    post:
+      tags:
+        - connection
+      summary: Update a connection with reason
+      operationId: updateConnectionWithReason
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionUpdateWithReason"
         required: true
       responses:
         "200":
@@ -4388,7 +4432,19 @@ paths:
                 $ref: "#/components/schemas/InstanceConfigurationResponse"
         "401":
           description: Instance setup failed.
-
+  /v1/instance_configuration/license/info:
+    get:
+      summary: Fetch license limits and usage
+      tags:
+        - instance_configuration
+      operationId: licenseInfo
+      responses:
+        "200":
+          description: Successfully retrieve license usage information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseInfoResponse"
   /v1/jobs/retry_states/create_or_update:
     post:
       summary: Creates or updates a retry state for a job.
@@ -7462,6 +7518,85 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+    WorkspaceUsageRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - timeWindow
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+    WorkspaceUsageRead:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionUsageRead"
+    ConnectionUsageRead:
+      type: object
+      required:
+        - connection
+        - source
+        - sourceDefinition
+        - destination
+        - destinationDefinition
+        - usage
+      properties:
+        connection:
+          $ref: "#/components/schemas/ConnectionRead"
+        source:
+          $ref: "#/components/schemas/SourceRead"
+        sourceDefinition:
+          $ref: "#/components/schemas/SourceDefinitionRead"
+        destination:
+          $ref: "#/components/schemas/DestinationRead"
+        destinationDefinition:
+          $ref: "#/components/schemas/DestinationDefinitionRead"
+        usage:
+          type: object
+          required:
+            - free
+            - regular
+            - internal
+          properties:
+            free:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            regular:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            internal:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+    TimeframeUsage:
+      type: object
+      required:
+        - timeframeStart
+        - timeframeEnd
+        - quantity
+      properties:
+        timeframeStart:
+          type: string
+        timeframeEnd:
+          type: string
+        quantity:
+          type: string
+          format: double
+    ConsumptionTimeWindow:
+      type: string
+      enum:
+        - lastMonth
+        - lastSixMonths
+        - lastYear
+      default: lastMonth
     WorkspaceGiveFeedback:
       type: object
       required:
@@ -9126,6 +9261,18 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
+    ConnectionUpdateWithReason:
+      type: object
+      required:
+        - connectionUpdate
+      properties:
+        connectionUpdate:
+          $ref: "#/components/schemas/ConnectionUpdate"
+        updateReason:
+          type: string
+        autoUpdate:
+          type: boolean
+          default: false
     WebBackendConnectionUpdate:
       type: object
       description: Used to apply a patch-style update to a connection, which means that null properties remain unchanged
@@ -10538,6 +10685,9 @@ components:
         selectedFields:
           description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
           $ref: "#/components/schemas/SelectedFields"
+        hashedFields:
+          description: Fields that should be hashed before being written to the destination.
+          $ref: "#/components/schemas/SelectedFields"
         minimumGenerationId:
           type: integer
           format: int64
@@ -11009,6 +11159,8 @@ components:
         - replication
         - persistence
         - airbyte_platform
+        - normalization # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
+        - dbt # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
         - unknown
     FailureType:
       description: Categorizes well known errors into types for programmatic handling. If not set, the type of error is not well known.
@@ -12199,6 +12351,13 @@ components:
         defaultRealm:
           type: string
           default: "airbyte"
+    LicenseStatus:
+      type: string
+      enum:
+        - pro
+        - invalid
+        - exceeded
+        - expired
     InstanceConfigurationResponse:
       type: object
       required:
@@ -12221,11 +12380,12 @@ components:
         version:
           description: release version for the corresponding edition
           type: string
-        licenseType:
-          type: string
-          enum:
-            - pro
-            - invalid
+        licenseStatus:
+          $ref: "#/components/schemas/LicenseStatus"
+          nullable: true
+        licenseExpirationDate:
+          type: integer
+          format: int64
           nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
@@ -12272,6 +12432,30 @@ components:
         organizationName:
           description: Optional name of the organization to create. Defaults to 'Default Organization' if not specified.
           type: string
+    LicenseInfoResponse:
+      type: object
+      required:
+        - edition
+        - licenseStatus
+        - usedNodes
+        - usedEditors
+        - expirationDate
+      properties:
+        edition:
+          type: string
+        licenseStatus:
+          $ref: "#/components/schemas/LicenseStatus"
+        maxNodes:
+          type: integer
+        maxEditors:
+          type: integer
+        usedNodes:
+          type: integer
+        usedEditors:
+          type: integer
+        expirationDate:
+          type: integer
+          format: int64
     StreamStatusRead:
       type: object
       required:

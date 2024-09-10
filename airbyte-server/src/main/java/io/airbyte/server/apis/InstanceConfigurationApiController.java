@@ -7,6 +7,7 @@ package io.airbyte.server.apis;
 import io.airbyte.api.generated.InstanceConfigurationApi;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
+import io.airbyte.api.model.generated.LicenseInfoResponse;
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -29,6 +30,11 @@ public class InstanceConfigurationApiController implements InstanceConfiguration
   @Get
   public InstanceConfigurationResponse getInstanceConfiguration() {
     return ApiHelper.execute(instanceConfigurationHandler::getInstanceConfiguration);
+  }
+
+  @Override
+  public LicenseInfoResponse licenseInfo() {
+    return ApiHelper.execute(instanceConfigurationHandler::licenseInfo);
   }
 
   @SuppressWarnings("LineLength")

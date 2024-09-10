@@ -13,6 +13,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -48,7 +49,7 @@ public class AirbyteLicenseFetcher {
       responseBody = httpClient.toBlocking().exchange(request, String.class).body();
     } catch (final Exception e) {
       log.warn("Returning INVALID license due to an error while attempting to retrieve license from server.", e);
-      return new AirbyteLicense(LicenseType.INVALID);
+      return new AirbyteLicense(LicenseType.INVALID, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     try {
@@ -56,7 +57,7 @@ public class AirbyteLicenseFetcher {
       return Jsons.deserialize(responseBody, AirbyteLicense.class);
     } catch (Exception e) {
       log.warn("Returning INVALID license due to a deserialization failure for response: {}", responseBody, e);
-      return new AirbyteLicense(LicenseType.INVALID);
+      return new AirbyteLicense(LicenseType.INVALID, Optional.empty(), Optional.empty(), Optional.empty());
     }
   }
 

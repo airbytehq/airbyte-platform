@@ -14,7 +14,7 @@ val log = KotlinLogging.logger {}
 class FieldGenerator {
   fun getFieldsFromSchema(schema: JsonNode): List<Field> {
     val properties = schema.get("properties")
-    if (properties.isObject) {
+    if (properties != null && properties.isObject) {
       val arrProperties = properties as ObjectNode
       return arrProperties.properties().map { (key, value) ->
         Field(
@@ -28,20 +28,31 @@ class FieldGenerator {
   }
 
   internal fun getFieldTypeFromNode(node: JsonNode): FieldType {
-    if (node.has("oneOf")) {
-      return FieldType.MULTI
-    }
-    val type = node.get("type")
-    return if (type.isArray) {
-      val curatedArray = removeNullFromArray(type as ArrayNode)
-
-      if (curatedArray.size == 1) {
-        getFieldTypeFromSchemaType(curatedArray[0], node)
-      } else {
-        FieldType.MULTI
+    try {
+      if (node.has("oneOf") || node.has("anyOf")) {
+        return FieldType.MULTI
       }
-    } else {
-      getFieldTypeFromSchemaType(type.asText(), node)
+
+      val type = node.get("type")
+
+      if (type == null) {
+        return FieldType.UNKNOWN
+      }
+
+      return if (type.isArray) {
+        val curatedArray = removeNullFromArray(type as ArrayNode)
+
+        if (curatedArray.size == 1) {
+          getFieldTypeFromSchemaType(curatedArray[0], node)
+        } else {
+          FieldType.MULTI
+        }
+      } else {
+        getFieldTypeFromSchemaType(type.asText(), node)
+      }
+    } catch (e: Exception) {
+      log.warn { "Error getting field type from node: $node" }
+      return FieldType.UNKNOWN
     }
   }
 
