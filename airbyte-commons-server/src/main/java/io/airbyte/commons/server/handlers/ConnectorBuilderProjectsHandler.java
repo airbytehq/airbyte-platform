@@ -12,7 +12,9 @@ import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -31,6 +33,7 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.NotFoundException;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.commons.version.Version;
@@ -49,6 +52,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
@@ -56,6 +60,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -77,6 +82,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ConnectorBuilderProjectsHandler. Javadocs suppressed because api docs should be used as source of
@@ -86,6 +93,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("PMD.PreserveStackTrace")
 public class ConnectorBuilderProjectsHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(ConnectorBuilderProjectsHandler.class);
   private final DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
   private final ConnectorBuilderService connectorBuilderService;
 
@@ -100,6 +108,8 @@ public class ConnectorBuilderProjectsHandler {
   private final SourceService sourceService;
   private final JsonSecretsProcessor secretsProcessor;
   private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
+  private final ActorDefinitionService actorDefinitionService;
+  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
 
   public static final String SPEC_FIELD = "spec";
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
@@ -117,7 +127,9 @@ public class ConnectorBuilderProjectsHandler {
                                          final SecretPersistenceConfigService secretPersistenceConfigService,
                                          final SourceService sourceService,
                                          @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
-                                         final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
+                                         final ConnectorBuilderServerApi connectorBuilderServerApiClient,
+                                         final ActorDefinitionService actorDefinitionService,
+                                         final RemoteDefinitionsProvider remoteDefinitionsProvider) {
     this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
@@ -131,6 +143,8 @@ public class ConnectorBuilderProjectsHandler {
     this.sourceService = sourceService;
     this.secretsProcessor = secretsProcessor;
     this.connectorBuilderServerApiClient = connectorBuilderServerApiClient;
+    this.actorDefinitionService = actorDefinitionService;
+    this.remoteDefinitionsProvider = remoteDefinitionsProvider;
   }
 
   private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
@@ -162,9 +176,24 @@ public class ConnectorBuilderProjectsHandler {
     final UUID id = uuidSupplier.get();
 
     connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
-        new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()));
+        new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
+        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId());
 
     return buildIdResponseFromId(id, projectCreate.getWorkspaceId());
+  }
+
+  /**
+   * Apply defaults from the persisted project to the update. These fields will only be passed when we
+   * are trying to set them (patch-style), and cannot be currently un-set. Therefore, grab the
+   * persisted value if the update does not contain it, since all fields are passed into the update
+   * method.
+   */
+  private ConnectorBuilderProjectDetails applyPatchDefaultsFromDb(final ConnectorBuilderProjectDetails projectDetailsUpdate,
+                                                                  final ConnectorBuilderProject persistedProject) {
+    if (projectDetailsUpdate.getBaseActorDefinitionVersionId() == null) {
+      projectDetailsUpdate.setBaseActorDefinitionVersionId(persistedProject.getBaseActorDefinitionVersionId());
+    }
+    return projectDetailsUpdate;
   }
 
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
@@ -174,7 +203,9 @@ public class ConnectorBuilderProjectsHandler {
         connectorBuilderService.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
     validateProjectUnderRightWorkspace(connectorBuilderProject, projectUpdate.getWorkspaceId());
 
-    buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate);
+    final ConnectorBuilderProjectDetails projectDetailsUpdate = applyPatchDefaultsFromDb(projectUpdate.getBuilderProject(), connectorBuilderProject);
+
+    buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate.builderProject(projectDetailsUpdate));
   }
 
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId projectDelete)
@@ -473,6 +504,23 @@ public class ConnectorBuilderProjectsHandler {
     final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest);
     return declarativeManifestImageVersionService
         .getDeclarativeManifestImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
+  }
+
+  public ConnectorBuilderProjectIdWithWorkspaceId createForkedConnectorBuilderProject(final ConnectorBuilderProjectForkRequestBody requestBody)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(requestBody.getBaseActorDefinitionId());
+    final ActorDefinitionVersion defaultVersion = actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+    final JsonNode manifest = remoteDefinitionsProvider.getConnectorManifest(defaultVersion.getDockerRepository(), defaultVersion.getDockerImageTag())
+        .orElseGet(() -> {
+          final String errorMessage = "Could not fork connector: no manifest file available for %s:%s".formatted(defaultVersion.getDockerRepository(),
+              defaultVersion.getDockerImageTag());
+          log.error(errorMessage);
+          throw new NotFoundException(errorMessage);
+        });
+    final ConnectorBuilderProjectDetails projectDetails = new ConnectorBuilderProjectDetails().name(sourceDefinition.getName())
+        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest);
+    return createConnectorBuilderProject(
+        new ConnectorBuilderProjectWithWorkspaceId().workspaceId(requestBody.getWorkspaceId()).builderProject(projectDetails));
   }
 
 }

@@ -36,6 +36,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
   private static final String A_SOURCE_NAME = "a source name";
   private static final JsonNode A_MANIFEST;
+  private static final UUID A_BASE_ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID();
 
   static {
     try {
@@ -85,7 +86,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null);
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null, null);
   }
 
   @Test
@@ -106,7 +107,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(), null);
   }
 
   @Test
@@ -114,18 +115,20 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
     when(connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(anyBuilderProject()
         .withBuilderProjectId(A_BUILDER_PROJECT_ID)
         .withWorkspaceId(A_WORKSPACE_ID)
-        .withActorDefinitionId(A_SOURCE_DEFINITION_ID));
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withBaseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID));
 
     projectUpdater.persistBuilderProjectUpdate(new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails()
             .name(A_SOURCE_NAME)
-            .draftManifest(A_MANIFEST))
+            .draftManifest(A_MANIFEST)
+            .baseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID))
         .workspaceId(A_WORKSPACE_ID)
         .builderProjectId(A_BUILDER_PROJECT_ID));
 
     verify(connectorBuilderService, times(1))
         .updateBuilderProjectAndActorDefinition(
-            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_SOURCE_DEFINITION_ID);
+            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_BASE_ACTOR_DEFINITION_VERSION_ID, A_SOURCE_DEFINITION_ID);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {

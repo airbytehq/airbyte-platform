@@ -34,13 +34,23 @@ public interface ConnectorBuilderService {
 
   void updateBuilderProjectTestingValues(UUID projectId, JsonNode testingValues) throws IOException;
 
-  void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
+  void writeBuilderProjectDraft(UUID projectId,
+                                UUID workspaceId,
+                                String name,
+                                JsonNode manifestDraft,
+                                UUID baseActorDefinitionVersionId)
+      throws IOException;
 
   void deleteBuilderProjectDraft(UUID projectId) throws IOException;
 
   void deleteManifestDraftForActorDefinition(UUID actorDefinitionId, UUID workspaceId) throws IOException;
 
-  void updateBuilderProjectAndActorDefinition(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft, UUID actorDefinitionId)
+  void updateBuilderProjectAndActorDefinition(UUID projectId,
+                                              UUID workspaceId,
+                                              String name,
+                                              JsonNode manifestDraft,
+                                              UUID baseActorDefinitionVersionId,
+                                              UUID actorDefinitionId)
       throws IOException;
 
   void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId, UUID actorDefinitionId) throws IOException;

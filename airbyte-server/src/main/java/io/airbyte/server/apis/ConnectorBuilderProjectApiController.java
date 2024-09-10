@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -58,6 +59,16 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(@Body final ConnectorBuilderProjectWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(project));
+  }
+
+  @Override
+  @Post(uri = "/fork")
+  @Status(HttpStatus.CREATED)
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public ConnectorBuilderProjectIdWithWorkspaceId createForkedConnectorBuilderProject(@Body final ConnectorBuilderProjectForkRequestBody connectorBuilderProjectForkRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(connectorBuilderProjectForkRequestBody));
   }
 
   @Override

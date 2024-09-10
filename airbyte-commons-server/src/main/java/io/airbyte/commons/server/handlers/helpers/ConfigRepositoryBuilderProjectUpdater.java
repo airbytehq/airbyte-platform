@@ -30,12 +30,14 @@ public class ConfigRepositoryBuilderProjectUpdater implements BuilderProjectUpda
           projectUpdate.getWorkspaceId(),
           projectUpdate.getBuilderProject().getName(),
           projectUpdate.getBuilderProject().getDraftManifest(),
+          projectUpdate.getBuilderProject().getBaseActorDefinitionVersionId(),
           connectorBuilderProject.getActorDefinitionId());
     } else {
       connectorBuilderService.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
           projectUpdate.getWorkspaceId(),
           projectUpdate.getBuilderProject().getName(),
-          projectUpdate.getBuilderProject().getDraftManifest());
+          projectUpdate.getBuilderProject().getDraftManifest(),
+          projectUpdate.getBuilderProject().getBaseActorDefinitionVersionId());
     }
 
   }
