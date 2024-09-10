@@ -85,7 +85,7 @@ global:
     #passwordSecretKey: "" # e.g."database-password"
 
   storage:
-    # -- The storage backend type. Supports s3, gcs, minio (default)
+    # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
     # -- Secret name where storage provider credentials are stored
     #storageSecretName: "airbyte-config-secrets"
@@ -107,6 +107,16 @@ global:
     #gcs:
     #  projectId: <project-id>
     #  credentialsJson: /secrets/gcs-log-creds/gcp.json
+
+    # Azure
+    #bucket: ## Azure Blob Storage container names that you've created. We recommend storing the following all in one bucket.
+    #  log: airbyte-bucket
+    #  state: airbyte-bucket
+    #  workloadOutput: airbyte-bucket
+    #azure:
+    #  # one of the following: connectionString, connectionStringSecretKey
+    #  connectionString: <azure storage connection string>
+    #  connectionStringSecretKey: <secret coordinate containing an existing connection-string secret>
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"

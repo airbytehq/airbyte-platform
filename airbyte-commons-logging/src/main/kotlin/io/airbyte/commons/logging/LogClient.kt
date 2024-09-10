@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.logging
 
+import com.azure.storage.blob.BlobContainerClient
+import com.azure.storage.blob.models.BlobItem
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
 import io.airbyte.metrics.lib.MetricTags
@@ -33,7 +35,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.function.Consumer
-import java.util.function.ToDoubleFunction
 import kotlin.io.path.deleteExisting
 
 private val logger = KotlinLogging.logger {}
@@ -47,28 +48,29 @@ interface LogClient {
   ): List<String>
 }
 
-interface CloudLogClient : LogClient {
-  fun sanitisePath(
-    prefix: String,
-    path: String,
-  ): String {
-    return Paths.get(prefix, path).toString()
-  }
-}
+private fun sanitisePath(
+  prefix: String,
+  path: String,
+): String = Paths.get(prefix, path).toString()
+
+interface CloudLogClient : LogClient
 
 /** The root node which contains the configuration settings for the storage client. */
 internal const val STORAGE_ROOT = "airbyte.cloud.storage"
 
-/** Specific settings for Google Cloud Storage are to be found here. Only used if `[STORAGE_ROOT].type` is `gcs`. */
+/** Specific settings for Azure Blob Storage are found here. Only used if `[STORAGE_ROOT].type` is `azure`. */
+internal const val STORAGE_AZURE = "$STORAGE_ROOT.azure"
+
+/** Specific settings for Google Cloud Storage are found here. Only used if `[STORAGE_ROOT].type` is `gcs`. */
 internal const val STORAGE_GCS = "$STORAGE_ROOT.gcs"
 
-/** Specific settings for local storage are to be found here. Only used if `[STORAGE_ROOT].type` is `local`. */
+/** Specific settings for local storage are found here. Only used if `[STORAGE_ROOT].type` is `local`. */
 internal const val STORAGE_LOCAL = "$STORAGE_ROOT.local"
 
-/** Specific settings for MinIO are to be found here. Only used if `[STORAGE_ROOT].type` is `minio`. */
+/** Specific settings for MinIO are found here. Only used if `[STORAGE_ROOT].type` is `minio`. */
 internal const val STORAGE_MINIO = "$STORAGE_ROOT.minio"
 
-/** Specific settings for S3 are to be found here. Only used if `[STORAGE_ROOT].type` is `s3`. */
+/** Specific settings for S3 are found here. Only used if `[STORAGE_ROOT].type` is `s3`. */
 internal const val STORAGE_S3 = "$STORAGE_ROOT.s3"
 
 /** Specific settings for buckets, specifically their names. */
@@ -78,43 +80,147 @@ internal const val STORAGE_BUCKET = "$STORAGE_ROOT.bucket"
 const val STORAGE_TYPE = "$STORAGE_ROOT.type"
 
 enum class LogClientType {
+  AZURE,
   GCS,
   LOCAL,
   MINIO,
   S3,
 }
 
-private fun createCounter(
+private fun MeterRegistry?.createCounter(
   metricName: String,
   logClientType: LogClientType,
-  meterRegistry: MeterRegistry?,
-): Counter? {
-  return meterRegistry?.let { registry ->
-    Counter.builder(metricName).tags(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase()).register(registry)
+): Counter? =
+  this?.let {
+    Counter
+      .builder(metricName)
+      .tags(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())
+      .register(it)
   }
-}
 
-private fun <T : Any> createGauge(
+private fun <T : List<Any>> MeterRegistry?.createGauge(
   metricName: String,
   logClientType: LogClientType,
   stateObject: T,
-  valueFunction: ToDoubleFunction<T>,
-  meterRegistry: MeterRegistry?,
-): T {
-  return meterRegistry?.let { registry ->
-    registry.gauge(metricName, listOf(Tag.of(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())), stateObject, valueFunction)
-  } ?: stateObject
-}
+): T =
+  this?.gauge(metricName, listOf(Tag.of(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())), stateObject, { stateObject.size.toDouble() })
+    ?: stateObject
 
-private fun createTimer(
+private fun MeterRegistry?.createTimer(
   metricName: String,
   logClientType: LogClientType,
-  meterRegistry: MeterRegistry?,
-): Timer? {
-  return meterRegistry?.let { registry ->
-    Timer.builder(metricName)
+): Timer? =
+  this?.let {
+    Timer
+      .builder(metricName)
       .tags(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())
-      .register(registry)
+      .register(it)
+  }
+
+@Singleton
+@Requires(property = STORAGE_TYPE, pattern = "(?i)^azure$")
+@Named("azureLogClient")
+class AzureLogClient(
+  private val azureClientFactory: AzureLogClientFactory,
+  private val storageBucketConfig: StorageBucketConfig,
+  private val meterRegistry: MeterRegistry?,
+  @Value("\${airbyte.logging.client.cloud.log-prefix:job-logging}") private val jobLoggingCloudPrefix: String,
+) : CloudLogClient {
+  override fun tailCloudLogs(
+    logPath: String,
+    numLines: Int,
+  ): List<String> {
+    // azure needs the trailing `/` in order for the list call to return the correct blobs
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath) + "/"
+    logger.debug { "Tailing logs from azure path: $cloudLogPath" }
+
+    logger.debug { "Tailing $numLines lines from logs from GCS path: $cloudLogPath" }
+    val blobContainerClient = azureClientFactory.get().getBlobContainerClient(storageBucketConfig.log)
+
+    val descending: MutableList<BlobItem> = blobContainerClient.listBlobsByHierarchy(cloudLogPath).reversed().toMutableList()
+
+    logger.debug { "Start Azure list request" }
+
+    val instrumentedDescendingTimestampBlobs =
+      meterRegistry.createGauge(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
+        logClientType = LogClientType.GCS,
+        stateObject = descending,
+      )
+    val timer =
+      meterRegistry.createTimer(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
+        logClientType = LogClientType.GCS,
+      )
+
+    val result =
+      if (timer != null) {
+        timer.recordCallable { retrieveFiles(client = blobContainerClient, blobs = instrumentedDescendingTimestampBlobs, numLines = numLines) }
+      } else {
+        retrieveFiles(client = blobContainerClient, blobs = instrumentedDescendingTimestampBlobs, numLines = numLines)
+      }
+    logger.debug { "Done retrieving GCS logs: $logPath." }
+
+    return result
+  }
+
+  override fun deleteLogs(logPath: String) {
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath)
+
+    logger.info { "Start azure list and delete request for path: $cloudLogPath." }
+    val blobContainerClient = azureClientFactory.get().getBlobContainerClient(storageBucketConfig.log)
+    blobContainerClient.listBlobsByHierarchy(cloudLogPath).forEach {
+      blobContainerClient.getBlobClient(it.name).delete()
+    }
+    logger.info { "Finished all deletes." }
+  }
+
+  private fun retrieveFiles(
+    client: BlobContainerClient,
+    blobs: List<BlobItem>,
+    numLines: Int,
+  ): List<String> {
+    val lineCounter =
+      meterRegistry.createCounter(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
+        logClientType = LogClientType.AZURE,
+      )
+    val byteCounter =
+      meterRegistry.createCounter(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
+        logClientType = LogClientType.AZURE,
+      )
+
+    val lines = mutableListOf<String>()
+    // run is necessary to allow the forEach calls to return early
+    run {
+      // iterate through blobs in descending order (oldest first)
+      blobs.forEach { blob ->
+        val blobClient = client.getBlobClient(blob.name)
+        val currentFileLines =
+          blobClient
+            .openInputStream()
+            .use { it.readAllBytes() }
+            .toString(Charsets.UTF_8)
+            .split("\n".toRegex())
+            .dropLastWhile { it.isEmpty() }
+            .toTypedArray()
+
+        currentFileLines.reversed().forEach { line ->
+          lines.add(line)
+          lineCounter?.increment()
+          byteCounter?.increment(line.length.toDouble())
+
+          if (lines.size >= numLines) {
+            return@run
+          }
+        }
+      }
+    }
+
+    // finally reverse the lines so they're returned in ascending order
+    lines.reverse()
+    return lines
   }
 }
 
@@ -131,7 +237,7 @@ class GscLogClient(
     logPath: String,
     numLines: Int,
   ): List<String> {
-    val cloudLogPath: String = sanitisePath(jobLoggingCloudPrefix, logPath)
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath)
 
     logger.debug { "Tailing $numLines lines from logs from GCS path: $cloudLogPath" }
     val gcsClient: Storage = gcsClientFactory.get()
@@ -139,37 +245,34 @@ class GscLogClient(
     logger.debug { "Start GCS list request." }
 
     val descending = mutableListOf<Blob>()
-    gcsClient.list(
-      storageBucketConfig.log,
-      Storage.BlobListOption.prefix(cloudLogPath),
-    )
-      .iterateAll()
+    gcsClient
+      .list(
+        storageBucketConfig.log,
+        Storage.BlobListOption.prefix(cloudLogPath),
+      ).iterateAll()
       .forEach(Consumer { e: Blob -> descending.addFirst(e) })
 
     logger.debug { "Start getting GCS objects." }
     return tailCloudLogSerially(descending, cloudLogPath, numLines)
   }
 
-  @Throws(IOException::class)
   private fun tailCloudLogSerially(
     descendingTimestampBlobs: List<Blob>,
     logPath: String,
     numLines: Int,
   ): List<String> {
     val instrumentedDescendingTimestampBlobs =
-      createGauge(
+      meterRegistry.createGauge(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
         logClientType = LogClientType.GCS,
         stateObject = descendingTimestampBlobs,
-        valueFunction = { descendingTimestampBlobs.size.toDouble() },
-        meterRegistry = meterRegistry,
       )
     val timer =
-      createTimer(
+      meterRegistry.createTimer(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
         logClientType = LogClientType.GCS,
-        meterRegistry = meterRegistry,
       )
+
     val result =
       if (timer != null) {
         timer.recordCallable { retrieveFiles(blobs = instrumentedDescendingTimestampBlobs, numLines = numLines) }
@@ -181,7 +284,7 @@ class GscLogClient(
   }
 
   override fun deleteLogs(logPath: String) {
-    val cloudLogPath: String = sanitisePath(jobLoggingCloudPrefix, logPath)
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath)
 
     logger.info { "Retrieving logs from GCS path: $cloudLogPath" }
     val gcsClient: Storage = gcsClientFactory.get()
@@ -199,16 +302,14 @@ class GscLogClient(
     val inMemoryData = ByteArrayOutputStream()
     val lines = mutableListOf<String>()
     val lineCounter =
-      createCounter(
+      meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
         logClientType = LogClientType.GCS,
-        meterRegistry = meterRegistry,
       )
     val byteCounter =
-      createCounter(
+      meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
         logClientType = LogClientType.GCS,
-        meterRegistry = meterRegistry,
       )
 
     // iterate through blobs in descending order (oldest first)
@@ -218,7 +319,10 @@ class GscLogClient(
       blob.downloadTo(inMemoryData)
 
       val currFileLines =
-        inMemoryData.toString(StandardCharsets.UTF_8).split("\n".toRegex()).dropLastWhile { it.isEmpty() }
+        inMemoryData
+          .toString(StandardCharsets.UTF_8)
+          .split("\n".toRegex())
+          .dropLastWhile { it.isEmpty() }
           .toTypedArray()
       // Iterate through the lines in reverse order. This ensures we keep the newer messages over the
       // older messages if we hit the numLines limit.
@@ -259,15 +363,21 @@ class S3LogClient(
       logPath: String,
       s3Bucket: String,
     ): List<String> {
-      val listObjReq = ListObjectsV2Request.builder().bucket(s3Bucket).prefix(logPath).build()
-      val ascendingTimestampObjs = ArrayList<String>()
+      val listObjReq =
+        ListObjectsV2Request
+          .builder()
+          .bucket(s3Bucket)
+          .prefix(logPath)
+          .build()
 
-      // Objects are returned in lexicographical order.
-      for (page in s3Client.listObjectsV2Paginator(listObjReq)) {
-        for (objMetadata in page.contents()) {
-          ascendingTimestampObjs.add(objMetadata.key())
-        }
-      }
+      val ascendingTimestampObjs: List<String> =
+        s3Client
+          .listObjectsV2Paginator(listObjReq)
+          // Objects are returned in lexicographical order.
+          .flatMap { it.contents() }
+          .map { it.key() }
+          .toList()
+
       return ascendingTimestampObjs
     }
 
@@ -278,15 +388,17 @@ class S3LogClient(
       poppedKey: String,
     ): List<String> {
       val getObjReq =
-        GetObjectRequest.builder()
+        GetObjectRequest
+          .builder()
           .key(poppedKey)
           .bucket(s3Bucket)
           .build()
 
       val data = s3Client.getObjectAsBytes(getObjReq).asByteArray()
-      val `is` = ByteArrayInputStream(data)
-      val currentFileLines = java.util.ArrayList<String>()
-      BufferedReader(InputStreamReader(`is`, StandardCharsets.UTF_8)).use { reader ->
+      val inputStream = ByteArrayInputStream(data)
+      val currentFileLines = mutableListOf<String>()
+
+      BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8)).use { reader ->
         var temp = reader.readLine()
         while (temp != null) {
           currentFileLines.add(temp)
@@ -300,21 +412,19 @@ class S3LogClient(
   private var s3Client: S3Client = s3LogClientFactory.get()
 
   override fun deleteLogs(logPath: String) {
-    val cloudLogPath: String = sanitisePath(jobLoggingCloudPrefix, logPath)
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath)
     logger.debug { "Deleting logs from S3 path: $cloudLogPath" }
 
     val s3Bucket: String = storageBucketConfig.log
     val keys: List<ObjectIdentifier> =
       getAscendingObjectKeys(s3Client, cloudLogPath, s3Bucket)
-        .stream().map { key: String? ->
-          ObjectIdentifier.builder().key(key).build()
-        }.toList()
-    val del =
-      Delete.builder()
-        .objects(keys)
-        .build()
+        .mapNotNull { ObjectIdentifier.builder().key(it).build() }
+        .toList()
+    val del = Delete.builder().objects(keys).build()
+
     val multiObjectDeleteRequest =
-      DeleteObjectsRequest.builder()
+      DeleteObjectsRequest
+        .builder()
         .bucket(s3Bucket)
         .delete(del)
         .build()
@@ -327,27 +437,24 @@ class S3LogClient(
     logPath: String,
     numLines: Int,
   ): List<String> {
-    val cloudLogPath: String = sanitisePath(jobLoggingCloudPrefix, logPath)
+    val cloudLogPath = sanitisePath(jobLoggingCloudPrefix, logPath)
     logger.debug { "Tailing logs from S3 path: $cloudLogPath" }
 
     val s3Bucket: String = storageBucketConfig.log
     logger.debug { "Start making S3 list request." }
     val ascendingTimestampKeys: List<String> = getAscendingObjectKeys(s3Client, cloudLogPath, s3Bucket)
-    val descendingTimestampKeys = ascendingTimestampKeys.reversed().toMutableList()
+    val descendingTimestampKeys = ascendingTimestampKeys.reversed()
 
     val instrumentedDescendingTimestampKeys =
-      createGauge(
+      meterRegistry.createGauge(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
         logClientType = LogClientType.valueOf(storageType.uppercase()),
         stateObject = descendingTimestampKeys,
-        valueFunction = { descendingTimestampKeys.size.toDouble() },
-        meterRegistry = meterRegistry,
       )
     val timer =
-      createTimer(
+      meterRegistry.createTimer(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
         logClientType = LogClientType.valueOf(storageType.uppercase()),
-        meterRegistry = meterRegistry,
       )
     val result =
       if (timer != null) {
@@ -360,28 +467,28 @@ class S3LogClient(
   }
 
   private fun retrieveFiles(
-    keys: MutableList<String>,
+    keys: List<String>,
     numLines: Int,
   ): List<String> {
     val lines = mutableListOf<String>()
     var linesRead = 0
     val s3Bucket: String = storageBucketConfig.log
     val lineCounter =
-      createCounter(
+      meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
         logClientType = LogClientType.valueOf(storageType.uppercase()),
-        meterRegistry = meterRegistry,
       )
     val byteCounter =
-      createCounter(
+      meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
         logClientType = LogClientType.valueOf(storageType.uppercase()),
-        meterRegistry = meterRegistry,
       )
 
+    val mutatedKeys = keys.toMutableList()
+
     logger.debug { "Start getting S3 objects." }
-    while (linesRead <= numLines && keys.isNotEmpty()) {
-      val poppedKey = keys.removeAt(0)
+    while (linesRead <= numLines && mutatedKeys.isNotEmpty()) {
+      val poppedKey = mutatedKeys.removeAt(0)
       val currFileLinesReversed = getCurrFile(s3Client, s3Bucket, poppedKey).reversed()
       for (line in currFileLinesReversed) {
         if (linesRead == numLines) {
@@ -415,6 +522,7 @@ class LocalLogClient : LogClient {
     var lineCount = 0
     val lines = mutableListOf<String>()
     val reader = ReversedLinesFileReader(Path.of(logPath).toFile(), Charsets.UTF_8)
+
     reader.use { r ->
       var moreToRead = true
       while (moreToRead) {

@@ -12,6 +12,8 @@ Determine the correct log4j configuration file to load based on the defined stor
     {{- printf "log4j2-gcs.xml" -}}
 {{- else if eq (lower (default "" .Values.global.storage.type)) "s3" -}}
     {{- printf "log4j2-s3.xml" -}}
+{{- else if eq (lower (default "" .Values.global.storage.type)) "azure" -}}
+    {{- printf "log4j2-azure.xml" -}}
 {{- else -}}
     {{- printf "log4j2.xml" -}}
 {{- end -}}

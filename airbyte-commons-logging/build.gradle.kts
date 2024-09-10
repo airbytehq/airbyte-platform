@@ -13,10 +13,11 @@ dependencies {
   api(libs.commons.io)
 
   // Dependencies for specific cloud clients
-  api(libs.google.cloud.storage)
+  api(libs.azure.storage)
   api(libs.aws.java.sdk.s3)
   api(libs.aws.java.sdk.sts)
   api(libs.s3)
+  api(libs.google.cloud.storage)
 
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-metrics:metrics-lib"))

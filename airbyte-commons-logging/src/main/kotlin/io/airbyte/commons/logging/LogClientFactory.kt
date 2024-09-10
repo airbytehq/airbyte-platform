@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.logging
 
+import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.BlobServiceClientBuilder
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
@@ -26,6 +28,23 @@ import java.util.function.Supplier
 interface LogClientFactory<T> : Supplier<T>
 
 @Singleton
+@Requires(property = STORAGE_TYPE, pattern = "(?i)^azure$")
+@Named("azureLogClientFactory")
+class AzureLogClientFactory(
+  @Value("\${$STORAGE_AZURE.connection-string}") val connectionString: String,
+) : LogClientFactory<BlobServiceClient> {
+  override fun get(): BlobServiceClient {
+    runCatching {
+      return BlobServiceClientBuilder()
+        .connectionString(connectionString)
+        .buildClient()
+    }.getOrElse {
+      throw RuntimeException("Error creating Azure log client", it)
+    }
+  }
+}
+
+@Singleton
 @Requires(property = STORAGE_TYPE, pattern = "(?i)^gcs$")
 @Named("gcsLogClientFactory")
 class GcsLogClientFactory(
@@ -35,7 +54,11 @@ class GcsLogClientFactory(
     runCatching {
       val credentialsByteStream = ByteArrayInputStream(Files.readAllBytes(Path.of(applicationCredentials)))
       val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
-      return StorageOptions.newBuilder().setCredentials(credentials).build().service
+      return StorageOptions
+        .newBuilder()
+        .setCredentials(credentials)
+        .build()
+        .service
     }.getOrElse {
       throw RuntimeException("Error creating GCS log client", it)
     }

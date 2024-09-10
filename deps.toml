@@ -1,5 +1,6 @@
 [versions]
 airbyte-protocol = "0.11.0"
+azure-storage = "12.27.1"
 bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
@@ -64,6 +65,7 @@ assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.770" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.770"}
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
+azure-storage = { module = "com.azure:azure-storage-blob", version.ref = "azure-storage" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.14.10" }

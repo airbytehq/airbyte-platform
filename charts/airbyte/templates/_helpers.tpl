@@ -207,22 +207,6 @@ Construct semi-colon delimited list of comma separated key/value pairs from arra
 {{ join ";" $mapList }}
 {{- end -}}
 
-{{/*
-Determine the correct log4j configuration file to load based on the defined storage type.
-*/}}
-{{- define "airbyte.log4jConfig" -}}
-{{- if eq (lower (default "" .Values.global.storage.type)) "minio" }}
-    {{- printf "log4j2-minio.xml" -}}
-{{- else if eq (lower (default "" .Values.global.storage.type)) "gcs" -}}
-    {{- printf "log4j2-gcs.xml" -}}
-{{- else if eq (lower (default "" .Values.global.storage.type)) "s3" -}}
-    {{- printf "log4j2-s3.xml" -}}
-{{- else -}}
-    {{- printf "log4j2.xml" -}}
-{{- end -}}
-{{- end -}}
-
-
 ## DEFAULT HELM VALUES
 # Secret Manager Defaults
 {{/*
