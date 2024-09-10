@@ -22,6 +22,7 @@ export interface Experiments {
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
+  "connection.hashingUI": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
   "billing.organizationBillingPage": boolean;

@@ -88,6 +88,17 @@ $row-height: 40px;
     border-bottom-right-radius: $border-radius;
   }
 
+  [data-showonhover="true"] {
+    visibility: hidden;
+  }
+
+  &:hover,
+  &:focus-within {
+    [data-showonhover] {
+      visibility: visible;
+    }
+  }
+
   @keyframes highlight {
     0%,
     50% {

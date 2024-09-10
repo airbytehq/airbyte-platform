@@ -106,6 +106,18 @@ export const checkIsFieldSelected = (field: SyncSchemaField, config: AirbyteStre
   return !!config?.selectedFields?.find((f) => isEqual(f.fieldPath, [field.path[0]]));
 };
 
+/*
+ * Check is stream field is hashed for sync
+ */
+export const checkIsFieldHashed = (field: SyncSchemaField, config: AirbyteStreamConfiguration): boolean => {
+  // If the stream is disabled, effectively each field is unselected
+  if (!config?.hashedFields || config.hashedFields.length === 0) {
+    return false;
+  }
+
+  return config.hashedFields.some((f) => isEqual(f.fieldPath, field.path));
+};
+
 export const pathDisplayName = (path: Path): string => path.join(".");
 
 /**
@@ -146,7 +158,7 @@ export const getFieldChangeStatus = (
   initialStreamNode: AirbyteStreamAndConfiguration,
   streamNode: SyncStreamFieldWithId,
   field?: SyncSchemaField
-): Exclude<StatusToDisplay, "changed"> => {
+): StatusToDisplay => {
   // if stream is disabled then disable all fields
   if (!streamNode.config?.selected) {
     return "disabled";
@@ -162,12 +174,8 @@ export const getFieldChangeStatus = (
   const fieldExistInSelectedFields = streamNode?.config?.selectedFields?.find(findField);
   const fieldExistsInSelectedFieldsInitialValue = initialStreamNode?.config?.selectedFields?.find(findField);
 
-  // if initially field selection was enabled
   if (initialStreamNode?.config?.fieldSelectionEnabled) {
     if (streamNode?.config?.fieldSelectionEnabled) {
-      if (fieldExistsInSelectedFieldsInitialValue && fieldExistInSelectedFields) {
-        return "unchanged";
-      }
       if (fieldExistsInSelectedFieldsInitialValue && !fieldExistInSelectedFields) {
         return "removed";
       }
@@ -175,22 +183,29 @@ export const getFieldChangeStatus = (
       if (!fieldExistsInSelectedFieldsInitialValue && fieldExistInSelectedFields) {
         return "added";
       }
-
-      return "unchanged";
     }
 
-    if (!streamNode?.config?.fieldSelectionEnabled) {
-      return fieldExistsInSelectedFieldsInitialValue ? "unchanged" : "added";
+    // stream field selection was disabled to start with
+    // now it is enabled, so if this field was not part
+    // of the initial selection it has been added
+    if (!streamNode?.config?.fieldSelectionEnabled && !fieldExistsInSelectedFieldsInitialValue) {
+      return "added";
     }
   }
 
   // if initially field selection was disabled
   if (!initialStreamNode?.config?.fieldSelectionEnabled) {
-    if (streamNode?.config?.fieldSelectionEnabled) {
-      return fieldExistInSelectedFields ? "unchanged" : "removed";
+    if (streamNode?.config?.fieldSelectionEnabled && !fieldExistInSelectedFields) {
+      return "removed";
     }
-    if (!streamNode?.config?.fieldSelectionEnabled) {
-      return "unchanged";
+  }
+
+  // if the field's hashing was changed
+  if (initialStreamNode?.config && streamNode.config) {
+    const wasHashed = checkIsFieldHashed(field, initialStreamNode?.config);
+    const isHashed = checkIsFieldHashed(field, streamNode?.config);
+    if (wasHashed !== isHashed) {
+      return "changed";
     }
   }
 

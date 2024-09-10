@@ -273,6 +273,7 @@
   "connectionForm.sourceStreamName.info": "<b>Stream name</b> is the raw table name from your source.",
   "connectionForm.sourceNamespace.info": "<b>Namespace</b> is the database schema of your source tables.",
   "connectionForm.streams.required": "Select at least 1 stream to sync.",
+  "connectionForm.streams.hashFieldCollision": "Configured field hashing conflicts with an existing field name.",
   "connectionForm.syncType.info": "How data will be replicated from source to destination.",
   "connectionForm.destinationName.info": "<b>Namespace</b> is the database schema of your destination tables.",
   "connectionForm.destinationStream.info": "<b>Stream name</b> is the final table name in destination.",
@@ -537,6 +538,9 @@
 
   "syncMode.full_refresh": "Full refresh",
   "syncMode.incremental": "Incremental",
+
+  "mapper.hash.optedIn": "Hashed",
+  "mapper.hash.optedOut": "Unhashed",
 
   "connection.onboarding.title": "<b>Connections</b> link Sources to Destinations",
   "connection.onboarding.createFirst": "Create your first connection",

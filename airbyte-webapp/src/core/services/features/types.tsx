@@ -21,6 +21,7 @@ export enum FeatureItem {
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
   ExternalInvitations = "EXTERNAL_INVITATIONS",
+  FieldHashing = "FIELD_HASHING",
   IndicateGuestUsers = "INDICATE_GUEST_USERS",
   MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
   RBAC = "RBAC",

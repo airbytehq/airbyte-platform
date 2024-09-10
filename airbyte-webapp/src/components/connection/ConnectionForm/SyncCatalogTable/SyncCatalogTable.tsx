@@ -26,11 +26,14 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
+import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { CursorCell } from "./components/CursorCell";
 import { FieldCursorCell } from "./components/FieldCursorCell";
+import { FieldHashMapping } from "./components/FieldHashMapping";
 import { FieldPKCell } from "./components/FieldPKCell";
 import { FormControls } from "./components/FormControls";
 import { HeaderNamespaceCell } from "./components/HeaderNamespaceCell";
@@ -99,6 +102,8 @@ export interface SyncCatalogUIModel {
 export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
   const { formatMessage } = useIntl();
   const { mode, connection } = useConnectionFormService();
+  const isHashingSupported = useFeature(FeatureItem.FieldHashing);
+  const isHashingEnabled = useExperiment("connection.hashingUI", false);
   const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const {
@@ -125,6 +130,11 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         ...streamNode.config,
         ...updatedConfig,
       });
+
+      // if this stream is disabled, remove any hashedFields configured
+      if (updatedStreamNode.config?.selected === false) {
+        updatedStreamNode.config.hashedFields = undefined;
+      }
 
       const streamNodeIndex = streams.findIndex((s) => s.id === streamNode.id);
       update(streamNodeIndex, updatedStreamNode);
@@ -216,6 +226,8 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
           </FlexContainer>
         ) : isStreamRow(row) ? (
           <SyncModeCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+        ) : isHashingEnabled && isHashingSupported ? (
+          <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : null,
       meta: {
         thClassName: styles.syncModeCell,
