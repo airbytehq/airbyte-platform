@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import merge from "lodash/merge";
-import omit from "lodash/omit";
 import { useCallback } from "react";
 
-import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { DEFAULT_JSON_MANIFEST_VALUES, useBuilderWatch } from "components/connectorBuilder/types";
+import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
@@ -12,7 +9,6 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { useNotificationService } from "hooks/services/Notification";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { ApiCallOptions } from "../apiCall";
 import {
@@ -47,8 +43,6 @@ import {
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
-const OMIT_ASSIST_KEYS_IN_CACHE = ["manifest"]; // just extra metadata that we don't need to factor into cache
-
 const connectorBuilderKeys = {
   all: ["connectorBuilder"] as const,
   read: (projectId: string, streamName: string) =>
@@ -60,17 +54,8 @@ const connectorBuilderKeys = {
   resolveSuspense: (manifest?: ConnectorManifest) =>
     [...connectorBuilderKeys.all, "resolveSuspense", { manifest }] as const,
   checkContribution: (imageName?: string) => [...connectorBuilderKeys.all, "checkContribution", { imageName }] as const,
-  assist: (
-    controller: string,
-    params: AssistV1ProcessRequestBody,
-    ignoreCacheKeys: Array<keyof BuilderAssistApiAllParams>
-  ) =>
-    [
-      ...connectorBuilderKeys.all,
-      "assist",
-      controller,
-      JSON.stringify(omit(params, ...OMIT_ASSIST_KEYS_IN_CACHE.concat(ignoreCacheKeys))),
-    ] as const,
+  assist: (controller: string, params: AssistV1ProcessRequestBody) =>
+    [...connectorBuilderKeys.all, "assist", controller, JSON.stringify(params)] as const,
 };
 
 export const useBuilderReadStream = (
@@ -124,33 +109,28 @@ export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest,
   });
 };
 
-export interface BuilderAssistCoreParams {
+export interface BuilderAssistBaseParams {
+  session_id?: string;
+  cdk_version?: string;
+}
+export interface BuilderAssistGlobalParams extends BuilderAssistBaseParams {
   docs_url?: string;
   openapi_spec_url?: string;
   app_name: string;
 }
-
-export interface BuilderAssistGlobalMetadataParams {
-  cdk_version: string;
-  workspace_id: string;
-}
-export interface BuilderAssistProjectMetadataParams {
-  project_id: string;
-  manifest: DeclarativeComponentSchema;
+export interface BuilderAssistGlobalUrlParams extends BuilderAssistGlobalParams {
   url_base?: string;
-  session_id: string;
 }
-export interface BuilderAssistInputStreamParams {
+
+export interface BuilderAssistStreamParams extends BuilderAssistGlobalUrlParams {
   stream_name: string;
 }
-type BuilderAssistUseProject = BuilderAssistCoreParams & BuilderAssistProjectMetadataParams;
-type BuilderAssistUseProjectStream = BuilderAssistUseProject & BuilderAssistInputStreamParams;
-
-export type BuilderAssistApiAllParams = BuilderAssistCoreParams &
-  BuilderAssistProjectMetadataParams &
-  BuilderAssistProjectMetadataParams &
-  BuilderAssistInputStreamParams;
-export type BuilderAssistInputAllParams = BuilderAssistInputStreamParams;
+export type BuilderAssistFindUrlBaseParams = BuilderAssistGlobalParams;
+export type BuilderAssistFindAuthParams = BuilderAssistGlobalUrlParams;
+export type BuilderAssistCreateStreamParams = BuilderAssistStreamParams;
+export type BuilderAssistFindStreamPaginatorParams = BuilderAssistStreamParams;
+export type BuilderAssistFindStreamMetadataParams = BuilderAssistStreamParams;
+export type BuilderAssistFindStreamResponseParams = BuilderAssistStreamParams;
 
 export interface ManifestUpdate {
   cdk_version: string;
@@ -187,18 +167,9 @@ const explicitlyCastedAssistV1Process = <T>(
   return assistV1Process({ controller, ...params }, requestOptions) as Promise<T>;
 };
 
-const useAssistProxyQuery = <T>(
-  controller: string,
-  enabled: boolean,
-  input: AssistV1ProcessRequestBody,
-  ignoreCacheKeys: Array<keyof BuilderAssistApiAllParams>
-) => {
+const useAssistManifestQuery = <T>(controller: string, enabled: boolean, params: AssistV1ProcessRequestBody) => {
   const requestOptions = useRequestOptions();
-  const { params: globalParams } = useAssistGlobalContext();
-  const params = merge({}, globalParams, input);
-  requestOptions.signal = AbortSignal.timeout(5 * 60 * 1000); // 5 minutes
-
-  const queryKey = connectorBuilderKeys.assist(controller, params, ignoreCacheKeys);
+  const queryKey = connectorBuilderKeys.assist(controller, params);
   const debouncedQueryKey = useDebounceValue(queryKey, 500);
 
   return useQuery<T, HttpError<KnownExceptionInfo>>(
@@ -217,94 +188,54 @@ const useAssistProxyQuery = <T>(
   );
 };
 
-const hasValueWithTrim = (value: unknown) => {
-  // if the value is a string, trim first
-  if (typeof value === "string") {
-    return value.trim() !== "";
-  }
-  // else check if truthy
-  return !!value;
-};
-
 const hasOneOf = <T>(params: T, keys: Array<keyof T>) => {
-  return keys.some((key) => hasValueWithTrim(params[key]));
+  return keys.some((key) => !!(params[key] as string)?.trim());
 };
 
 const hasAllOf = <T>(params: T, keys: Array<keyof T>) => {
   return keys.every((key) => !!(params[key] as string)?.trim());
 };
 
-const useAssistGlobalContext = (): { params: BuilderAssistGlobalMetadataParams } => {
-  const params: BuilderAssistGlobalMetadataParams = {
-    cdk_version: CDK_VERSION,
-    workspace_id: useCurrentWorkspaceId(),
-  };
-  return { params };
+export const useBuilderAssistFindUrlBase = (params: BuilderAssistFindUrlBaseParams) => {
+  const hasRequiredParams = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("find_url_base", hasRequiredParams, params);
 };
 
-const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequiredParams: boolean } => {
-  const { assistEnabled, projectId, assistSessionId, jsonManifest } = useConnectorBuilderFormState();
-  // session id on form
-  const params: BuilderAssistUseProject = {
-    docs_url: useBuilderWatch("formValues.assist.docsUrl"),
-    openapi_spec_url: useBuilderWatch("formValues.assist.openApiSpecUrl"),
-    app_name: useBuilderWatch("name") || "Connector",
-    url_base: useBuilderWatch("formValues.global.urlBase"),
-    project_id: projectId,
-    manifest: jsonManifest,
-    session_id: assistSessionId,
-  };
-  const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
-  const hasRequiredParams = assistEnabled && hasBase;
-  return { params, hasRequiredParams };
-};
-const useAssistProjectStreamContext = (
-  input: BuilderAssistInputStreamParams
-): { params: BuilderAssistUseProjectStream; hasRequiredParams: boolean } => {
-  const { params: baseParams, hasRequiredParams: baseRequiredParams } = useAssistProjectContext();
-  const params = { ...baseParams, ...input };
-  const hasStream = hasAllOf(params, ["stream_name"]);
-  const hasRequiredParams = baseRequiredParams && hasStream;
-  return { params, hasRequiredParams };
+export const useBuilderAssistFindAuth = (params: BuilderAssistFindAuthParams) => {
+  const hasRequiredParams = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("find_auth", hasRequiredParams, params);
 };
 
-export const useBuilderAssistFindUrlBase = () => {
-  const { params, hasRequiredParams } = useAssistProjectContext();
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_url_base", hasRequiredParams, params, ["url_base"]);
-};
-
-export const useBuilderAssistFindAuth = () => {
-  const { params, hasRequiredParams } = useAssistProjectContext();
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_auth", hasRequiredParams, params, ["url_base"]);
-};
-
-export const useBuilderAssistCreateStream = (input: BuilderAssistInputStreamParams) => {
+export const useBuilderAssistCreateStream = (params: BuilderAssistCreateStreamParams) => {
   // this one is always enabled, let the server return an error if there is a problem
-  const { params } = useAssistProjectStreamContext(input);
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("create_stream", true, params, []);
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("create_stream", true, params);
 };
 
-export const useBuilderAssistFindStreamPaginator = (input: BuilderAssistInputStreamParams) => {
-  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_stream_pagination", hasRequiredParams, params, [
-    "url_base",
-  ]);
+export const useBuilderAssistFindStreamPaginator = (params: BuilderAssistFindStreamPaginatorParams) => {
+  const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
+  const hasStream = hasAllOf(params, ["app_name", "stream_name"]);
+  const hasRequiredParams = hasBase && hasStream;
+
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("find_stream_pagination", hasRequiredParams, params);
 };
 
-export const useBuilderAssistStreamMetadata = (input: BuilderAssistInputStreamParams) => {
-  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
-  // note: url_base important here because path is built off of it
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_stream_metadata", hasRequiredParams, params, []);
+export const useBuilderAssistStreamMetadata = (params: BuilderAssistFindStreamMetadataParams) => {
+  const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
+  const hasStream = hasAllOf(params, ["app_name", "stream_name"]);
+  const hasRequiredParams = hasBase && hasStream;
+
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("find_stream_metadata", hasRequiredParams, params);
 };
 
-export const useBuilderAssistStreamResponse = (input: BuilderAssistInputStreamParams) => {
-  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
-  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_response_structure", hasRequiredParams, params, [
-    "url_base",
-  ]);
+export const useBuilderAssistStreamResponse = (params: BuilderAssistFindStreamResponseParams) => {
+  const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
+  const hasStream = hasAllOf(params, ["app_name", "stream_name"]);
+  const hasRequiredParams = hasBase && hasStream;
+
+  return useAssistManifestQuery<BuilderAssistManifestResponse>("find_response_structure", hasRequiredParams, params);
 };
 
-export interface BuilderAssistFindStreamsParams {
+export interface BuilderAssistFindStreamsParams extends BuilderAssistGlobalUrlParams {
   enabled: boolean;
 }
 export interface BuilderAssistFoundStream {
@@ -314,16 +245,14 @@ export interface BuilderAssistFindStreamsResponse extends BuilderAssistBaseRespo
   streams: BuilderAssistFoundStream[];
 }
 
-export const useBuilderAssistFindStreams = (input: BuilderAssistFindStreamsParams) => {
-  const { params, hasRequiredParams } = useAssistProjectContext();
-  const enabled = input.enabled && hasRequiredParams;
-  return useAssistProxyQuery<BuilderAssistFindStreamsResponse>("find_streams", enabled, params, ["url_base"]);
+export const useBuilderAssistFindStreams = (params: BuilderAssistFindStreamsParams) => {
+  const isEnabled = params.enabled;
+  const hasRequiredParams = hasOneOf(params, ["docs_url", "openapi_spec_url", "app_name"]);
+  const enabled = isEnabled && hasRequiredParams;
+  return useAssistManifestQuery<BuilderAssistFindStreamsResponse>("find_streams", enabled, params);
 };
 
-export interface BuilderAssistCreateConnectorParams extends BuilderAssistCoreParams {
-  stream_name: string;
-  session_id: string;
-}
+export type BuilderAssistCreateConnectorParams = BuilderAssistStreamParams;
 export interface BuilderAssistCreateConnectorResponse extends BuilderAssistBaseResponse {
   connector: DeclarativeComponentSchema;
 }
@@ -332,22 +261,12 @@ export const CONNECTOR_ASSIST_NOTIFICATION_ID = "connector-assist-notification";
 
 export const useBuilderAssistCreateConnectorMutation = () => {
   const requestOptions = useRequestOptions();
-  requestOptions.signal = AbortSignal.timeout(5 * 60 * 1000); // 5 minutes
-
-  const { params: globalParams } = useAssistGlobalContext();
-
   const formatError = useFormatError();
   const { registerNotification } = useNotificationService();
 
   return useMutation(
-    (params: BuilderAssistCreateConnectorParams) => {
-      const allParams = merge({}, globalParams, params);
-      return explicitlyCastedAssistV1Process<BuilderAssistCreateConnectorResponse>(
-        "create_connector",
-        allParams,
-        requestOptions
-      );
-    },
+    (params: BuilderAssistCreateConnectorParams) =>
+      explicitlyCastedAssistV1Process<BuilderAssistCreateConnectorResponse>("create_connector", params, requestOptions),
     {
       onError: (error: Error) => {
         const errorMessage = formatError(error);

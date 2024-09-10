@@ -13,7 +13,6 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import {
   BuilderAssistFindStreamsResponse,
-  BuilderAssistInputAllParams,
   BuilderAssistManifestResponse,
   useBuilderAssistFindAuth,
   useBuilderAssistFindUrlBase,
@@ -145,53 +144,65 @@ export interface AssistButtonProps {
 }
 
 interface AssistButtonConfig {
-  useHook: (
-    input: BuilderAssistInputAllParams
-  ) => UseQueryResult<BuilderAssistManifestResponse, HttpError<KnownExceptionInfo>>;
-  useHookParams: Array<keyof BuilderAssistInputAllParams>;
+  useHook: (params: object) => UseQueryResult<BuilderAssistManifestResponse, HttpError<KnownExceptionInfo>>;
   formPathToSet: string | ((streamNum: number) => string);
   propertiesToPluck?: string[];
 }
 
-const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
+const assistButtonConfigs = {
   urlbase: {
     useHook: useBuilderAssistFindUrlBase,
-    useHookParams: [],
     formPathToSet: "global.urlBase",
   },
   auth: {
     useHook: useBuilderAssistFindAuth,
-    useHookParams: [],
     formPathToSet: "global.authenticator",
   },
   metadata: {
     useHook: useBuilderAssistStreamMetadata,
-    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}`,
     propertiesToPluck: ["urlPath", "httpMethod", "primaryKey"],
   },
   record_selector: {
     useHook: useBuilderAssistStreamResponse,
-    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.recordSelector`,
   },
   paginator: {
     useHook: useBuilderAssistFindStreamPaginator,
-    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.paginator`,
   },
-};
+} as const;
 
 export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
+  const assistData: AssistData = useBuilderWatch("formValues.assist");
+  const app_name = useWatch({ name: "name" }) || "Connector";
+  const url_base = useWatch({ name: "formValues.global.urlBase" });
   const stream_name = useWatch({ name: `formValues.streams.${streamNum}.name` });
 
-  const config = assistButtonConfigs[assistKey];
-  const hookParams = useMemo(() => pick({ stream_name }, config.useHookParams), [stream_name, config.useHookParams]);
-
   const { assistEnabled } = useConnectorBuilderFormState();
-  if (!assistEnabled) {
+  if (!assistData || !assistEnabled) {
     return null;
   }
+
+  // TODO: this is a hack to get the docs_url and openapi_spec_url from the assistData
+  // Before we bring this to our customers we should hoist this error higher.
+  const docs_url = assistData?.docsUrl?.trim();
+  const openapi_spec_url = assistData?.openApiSpecUrl?.trim();
+
+  const config = assistButtonConfigs[assistKey] as AssistButtonConfig | undefined;
+  if (!config) {
+    console.error(`Unknown assist key: ${assistKey}`);
+    return null;
+  }
+
+  const hookParams = {
+    docs_url,
+    openapi_spec_url,
+    app_name,
+    url_base,
+    stream_name,
+    streamNum,
+  };
 
   return <InternalAssistButton assistKey={assistKey} hookParams={hookParams} streamNum={streamNum} {...config} />;
 };
@@ -267,8 +278,8 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
 
 interface InternalAssistButtonProps extends AssistButtonConfig {
   streamNum?: number;
+  hookParams: object;
   assistKey: AssistKey;
-  hookParams: BuilderAssistInputAllParams;
 }
 
 const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({

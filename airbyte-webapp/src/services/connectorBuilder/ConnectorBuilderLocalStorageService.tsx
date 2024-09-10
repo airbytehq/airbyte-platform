@@ -1,5 +1,4 @@
 import React, { useContext } from "react";
-import { v4 as uuid } from "uuid";
 
 import { BuilderState } from "components/connectorBuilder/types";
 
@@ -9,41 +8,37 @@ import { useExperiment } from "hooks/services/Experiment";
 interface LocalStorageContext {
   storedMode: BuilderState["mode"];
   setStoredMode: (view: BuilderState["mode"]) => void;
-  isAssistProjectEnabled: (projectId: string) => boolean;
-  setAssistProjectEnabled: (projectId: string, enabled: boolean, sessionId?: string) => void;
-  getAssistProjectSessionId: (projectId: string) => string;
+  checkAssistEnabled: (projectId: string) => boolean;
+  setAssistEnabledById: (projectId: string) => (enabled: boolean) => void;
 }
 
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const useAssistEnabled = () => {
   const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
-  const [assistProjects, setAssistProjects] = useLocalStorage("airbyte_ai-assist-projects", {});
+  const [assistEnabledList, setAssistEnabledList] = useLocalStorage("airbyte_ai-assist-enabled-projects", []);
+  const checkAssistEnabled = (projectId: string) => assistEnabledList.includes(projectId) && isAIFeatureEnabled;
 
-  const isAssistProjectEnabled = (projectId: string) => projectId in assistProjects && isAIFeatureEnabled;
-  const setAssistProjectEnabled = (projectId: string, enabled: boolean, sessionId?: string) => {
+  const setAssistEnabled = (projectId: string) => (enabled: boolean) => {
     if (enabled) {
-      assistProjects[projectId] = { sessionId: sessionId || uuid() };
+      setAssistEnabledList([...assistEnabledList, projectId]);
     } else {
-      delete assistProjects[projectId];
+      setAssistEnabledList(assistEnabledList.filter((id) => id !== projectId));
     }
-    setAssistProjects(assistProjects);
   };
-  const getAssistProjectSessionId = (projectId: string) => assistProjects[projectId]?.sessionId || uuid();
 
-  return [isAssistProjectEnabled, setAssistProjectEnabled, getAssistProjectSessionId] as const;
+  return [checkAssistEnabled, setAssistEnabled] as const;
 };
 
 export const ConnectorBuilderLocalStorageProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const [storedMode, setStoredMode] = useLocalStorage("connectorBuilderEditorView", "ui");
-  const [isAssistProjectEnabled, setAssistProjectEnabled, getAssistProjectSessionId] = useAssistEnabled();
+  const [checkAssistEnabled, setAssistEnabledById] = useAssistEnabled();
 
   const ctx = {
     storedMode,
     setStoredMode,
-    isAssistProjectEnabled,
-    setAssistProjectEnabled,
-    getAssistProjectSessionId,
+    checkAssistEnabled,
+    setAssistEnabledById,
   };
 
   return (

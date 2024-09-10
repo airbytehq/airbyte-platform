@@ -114,7 +114,6 @@ interface FormStateContext {
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
-  assistSessionId: string;
   setAssistEnabled: (enabled: boolean) => void;
 }
 
@@ -236,17 +235,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
-  const { setStoredMode, isAssistProjectEnabled, setAssistProjectEnabled, getAssistProjectSessionId } =
-    useConnectorBuilderLocalStorage();
+  const { setStoredMode, checkAssistEnabled, setAssistEnabledById } = useConnectorBuilderLocalStorage();
 
-  const assistEnabled = isAssistProjectEnabled(projectId);
-  const setAssistEnabled = useCallback(
-    (enabled: boolean) => {
-      setAssistProjectEnabled(projectId, enabled);
-    },
-    [projectId, setAssistProjectEnabled]
-  );
-  const assistSessionId = getAssistProjectSessionId(projectId);
+  const assistEnabled = checkAssistEnabled(projectId);
+  const setAssistEnabled = setAssistEnabledById(projectId);
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
@@ -578,7 +570,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     updateYamlCdkVersion,
     setAssistEnabled,
     assistEnabled,
-    assistSessionId,
   };
 
   return (

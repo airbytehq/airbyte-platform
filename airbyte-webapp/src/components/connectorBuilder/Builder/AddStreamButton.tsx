@@ -14,8 +14,9 @@ import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import {
+  BuilderAssistCreateStreamParams,
   BuilderAssistFindStreamsResponse,
-  BuilderAssistInputStreamParams,
+  BuilderAssistGlobalParams,
   BuilderAssistManifestResponse,
   useBuilderAssistCreateStream,
   useBuilderAssistFindStreams,
@@ -28,7 +29,7 @@ import { convertToAssistFormValuesSync } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
+import { AssistData, BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamResponse {
   streamName: string;
@@ -171,11 +172,25 @@ const AddStreamModal = ({
   streams: BuilderStream[];
   initialUrlPath?: string;
 }) => {
+  const baseUrl = useBuilderWatch("formValues.global.urlBase");
+  const appName = useBuilderWatch("name") || "Connector";
+  const assistData: AssistData = useBuilderWatch("formValues.assist");
   const { assistEnabled } = useConnectorBuilderFormState();
+
   const shouldAssist = assistEnabled && !isDuplicate;
 
   // TODO refactor to useMutation, as this is a bit of a hack
   const [assistFormValues, setAssistFormValues] = useState<AddStreamFormValues | null>(null);
+
+  const assistParams = useMemo(
+    () => ({
+      docs_url: assistData?.docsUrl,
+      openapi_spec_url: assistData?.openApiSpecUrl,
+      app_name: appName,
+      url_base: baseUrl,
+    }),
+    [assistData?.docsUrl, assistData?.openApiSpecUrl, appName, baseUrl]
+  );
 
   const submitResponse = useCallback(
     (values: AddStreamFormValues) => {
@@ -220,9 +235,10 @@ const AddStreamModal = ({
       return null;
     }
     return {
+      ...assistParams,
       stream_name: assistFormValues.streamName,
     };
-  }, [assistFormValues]);
+  }, [assistParams, assistFormValues]);
 
   return (
     <Modal
@@ -239,6 +255,7 @@ const AddStreamModal = ({
           isDuplicate={isDuplicate}
           streams={streams}
           initialUrlPath={initialUrlPath}
+          assistParams={assistParams}
           shouldAssist={shouldAssist}
         />
       )}
@@ -259,6 +276,7 @@ const AddStreamForm = ({
   isDuplicate,
   streams,
   initialUrlPath,
+  assistParams,
   shouldAssist,
 }: {
   onSubmit: (values: AddStreamFormValues) => void;
@@ -266,13 +284,10 @@ const AddStreamForm = ({
   isDuplicate: boolean;
   streams: BuilderStream[];
   initialUrlPath?: string;
+  assistParams: BuilderAssistGlobalParams;
   shouldAssist: boolean;
 }) => {
   const { formatMessage } = useIntl();
-
-  const { data, isFetching } = useBuilderAssistFindStreams({
-    enabled: shouldAssist,
-  });
 
   const showCopyFromStream = !isDuplicate && streams.length > 0;
   const showUrlPath = !shouldAssist;
@@ -291,7 +306,6 @@ const AddStreamForm = ({
     validator.urlPath = yup.string().required("form.empty.error");
   }
 
-  // put the main form default values here so the API can use the context in the new form
   const methods = useForm({
     defaultValues: {
       streamName: "",
@@ -310,7 +324,7 @@ const AddStreamForm = ({
       <form onSubmit={methods.handleSubmit(onSubmit)}>
         <ModalBody className={styles.body}>
           {shouldAssist ? (
-            <AssistedStreamNameField path="streamName" streams={streams} data={data} isFetching={isFetching} />
+            <AssistedStreamNameField path="streamName" streams={streams} assistParams={assistParams} />
           ) : (
             <BuilderField
               path="streamName"
@@ -379,15 +393,18 @@ const AssistLoadingMessage = () => {
 const AssistedStreamNameField = ({
   path,
   streams,
-  data,
-  isFetching,
+  assistParams,
 }: {
   path: string;
   streams: BuilderStream[];
-  data: BuilderAssistFindStreamsResponse | undefined;
-  isFetching: boolean;
+  assistParams: BuilderAssistGlobalParams;
 }) => {
   const { formatMessage } = useIntl();
+
+  const { data, isFetching } = useBuilderAssistFindStreams({
+    ...assistParams,
+    enabled: true,
+  });
 
   const streamOptions = useMemo(() => {
     if (data) {
@@ -426,7 +443,7 @@ const AssistProcessing = ({
   onComplete,
   onSkip,
 }: {
-  input: BuilderAssistInputStreamParams;
+  input: BuilderAssistCreateStreamParams;
   onComplete: (values: AddStreamResponse) => void;
   onSkip: () => void;
 }) => {
