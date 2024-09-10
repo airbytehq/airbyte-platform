@@ -8,13 +8,12 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const QUERY_KEY_INSTANCE = "airbyte-instance";
 
-export function useGetInstanceConfiguration(options?: { enabled?: boolean }) {
+export function useGetInstanceConfiguration() {
   // The instance configuration endpoint is not authenticated, so we don't need to pass any auth headers.
   // But because of how the API client is generated, we still need to pass an empty request options object.
   const emptyRequestOptions: ApiCallOptions = { getAccessToken: () => Promise.resolve(null) };
 
   return useSuspenseQuery([QUERY_KEY_INSTANCE], () => getInstanceConfiguration(emptyRequestOptions), {
-    enabled: options?.enabled,
     staleTime: Infinity, // This data should be fetched once and never updated
   });
 }
