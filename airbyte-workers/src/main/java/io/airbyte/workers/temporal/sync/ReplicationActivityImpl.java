@@ -300,7 +300,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   boolean useWorkloadApi(final ReplicationActivityInput input) {
     // TODO: remove this once active workloads finish
     if (input.getUseWorkloadApi() == null) {
-      return false;
+      return true;
     } else {
       return input.getUseWorkloadApi();
     }
