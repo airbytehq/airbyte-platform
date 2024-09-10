@@ -461,6 +461,10 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
             })}
             containerClassName={styles.searchInputContainer}
             onChange={(e) => setFiltering(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              // We do not want to submit the connection form when pressing Enter in the search field
+              e.key === "Enter" && e.preventDefault();
+            }}
           />
           <FlexContainer>
             <FlexContainer justifyContent="flex-end" alignItems="center" direction="row" gap="lg">
