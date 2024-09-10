@@ -95,6 +95,16 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     return projectOptional.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, builderProjectId));
   }
 
+  @Override
+  public Optional<UUID> getConnectorBuilderProjectIdForActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx
+        .select(CONNECTOR_BUILDER_PROJECT.ID)
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+            .andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+        .fetchOptional(CONNECTOR_BUILDER_PROJECT.ID));
+  }
+
   /**
    * Return a versioned manifest associated with a builder project.
    *

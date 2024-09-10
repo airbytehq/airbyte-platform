@@ -24,6 +24,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest.HttpMethodEnum;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
@@ -85,6 +87,7 @@ import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -753,6 +756,31 @@ class ConnectorBuilderProjectsHandlerTest {
 
     final DeclarativeManifestBaseImageRead responseBody = connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody);
     assertEquals(A_BASE_IMAGE, responseBody.getBaseImage());
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdBySourceDefinitionId() throws IOException {
+    final UUID actorDefinitionId = UUID.randomUUID();
+    final UUID projectId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.of(projectId));
+
+    final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
+        new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
+
+    assertEquals(projectId, response.getBuilderProjectId());
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() throws IOException {
+    final UUID actorDefinitionId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.empty());
+
+    final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
+        new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
+
+    assertNull(response.getBuilderProjectId());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

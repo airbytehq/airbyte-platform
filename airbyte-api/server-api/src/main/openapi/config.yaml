@@ -1029,6 +1029,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_builder_projects/get_for_definition_id:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project by source definition ID
+      operationId: getConnectorBuilderProjectIdForDefinitionId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectForDefinitionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProjectForDefinitionResponse"
   /v1/connector_builder_projects/update_testing_values:
     post:
       tags:
@@ -7742,6 +7761,25 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProject:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    BuilderProjectForDefinitionRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - workspaceId
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    BuilderProjectForDefinitionResponse:
+      type: object
+      required:
+        - builderProjectId
+      properties:
+        builderProjectId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectRead:
       type: object
       required:

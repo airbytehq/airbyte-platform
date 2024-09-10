@@ -8,6 +8,8 @@ import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
@@ -369,6 +371,13 @@ public class ConnectorBuilderProjectsHandler {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
+  }
+
+  public BuilderProjectForDefinitionResponse getConnectorBuilderProjectForDefinitionId(final BuilderProjectForDefinitionRequestBody requestBody)
+      throws IOException {
+    final Optional<UUID> builderProjectId =
+        connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(requestBody.getActorDefinitionId());
+    return new BuilderProjectForDefinitionResponse().builderProjectId(builderProjectId.orElse(null));
   }
 
   private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {

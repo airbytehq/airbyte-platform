@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -306,6 +307,20 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     assertNotNull(connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
     connectorBuilderService.deleteManifestDraftForActorDefinition(sourceDefinition.getSourceDefinitionId(), project1.getWorkspaceId());
     assertNull(connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdByActorDefinitionId() throws IOException {
+    createBaseObjects();
+    final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
+    assertEquals(Optional.of(project1.getBuilderProjectId()),
+        connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(sourceDefinition.getSourceDefinitionId()));
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdByActorDefinitionIdWhenNoMatch() throws IOException {
+    createBaseObjects();
+    assertEquals(Optional.empty(), connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(UUID.randomUUID()));
   }
 
   private DeclarativeManifest anyDeclarativeManifest() {

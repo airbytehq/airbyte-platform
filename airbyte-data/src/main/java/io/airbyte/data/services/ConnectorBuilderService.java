@@ -12,6 +12,7 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -21,6 +22,8 @@ import java.util.stream.Stream;
 public interface ConnectorBuilderService {
 
   ConnectorBuilderProject getConnectorBuilderProject(UUID builderProjectId, boolean fetchManifestDraft) throws IOException, ConfigNotFoundException;
+
+  Optional<UUID> getConnectorBuilderProjectIdForActorDefinitionId(UUID actorDefinitionId) throws IOException;
 
   ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(UUID builderProjectId, Long version)
       throws ConfigNotFoundException, IOException;
