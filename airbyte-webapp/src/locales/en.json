@@ -1795,6 +1795,7 @@
 
   "jobHistory.logs.title": "Logs: {connectionName}",
   "jobHistory.logs.noLogs": "No logs",
+  "jobHistory.logs.noAttempts": "An unknown error prevented this job from generating any attempts.  No logs are available.",
   "jobHistory.logs.nextMatchLabel": "Jump to next match",
   "jobHistory.logs.previousMatchLabel": "Jump to previous match",
   "jobHistory.logs.downloadLogs": "Download logs",

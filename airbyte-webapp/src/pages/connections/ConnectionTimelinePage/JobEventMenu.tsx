@@ -8,6 +8,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
@@ -50,20 +51,22 @@ export const nextOpenJobLogsModal = ({
     size: "full",
     title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName }} />,
     content: () => (
-      <Suspense
-        fallback={
-          <div className={styles.modalLoading}>
-            <Spinner />
-          </div>
-        }
-      >
-        <JobLogsModalContent
-          jobId={jobId}
-          attemptNumber={attemptNumber}
-          eventId={eventId}
-          connectionId={connectionId}
-        />
-      </Suspense>
+      <DefaultErrorBoundary>
+        <Suspense
+          fallback={
+            <div className={styles.modalLoading}>
+              <Spinner />
+            </div>
+          }
+        >
+          <JobLogsModalContent
+            jobId={jobId}
+            attemptNumber={attemptNumber}
+            eventId={eventId}
+            connectionId={connectionId}
+          />
+        </Suspense>
+      </DefaultErrorBoundary>
     ),
   }).then((result) => {
     if (result && setFilterValue) {
