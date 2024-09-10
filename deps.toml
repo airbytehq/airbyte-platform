@@ -17,6 +17,7 @@ jmh = "1.37"
 jooq = "3.19.7"
 junit-jupiter = "5.10.3"
 keycloak = "25.0.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
+kotest = "5.9.1"
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.12.1"
 log4j = "2.23.1"
@@ -133,6 +134,7 @@ junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter"
 junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak" }
+kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.9.10" }
 kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
@@ -247,6 +249,7 @@ flyway = ["flyway-core", "flyway-postgresql"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype", "jackson-jdk-datatype", "jackson-kotlin"]
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
+kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
 log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-slf4j2-impl", "log4j-web", "appender-log4j2"]
 micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind"]
