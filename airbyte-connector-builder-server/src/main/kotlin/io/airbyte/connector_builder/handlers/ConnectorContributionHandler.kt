@@ -63,6 +63,7 @@ class ConnectorContributionHandler(
     connectorDescription: String,
     rawManifestYaml: String,
     baseImage: String,
+    actorDefinitionId: UUID,
     githubContributionService: GithubContributionService,
   ): Map<String, String> {
     val versionTag = "0.0.1"
@@ -92,7 +93,7 @@ class ConnectorContributionHandler(
       contributionTemplates.renderContributionMetadataYaml(
         connectorImageName = connectorImageName,
         connectorName = connectorName,
-        actorDefinitionId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId.toString(),
         versionTag = versionTag,
         baseImage = baseImage,
         // TODO: Parse Allowed Hosts from manifest
@@ -132,6 +133,8 @@ class ConnectorContributionHandler(
     // 1. Create a branch
     githubContributionService.prepareBranchForContribution()
 
+    val generatedActorDefinitionId = UUID.randomUUID()
+
     // 2. Generate Files
     val filesToCommit =
       createFileCommitMap(
@@ -140,6 +143,7 @@ class ConnectorContributionHandler(
         generateContributionRequestBody.description,
         generateContributionRequestBody.manifestYaml,
         generateContributionRequestBody.baseImage,
+        generatedActorDefinitionId,
         githubContributionService,
       )
 
@@ -152,7 +156,7 @@ class ConnectorContributionHandler(
     // 4. Create / update pull request
     val pullRequest = githubContributionService.getOrCreatePullRequest()
 
-    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString())
+    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString()).actorDefinitionId(generatedActorDefinitionId)
   }
 
   fun convertGithubExceptionToContributionException(e: HttpException): Exception {
