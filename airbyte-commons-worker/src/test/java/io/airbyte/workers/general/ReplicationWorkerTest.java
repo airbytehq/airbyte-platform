@@ -65,6 +65,7 @@ import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
@@ -203,6 +204,7 @@ abstract class ReplicationWorkerTest {
   protected StreamStatusTrackerFactory streamStatusTrackerFactory;
   protected RecordMapper recordMapper;
   protected FeatureFlagClient featureFlagClient;
+  protected DestinationCatalogGenerator destinationCatalogGenerator;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -308,6 +310,9 @@ abstract class ReplicationWorkerTest {
     recordMapper = mock(RecordMapper.class);
     featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+        .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
   }
 
   @AfterEach

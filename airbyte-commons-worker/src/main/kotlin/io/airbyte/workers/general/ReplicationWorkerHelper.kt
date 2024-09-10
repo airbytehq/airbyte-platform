@@ -33,6 +33,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableMappers
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.application.RecordMapper
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
@@ -107,6 +108,7 @@ class ReplicationWorkerHelper(
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
   private val recordMapper: RecordMapper,
   private val featureFlagClient: FeatureFlagClient,
+  private val destinationCatalogGenerator: DestinationCatalogGenerator,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -240,8 +242,10 @@ class ReplicationWorkerHelper(
       metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
     }
 
+    val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog, ctx.connectionId)
+
     mappersPerStreamDescriptor =
-      configuredAirbyteCatalog.streams.map { stream ->
+      catalogWithoutInvalidMappers.catalog.streams.map { stream ->
         stream.streamDescriptor to stream.mappers
       }.toMap()
 

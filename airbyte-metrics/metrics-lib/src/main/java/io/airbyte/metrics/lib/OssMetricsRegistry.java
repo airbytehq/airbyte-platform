@@ -125,6 +125,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
       "inconsistent_activity_input",
       "whenever we detect a mismatch between the input and the actual config"),
+  INVALID_MAPPER_CONFIG(MetricEmittingApps.ORCHESTRATOR,
+      "invalid_mapper_config",
+      "a mapper configuration is invalid"),
   JOB_CANCELLED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "job_cancelled_by_release_stage",
@@ -164,6 +167,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
       "missing_apply_schema_change_input",
       "one expected value for applying the schema change is missing"),
+  MISSING_MAPPER(MetricEmittingApps.ORCHESTRATOR,
+      "missing_mapper",
+      "a mapper implementation is missing"),
   NORMALIZATION_IN_DESTINATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_destination_container",
