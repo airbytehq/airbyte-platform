@@ -2078,7 +2078,7 @@ workload-api-server:
     # -- Set to true to enable ingress record generation
     enabled: true
     # -- Specifies ingressClassName for clusters >= 1.18+
-    className: kong
+    ingressClassName: kong
     # -- Ingress annotations done as key:value pairs
     annotations: {}
       nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
