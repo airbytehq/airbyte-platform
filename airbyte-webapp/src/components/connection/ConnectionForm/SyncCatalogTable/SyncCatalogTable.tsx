@@ -32,6 +32,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useExperiment } from "hooks/services/Experiment";
 
 import { CursorCell } from "./components/CursorCell";
+import { ExpandCollapseAllControl } from "./components/ExpandCollapseAllControl";
 import { FieldCursorCell } from "./components/FieldCursorCell";
 import { FieldHashMapping } from "./components/FieldHashMapping";
 import { FieldPKCell } from "./components/FieldPKCell";
@@ -39,12 +40,12 @@ import { FormControls } from "./components/FormControls";
 import { HeaderNamespaceCell } from "./components/HeaderNamespaceCell";
 import { NamespaceNameCell } from "./components/NamespaceNameCell";
 import { PKCell } from "./components/PKCell";
+import { RefreshSchemaControl } from "./components/RefreshSchemaControl";
 import { SelectedFieldsCell } from "./components/SelectedFieldsCell";
 import { StreamFieldNameCell } from "./components/StreamFieldCell";
 import { StreamNameCell } from "./components/StreamNameCell";
 import { FilterTabId, StreamsFilterTabs } from "./components/StreamsFilterTabs";
 import { SyncModeCell } from "./components/SyncModeCell";
-import { TableControls } from "./components/TableControls";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getRowChangeStatus, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
@@ -451,7 +452,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
 
   return (
     <>
-      <Box p="md" pl="xl" className={styles.stickyControlsContainer}>
+      <Box p="md" pl="xl" pr="xl" className={styles.stickyControlsContainer}>
         {debugTable && (
           <Box p="md">
             {JSON.stringify(
@@ -481,17 +482,23 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
           <FlexContainer>
             <FlexContainer justifyContent="flex-end" alignItems="center" direction="row" gap="lg">
               {mode === "create" ? (
-                <TableControls
-                  isAllRowsExpanded={isAllStreamRowsExpanded}
-                  toggleAllRowsExpanded={toggleAllStreamRowsExpanded}
-                />
-              ) : (
-                <FormControls>
-                  <TableControls
+                <>
+                  <RefreshSchemaControl />
+                  <ExpandCollapseAllControl
                     isAllRowsExpanded={isAllStreamRowsExpanded}
                     toggleAllRowsExpanded={toggleAllStreamRowsExpanded}
                   />
-                </FormControls>
+                </>
+              ) : (
+                <>
+                  <FormControls>
+                    <RefreshSchemaControl />
+                  </FormControls>
+                  <ExpandCollapseAllControl
+                    isAllRowsExpanded={isAllStreamRowsExpanded}
+                    toggleAllRowsExpanded={toggleAllStreamRowsExpanded}
+                  />
+                </>
               )}
             </FlexContainer>
           </FlexContainer>
