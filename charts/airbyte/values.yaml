@@ -2076,21 +2076,22 @@ workload-api-server:
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
     # -- Set to true to enable ingress record generation
-    enabled: false
+    enabled: true
     # -- Specifies ingressClassName for clusters >= 1.18+
-    className: ""
+    className: kong
     # -- Ingress annotations done as key:value pairs
     annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-    # -- The list of hostnames to be covered with this ingress record
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    path: /
+    pathType: ImplementationSpecific  
     hosts: []
-    # - host: chart-example.local
-    #   paths:
-    #   - path: /
-    #     pathType: ImplementationSpecific
-    # -- Custom ingress TLS configuration
-    tls: []
+      - supersetk8s.numocity.in
+    tls: 
+      - secretName: airbyte-tls-secret
+        hosts:
+          - supersetk8s.numocity.in
     # - secretName: chart-example-tls
     #   hosts:
     #   - chart-example.local
