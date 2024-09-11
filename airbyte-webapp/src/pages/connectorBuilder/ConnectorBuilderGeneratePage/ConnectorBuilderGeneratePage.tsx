@@ -1,9 +1,11 @@
 import cloneDeep from "lodash/cloneDeep";
 import merge from "lodash/merge";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
+import { useBuilderAssistCreateConnectorMutation } from "components/connectorBuilder/Builder/Assist/assist";
 import { AssistWaiting } from "components/connectorBuilder/Builder/Assist/AssistWaiting";
 import {
   DEFAULT_CONNECTOR_NAME,
@@ -19,7 +21,6 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useBuilderAssistCreateConnectorMutation } from "core/api";
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
@@ -38,6 +39,7 @@ interface GeneratorFormResponse {
 }
 
 const ConnectorBuilderGeneratePageInner: React.FC = () => {
+  const assistSessionId = useMemo(() => uuid(), []);
   const { createAndNavigate, isLoading: isCreateLoading } = useCreateAndNavigate();
   const { mutateAsync: getAssistValues, isLoading: isAssistLoading } = useBuilderAssistCreateConnectorMutation();
 
@@ -51,7 +53,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
   const projectName = submittedAssistValues?.name || DEFAULT_CONNECTOR_NAME;
 
   const onCancel = useCallback(() => {
-    createAndNavigate({ name: projectName, assistEnabled: false });
+    createAndNavigate({ name: projectName, assistSessionId: undefined });
   }, [createAndNavigate, projectName]);
 
   const onSkip = useCallback(() => {
@@ -67,8 +69,8 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       name: submittedAssistValues?.firstStream,
     });
     manifest.streams = [stream];
-    createAndNavigate({ name: projectName, assistEnabled: true, manifest });
-  }, [createAndNavigate, submittedAssistValues, projectName]);
+    createAndNavigate({ name: projectName, assistSessionId, manifest });
+  }, [createAndNavigate, submittedAssistValues, projectName, assistSessionId]);
 
   const onFormSubmit = useCallback(
     async (values: GeneratorFormResponse) => {
@@ -76,6 +78,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       setSubmittedAssistValues(values);
 
       const assistValues = await getAssistValues({
+        session_id: assistSessionId,
         app_name: values.name,
         docs_url: values.docsUrl,
         openapi_spec_url: values.openApiSpecUrl,
@@ -85,10 +88,10 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
       createAndNavigate({
         name: values.name || DEFAULT_CONNECTOR_NAME,
         manifest: assistValues.connector,
-        assistEnabled: true,
+        assistSessionId,
       });
     },
-    [getAssistValues, createAndNavigate, setSubmittedAssistValues]
+    [getAssistValues, createAndNavigate, setSubmittedAssistValues, assistSessionId]
   );
 
   return (

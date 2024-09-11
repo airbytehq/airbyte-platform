@@ -13,7 +13,7 @@ const CREATE_PROJECT_ERROR_ID = "connectorBuilder.createProject.error";
 export const useCreateAndNavigate = () => {
   const { mutateAsync: createProject, isLoading } = useCreateBuilderProject();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { setAssistEnabledById } = useConnectorBuilderLocalStorage();
+  const { setAssistProjectEnabled } = useConnectorBuilderLocalStorage();
 
   useEffect(
     () => () => {
@@ -26,8 +26,8 @@ export const useCreateAndNavigate = () => {
     async (context: CreateProjectContext) => {
       try {
         const result = await createProject(context);
-        if (context.assistEnabled) {
-          setAssistEnabledById(result.builderProjectId)(true);
+        if (context.assistSessionId) {
+          setAssistProjectEnabled(result.builderProjectId, true, context.assistSessionId);
         }
         navigate(`../${getEditPath(result.builderProjectId)}`);
       } catch (e) {
@@ -45,7 +45,7 @@ export const useCreateAndNavigate = () => {
         });
       }
     },
-    [createProject, navigate, registerNotification, setAssistEnabledById]
+    [createProject, navigate, registerNotification, setAssistProjectEnabled]
   );
   return { createAndNavigate, isLoading };
 };
