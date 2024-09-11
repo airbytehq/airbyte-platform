@@ -2080,7 +2080,7 @@ workload-api-server:
     # -- Specifies ingressClassName for clusters >= 1.18+
     ingressClassName: kong
     # -- Ingress annotations done as key:value pairs
-    annotations: {}
+    annotations: 
       nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
