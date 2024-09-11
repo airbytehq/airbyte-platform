@@ -15,6 +15,7 @@ export interface Experiments {
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
+  "connection.timeline.schemaUpdates": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;

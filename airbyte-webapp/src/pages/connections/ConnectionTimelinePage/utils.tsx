@@ -29,9 +29,9 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   [ConnectionEventType.SYNC_SUCCEEDED]: "connection.timeline.sync_succeeded",
   [ConnectionEventType.SYNC_STARTED]: "connection.timeline.sync_started",
   [ConnectionEventType.REFRESH_STARTED]: "connection.timeline.refresh_started",
+  [ConnectionEventType.SCHEMA_UPDATE]: "connection.timeline.schema_update",
 
   // todo
-  [ConnectionEventType.SCHEMA_UPDATE]: "",
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
   [ConnectionEventType.UNKNOWN]: "",
 };
