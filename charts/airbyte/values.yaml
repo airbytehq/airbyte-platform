@@ -2086,7 +2086,7 @@ workload-api-server:
       nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     path: /
     pathType: ImplementationSpecific  
-    hosts: []
+    hosts: 
       - airbyte.numocity.in
     tls: 
       - secretName: airbyte-tls-secret
