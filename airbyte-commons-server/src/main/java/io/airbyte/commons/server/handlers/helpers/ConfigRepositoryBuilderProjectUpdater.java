@@ -31,13 +31,17 @@ public class ConfigRepositoryBuilderProjectUpdater implements BuilderProjectUpda
           projectUpdate.getBuilderProject().getName(),
           projectUpdate.getBuilderProject().getDraftManifest(),
           projectUpdate.getBuilderProject().getBaseActorDefinitionVersionId(),
+          projectUpdate.getBuilderProject().getContributionPullRequestUrl(),
+          projectUpdate.getBuilderProject().getContributionActorDefinitionId(),
           connectorBuilderProject.getActorDefinitionId());
     } else {
       connectorBuilderService.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
           projectUpdate.getWorkspaceId(),
           projectUpdate.getBuilderProject().getName(),
           projectUpdate.getBuilderProject().getDraftManifest(),
-          projectUpdate.getBuilderProject().getBaseActorDefinitionVersionId());
+          projectUpdate.getBuilderProject().getBaseActorDefinitionVersionId(),
+          projectUpdate.getBuilderProject().getContributionPullRequestUrl(),
+          projectUpdate.getBuilderProject().getContributionActorDefinitionId());
     }
 
   }

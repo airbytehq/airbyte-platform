@@ -7730,6 +7730,13 @@ components:
           type: string
         baseActorDefinitionVersionId:
           $ref: "#/components/schemas/NullableActorDefinitionVersionId"
+        contributionPullRequestUrl:
+          type: string
+          nullable: true
+        contributionActorDefinitionId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:

@@ -177,7 +177,8 @@ public class ConnectorBuilderProjectsHandler {
 
     connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
-        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId());
+        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
+        projectCreate.getBuilderProject().getContributionActorDefinitionId());
 
     return buildIdResponseFromId(id, projectCreate.getWorkspaceId());
   }
@@ -192,6 +193,12 @@ public class ConnectorBuilderProjectsHandler {
                                                                   final ConnectorBuilderProject persistedProject) {
     if (projectDetailsUpdate.getBaseActorDefinitionVersionId() == null) {
       projectDetailsUpdate.setBaseActorDefinitionVersionId(persistedProject.getBaseActorDefinitionVersionId());
+    }
+    if (projectDetailsUpdate.getContributionPullRequestUrl() == null) {
+      projectDetailsUpdate.setContributionPullRequestUrl(persistedProject.getContributionPullRequestUrl());
+    }
+    if (projectDetailsUpdate.getContributionActorDefinitionId() == null) {
+      projectDetailsUpdate.setContributionActorDefinitionId(persistedProject.getContributionActorDefinitionId());
     }
     return projectDetailsUpdate;
   }

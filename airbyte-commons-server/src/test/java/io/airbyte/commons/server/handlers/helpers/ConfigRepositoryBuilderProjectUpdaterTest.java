@@ -37,6 +37,8 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
   private static final String A_SOURCE_NAME = "a source name";
   private static final JsonNode A_MANIFEST;
   private static final UUID A_BASE_ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID();
+  private static final String A_CONTRIBUTION_PULL_REQUEST_URL = "https://github.com/airbytehq/airbyte/pull/1234";
+  private static final UUID A_CONTRIBUTION_ACTOR_DEFINITION_ID = UUID.randomUUID();
 
   static {
     try {
@@ -86,7 +88,8 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null, null);
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null, project.getBaseActorDefinitionVersionId(),
+            project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
   @Test
@@ -107,7 +110,8 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(), null);
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(),
+            project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
   @Test
@@ -116,19 +120,24 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
         .withBuilderProjectId(A_BUILDER_PROJECT_ID)
         .withWorkspaceId(A_WORKSPACE_ID)
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withBaseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID));
+        .withBaseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID)
+        .withContributionPullRequestUrl(A_CONTRIBUTION_PULL_REQUEST_URL)
+        .withContributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID));
 
     projectUpdater.persistBuilderProjectUpdate(new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails()
             .name(A_SOURCE_NAME)
             .draftManifest(A_MANIFEST)
-            .baseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID))
+            .baseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID)
+            .contributionPullRequestUrl(A_CONTRIBUTION_PULL_REQUEST_URL)
+            .contributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID))
         .workspaceId(A_WORKSPACE_ID)
         .builderProjectId(A_BUILDER_PROJECT_ID));
 
     verify(connectorBuilderService, times(1))
         .updateBuilderProjectAndActorDefinition(
-            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_BASE_ACTOR_DEFINITION_VERSION_ID, A_SOURCE_DEFINITION_ID);
+            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_BASE_ACTOR_DEFINITION_VERSION_ID, A_CONTRIBUTION_PULL_REQUEST_URL,
+            A_CONTRIBUTION_ACTOR_DEFINITION_ID, A_SOURCE_DEFINITION_ID);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {

@@ -38,7 +38,9 @@ public interface ConnectorBuilderService {
                                 UUID workspaceId,
                                 String name,
                                 JsonNode manifestDraft,
-                                UUID baseActorDefinitionVersionId)
+                                UUID baseActorDefinitionVersionId,
+                                String contributionUrl,
+                                UUID contributionActorDefinitionId)
       throws IOException;
 
   void deleteBuilderProjectDraft(UUID projectId) throws IOException;
@@ -50,6 +52,8 @@ public interface ConnectorBuilderService {
                                               String name,
                                               JsonNode manifestDraft,
                                               UUID baseActorDefinitionVersionId,
+                                              String contributionUrl,
+                                              UUID contributionActorDefinitionId,
                                               UUID actorDefinitionId)
       throws IOException;
 

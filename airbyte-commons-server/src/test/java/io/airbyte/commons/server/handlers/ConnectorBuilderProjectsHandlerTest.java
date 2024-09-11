@@ -244,7 +244,8 @@ class ConnectorBuilderProjectsHandlerTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(), null);
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(),
+            project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
   @Test
@@ -305,7 +306,7 @@ class ConnectorBuilderProjectsHandlerTest {
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.updateConnectorBuilderProject(update));
 
     verify(connectorBuilderService, never()).writeBuilderProjectDraft(any(UUID.class), any(UUID.class), any(String.class), any(JsonNode.class),
-        any(UUID.class));
+        any(UUID.class), any(String.class), any(UUID.class));
   }
 
   @Test
@@ -851,23 +852,25 @@ class ConnectorBuilderProjectsHandlerTest {
         new ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId);
 
     final String connectorName = "Test Connector";
-    final UUID defaultVersionId = UUID.randomUUID();
+    final UUID baseActorDefinitionVersionId = UUID.randomUUID();
     final String dockerRepository = "airbyte/source-test";
     final String dockerImageTag = "1.2.3";
-    final ActorDefinitionVersion defaultADV = new ActorDefinitionVersion().withVersionId(defaultVersionId)
+    final ActorDefinitionVersion defaultADV = new ActorDefinitionVersion().withVersionId(baseActorDefinitionVersionId)
         .withActorDefinitionId(baseActorDefinitionId).withDockerRepository(dockerRepository).withDockerImageTag(dockerImageTag);
     final UUID connectorBuilderProjectId = UUID.randomUUID();
 
     when(sourceService.getStandardSourceDefinition(baseActorDefinitionId)).thenReturn(
-        new StandardSourceDefinition().withSourceDefinitionId(baseActorDefinitionId).withDefaultVersionId(defaultVersionId).withName(connectorName));
-    when(actorDefinitionService.getActorDefinitionVersion(defaultVersionId)).thenReturn(defaultADV);
+        new StandardSourceDefinition().withSourceDefinitionId(baseActorDefinitionId).withDefaultVersionId(baseActorDefinitionVersionId)
+            .withName(connectorName));
+    when(actorDefinitionService.getActorDefinitionVersion(baseActorDefinitionVersionId)).thenReturn(defaultADV);
     when(remoteDefinitionsProvider.getConnectorManifest(dockerRepository, dockerImageTag)).thenReturn(Optional.of(draftManifest));
     when(uuidSupplier.get()).thenReturn(connectorBuilderProjectId);
 
     connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody);
 
     verify(connectorBuilderService, times(1))
-        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest), eq(defaultVersionId));
+        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest),
+            eq(baseActorDefinitionVersionId), eq(null), eq(null));
   }
 
 }
