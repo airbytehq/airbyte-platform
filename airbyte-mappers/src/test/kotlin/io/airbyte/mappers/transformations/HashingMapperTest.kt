@@ -6,7 +6,6 @@ import io.airbyte.config.FieldType
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.mappers.transformations.HashingMapper.Companion.supportedMethods
-import io.mockk.every
 import io.mockk.spyk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -86,18 +85,17 @@ class HashingMapperTest {
         "test",
         mapOf(
           HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1",
-          HashingMapper.METHOD_CONFIG_KEY to HashingMapper.SHA256,
+          HashingMapper.METHOD_CONFIG_KEY to hashingMethod,
           HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
         ),
       )
-
-    every { hashingMapper.hashAndEncodeData(HashingMapper.SHA256, "value1".toByteArray()) } returns "hashed_value"
 
     val record = TestRecordAdapter(StreamDescriptor().withName("stream"), mapOf("field1" to "value1", "field2" to "value2"))
     hashingMapper.map(config, record)
 
     assertTrue(record.has("field1_hashed"))
-    assertEquals("hashed_value", record.get("field1_hashed").asString())
+    val hashedValue = record.get("field1_hashed").asString()
+    assertTrue("hashed_value" != hashedValue && hashedValue.all { it.isLetterOrDigit() }, "$hashedValue doesn't look like a valid hash")
     assertFalse(record.has("field1"))
     assertTrue(record.has("field2"))
     assertEquals("value2", record.get("field2").asString())
