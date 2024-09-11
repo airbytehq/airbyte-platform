@@ -2075,7 +2075,7 @@ workload-api-server:
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
-    # -- Set to true to enable ingress record generation
+    # -- Set to true to enable ingress record generations
     enabled: false
     # -- Specifies ingressClassName for clusters >= 1.18+
     className: ""
