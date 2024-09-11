@@ -34,11 +34,14 @@ import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeoutException
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Interface layer between domain and Kube layers.
@@ -146,6 +149,11 @@ class KubePodClient(
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.connectionId,
       )
+
+    logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
+    logger.info { "[source] image: ${kubeInput.sourceImage} resources: ${kubeInput.sourceReqs}" }
+    logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
+    logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
 
     try {
       pod =
