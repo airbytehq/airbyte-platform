@@ -2073,21 +2073,27 @@ workload-api-server:
   service:
     port: 8007
 
-ingress:
-  enabled: true
-  ingressClassName: kong
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-  path: /
-  pathType: ImplementationSpecific
-  hosts:
-    - airbyte.numocity.in # Replace with your domain name
-  tls:
-    - secretName: airbyte-tls-secret
-      hosts:
-        - airbyte.numocity.in
+  # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
+  ingress:
+    # -- Set to true to enable ingress record generation
+    enabled: false
+    # -- Specifies ingressClassName for clusters >= 1.18+
+    className: ""
+    # -- Ingress annotations done as key:value pairs
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # -- The list of hostnames to be covered with this ingress record
+    hosts: []
+    # - host: chart-example.local
+    #   paths:
+    #   - path: /
+    #     pathType: ImplementationSpecific
+    # -- Custom ingress TLS configuration
+    tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #   - chart-example.local
 
 featureflag-server:
   enabled: false
