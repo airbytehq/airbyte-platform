@@ -18,15 +18,15 @@
 */}}
 
 {{ if .Values.ingress.enabled -}}
-{{- $fullName := include "airbyte.fullname" . -}}
+{{- $fullName := include "superset.fullname" . -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ template "airbyte.name" . }}
-    chart: {{ template "airbyte.chart" . }}
+    app: {{ template "superset.name" . }}
+    chart: {{ template "superset.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
   {{- with .Values.ingress.annotations }}
@@ -58,12 +58,11 @@ spec:
                 name: {{ $fullName }}
                 port:
                   name: http
-          {{- if $.Values.airbyteWebsockets.enabled }}
-          - path: {{ $.Values.airbyteWebsockets.ingress.path }}
-            pathType: {{ $.Values.airbyteWebsockets.ingress.pathType }}
+          - path: {{  }}
+            pathType: {{}}
             backend:
               service:
-                name: "{{ template "airbyte.fullname" $ }}-ws"
+                name: "{{ template "superset.fullname" $ }}-ws"
                 port:
                   name: ws
           {{- end }}
