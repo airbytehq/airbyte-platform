@@ -808,6 +808,8 @@
   "connection.stream.status.table.streamName": "Stream name",
   "connection.stream.status.table.lastRecordAt": "Last record loaded at",
   "connection.stream.status.table.dataFreshAsOf": "Data fresh as of",
+  "connection.stream.status.table.dataFreshAsOf.relative": "Show relative time",
+  "connection.stream.status.table.dataFreshAsOf.absolute": "Show absolute time",
   "connection.stream.status.table.lastSync": "Last sync",
   "connection.stream.status.table.latestSync": "Latest sync",
   "connection.stream.status.table.lastRecord": "Last record loaded",
