@@ -1,4 +1,4 @@
-import { Row } from "@tanstack/react-table";
+import { ColumnFilter, Row } from "@tanstack/react-table";
 import isEqual from "lodash/isEqual";
 
 import {
@@ -86,6 +86,15 @@ export const getSyncCatalogRows = (
 
 export const isNamespaceRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0 && row.original.rowType === "namespace";
 export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 1 && row.original.rowType === "stream";
+
+/**
+ * Is filter by stream enabled
+ * @param columnFilters - column filters array, for "stream.selected" column the format is: { id: "stream.selected", value: boolean }
+ * @param id - column id
+ * @returns boolean - true or false if filter by stream is enabled, undefined if filter is not set
+ */
+export const getColumnFilterValue = (columnFilters: ColumnFilter[], id: string) =>
+  columnFilters.find((filter) => filter.id === id)?.value;
 
 // Stream  Fields
 /*

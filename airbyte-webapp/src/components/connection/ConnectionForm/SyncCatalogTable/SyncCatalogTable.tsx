@@ -180,6 +180,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
               syncCheckboxDisabled={!!filtering.length}
               namespaceFormat={watchedNamespaceFormat}
               namespaceDefinition={watchedNamespaceDefinition}
+              columnFilters={columnFilters}
             />
           ) : isStreamRow(row) ? (
             <StreamNameCell

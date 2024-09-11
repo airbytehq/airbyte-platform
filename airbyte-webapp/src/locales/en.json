@@ -367,6 +367,7 @@
   "form.syncMode.subtitle": "Choose a default",
   "form.all": "All",
   "form.amountOfStreams": "{count, plural, one {# stream} other {# streams}}",
+  "form.amountOfCountedStreamsOutOfTotal": "{countedStreams} / {count, plural, one {# stream} other {# streams}}",
   "form.selected": "Selected",
   "form.notSelected": "Not selected",
   "form.nullable": "Nullable",
