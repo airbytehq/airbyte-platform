@@ -33,6 +33,7 @@ import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
+import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -365,13 +366,17 @@ class KubePodClient(
   ) {
     try {
       kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: TimeoutException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "$podLogLabel pod failed to init within allotted timeout.",
-        e,
-        KubeCommandType.WAIT_INIT,
-      )
+    } catch (e: Exception) {
+      when (e) {
+        is TimeoutException, is KubernetesClientTimeoutException -> {
+          ApmTraceUtils.addExceptionToTrace(e)
+          throw KubeClientException(
+            "Unable to start the $podLogLabel pod. This may be due to insufficient system resources. Please check available resources and try again.",
+            e,
+            KubeCommandType.WAIT_INIT,
+          )
+        } else -> throw e
+      }
     }
   }
 
