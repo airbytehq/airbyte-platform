@@ -7754,6 +7754,41 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        baseActorDefinitionVersionInfo:
+          $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
+        contributionInfo:
+          $ref: "#/components/schemas/ContributionInfo"
+    BaseActorDefinitionVersionInfo:
+      type: object
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+        - actorDefinitionId
+        - icon
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        icon:
+          type: string
+        documentationUrl:
+          type: string
+    ContributionInfo:
+      type: object
+      required:
+        - pullRequestUrl
+        - actorDefinitionId
+      properties:
+        pullRequestUrl:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:

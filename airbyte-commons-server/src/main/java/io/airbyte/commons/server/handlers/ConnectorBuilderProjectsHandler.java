@@ -8,6 +8,7 @@ import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.model.generated.BaseActorDefinitionVersionInfo;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
@@ -26,6 +27,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInn
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.ContributionInfo;
 import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
@@ -78,9 +80,13 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,12 +153,80 @@ public class ConnectorBuilderProjectsHandler {
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
   }
 
-  private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
-    return new ConnectorBuilderProjectDetailsRead().name(project.getName()).builderProjectId(project.getBuilderProjectId())
+  private ConnectorBuilderProjectDetailsRead getProjectDetailsWithoutBaseAdvInfo(final ConnectorBuilderProject project) {
+    final ConnectorBuilderProjectDetailsRead detailsRead = new ConnectorBuilderProjectDetailsRead()
+        .name(project.getName())
+        .builderProjectId(project.getBuilderProjectId())
         .sourceDefinitionId(project.getActorDefinitionId())
         .activeDeclarativeManifestVersion(
             project.getActiveDeclarativeManifestVersion())
         .hasDraft(project.getHasDraft());
+
+    if (project.getContributionPullRequestUrl() != null) {
+      detailsRead.setContributionInfo(new ContributionInfo().pullRequestUrl(project.getContributionPullRequestUrl())
+          .actorDefinitionId(project.getContributionActorDefinitionId()));
+    }
+    return detailsRead;
+  }
+
+  private BaseActorDefinitionVersionInfo buildBaseActorDefinitionVersionInfo(final ActorDefinitionVersion actorDefinitionVersion,
+                                                                             final StandardSourceDefinition sourceDefinition) {
+    return new BaseActorDefinitionVersionInfo()
+        .name(sourceDefinition.getName())
+        .dockerRepository(actorDefinitionVersion.getDockerRepository())
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .actorDefinitionId(actorDefinitionVersion.getActorDefinitionId())
+        .icon(sourceDefinition.getIconUrl())
+        .documentationUrl(actorDefinitionVersion.getDocumentationUrl());
+  }
+
+  private ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final ConnectorBuilderProjectDetailsRead detailsRead = getProjectDetailsWithoutBaseAdvInfo(project);
+    if (project.getBaseActorDefinitionVersionId() != null) {
+      final ActorDefinitionVersion baseActorDefinitionVersion =
+          actorDefinitionService.getActorDefinitionVersion(project.getBaseActorDefinitionVersionId());
+      detailsRead.baseActorDefinitionVersionInfo(
+          buildBaseActorDefinitionVersionInfo(
+              baseActorDefinitionVersion,
+              sourceService.getStandardSourceDefinition(baseActorDefinitionVersion.getActorDefinitionId())));
+    }
+    return detailsRead;
+  }
+
+  private List<ConnectorBuilderProjectDetailsRead> builderProjectsToDetailsReads(final List<ConnectorBuilderProject> projects)
+      throws IOException {
+
+    final List<UUID> baseActorDefinitionVersionIds = projects
+        .stream()
+        .map(ConnectorBuilderProject::getBaseActorDefinitionVersionId)
+        .distinct()
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+
+    final List<ActorDefinitionVersion> baseActorDefinitionVersions = actorDefinitionService.getActorDefinitionVersions(baseActorDefinitionVersionIds);
+
+    final Map<UUID, ActorDefinitionVersion> baseAdvIdToAdvMap =
+        baseActorDefinitionVersions.stream().collect(Collectors.toMap(ActorDefinitionVersion::getVersionId, Function.identity()));
+    final Map<UUID, StandardSourceDefinition> standardSourceDefinitionsMap = sourceService.listStandardSourceDefinitions(false).stream()
+        .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, Function.identity()));
+
+    final Map<UUID, StandardSourceDefinition> baseAdvIdToAssociatedSourceDefMap = baseActorDefinitionVersions.stream()
+        .collect(Collectors.toMap(
+            ActorDefinitionVersion::getVersionId,
+            actorDefinitionVersion -> standardSourceDefinitionsMap.get(actorDefinitionVersion.getActorDefinitionId())));
+
+    return projects.stream().map(project -> {
+      final ConnectorBuilderProjectDetailsRead detailsRead = getProjectDetailsWithoutBaseAdvInfo(project);
+      final UUID baseAdvId = project.getBaseActorDefinitionVersionId();
+      if (baseAdvId != null) {
+        detailsRead
+            .baseActorDefinitionVersionInfo(buildBaseActorDefinitionVersionInfo(
+                baseAdvIdToAdvMap.get(baseAdvId),
+                baseAdvIdToAssociatedSourceDefMap.get(baseAdvId)));
+      }
+      return detailsRead;
+    }).collect(Collectors.toList());
   }
 
   private ConnectorBuilderProjectIdWithWorkspaceId buildIdResponseFromId(final UUID projectId, final UUID workspaceId) {
@@ -222,7 +296,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public ConnectorBuilderProjectRead getConnectorBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
-      throws IOException, ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException {
 
     if (request.getVersion() != null) {
       validateProjectUnderRightWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
@@ -234,7 +308,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   private ConnectorBuilderProjectRead getWithManifestWithoutVersion(final ConnectorBuilderProjectIdWithWorkspaceId request)
-      throws IOException, ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException {
     final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(request.getBuilderProjectId(), true);
     validateProjectUnderRightWorkspace(project, request.getWorkspaceId());
     final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
@@ -290,7 +364,7 @@ public class ConnectorBuilderProjectsHandler {
     final Stream<ConnectorBuilderProject> projects =
         connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());
 
-    return new ConnectorBuilderProjectReadList().projects(projects.map(ConnectorBuilderProjectsHandler::builderProjectToDetailsRead).toList());
+    return new ConnectorBuilderProjectReadList().projects(builderProjectsToDetailsReads(projects.toList()));
   }
 
   public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody)
