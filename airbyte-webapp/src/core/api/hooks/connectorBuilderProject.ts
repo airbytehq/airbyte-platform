@@ -35,6 +35,9 @@ import {
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
   DeclarativeManifestRequestBody,
   DeclarativeManifestBaseImageRead,
+  BaseActorDefinitionVersionInfo,
+  ContributionInfo,
+  ConnectorBuilderProjectDetailsRead,
   SourceDefinitionId,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
@@ -59,6 +62,8 @@ export interface BuilderProject {
   sourceDefinitionId?: string;
   id: string;
   hasDraft?: boolean;
+  baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
+  contributionInfo?: ContributionInfo;
 }
 
 export interface BuilderProjectWithManifest {
@@ -73,19 +78,25 @@ export const useListBuilderProjects = () => {
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
     (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-      (projectDetails): BuilderProject => ({
-        name: projectDetails.name,
-        version:
-          typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
-            ? projectDetails.activeDeclarativeManifestVersion
-            : "draft",
-        sourceDefinitionId: projectDetails.sourceDefinitionId,
-        id: projectDetails.builderProjectId,
-        hasDraft: projectDetails.hasDraft,
-      })
+      convertProjectDetailsReadToBuilderProject
     )
   );
 };
+
+export const convertProjectDetailsReadToBuilderProject = (
+  projectDetails: ConnectorBuilderProjectDetailsRead
+): BuilderProject => ({
+  name: projectDetails.name,
+  version:
+    typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+      ? projectDetails.activeDeclarativeManifestVersion
+      : "draft",
+  sourceDefinitionId: projectDetails.sourceDefinitionId,
+  id: projectDetails.builderProjectId,
+  hasDraft: projectDetails.hasDraft,
+  baseActorDefinitionVersionInfo: projectDetails.baseActorDefinitionVersionInfo,
+  contributionInfo: projectDetails.contributionInfo,
+});
 
 export const useListBuilderProjectVersions = (project?: BuilderProject) => {
   const requestOptions = useRequestOptions();
