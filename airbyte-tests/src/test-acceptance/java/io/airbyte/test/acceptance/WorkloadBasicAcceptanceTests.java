@@ -34,9 +34,9 @@ class WorkloadBasicAcceptanceTests {
 
   AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 
-  static final UUID RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
-  static final UUID RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("1bdcfb61-219b-4290-be4f-12f9ac5461be");
-  static final UUID RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("3851861d-ac0b-440c-bd60-408cf9e7fc0e");
+  static final UUID REPLICATION_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
+  static final UUID CHECK_WORKSPACE_ID = UUID.fromString("1bdcfb61-219b-4290-be4f-12f9ac5461be");
+  static final UUID DISCOVER_WORKSPACE_ID = UUID.fromString("3851861d-ac0b-440c-bd60-408cf9e7fc0e");
 
   @BeforeEach
   void setup() throws Exception {
@@ -63,9 +63,9 @@ class WorkloadBasicAcceptanceTests {
   void testSyncWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an
     // override in order to exercise the workload path.
-    testResources.getTestHarness().createWorkspaceWithId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
+    testResources.getTestHarness().createWorkspaceWithId(REPLICATION_WORKSPACE_ID);
 
-    testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
+    testResources.runSmallSyncForAWorkspaceId(REPLICATION_WORKSPACE_ID);
   }
 
   @Test
@@ -77,9 +77,9 @@ class WorkloadBasicAcceptanceTests {
   void testDestinationCheckConnectionWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
-    testResources.getTestHarness().createWorkspaceWithId(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID);
+    testResources.getTestHarness().createWorkspaceWithId(CHECK_WORKSPACE_ID);
 
-    final UUID destinationId = testResources.getTestHarness().createPostgresDestination(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID).getDestinationId();
+    final UUID destinationId = testResources.getTestHarness().createPostgresDestination(CHECK_WORKSPACE_ID).getDestinationId();
 
     final CheckConnectionRead.Status checkOperationStatus = testResources.getTestHarness().checkDestination(destinationId);
 
@@ -96,9 +96,9 @@ class WorkloadBasicAcceptanceTests {
   void testDiscoverSourceSchema() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
-    testResources.getTestHarness().createWorkspaceWithId(RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID);
+    testResources.getTestHarness().createWorkspaceWithId(DISCOVER_WORKSPACE_ID);
 
-    final UUID sourceId = testResources.getTestHarness().createPostgresSource(RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID).getSourceId();
+    final UUID sourceId = testResources.getTestHarness().createPostgresSource(DISCOVER_WORKSPACE_ID).getSourceId();
 
     final AirbyteCatalog actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
 

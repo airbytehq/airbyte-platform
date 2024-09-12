@@ -16,9 +16,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
@@ -30,10 +27,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.CheckConnectionInputHydrator;
-import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.models.CheckConnectionInput;
-import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -58,14 +52,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CheckConnectionActivityTest {
 
-  private final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
-  private final ProcessFactory processFactory = mock(ProcessFactory.class);
   private final Path workspaceRoot = Path.of("workspace-root");
   private final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
-  private final String airbyteVersion = "";
-  private final AirbyteMessageSerDeProvider serDeProvider = mock(AirbyteMessageSerDeProvider.class);
-  private final AirbyteProtocolVersionedMigratorFactory migratorFactory = mock(AirbyteProtocolVersionedMigratorFactory.class);
-  private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
   private final WorkloadApi workloadApi = mock(WorkloadApi.class);
   private final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
   private final WorkloadIdGenerator workloadIdGenerator = mock(WorkloadIdGenerator.class);
@@ -89,18 +77,11 @@ class CheckConnectionActivityTest {
   @BeforeEach
   void init() throws Exception {
     checkConnectionActivity = spy(new CheckConnectionActivityImpl(
-        workerConfigsProvider,
-        processFactory,
         workspaceRoot,
         airbyteApiClient,
-        airbyteVersion,
-        serDeProvider,
-        migratorFactory,
         featureFlagClient,
-        gsonPksExtractor,
         new WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
-        mock(CheckConnectionInputHydrator.class),
         mock(MetricClient.class),
         mock(ActivityOptions.class),
         logClientManager));

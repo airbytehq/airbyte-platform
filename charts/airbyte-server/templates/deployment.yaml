@@ -211,16 +211,6 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
-        - name: WORKLOAD_LAUNCHER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_LAUNCHER_ENABLED
-        - name: WORKLOAD_API_SERVER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_API_SERVER_ENABLED
 
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
         # Values for Airbyte auth configurations, secrets, and credentials in Community edition

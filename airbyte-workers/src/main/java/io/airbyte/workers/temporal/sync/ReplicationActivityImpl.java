@@ -17,7 +17,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -199,7 +198,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
-          final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput, context);
+          final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
           final ReplicationInput hydratedReplicationInput = workerAndReplicationInput.replicationInput;
           final Worker<ReplicationInput, ReplicationOutput> worker = workerAndReplicationInput.worker;
 
@@ -251,24 +250,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   record WorkerAndReplicationInput(Worker<ReplicationInput, ReplicationOutput> worker, ReplicationInput replicationInput) {}
 
   @VisibleForTesting
-  WorkerAndReplicationInput getWorkerAndReplicationInput(final ReplicationActivityInput replicationActivityInput,
-                                                         final ActivityExecutionContext context)
-      throws Exception {
+  WorkerAndReplicationInput getWorkerAndReplicationInput(final ReplicationActivityInput replicationActivityInput) {
     final ReplicationInput hydratedReplicationInput;
     final Worker<ReplicationInput, ReplicationOutput> worker;
 
-    if (useWorkloadApi(replicationActivityInput)) {
-      hydratedReplicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
-      worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-          workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
-    } else {
-      hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
-      final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
-          orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
-              hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
-              () -> context);
-      worker = workerFactory.get();
-    }
+    hydratedReplicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
+    worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
+        workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
 
     return new WorkerAndReplicationInput(worker, hydratedReplicationInput);
   }
@@ -294,16 +282,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     standardSyncOutput.setFailures(output.getFailures());
 
     return standardSyncOutput;
-  }
-
-  @VisibleForTesting
-  boolean useWorkloadApi(final ReplicationActivityInput input) {
-    // TODO: remove this once active workloads finish
-    if (input.getUseWorkloadApi() == null) {
-      return true;
-    } else {
-      return input.getUseWorkloadApi();
-    }
   }
 
   private void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final MetricAttribute[] metricAttributes) {
