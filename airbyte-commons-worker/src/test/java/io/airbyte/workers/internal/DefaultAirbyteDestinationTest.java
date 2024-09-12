@@ -305,13 +305,13 @@ class DefaultAirbyteDestinationTest {
         new AirbyteStream("testName", Jsons.emptyObject(), List.of()))));
 
     if (mappersEnabled) {
-      when(destinationCatalogGenerator.generateDestinationCatalog(eq(config.getCatalog()), any())).thenReturn(
+      when(destinationCatalogGenerator.generateDestinationCatalog(eq(config.getCatalog()))).thenReturn(
           new DestinationCatalogGenerator.CatalogGenerationResult(modifiedCatalog, Map.of()));
     }
     destination.start(config, jobRoot);
 
     if (mappersEnabled) {
-      verify(destinationCatalogGenerator).generateDestinationCatalog(eq(config.getCatalog()), any());
+      verify(destinationCatalogGenerator).generateDestinationCatalog(eq(config.getCatalog()));
       verify(protocolSerializer).serialize(modifiedCatalog, false);
     } else {
       verifyNoInteractions(destinationCatalogGenerator);

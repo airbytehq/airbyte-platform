@@ -13,11 +13,8 @@ import io.airbyte.mappers.mocks.TestMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 class DestinationCatalogGeneratorTest {
-  val connectionId = UUID.randomUUID()
-
   private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf())
   private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()))
   private val destinationCatalogGeneratorWithFailingMapper = DestinationCatalogGenerator(listOf(FailingTestMapper()))
@@ -47,7 +44,7 @@ class DestinationCatalogGeneratorTest {
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
 
-    val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog, connectionId)
+    val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
     assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.catalog.streams[0].stream.jsonSchema)
   }
@@ -79,7 +76,7 @@ class DestinationCatalogGeneratorTest {
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
 
-    val result = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog, connectionId)
+    val result = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
     assertTrue(result.catalog.streams[0].mappers.isEmpty())
     val streamDescriptor = StreamDescriptor().withName("users")
@@ -113,7 +110,7 @@ class DestinationCatalogGeneratorTest {
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
 
-    val result = destinationCatalogGeneratorWithFailingMapper.generateDestinationCatalog(catalog, connectionId)
+    val result = destinationCatalogGeneratorWithFailingMapper.generateDestinationCatalog(catalog)
 
     assertTrue(result.catalog.streams[0].mappers.isEmpty())
     val streamDescriptor = StreamDescriptor().withName("users")
@@ -137,7 +134,7 @@ class DestinationCatalogGeneratorTest {
           ),
       )
 
-    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream, connectionId).field
+    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).field
 
     assertEquals(configuredUsersStream.fields, resultFields)
   }
@@ -160,7 +157,7 @@ class DestinationCatalogGeneratorTest {
         mappers = listOf(ConfiguredMapper("test", mapOf()), ConfiguredMapper("test", mapOf())),
       )
 
-    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream, connectionId).field
+    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).field
 
     assertEquals(
       listOf(
@@ -227,7 +224,7 @@ class DestinationCatalogGeneratorTest {
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream1, configuredUsersStream2))
 
-    val catalogCopy = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalog, connectionId)
+    val catalogCopy = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalog)
 
     assertEquals(
       Jsons.jsonNode(

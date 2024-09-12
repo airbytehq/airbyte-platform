@@ -154,7 +154,7 @@ class ReplicationWorkerHelperTest {
     mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = buildConfiguredAirbyteCatalog();
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
@@ -184,7 +184,7 @@ class ReplicationWorkerHelperTest {
     mockSupportRefreshes(false);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
@@ -252,7 +252,7 @@ class ReplicationWorkerHelperTest {
   void callsStreamStatusTrackerOnSourceMessage() throws IOException {
     mockSupportRefreshes(true);
     final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
 
     replicationWorkerHelper.initialize(
@@ -273,7 +273,7 @@ class ReplicationWorkerHelperTest {
   void callsStreamStatusTrackerOnDestinationMessage() throws IOException {
     mockSupportRefreshes(true);
     final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
@@ -296,7 +296,7 @@ class ReplicationWorkerHelperTest {
     mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = buildConfiguredAirbyteCatalog();
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
@@ -320,7 +320,7 @@ class ReplicationWorkerHelperTest {
   void testApplyTransformationFlagDisableOrNoMapper(final boolean mappersEnabled) throws IOException {
     mockSupportRefreshes(false);
     ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
@@ -354,7 +354,7 @@ class ReplicationWorkerHelperTest {
     when(stream.getMappers()).thenReturn(mappers);
     when(catalog.getStreams()).thenReturn(List.of(stream));
     when(featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(replicationContext.getConnectionId()))).thenReturn(true);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(

@@ -311,7 +311,7 @@ abstract class ReplicationWorkerTest {
     featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
-    when(destinationCatalogGenerator.generateDestinationCatalog(any(), any()))
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
   }
 

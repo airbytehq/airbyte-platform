@@ -242,7 +242,7 @@ class ReplicationWorkerHelper(
       metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
     }
 
-    val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog, ctx.connectionId)
+    val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
 
     mappersPerStreamDescriptor =
       catalogWithoutInvalidMappers.catalog.streams.map { stream ->

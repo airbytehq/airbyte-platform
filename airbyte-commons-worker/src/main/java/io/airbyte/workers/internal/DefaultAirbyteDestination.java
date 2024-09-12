@@ -140,8 +140,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
     if (usesMapper) {
       DestinationCatalogGenerator.CatalogGenerationResult transformedCatalog =
-          destinationCatalogGenerator.generateDestinationCatalog(destinationConfig.getCatalog(),
-              destinationConfig.getConnectionId());
+          destinationCatalogGenerator.generateDestinationCatalog(destinationConfig.getCatalog());
 
       transformedCatalog.getErrors().entrySet().stream().forEach(error -> {
         error.getValue().values().forEach(errorType -> {
