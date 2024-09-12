@@ -32,6 +32,7 @@ import StartFromScratchImage from "./start-from-scratch.svg?react";
 import { AirbyteTitle } from "../components/AirbyteTitle";
 import { BackButton } from "../components/BackButton";
 import { useCreateAndNavigate } from "../components/useCreateAndNavigate";
+import { useManifestOnlySourceDefinitions } from "../components/useManifestOnlySourceDefinitions";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
@@ -39,6 +40,8 @@ const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const existingProjects = useListBuilderProjects();
+  const { manifestOnlySourceDefinitions } = useManifestOnlySourceDefinitions();
+
   const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const navigate = useNavigate();
 
@@ -155,12 +158,12 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           }}
           dataTestId="import-yaml"
         />
-        {existingProjects.length > 0 && (
+        {(existingProjects.length > 0 || manifestOnlySourceDefinitions.length > 0) && (
           <Tile
             image={<LoadExistingConnectorImage />}
-            title="connectorBuilder.createPage.loadExistingConnector.title"
-            description="connectorBuilder.createPage.loadExistingConnector.description"
-            buttonText="connectorBuilder.createPage.loadExistingConnector.button"
+            title="connectorBuilder.createPage.forkExistingConnector.title"
+            description="connectorBuilder.createPage.forkExistingConnector.description"
+            buttonText="connectorBuilder.createPage.forkExistingConnector.button"
             buttonProps={{ disabled: buttonsDisabledState }}
             onClick={() => {
               navigate(`../${ConnectorBuilderRoutePaths.Fork}`);

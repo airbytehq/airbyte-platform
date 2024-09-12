@@ -18,6 +18,7 @@ import {
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
   getDeclarativeManifestBaseImage,
+  createForkedConnectorBuilderProject,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -34,6 +35,7 @@ import {
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
   DeclarativeManifestRequestBody,
   DeclarativeManifestBaseImageRead,
+  SourceDefinitionId,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -144,6 +146,27 @@ export const useCreateBuilderProject = () => {
             },
           ]
         );
+      },
+    }
+  );
+};
+
+export const useCreateSourceDefForkedBuilderProject = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<ConnectorBuilderProjectIdWithWorkspaceId, Error, SourceDefinitionId>(
+    async (sourceDefinitionId) => {
+      return createForkedConnectorBuilderProject(
+        { workspaceId, baseActorDefinitionId: sourceDefinitionId },
+        requestOptions
+      );
+    },
+    {
+      onSuccess: () => {
+        // invalidate cached projects list
+        queryClient.invalidateQueries(connectorBuilderProjectsKeys.list(workspaceId));
       },
     }
   );
