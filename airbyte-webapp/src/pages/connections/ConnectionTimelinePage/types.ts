@@ -232,7 +232,6 @@ export const patchFields = Object.keys(connectionSettingsUpdateEventSummaryPatch
 >;
 
 export const connectionSettingsUpdateEventSummarySchema = yup.object({
-  startTimeEpochSeconds: yup.number().required(),
   patches: yup
     .object(connectionSettingsUpdateEventSummaryPatchesShape)
     // ensure that at least one of the known patch fields is present
