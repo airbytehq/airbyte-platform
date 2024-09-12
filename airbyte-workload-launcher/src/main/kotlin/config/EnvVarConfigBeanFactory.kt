@@ -13,6 +13,7 @@ import io.airbyte.config.Configs
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.constants.EnvVarConstants
+import io.airbyte.workload.launcher.constants.EnvVarConstants.LOCAL_SECRETS_MICRONAUT_ENV
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.model.toRefEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -323,20 +324,28 @@ class EnvVarConfigBeanFactory {
 
   /**
    * Map of env vars for specifying the Micronaut environment.
-   * Indirectly necessary for configuring API client auth.
+   * Indirectly necessary for configuring API client auth and the local test secrets db
    */
   @Singleton
   @Named("micronautEnvMap")
-  fun micronautEnvMap(): Map<String, String> {
-    val envMap: MutableMap<String, String> = HashMap()
+  fun micronautEnvMap(
+    @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
+  ): Map<String, String> {
+    val envs = mutableListOf(EnvVarConstants.WORKER_V2_MICRONAUT_ENV)
 
-    if (System.getenv(Environment.ENVIRONMENTS_ENV) != null) {
-      envMap[Environment.ENVIRONMENTS_ENV] = "${EnvVarConstants.WORKER_V2_MICRONAUT_ENV},${System.getenv(Environment.ENVIRONMENTS_ENV)}"
-    } else {
-      envMap[Environment.ENVIRONMENTS_ENV] = EnvVarConstants.WORKER_V2_MICRONAUT_ENV
+    // inherit from the parent env
+    System.getenv(Environment.ENVIRONMENTS_ENV)?.let {
+      envs.add(it)
     }
 
-    return envMap
+    // add this conditionally to trigger datasource bean creation via application.yaml
+    if (secretPersistenceType == Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE.toString()) {
+      envs.add(LOCAL_SECRETS_MICRONAUT_ENV)
+    }
+
+    val commaSeparatedEnvString = envs.joinToString(separator = ",")
+
+    return mapOf(Environment.ENVIRONMENTS_ENV to commaSeparatedEnvString)
   }
 
   /**
