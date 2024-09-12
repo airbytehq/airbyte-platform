@@ -7626,7 +7626,7 @@ components:
         timeframeEnd:
           type: string
         quantity:
-          type: string
+          type: number
           format: double
     ConsumptionTimeWindow:
       type: string

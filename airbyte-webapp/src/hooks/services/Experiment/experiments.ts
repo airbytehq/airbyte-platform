@@ -27,4 +27,5 @@ export interface Experiments {
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
   "billing.organizationBillingPage": boolean;
+  "billing.workspaceUsagePage": boolean;
 }

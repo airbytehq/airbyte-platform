@@ -17,15 +17,16 @@ import { ConnectionScheduleType, ConnectionStatus } from "core/api/types/Airbyte
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
-import { useCreditsContext } from "./CreditsUsageContext";
 import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerConnectionTable.module.scss";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
-export const UsagePerConnectionTable: React.FC = () => {
-  const { workspaceId } = useCurrentWorkspace();
+interface UsagePerConnectionTableProps {
+  freeAndPaidUsageByConnection: ConnectionFreeAndPaidUsage[];
+}
 
-  const { freeAndPaidUsageByConnection } = useCreditsContext();
+export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ freeAndPaidUsageByConnection }) => {
+  const { workspaceId } = useCurrentWorkspace();
 
   const columnHelper = useMemo(() => createColumnHelper<ConnectionFreeAndPaidUsage>(), []);
 
@@ -175,11 +176,18 @@ export const UsagePerConnectionTable: React.FC = () => {
             })}
           >
             <UsagePerDayGraph chartData={props.row.original.usage} minimized />
-            <FlexContainer direction="column" gap="none">
+            <FlexContainer direction="column" gap="none" className={styles.usageTotals}>
               {props.row.original.totalFreeUsage > 0 && (
                 <FormattedCredits
                   credits={props.row.original.totalFreeUsage}
                   color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "green"}
+                  size="sm"
+                />
+              )}
+              {props.row.original.totalInternalUsage > 0 && (
+                <FormattedCredits
+                  credits={props.row.original.totalInternalUsage}
+                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "blue"}
                   size="sm"
                 />
               )}
