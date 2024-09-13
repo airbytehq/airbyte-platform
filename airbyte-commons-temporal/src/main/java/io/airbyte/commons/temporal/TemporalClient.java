@@ -413,7 +413,7 @@ public class TemporalClient {
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector());
     return execute(jobRunConfig,
-        () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC).run(jobRunConfig, launcherConfig));
+        () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC, jobId).run(jobRunConfig, launcherConfig));
 
   }
 
@@ -450,7 +450,7 @@ public class TemporalClient {
         .withActorContext(context);
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
   }
 
   /**
@@ -484,7 +484,7 @@ public class TemporalClient {
         .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true);
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
   }
 
   /**
@@ -542,12 +542,12 @@ public class TemporalClient {
     return new TemporalResponse<>(operationOutput, metadata);
   }
 
-  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
+  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType, jobId));
   }
 
-  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
+  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue, jobId));
   }
 
   /**
