@@ -367,6 +367,43 @@ spec:
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
         {{- end }}
 
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
+        {{- end }}
+
         # Values for googleSecretManager secrets
         {{- if (((.Values.global).secretsManager).googleSecretManager) }}
         - name: SECRET_STORE_GCP_PROJECT_ID

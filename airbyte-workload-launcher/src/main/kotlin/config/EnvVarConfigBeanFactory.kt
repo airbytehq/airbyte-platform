@@ -400,6 +400,9 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.aws.region}") awsRegion: String,
     @Value("\${airbyte.secret.store.aws.kms-key-arn}") awsKmsKeyArn: String,
     @Value("\${airbyte.secret.store.aws.tags}") awsTags: String,
+    @Value("\${airbyte.secret.store.azure.vault-url}") azureVaultUrl: String,
+    @Value("\${airbyte.secret.store.azure.tenant-id}") azureTenantId: String,
+    @Value("\${airbyte.secret.store.azure.tags}") azureTags: String,
     @Value("\${airbyte.secret.store.vault.address}") vaultAddress: String,
     @Value("\${airbyte.secret.store.vault.prefix}") vaultPrefix: String,
   ): Map<String, String> {
@@ -409,6 +412,9 @@ class EnvVarConfigBeanFactory {
       put(EnvVarConstants.AWS_SECRET_MANAGER_REGION, awsRegion)
       put(EnvVarConstants.AWS_KMS_KEY_ARN, awsKmsKeyArn)
       put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_TAGS, awsTags)
+      put(EnvVarConstants.AZURE_KEY_VAULT_VAULT_URL, azureVaultUrl)
+      put(EnvVarConstants.AZURE_KEY_VAULT_TENANT_ID, azureTenantId)
+      put(EnvVarConstants.AZURE_KEY_VAULT_SECRET_TAGS, azureTags)
       put(EnvVarConstants.VAULT_ADDRESS, vaultAddress)
       put(EnvVarConstants.VAULT_PREFIX, vaultPrefix)
     }
@@ -429,6 +435,10 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.aws.access-key-ref-key}") awsAccessKeyRefKey: String,
     @Value("\${airbyte.secret.store.aws.secret-key-ref-name}") awsSecretKeyRefName: String,
     @Value("\${airbyte.secret.store.aws.secret-key-ref-key}") awsSecretKeyRefKey: String,
+    @Value("\${airbyte.secret.store.azure.client-id-ref-name}") azureClientKeyRefName: String,
+    @Value("\${airbyte.secret.store.azure.client-id-ref-key}") azureClientKeyRefKey: String,
+    @Value("\${airbyte.secret.store.azure.client-secret-ref-name}") azureSecretKeyRefName: String,
+    @Value("\${airbyte.secret.store.azure.client-secret-ref-key}") azureSecretKeyRefKey: String,
     @Value("\${airbyte.secret.store.vault.token-ref-name}") vaultTokenRefName: String,
     @Value("\${airbyte.secret.store.vault.token-ref-key}") vaultTokenRefKey: String,
   ): Map<String, EnvVarSource> {
@@ -442,6 +452,13 @@ class EnvVarConfigBeanFactory {
       }
       if (awsSecretKeyRefName.isNotBlank() && awsSecretKeyRefKey.isNotBlank()) {
         put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_ACCESS_KEY, createEnvVarSource(awsSecretKeyRefName, awsSecretKeyRefKey))
+      }
+      // Azure
+      if (azureClientKeyRefName.isNotBlank() && azureClientKeyRefKey.isNotBlank()) {
+        put(EnvVarConstants.AZURE_KEY_VAULT_CLIENT_ID, createEnvVarSource(azureClientKeyRefName, azureClientKeyRefKey))
+      }
+      if (azureSecretKeyRefName.isNotBlank() && azureSecretKeyRefKey.isNotBlank()) {
+        put(EnvVarConstants.AZURE_KEY_VAULT_CLIENT_SECRET, createEnvVarSource(azureSecretKeyRefName, azureSecretKeyRefKey))
       }
       if (vaultTokenRefName.isNotBlank() && vaultTokenRefKey.isNotBlank()) {
         put(EnvVarConstants.VAULT_AUTH_TOKEN, createEnvVarSource(vaultTokenRefName, vaultTokenRefKey))

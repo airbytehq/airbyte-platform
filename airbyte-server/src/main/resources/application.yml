@@ -158,6 +158,12 @@ airbyte:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
