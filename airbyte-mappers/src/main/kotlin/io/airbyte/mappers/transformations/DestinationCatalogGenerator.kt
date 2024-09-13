@@ -46,7 +46,8 @@ class DestinationCatalogGenerator(
         "type": "object", 
         "${'$'}schema": "http://json-schema.org/schema#", 
         "properties":
-          ${generateJsonSchemaFromFields(updateFields, stream.stream.jsonSchema)}  
+          ${generateJsonSchemaFromFields(updateFields, stream.stream.jsonSchema)},
+        "additionalProperties": true
       } 
       """.trimIndent()
     stream.fields = updateFields
@@ -99,7 +100,7 @@ class DestinationCatalogGenerator(
     return Jsons.serialize(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
-          Pair(it.name, jsonSchema.get(it.name))
+          Pair(it.name, jsonSchema.get("properties").get(it.name))
         } else {
           Pair(it.name, Jsons.jsonNode(it.type.toMap()))
         }
