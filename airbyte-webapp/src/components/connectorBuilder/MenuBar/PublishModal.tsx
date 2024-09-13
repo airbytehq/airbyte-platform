@@ -318,6 +318,7 @@ interface ContributeToAirbyteFormProps {
 
 const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ imageNameError, setImageNameError }) => {
   const isEdit = useWatch({ name: "isEditing" });
+  const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   return (
     <FlexContainer direction="column" gap="none">
@@ -350,6 +351,11 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
             })}
           />
         }
+        onFocus={() => {
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_FORM_FOCUSED, {
+            actionDescription: "User focused the description field in the Contribute to Airbyte modal",
+          });
+        }}
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
