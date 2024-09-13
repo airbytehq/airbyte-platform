@@ -3,6 +3,8 @@ import { InferType } from "yup";
 import { Box } from "components/ui/Box";
 
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
+import { trackError } from "core/utils/datadog";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ClearEventItem } from "./ClearEventItem";
 import { ConnectionDisabledEventItem } from "./ConnectionDisabledEventItem";
@@ -11,6 +13,7 @@ import { ConnectionSettingsUpdateEventItem } from "./ConnectionSettingsUpdateEve
 import { JobStartEventItem } from "./JobStartEventItem";
 import { RefreshEventItem } from "./RefreshEventItem";
 import { RunningJobItem } from "./RunningJobItem";
+import { SchemaUpdateEventItem } from "./SchemaUpdateEventItem";
 import { SyncEventItem } from "./SyncEventItem";
 import { SyncFailEventItem } from "./SyncFailEventItem";
 import {
@@ -23,9 +26,12 @@ import {
   connectionEnabledEventSchema,
   connectionDisabledEventSchema,
   connectionSettingsUpdateEventSchema,
+  schemaUpdateEventSchema,
 } from "../types";
 
 export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof jobRunningSchema> }> = ({ event }) => {
+  const showSchemaUpdates = useExperiment("connection.timeline.schemaUpdates", false);
+
   if (jobRunningSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
     return (
       <Box py="lg" key={event.id}>
@@ -80,6 +86,14 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
         <ConnectionSettingsUpdateEventItem event={event} />
       </Box>
     );
+  } else if (showSchemaUpdates && schemaUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <SchemaUpdateEventItem event={event} />
+      </Box>
+    );
   }
+
+  trackError(new Error("Invalid connection timeline event"), { event });
   return null;
 };

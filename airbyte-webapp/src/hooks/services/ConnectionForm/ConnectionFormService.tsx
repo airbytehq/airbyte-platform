@@ -59,6 +59,8 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
+        const hasHashCollisionError =
+          errors?.syncCatalog?.streams?.message === "connectionForm.streams.hashFieldCollision";
 
         const hasPrimaryKeyOrCursorError = (field: "primaryKey" | "cursorField") =>
           errors?.syncCatalog?.streams &&
@@ -78,7 +80,11 @@ const useConnectionForm = ({
             ? "form.error.cursor.missing"
             : "connectionForm.validation.creationError";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
+          id: hasNoStreamsSelectedError
+            ? "connectionForm.streams.required"
+            : hasHashCollisionError
+            ? "connectionForm.streams.hashFieldCollision"
+            : validationErrorMessage,
         });
       }
 

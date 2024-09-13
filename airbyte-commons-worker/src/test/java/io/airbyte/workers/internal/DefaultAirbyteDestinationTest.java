@@ -51,6 +51,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -304,12 +305,13 @@ class DefaultAirbyteDestinationTest {
         new AirbyteStream("testName", Jsons.emptyObject(), List.of()))));
 
     if (mappersEnabled) {
-      when(destinationCatalogGenerator.generateDestinationCatalog(config.getCatalog())).thenReturn(modifiedCatalog);
+      when(destinationCatalogGenerator.generateDestinationCatalog(eq(config.getCatalog()))).thenReturn(
+          new DestinationCatalogGenerator.CatalogGenerationResult(modifiedCatalog, Map.of()));
     }
     destination.start(config, jobRoot);
 
     if (mappersEnabled) {
-      verify(destinationCatalogGenerator).generateDestinationCatalog(config.getCatalog());
+      verify(destinationCatalogGenerator).generateDestinationCatalog(eq(config.getCatalog()));
       verify(protocolSerializer).serialize(modifiedCatalog, false);
     } else {
       verifyNoInteractions(destinationCatalogGenerator);

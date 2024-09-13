@@ -33,11 +33,15 @@ import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
+import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeoutException
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Interface layer between domain and Kube layers.
@@ -145,6 +149,11 @@ class KubePodClient(
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.connectionId,
       )
+
+    logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
+    logger.info { "[source] image: ${kubeInput.sourceImage} resources: ${kubeInput.sourceReqs}" }
+    logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
+    logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
 
     try {
       pod =
@@ -365,13 +374,17 @@ class KubePodClient(
   ) {
     try {
       kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: TimeoutException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "$podLogLabel pod failed to init within allotted timeout.",
-        e,
-        KubeCommandType.WAIT_INIT,
-      )
+    } catch (e: Exception) {
+      when (e) {
+        is TimeoutException, is KubernetesClientTimeoutException -> {
+          ApmTraceUtils.addExceptionToTrace(e)
+          throw KubeClientException(
+            "Unable to start the $podLogLabel pod. This may be due to insufficient system resources. Please check available resources and try again.",
+            e,
+            KubeCommandType.WAIT_INIT,
+          )
+        } else -> throw e
+      }
     }
   }
 

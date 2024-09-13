@@ -11,7 +11,7 @@ import io.airbyte.config.adapters.AirbyteRecord
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.security.MessageDigest
-import java.util.Base64
+import java.util.HexFormat
 
 @Singleton
 @Named("HashingMapper")
@@ -122,7 +122,7 @@ class HashingMapper : Mapper {
 
     val hashedValue = MessageDigest.getInstance(method).digest(data)
 
-    return Base64.getEncoder().encodeToString(hashedValue)
+    return HexFormat.of().formatHex(hashedValue)
   }
 
   data class HashingConfig(

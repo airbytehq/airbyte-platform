@@ -71,17 +71,9 @@ class DiscoverCatalogActivityTest {
     discoverCatalogActivity =
       spyk(
         DiscoverCatalogActivityImpl(
-          workerConfigsProvider,
-          processFactory,
-          secretsRepositoryReader,
           workspaceRoot,
           airbyteApiClient,
-          airbyteVersion,
-          serDeProvider,
-          migratorFactory,
-          metricClient,
           featureFlagClient,
-          gsonPksExtractor,
           WorkloadClient(workloadApiClient, jobOutputDocStore),
           workloadIdGenerator,
           logClientManager,

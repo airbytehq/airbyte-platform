@@ -7,14 +7,17 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.mappers.mocks.FailingTestMapper
 import io.airbyte.mappers.mocks.TestMapper
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class DestinationCatalogGeneratorTest {
   private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf())
   private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()))
+  private val destinationCatalogGeneratorWithFailingMapper = DestinationCatalogGenerator(listOf(FailingTestMapper()))
 
   @Test
   fun `test generateDestinationCatalogWithoutMapper`() {
@@ -43,11 +46,12 @@ class DestinationCatalogGeneratorTest {
 
     val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
-    assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.streams[0].stream.jsonSchema)
+    assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.catalog.streams[0].stream.jsonSchema)
   }
 
   @Test
   fun `test generateDestinationCatalogMissingMapper`() {
+    val mapperConfig = ConfiguredMapper("test", mapOf())
     val configuredUsersStream =
       ConfiguredAirbyteStream(
         stream =
@@ -67,12 +71,50 @@ class DestinationCatalogGeneratorTest {
           listOf(
             Field(name = "field1", type = FieldType.STRING),
           ),
-        mappers = listOf(ConfiguredMapper("test", mapOf())),
+        mappers = listOf(mapperConfig),
       )
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
 
-    assertThrows<IllegalStateException> { destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog) }
+    val result = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
+
+    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    val streamDescriptor = StreamDescriptor().withName("users")
+    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.MISSING_MAPPER), result.errors[streamDescriptor])
+  }
+
+  @Test
+  fun `test generateDestinationCatalogFailedSchema`() {
+    val mapperConfig = ConfiguredMapper("test", mapOf())
+    val configuredUsersStream =
+      ConfiguredAirbyteStream(
+        stream =
+          AirbyteStream(
+            name = "users",
+            jsonSchema =
+              Jsons.jsonNode(
+                mapOf(
+                  "type" to "object",
+                  "${'$'}schema" to "http://json-schema.org/schema#",
+                  "properties" to mapOf("field1" to mapOf("type" to "string")),
+                ),
+              ),
+            supportedSyncModes = listOf(),
+          ),
+        fields =
+          listOf(
+            Field(name = "field1", type = FieldType.STRING),
+          ),
+        mappers = listOf(mapperConfig),
+      )
+
+    val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
+
+    val result = destinationCatalogGeneratorWithFailingMapper.generateDestinationCatalog(catalog)
+
+    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    val streamDescriptor = StreamDescriptor().withName("users")
+    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG), result.errors[streamDescriptor])
   }
 
   @Test
@@ -92,7 +134,7 @@ class DestinationCatalogGeneratorTest {
           ),
       )
 
-    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream)
+    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).field
 
     assertEquals(configuredUsersStream.fields, resultFields)
   }
@@ -115,7 +157,7 @@ class DestinationCatalogGeneratorTest {
         mappers = listOf(ConfiguredMapper("test", mapOf()), ConfiguredMapper("test", mapOf())),
       )
 
-    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream)
+    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).field
 
     assertEquals(
       listOf(
@@ -196,7 +238,7 @@ class DestinationCatalogGeneratorTest {
             ),
         ),
       ),
-      catalogCopy.streams[0].stream.jsonSchema,
+      catalogCopy.catalog.streams[0].stream.jsonSchema,
     )
     assertEquals(
       Jsons.jsonNode(
@@ -209,7 +251,7 @@ class DestinationCatalogGeneratorTest {
             ),
         ),
       ),
-      catalogCopy.streams[1].stream.jsonSchema,
+      catalogCopy.catalog.streams[1].stream.jsonSchema,
     )
   }
 

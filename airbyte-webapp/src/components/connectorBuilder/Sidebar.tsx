@@ -9,6 +9,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { BaseConnectorInfo } from "./BaseConnectorInfo";
 import { NameInput } from "./NameInput";
 import { SavingIndicator } from "./SavingIndicator";
 import styles from "./Sidebar.module.scss";
@@ -22,7 +23,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
   const analyticsService = useAnalyticsService();
-  const { toggleUI, isResolving } = useConnectorBuilderFormState();
+  const { toggleUI, isResolving, currentProject } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
   const showSavingIndicator = yamlSelected || formValues.streams.length > 0;
 
@@ -50,8 +51,13 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
         }
       />
 
-      <FlexContainer direction="column" alignItems="center">
-        <NameInput className={styles.connectorName} size="md" />
+      <FlexContainer direction="column" alignItems="center" className={styles.contained}>
+        <FlexContainer direction="column" gap="none" className={styles.contained}>
+          <NameInput className={styles.connectorName} size="md" />
+          {currentProject.baseActorDefinitionVersionInfo && (
+            <BaseConnectorInfo {...currentProject.baseActorDefinitionVersionInfo} showDocsLink />
+          )}
+        </FlexContainer>
 
         {showSavingIndicator && <SavingIndicator />}
       </FlexContainer>

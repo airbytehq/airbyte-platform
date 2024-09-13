@@ -114,6 +114,30 @@ Get awsSecretManager secret access key secret key or default
 {{- end -}}
 
 {{/*
+Get azureKeyVault clientId or default
+*/}}
+{{- define "airbyte.azureKeyVaultClientIdSecretKey" -}}
+{{- $azureKeyVaultClientIdSecretKey := . -}}
+{{- if $azureKeyVaultClientIdSecretKey -}}
+  {{- printf "%s" $azureKeyVaultClientIdSecretKey -}}
+{{- else -}}
+  {{- printf "azure-key-vault-client-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get azureKeyVault clientSecret or default
+*/}}
+{{- define "airbyte.azureKeyVaultClientSecretSecretKey" -}}
+{{- $azureKeyVaultClientSecretSecretKey := . -}}
+{{- if $azureKeyVaultClientSecretSecretKey -}}
+  {{- printf "%s" $azureKeyVaultClientSecretSecretKey -}}
+{{- else -}}
+  {{- printf "azure-key-vault-client-secret" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Get googleSecretManager credentials secret key or default
 */}}
 {{- define "airbyte.googleSecretManagerCredentialsSecretKey" -}}

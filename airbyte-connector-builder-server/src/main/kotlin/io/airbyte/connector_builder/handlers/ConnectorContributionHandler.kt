@@ -3,7 +3,6 @@
 package io.airbyte.connector_builder.handlers
 
 import io.airbyte.api.problems.model.generated.GithubContributionProblemData
-import io.airbyte.api.problems.throwable.generated.ConnectorImageNameInUseProblem
 import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
 import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
@@ -39,7 +38,7 @@ class ConnectorContributionHandler(
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
-    val connectorName = if (connectorExists) githubContributionService.readConnectorMetadataName() else null
+    val connectorName = githubContributionService.readConnectorMetadataValue("name")
     val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
 
     return CheckContributionRead().apply {
@@ -63,6 +62,7 @@ class ConnectorContributionHandler(
     connectorDescription: String,
     rawManifestYaml: String,
     baseImage: String,
+    actorDefinitionId: String,
     githubContributionService: GithubContributionService,
   ): Map<String, String> {
     val versionTag = "0.0.1"
@@ -92,7 +92,7 @@ class ConnectorContributionHandler(
       contributionTemplates.renderContributionMetadataYaml(
         connectorImageName = connectorImageName,
         connectorName = connectorName,
-        actorDefinitionId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId,
         versionTag = versionTag,
         baseImage = baseImage,
         // TODO: Parse Allowed Hosts from manifest
@@ -123,11 +123,7 @@ class ConnectorContributionHandler(
     val connectorImageName = generateContributionRequestBody.connectorImageName
 
     val githubContributionService = GithubContributionService(connectorImageName, githubToken)
-
-    // 0. Error if connector already exists
-    if (githubContributionService.checkIfConnectorExistsOnMain()) {
-      throw ConnectorImageNameInUseProblem()
-    }
+    val actorDefinitionId = githubContributionService.readConnectorMetadataValue("definitionId") ?: UUID.randomUUID().toString()
 
     // 1. Create a branch
     githubContributionService.prepareBranchForContribution()
@@ -140,6 +136,7 @@ class ConnectorContributionHandler(
         generateContributionRequestBody.description,
         generateContributionRequestBody.manifestYaml,
         generateContributionRequestBody.baseImage,
+        actorDefinitionId,
         githubContributionService,
       )
 
@@ -152,7 +149,7 @@ class ConnectorContributionHandler(
     // 4. Create / update pull request
     val pullRequest = githubContributionService.getOrCreatePullRequest()
 
-    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString())
+    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString()).actorDefinitionId(UUID.fromString(actorDefinitionId))
   }
 
   fun convertGithubExceptionToContributionException(e: HttpException): Exception {

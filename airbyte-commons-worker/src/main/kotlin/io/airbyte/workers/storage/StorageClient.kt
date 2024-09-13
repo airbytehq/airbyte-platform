@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.storage
 
+import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.BlobServiceClientBuilder
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
@@ -11,6 +13,7 @@ import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.io.IOs
+import io.airbyte.commons.logging.AzureStorageConfig
 import io.airbyte.commons.logging.GcsStorageConfig
 import io.airbyte.commons.logging.LocalStorageConfig
 import io.airbyte.commons.logging.MinioStorageConfig
@@ -56,6 +59,7 @@ class StorageClientFactory(
    */
   fun get(type: DocumentType): StorageClient =
     when (storageType) {
+      StorageType.AZURE -> appCtx.createBean<AzureStorageClient>(type)
       StorageType.GCS -> appCtx.createBean<GcsStorageClient>(type)
       StorageType.LOCAL -> appCtx.createBean<LocalStorageClient>(type)
       StorageType.MINIO -> appCtx.createBean<MinioStorageClient>(type)
@@ -68,7 +72,9 @@ class StorageClientFactory(
  *
  * @param prefix The prefix to which these documents will be stored
  */
-enum class DocumentType(val prefix: Path) {
+enum class DocumentType(
+  val prefix: Path,
+) {
   LOGS(prefix = Path.of("/job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
@@ -109,6 +115,55 @@ interface StorageClient {
 }
 
 /**
+ * Constructs a [AzureStorageClient] implementation of the [StorageClient].
+ *
+ * @param config The [AzureStorageConfig] for configuring this [StorageConfig]
+ * @param type which [DocumentType] this client represents
+ * @param gcsClient the [Storage] client, should only be specified for testing purposes
+ */
+@Prototype
+class AzureStorageClient(
+  config: AzureStorageConfig,
+  private val type: DocumentType,
+  private val azureClient: BlobServiceClient,
+) : StorageClient {
+  private val bucketName = config.bucketName(type)
+
+  @Inject
+  constructor(
+    config: AzureStorageConfig,
+    @Parameter type: DocumentType,
+  ) : this(config = config, type = type, azureClient = config.azureClient())
+
+  override fun write(
+    id: String,
+    document: String,
+  ) {
+    azureClient
+      .getBlobContainerClient(bucketName)
+      .getBlobClient(key(id))
+      .upload(document.byteInputStream(StandardCharsets.UTF_8))
+  }
+
+  override fun read(id: String): String? =
+    azureClient
+      .getBlobContainerClient(bucketName)
+      .getBlobClient(key(id))
+      // ensure the blob exists before downloading it
+      .takeIf { it.exists() }
+      ?.downloadContent()
+      ?.toString()
+
+  override fun delete(id: String): Boolean =
+    azureClient
+      .getBlobContainerClient(bucketName)
+      .getBlobClient(key(id))
+      .deleteIfExists()
+
+  internal fun key(id: String): String = "${type.prefix}/$id"
+}
+
+/**
  * Constructs a [GcsStorageClient] implementation of the [StorageClient].
  *
  * @param config The [GcsStorageConfig] for configuring this [StorageConfig]
@@ -140,7 +195,8 @@ class GcsStorageClient(
   override fun read(id: String): String? {
     val blobId = blobId(id)
 
-    return gcsClient.get(blobId)
+    return gcsClient
+      .get(blobId)
       ?.takeIf { it.exists() }
       ?.let { gcsClient.readAllBytes(blobId).toString(StandardCharsets.UTF_8) }
   }
@@ -250,7 +306,8 @@ abstract class AbstractS3StorageClient internal constructor(
     document: String,
   ) {
     val request =
-      PutObjectRequest.builder()
+      PutObjectRequest
+        .builder()
         .bucket(bucketName)
         .key(key(id))
         .build()
@@ -258,29 +315,42 @@ abstract class AbstractS3StorageClient internal constructor(
     s3Client.putObject(request, RequestBody.fromString(document))
   }
 
-  override fun read(id: String): String? {
-    return try {
-      s3Client.getObjectAsBytes(
-        GetObjectRequest.builder()
-          .bucket(bucketName)
-          .key(key(id))
-          .build(),
-      ).asString(StandardCharsets.UTF_8)
+  override fun read(id: String): String? =
+    try {
+      s3Client
+        .getObjectAsBytes(
+          GetObjectRequest
+            .builder()
+            .bucket(bucketName)
+            .key(key(id))
+            .build(),
+        ).asString(StandardCharsets.UTF_8)
     } catch (e: NoSuchKeyException) {
       null
     }
-  }
 
   override fun delete(id: String): Boolean {
     val exists =
       try {
-        s3Client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key(id)).build())
+        s3Client.headObject(
+          HeadObjectRequest
+            .builder()
+            .bucket(bucketName)
+            .key(key(id))
+            .build(),
+        )
         true
       } catch (e: NoSuchKeyException) {
         false
       }
 
-    s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key(id)).build())
+    s3Client.deleteObject(
+      DeleteObjectRequest
+        .builder()
+        .bucket(bucketName)
+        .key(key(id))
+        .build(),
+    )
     return exists
   }
 
@@ -293,10 +363,25 @@ abstract class AbstractS3StorageClient internal constructor(
  * @receiver [GcsStorageConfig]
  * internal for mocking purposes
  */
+internal fun AzureStorageConfig.azureClient(): BlobServiceClient =
+  BlobServiceClientBuilder()
+    .connectionString(this@azureClient.connectionString)
+    .buildClient()
+
+/**
+ * Extension function for extracting a [Storage] client out of the [GcsStorageConfig].
+ *
+ * @receiver [GcsStorageConfig]
+ * internal for mocking purposes
+ */
 internal fun GcsStorageConfig.gcsClient(): Storage {
   val credentialsByteStream = ByteArrayInputStream(Files.readAllBytes(Path.of(this.applicationCredentials)))
   val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
-  return StorageOptions.newBuilder().setCredentials(credentials).build().service
+  return StorageOptions
+    .newBuilder()
+    .setCredentials(credentials)
+    .build()
+    .service
 }
 
 /**
@@ -305,7 +390,8 @@ internal fun GcsStorageConfig.gcsClient(): Storage {
  * @receiver [MinioStorageConfig]
  */
 internal fun MinioStorageConfig.s3Client(): S3Client =
-  S3Client.builder()
+  S3Client
+    .builder()
     .serviceConfiguration { it.pathStyleAccessEnabled(true) }
     .credentialsProvider { AwsBasicCredentials.create(this@s3Client.accessKey, this@s3Client.secretAccessKey) }
     .endpointOverride(URI(this@s3Client.endpoint))

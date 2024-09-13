@@ -11,6 +11,7 @@ WORKDIR /opt/keycloak
 # Blacklist recommended by pen testers: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
 COPY bin/password-blacklists/10k-most-common.txt data/password-blacklists/10k-most-common.txt
 COPY bin/scripts/entrypoint.sh entrypoint.sh
+COPY bin/scripts/configure_keycloak.sh configure_keycloak.sh
 COPY bin/themes themes
 
 # Doing this instead of creating a separate file and copying it to ensure that we get any keycloak updates to this conf file.

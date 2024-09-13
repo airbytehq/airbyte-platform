@@ -216,6 +216,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           columns={usedDefinitionColumns}
           data={filteredUsedConnectorsDefinitions}
           sorting={false}
+          className={styles.connectorsTable}
         />
       ),
     });
@@ -229,34 +230,33 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         columns={definitionColumns}
         data={filteredConnectorsDefinitions}
         sorting={false}
+        className={styles.connectorsTable}
       />
     ),
   });
 
   return (
     <ConnectorsViewContext.Provider value={ctx}>
-      <div className={styles.connectorsTable}>
-        <FlexContainer direction="column" gap="2xl">
-          {sections.map((section, index) => (
-            <FlexContainer key={index} direction="column">
-              <FlexContainer alignItems="center">
-                <FlexItem grow>
-                  <Heading as="h2">
-                    <FormattedMessage id={section.title} />
-                  </Heading>
-                </FlexItem>
-                {index === 0 && (
-                  <FlexContainer>
-                    <AddNewConnectorButton type={type} />
-                    {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
-                  </FlexContainer>
-                )}
-              </FlexContainer>
-              {section.content}
+      <FlexContainer direction="column" gap="2xl">
+        {sections.map((section, index) => (
+          <FlexContainer key={index} direction="column">
+            <FlexContainer alignItems="center">
+              <FlexItem grow>
+                <Heading as="h2">
+                  <FormattedMessage id={section.title} />
+                </Heading>
+              </FlexItem>
+              {index === 0 && (
+                <FlexContainer>
+                  <AddNewConnectorButton type={type} />
+                  {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
+                </FlexContainer>
+              )}
             </FlexContainer>
-          ))}
-        </FlexContainer>
-      </div>
+            {section.content}
+          </FlexContainer>
+        ))}
+      </FlexContainer>
     </ConnectorsViewContext.Provider>
   );
 };

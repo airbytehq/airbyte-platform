@@ -12,6 +12,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
@@ -66,10 +67,23 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
-          <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
-            <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
-            <Icon type="clockOutline" size="sm" className={styles.icon} />
-          </button>
+          <Tooltip
+            placement="top"
+            control={
+              <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
+                <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
+                <Icon type="clockOutline" size="sm" className={styles.icon} />
+              </button>
+            }
+          >
+            <FormattedMessage
+              id={
+                showRelativeTime
+                  ? "connection.stream.status.table.dataFreshAsOf.absolute"
+                  : "connection.stream.status.table.dataFreshAsOf.relative"
+              }
+            />
+          </Tooltip>
         ),
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />

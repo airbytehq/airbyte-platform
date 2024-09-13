@@ -27,6 +27,7 @@ import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.NotImplementedMetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -203,7 +204,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false, analyticsMessageTracker,
             Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
-            recordMapper, featureFlagClient);
+            recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class));
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

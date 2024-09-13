@@ -35,3 +35,14 @@ properties:
     description: Integration specific blob. Must be a valid JSON string.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  baseActorDefinitionVersionId:
+    description: Optional base actor definition version id. Existence indicates that the project was created by forking an existing connector.
+    type: string
+    format: uuid
+  contributionPullRequestUrl:
+    description: Optional URL of the contribution pull request
+    type: string
+  contributionActorDefinitionId:
+    description: Optional actor definition id the pull request is contributing to
+    type: string
+    format: uuid

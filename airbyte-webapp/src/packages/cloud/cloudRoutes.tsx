@@ -71,7 +71,8 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage", false);
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage", false);
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -122,17 +123,17 @@ const MainRoutes: React.FC = () => {
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
+          {isWorkspaceUsagePageVisible && (
+            <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
+          )}
           {canViewOrgSettings && (
             <>
               <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
               <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
             </>
           )}
-          {isBillingInArrearsActive && (
-            <>
-              <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
-              <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
-            </>
+          {canViewOrgSettings && isOrganizationBillingPageVisible && (
+            <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />

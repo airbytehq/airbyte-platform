@@ -31,24 +31,20 @@ class LogClientManager(
    * @throws IOException exception while accessing logs
    */
   @Throws(IOException::class)
-  fun getJobLogFile(logPath: Path?): List<String> {
-    if (logPath == null || logPath == Path.of("")) {
-      return emptyList()
+  fun getJobLogFile(logPath: Path?): List<String> =
+    when {
+      logPath == null || logPath == Path.of("") -> emptyList()
+      else -> logClient.tailCloudLogs(logPath = logPath.toString(), numLines = logTailSize)
     }
-
-    return logClient.tailCloudLogs(logPath = logPath.toString(), numLines = logTailSize)
-  }
 
   /**
    * Primarily to clean up logs after testing. Only valid for Kube logs.
    */
   @VisibleForTesting
   fun deleteLogs(logPath: String) {
-    if (logPath.isEmpty()) {
-      return
+    if (logPath.isNotEmpty()) {
+      logClient.deleteLogs(logPath = logPath)
     }
-
-    logClient.deleteLogs(logPath = logPath)
   }
 
   /**
@@ -69,7 +65,5 @@ class LogClientManager(
     logMdcHelper.setWorkspaceMdc(path = path)
   }
 
-  fun fullLogPath(path: Path): String {
-    return logMdcHelper.fullLogPath(path = path)
-  }
+  fun fullLogPath(path: Path): String = logMdcHelper.fullLogPath(path = path)
 }

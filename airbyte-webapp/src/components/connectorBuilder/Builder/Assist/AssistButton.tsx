@@ -11,7 +11,14 @@ import { Button } from "components/ui/Button";
 import { IconColor } from "components/ui/Icon/types";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { HttpError } from "core/api";
+import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+
 import {
+  AssistKey,
+  convertToAssistFormValuesSync,
   BuilderAssistFindStreamsResponse,
   BuilderAssistInputAllParams,
   BuilderAssistManifestResponse,
@@ -20,13 +27,7 @@ import {
   useBuilderAssistFindStreamPaginator,
   useBuilderAssistStreamMetadata,
   useBuilderAssistStreamResponse,
-  HttpError,
-} from "core/api";
-import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
-import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import { AssistKey, convertToAssistFormValuesSync } from "./assist";
+} from "./assist";
 import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
 
 /**

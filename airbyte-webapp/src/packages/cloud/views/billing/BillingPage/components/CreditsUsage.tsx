@@ -16,7 +16,7 @@ import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 export const CreditsUsage: React.FC = () => {
-  const { freeAndPaidUsageByTimeChunk, hasFreeUsage } = useCreditsContext();
+  const { freeAndPaidUsageByTimeChunk, hasFreeUsage, freeAndPaidUsageByConnection } = useCreditsContext();
 
   useEffectOnce(() => {
     trackTiming("CreditUsage");
@@ -24,7 +24,7 @@ export const CreditsUsage: React.FC = () => {
 
   return (
     <Card className={styles.card}>
-      <Box pt="xl">
+      <Box pt="xl" px="lg">
         <CreditsUsageFilters />
       </Box>
       {freeAndPaidUsageByTimeChunk.length > 0 ? (
@@ -43,7 +43,7 @@ export const CreditsUsage: React.FC = () => {
                 <FormattedMessage id="credits.usagePerConnection" />
               </Heading>
             </Box>
-            <UsagePerConnectionTable />
+            <UsagePerConnectionTable freeAndPaidUsageByConnection={freeAndPaidUsageByConnection} />
           </Box>
         </>
       ) : (

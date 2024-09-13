@@ -18,6 +18,7 @@ import {
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
   getDeclarativeManifestBaseImage,
+  createForkedConnectorBuilderProject,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -34,6 +35,10 @@ import {
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
   DeclarativeManifestRequestBody,
   DeclarativeManifestBaseImageRead,
+  BaseActorDefinitionVersionInfo,
+  ContributionInfo,
+  ConnectorBuilderProjectDetailsRead,
+  SourceDefinitionId,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -57,6 +62,8 @@ export interface BuilderProject {
   sourceDefinitionId?: string;
   id: string;
   hasDraft?: boolean;
+  baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
+  contributionInfo?: ContributionInfo;
 }
 
 export interface BuilderProjectWithManifest {
@@ -71,19 +78,25 @@ export const useListBuilderProjects = () => {
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
     (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-      (projectDetails): BuilderProject => ({
-        name: projectDetails.name,
-        version:
-          typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
-            ? projectDetails.activeDeclarativeManifestVersion
-            : "draft",
-        sourceDefinitionId: projectDetails.sourceDefinitionId,
-        id: projectDetails.builderProjectId,
-        hasDraft: projectDetails.hasDraft,
-      })
+      convertProjectDetailsReadToBuilderProject
     )
   );
 };
+
+export const convertProjectDetailsReadToBuilderProject = (
+  projectDetails: ConnectorBuilderProjectDetailsRead
+): BuilderProject => ({
+  name: projectDetails.name,
+  version:
+    typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+      ? projectDetails.activeDeclarativeManifestVersion
+      : "draft",
+  sourceDefinitionId: projectDetails.sourceDefinitionId,
+  id: projectDetails.builderProjectId,
+  hasDraft: projectDetails.hasDraft,
+  baseActorDefinitionVersionInfo: projectDetails.baseActorDefinitionVersionInfo,
+  contributionInfo: projectDetails.contributionInfo,
+});
 
 export const useListBuilderProjectVersions = (project?: BuilderProject) => {
   const requestOptions = useRequestOptions();
@@ -144,6 +157,27 @@ export const useCreateBuilderProject = () => {
             },
           ]
         );
+      },
+    }
+  );
+};
+
+export const useCreateSourceDefForkedBuilderProject = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<ConnectorBuilderProjectIdWithWorkspaceId, Error, SourceDefinitionId>(
+    async (sourceDefinitionId) => {
+      return createForkedConnectorBuilderProject(
+        { workspaceId, baseActorDefinitionId: sourceDefinitionId },
+        requestOptions
+      );
+    },
+    {
+      onSuccess: () => {
+        // invalidate cached projects list
+        queryClient.invalidateQueries(connectorBuilderProjectsKeys.list(workspaceId));
       },
     }
   );

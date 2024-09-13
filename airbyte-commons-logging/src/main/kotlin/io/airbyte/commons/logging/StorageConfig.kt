@@ -34,6 +34,30 @@ data class StorageBucketConfig(
 )
 
 /**
+ * Azure storage configuration
+ *
+// * @param applicationCredentials required credentials for accessing Azure Blob Storage
+ */
+@Singleton
+@Requires(property = STORAGE_TYPE, pattern = "(?i)^azure$")
+data class AzureStorageConfig(
+  override val buckets: StorageBucketConfig,
+  @Value("\${$STORAGE_AZURE.connection-string}") val connectionString: String,
+) : StorageConfig {
+  override fun toEnvVarMap(): Map<String, String> =
+    buildMap {
+      put(EnvVar.STORAGE_BUCKET_LOG, buckets.log)
+      put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
+      put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
+      put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      put(EnvVar.STORAGE_TYPE, StorageType.AZURE.name)
+      put(EnvVar.AZURE_STORAGE_CONNECTION_STRING, connectionString)
+    }.mapKeys { it.key.name }
+
+  override fun toString(): String = "AzureStorageConfig(connectionString=${connectionString.mask()})"
+}
+
+/**
  * GCS storage configuration
  *
  * @param applicationCredentials required credentials for accessing GCS

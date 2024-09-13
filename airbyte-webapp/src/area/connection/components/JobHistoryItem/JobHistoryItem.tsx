@@ -18,6 +18,7 @@ import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptL
 import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
 import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
@@ -64,19 +65,21 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         size: "full",
         title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
         content: () => (
-          <Suspense
-            fallback={
-              <div className={styles.jobHistoryItem__modalLoading}>
-                <Spinner />
-              </div>
-            }
-          >
-            <JobLogsModal
-              connectionId={connection.connectionId}
-              jobId={jobWithAttempts.job.id}
-              initialAttemptId={initialAttemptId}
-            />
-          </Suspense>
+          <DefaultErrorBoundary>
+            <Suspense
+              fallback={
+                <div className={styles.jobHistoryItem__modalLoading}>
+                  <Spinner />
+                </div>
+              }
+            >
+              <JobLogsModal
+                connectionId={connection.connectionId}
+                jobId={jobWithAttempts.job.id}
+                initialAttemptId={initialAttemptId}
+              />
+            </Suspense>
+          </DefaultErrorBoundary>
         ),
       });
     },

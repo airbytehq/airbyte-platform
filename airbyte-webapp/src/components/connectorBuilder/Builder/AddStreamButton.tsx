@@ -13,18 +13,18 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+
+import styles from "./AddStreamButton.module.scss";
 import {
+  convertToAssistFormValuesSync,
   BuilderAssistFindStreamsResponse,
   BuilderAssistInputStreamParams,
   BuilderAssistManifestResponse,
   useBuilderAssistCreateStream,
   useBuilderAssistFindStreams,
-} from "core/api";
-import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import styles from "./AddStreamButton.module.scss";
-import { convertToAssistFormValuesSync } from "./Assist/assist";
+} from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";

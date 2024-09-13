@@ -29,3 +29,19 @@ class TestMapper : Mapper {
     record.remove(targetField)
   }
 }
+
+class FailingTestMapper : Mapper {
+  override val name: String = "test"
+
+  override fun spec(): MapperSpecification = MapperSpecification("test", "", mapOf())
+
+  override fun schema(
+    config: ConfiguredMapper,
+    streamFields: List<Field>,
+  ): List<Field> = throw RuntimeException("Failed to generate schema")
+
+  override fun map(
+    config: ConfiguredMapper,
+    record: AirbyteRecord,
+  ) = throw RuntimeException("Failed to map record")
+}

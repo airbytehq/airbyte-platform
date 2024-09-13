@@ -70,8 +70,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ReportRunTimeActivity reportRunTimeActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
@@ -90,8 +88,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
-    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput.getWorkspaceId());
-    final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
     final var sendRunTimeMetrics = shouldReportRuntime();
     final var shouldRunAsChildWorkflow = shouldRunAsAChildWorkflow(connectionId, syncInput.getWorkspaceId(),
         syncInput.getConnectionContext().getSourceDefinitionId(), syncInput.getIsReset());
@@ -102,8 +98,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             CONNECTION_ID_KEY, connectionId.toString(),
             JOB_ID_KEY, jobRunConfig.getJobId(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage(),
-            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
-            "USE_WORKLOAD_API", useWorkloadApi));
+            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
@@ -140,7 +135,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final StandardSyncOutput syncOutput = replicationActivity
         .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-            refreshSchemaOutput, useWorkloadApi, useWorkloadOutputDocStore));
+            refreshSchemaOutput));
 
     final WebhookOperationSummary webhookOperationSummary = invokeOperationsActivity.invokeOperations(
         syncInput.getOperationSequence(), syncInput, jobRunConfig);
@@ -215,13 +210,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (shouldRunAsChildWorkflowVersion == Workflow.DEFAULT_VERSION) {
       return false;
     } else if (shouldRunAsChildWorkflowVersion == versionWithoutResetCheck) {
-      return checkUseWorkloadApiFlag(workspaceId)
-          && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
-              Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
-              sourceDefinitionId,
-              workspaceId));
+      return syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
+          Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
+          sourceDefinitionId,
+          workspaceId));
     } else {
-      return !isReset && checkUseWorkloadApiFlag(workspaceId)
+      return !isReset
           && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
               Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
               sourceDefinitionId,
@@ -241,9 +235,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
-                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput,
-                                                                    final boolean useWorkloadApi,
-                                                                    final boolean useWorkloadOutputDocStore) {
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
     return new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -261,18 +253,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         refreshSchemaOutput,
-        syncInput.getConnectionContext(),
-        useWorkloadApi,
-        useWorkloadOutputDocStore);
-  }
-
-  private boolean checkUseWorkloadApiFlag(final UUID workspaceId) {
-    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(workspaceId));
-  }
-
-  private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
-    return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId()));
+        syncInput.getConnectionContext());
   }
 
 }

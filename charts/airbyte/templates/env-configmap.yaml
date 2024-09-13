@@ -35,13 +35,8 @@ data:
   KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
-{{- if eq (index .Values "workload-api-server" "enabled") true }}
-  # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
-  # block can be removed
   WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
-  {{- else }}
-  WORKLOAD_API_HOST: http://localhost # placeholder value
-  {{- end }}
+
 
   {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
   INITIAL_USER_FIRST_NAME: {{ .Values.global.auth.instanceAdmin.firstName }}
@@ -163,8 +158,6 @@ data:
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
-  WORKLOAD_LAUNCHER_ENABLED: "true"
-  WORKLOAD_API_SERVER_ENABLED: "true"
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""

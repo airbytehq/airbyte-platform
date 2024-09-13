@@ -282,16 +282,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKERS_MICRONAUT_ENVIRONMENTS
-        - name: WORKLOAD_LAUNCHER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_LAUNCHER_ENABLED
-        - name: WORKLOAD_API_SERVER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_API_SERVER_ENABLED
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -333,6 +323,33 @@ spec:
         {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
         - name: AWS_KMS_KEY_ARN
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
         {{- end }}
 
         # Values for googleSecretManager secrets

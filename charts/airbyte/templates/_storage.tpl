@@ -35,6 +35,32 @@ Returns the storage provider secret name
 {{- end }}
 
 {{/*
+Returns azure environment variables.
+*/}}
+{{- define "airbyte.storage.azure.envs" }}
+{{- if .Values.global.storage.azure.connectionString }}
+- name: AZURE_STORAGE_CONNECTION_STRING
+  value: {{ .Values.global.storage.azure.connectionString }}
+{{- end }}
+{{- if .Values.global.storage.azure.connectionStringSecretKey }}
+- name: AZURE_STORAGE_CONNECTION_STRING
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.storage.secretName" . }}
+      key: {{ .Values.global.storage.azure.connectionStringSecretKey }}
+{{- end }}
+{{- end }}
+
+{{/*
+Returns azure secrets
+*/}}
+{{- define "airbyte.storage.azure.secrets" }}
+{{- if .Values.global.storage.azure }}
+AZURE_STORAGE_CONNECTION_STRING: {{ .Values.global.storage.azure.connectionString | default "" }}
+{{- end }}
+{{- end }}
+
+{{/*
 Returns S3 environment variables.
 */}}
 {{- define "airbyte.storage.s3.envs" }}
@@ -67,7 +93,7 @@ Returns S3 secrets
 AWS_ACCESS_KEY_ID: {{ .Values.global.storage.s3.accessKeyId | default "" }}
 AWS_SECRET_ACCESS_KEY: {{ .Values.global.storage.s3.secretAccessKey | default "" }}
 {{- end }}
-{{- end}}
+{{- end }}
 
 {{/*
 Returns GCS environment variables.
@@ -180,6 +206,11 @@ Returns storage config environment variables.
 {{- include "airbyte.storage.minio.envs" . }}
 {{- end }}
 
+{{/* AZURE */}}
+{{- if eq $storageProvider "azure" }}
+{{- include "airbyte.storage.azure.envs" . }}
+{{- end }}
+
 {{/* LOCAl */}}
 {{- if eq $storageProvider "local" }}
 - name: LOCAL_ROOT
@@ -214,5 +245,10 @@ Returns storage config secrets.
 {{/* MINIO */}}
 {{- if eq $storageProvider "minio" }}
 {{- include "airbyte.storage.minio.secrets" . }}
+{{- end }}
+
+{{/* AZURE */}}
+{{- if eq $storageProvider "azure" }}
+{{- include "airbyte.storage.azure.secrets" . }}
 {{- end }}
 {{- end }}

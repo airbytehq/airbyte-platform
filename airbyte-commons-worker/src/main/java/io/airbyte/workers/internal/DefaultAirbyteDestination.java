@@ -27,7 +27,10 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -78,6 +81,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private final DestinationTimeoutMonitor destinationTimeoutMonitor;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
@@ -116,6 +120,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
     this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
     this.destinationCatalogGenerator = destinationCatalogGenerator;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Override
@@ -131,9 +136,33 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
     if (usesMapper) {
       LOGGER.info("Applying mapper transformation to destination catalog.");
     }
-    final ConfiguredAirbyteCatalog catalogToSendToDestination =
-        usesMapper ? destinationCatalogGenerator.generateDestinationCatalog(destinationConfig.getCatalog())
-            : destinationConfig.getCatalog();
+    final ConfiguredAirbyteCatalog catalogToSendToDestination;
+
+    if (usesMapper) {
+      DestinationCatalogGenerator.CatalogGenerationResult transformedCatalog =
+          destinationCatalogGenerator.generateDestinationCatalog(destinationConfig.getCatalog());
+
+      transformedCatalog.getErrors().entrySet().stream().forEach(error -> {
+        error.getValue().values().forEach(errorType -> {
+          switch (errorType) {
+            case DestinationCatalogGenerator.MapperError.MISSING_MAPPER:
+              metricClient.count(OssMetricsRegistry.MISSING_MAPPER, 1, new MetricAttribute(MetricTags.CONNECTION_ID,
+                  destinationConfig.getConnectionId().toString()));
+              break;
+            case DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG:
+              metricClient.count(OssMetricsRegistry.INVALID_MAPPER_CONFIG, 1, new MetricAttribute(MetricTags.CONNECTION_ID,
+                  destinationConfig.getConnectionId().toString()));
+              break;
+            default:
+              break;
+          }
+        });
+      });
+
+      catalogToSendToDestination = transformedCatalog.getCatalog();
+    } else {
+      catalogToSendToDestination = destinationConfig.getCatalog();
+    }
 
     LOGGER.info("Running destination...");
     destinationProcess = integrationLauncher.write(

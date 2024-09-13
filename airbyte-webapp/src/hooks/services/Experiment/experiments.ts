@@ -15,6 +15,7 @@ export interface Experiments {
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
+  "connection.timeline.schemaUpdates": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
@@ -22,7 +23,9 @@ export interface Experiments {
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
+  "connection.hashingUI": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
   "billing.organizationBillingPage": boolean;
+  "billing.workspaceUsagePage": boolean;
 }

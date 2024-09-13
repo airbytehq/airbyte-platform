@@ -1029,6 +1029,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_builder_projects/get_for_definition_id:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project by source definition ID
+      operationId: getConnectorBuilderProjectIdForDefinitionId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectForDefinitionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProjectForDefinitionResponse"
   /v1/connector_builder_projects/update_testing_values:
     post:
       tags:
@@ -1067,6 +1086,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectStreamRead"
+  /v1/connector_builder_projects/fork:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Creates a new builder project that is a fork of an existing source definition
+      operationId: createForkedConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectForkRequestBody"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
   /v1/connector_documentation/get:
     post:
       tags:
@@ -7588,7 +7626,7 @@ components:
         timeframeEnd:
           type: string
         quantity:
-          type: string
+          type: number
           format: double
     ConsumptionTimeWindow:
       type: string
@@ -7690,6 +7728,15 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         yamlManifest:
           type: string
+        baseActorDefinitionVersionId:
+          $ref: "#/components/schemas/NullableActorDefinitionVersionId"
+        contributionPullRequestUrl:
+          type: string
+          nullable: true
+        contributionActorDefinitionId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:
@@ -7707,6 +7754,41 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        baseActorDefinitionVersionInfo:
+          $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
+        contributionInfo:
+          $ref: "#/components/schemas/ContributionInfo"
+    BaseActorDefinitionVersionInfo:
+      type: object
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+        - actorDefinitionId
+        - icon
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        icon:
+          type: string
+        documentationUrl:
+          type: string
+    ContributionInfo:
+      type: object
+      required:
+        - pullRequestUrl
+        - actorDefinitionId
+      properties:
+        pullRequestUrl:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
@@ -7719,6 +7801,16 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         version:
           $ref: "#/components/schemas/ManifestVersion"
+    ConnectorBuilderProjectForkRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - baseActorDefinitionId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        baseActorDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     ExistingConnectorBuilderProjectWithWorkspaceId:
       type: object
       required:
@@ -7742,6 +7834,25 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProject:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    BuilderProjectForDefinitionRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - workspaceId
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    BuilderProjectForDefinitionResponse:
+      type: object
+      required:
+        - builderProjectId
+      properties:
+        builderProjectId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectRead:
       type: object
       required:
@@ -8880,6 +8991,10 @@ components:
     ActorDefinitionVersionId:
       type: string
       format: uuid
+    NullableActorDefinitionVersionId:
+      type: string
+      format: uuid
+      nullable: true
     ActorDefinitionVersionRead:
       type: object
       required:

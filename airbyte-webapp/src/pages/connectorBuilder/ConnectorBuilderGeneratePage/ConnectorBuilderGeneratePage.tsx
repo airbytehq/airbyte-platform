@@ -5,6 +5,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
+import { useBuilderAssistCreateConnectorMutation } from "components/connectorBuilder/Builder/Assist/assist";
 import { AssistWaiting } from "components/connectorBuilder/Builder/Assist/AssistWaiting";
 import {
   DEFAULT_CONNECTOR_NAME,
@@ -20,8 +21,8 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useBuilderAssistCreateConnectorMutation } from "core/api";
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import { useDebounceValue } from "core/utils/useDebounceValue";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import { ConnectorBuilderFormManagementStateProvider } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -39,9 +40,13 @@ interface GeneratorFormResponse {
 
 const ConnectorBuilderGeneratePageInner: React.FC = () => {
   const assistSessionId = useMemo(() => uuid(), []);
-
-  const { createAndNavigate, isLoading } = useCreateAndNavigate();
+  const { createAndNavigate, isLoading: isCreateLoading } = useCreateAndNavigate();
   const { mutateAsync: getAssistValues, isLoading: isAssistLoading } = useBuilderAssistCreateConnectorMutation();
+
+  // Ensure we don't show the loading spinner too early
+  const isLoading = isCreateLoading || isAssistLoading;
+  const debounceTime = isLoading ? 500 : 0;
+  const isLoadingWithDelay = useDebounceValue(isCreateLoading || isAssistLoading, debounceTime);
 
   // These are stored to ensure we persist form values even if the user skips the assist
   const [submittedAssistValues, setSubmittedAssistValues] = useState<GeneratorFormResponse | null>(null);
@@ -92,10 +97,10 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="2xl" className={styles.container}>
       <AirbyteTitle title={<FormattedMessage id="connectorBuilder.generatePage.prompt" />} />
-      {isAssistLoading ? (
+      {isLoadingWithDelay ? (
         <AssistWaiting onSkip={onSkip} />
       ) : (
-        <ConnectorBuilderGenerateForm isLoading={isLoading} onSubmit={onFormSubmit} onCancel={onCancel} />
+        <ConnectorBuilderGenerateForm isLoading={isCreateLoading} onSubmit={onFormSubmit} onCancel={onCancel} />
       )}
     </FlexContainer>
   );

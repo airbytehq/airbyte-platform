@@ -27,7 +27,8 @@ export const CloudSettingsPage: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage", false);
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage", false);
   const canManageOrganizationBilling = useGeneratedIntent("ManageOrganizationBilling");
 
   return (
@@ -95,7 +96,7 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
 
-          {isBillingInArrearsActive && (
+          {isWorkspaceUsagePageVisible && (
             <SettingsLink
               iconType="chart"
               name={formatMessage({ id: "settings.usage" })}
@@ -115,7 +116,7 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.members" })}
               to={CloudSettingsRoutePaths.OrganizationMembers}
             />
-            {isBillingInArrearsActive && canManageOrganizationBilling && (
+            {isOrganizationBillingPageVisible && canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}

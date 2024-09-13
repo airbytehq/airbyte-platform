@@ -55,7 +55,7 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
           ),
         )
       } catch (e: WorkerException) {
-        reportActivity.reportFailure(true)
+        reportActivity.reportFailure()
         throw RuntimeException(e)
       }
 
@@ -68,12 +68,12 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
       return failure()
     }
 
-    reportActivity.reportSuccess(true)
+    reportActivity.reportSuccess()
     return RefreshSchemaActivityOutput(postprocessResult.diff)
   }
 
   fun failure(): RefreshSchemaActivityOutput {
-    reportActivity.reportFailure(true)
+    reportActivity.reportFailure()
     return RefreshSchemaActivityOutput(null)
   }
 }

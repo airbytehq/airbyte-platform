@@ -4,10 +4,14 @@
 
 package io.airbyte.workers.storage
 
+import com.azure.core.util.BinaryData
+import com.azure.storage.blob.BlobClient
+import com.azure.storage.blob.BlobServiceClient
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
+import io.airbyte.commons.logging.AzureStorageConfig
 import io.airbyte.commons.logging.GcsStorageConfig
 import io.airbyte.commons.logging.LocalStorageConfig
 import io.airbyte.commons.logging.MinioStorageConfig
@@ -32,6 +36,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
@@ -47,6 +52,102 @@ class DocumentTypeTest {
     assertEquals(DocumentType.LOGS.prefix, Path.of("/job-logging"))
     assertEquals(DocumentType.STATE.prefix, Path.of("/state"))
     assertEquals(DocumentType.WORKLOAD_OUTPUT.prefix, Path.of("/workload/output"))
+  }
+}
+
+class AzureStorageClientTest {
+  private val config = AzureStorageConfig(buckets = buckets, connectionString = "connect")
+
+  @Test
+  fun `key matches`() {
+    val azureClient: BlobServiceClient = mockk()
+
+    val clientState = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    assertEquals("/state/$KEY", clientState.key(KEY))
+
+    val workloadState = AzureStorageClient(config = config, type = DocumentType.WORKLOAD_OUTPUT, azureClient = azureClient)
+    assertEquals("/workload/output/$KEY", workloadState.key(KEY))
+  }
+
+  @Test
+  fun `read missing doc`() {
+    val azureClient: BlobServiceClient = mockk()
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+      mockk {
+        every { getBlobClient(client.key(KEY)) } returns
+          mockk {
+            every { exists() } returns false
+          }
+      }
+
+    assertNull(client.read(KEY), "key $KEY should be null")
+  }
+
+  @Test
+  fun `read existing doc`() {
+    val azureClient: BlobServiceClient = mockk()
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+      mockk {
+        every { getBlobClient(client.key(KEY)) } returns
+          mockk {
+            every { exists() } returns true
+            every { downloadContent() } returns
+              mockk<BinaryData> BinaryData@{
+                every { this@BinaryData.toString() } returns DOC1
+              }
+          }
+      }
+
+    with(client.read(KEY)) {
+      assertNotNull(this, "key $KEY should not be null")
+      assertEquals(DOC1, this)
+    }
+  }
+
+  @Test
+  fun `write doc`() {
+    val azureClient: BlobServiceClient = mockk()
+    var blobClient: BlobClient = mockk()
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+      mockk { every { getBlobClient(client.key(KEY)) } returns blobClient }
+
+    every { blobClient.exists() } returns true
+    every { blobClient.upload(any<InputStream>()) } returns Unit
+
+    client.write(KEY, DOC1)
+    verify { blobClient.upload(any<InputStream>()) }
+  }
+
+  @Test
+  fun `delete doc`() {
+    val azureClient: BlobServiceClient = mockk()
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+
+    // doc not deleted
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+      mockk {
+        every { getBlobClient(client.key(KEY)) } returns
+          mockk {
+            every { deleteIfExists() } returns false
+          }
+      }
+    assertFalse(client.delete(KEY))
+
+    // doc deleted
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+      mockk {
+        every { getBlobClient(client.key(KEY)) } returns
+          mockk {
+            every { deleteIfExists() } returns true
+          }
+      }
+    assertTrue(client.delete(KEY))
   }
 }
 
@@ -183,7 +284,8 @@ class MinioStorageClientTest {
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      GetObjectRequest.builder()
+      GetObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -201,7 +303,8 @@ class MinioStorageClientTest {
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      GetObjectRequest.builder()
+      GetObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -223,7 +326,8 @@ class MinioStorageClientTest {
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      PutObjectRequest.builder()
+      PutObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -239,8 +343,18 @@ class MinioStorageClientTest {
     val s3Client: S3Client = mockk()
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
-    val existsRequest = HeadObjectRequest.builder().bucket(buckets.state).key(client.key(KEY)).build()
-    val deleteRequest = DeleteObjectRequest.builder().bucket(buckets.state).key(client.key(KEY)).build()
+    val existsRequest =
+      HeadObjectRequest
+        .builder()
+        .bucket(buckets.state)
+        .key(client.key(KEY))
+        .build()
+    val deleteRequest =
+      DeleteObjectRequest
+        .builder()
+        .bucket(buckets.state)
+        .key(client.key(KEY))
+        .build()
     val exception = NoSuchKeyException.builder().build()
 
     // doc does not exist
@@ -275,7 +389,8 @@ class S3StorageClientTest {
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      GetObjectRequest.builder()
+      GetObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -293,7 +408,8 @@ class S3StorageClientTest {
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      GetObjectRequest.builder()
+      GetObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -315,7 +431,8 @@ class S3StorageClientTest {
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
-      PutObjectRequest.builder()
+      PutObjectRequest
+        .builder()
         .bucket(buckets.state)
         .key(client.key(KEY))
         .build()
@@ -331,8 +448,18 @@ class S3StorageClientTest {
     val s3Client: S3Client = mockk()
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
-    val existsRequest = HeadObjectRequest.builder().bucket(buckets.state).key(client.key(KEY)).build()
-    val deleteRequest = DeleteObjectRequest.builder().bucket(buckets.state).key(client.key(KEY)).build()
+    val existsRequest =
+      HeadObjectRequest
+        .builder()
+        .bucket(buckets.state)
+        .key(client.key(KEY))
+        .build()
+    val deleteRequest =
+      DeleteObjectRequest
+        .builder()
+        .bucket(buckets.state)
+        .key(client.key(KEY))
+        .build()
     val exception = NoSuchKeyException.builder().build()
 
     // doc does not exist

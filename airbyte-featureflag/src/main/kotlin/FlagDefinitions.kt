@@ -138,8 +138,6 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
-object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
-
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
@@ -167,10 +165,6 @@ object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-lim
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
-
-object WorkloadLauncherEnabled : EnvVar(envVar = "WORKLOAD_LAUNCHER_ENABLED", default = false)
-
-object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED", default = false)
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 

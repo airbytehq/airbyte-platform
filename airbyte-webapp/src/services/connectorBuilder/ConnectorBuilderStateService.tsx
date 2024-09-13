@@ -32,6 +32,7 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
+  convertProjectDetailsReadToBuilderProject,
   HttpError,
   NewVersionBody,
   StreamReadTransformedSlices,
@@ -223,15 +224,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
 
   const currentProject: BuilderProject = useMemo(
-    () => ({
-      name: builderProject.builderProject.name,
-      version: builderProject.builderProject.activeDeclarativeManifestVersion
-        ? builderProject.builderProject.activeDeclarativeManifestVersion
-        : "draft",
-      id: builderProject.builderProject.builderProjectId,
-      hasDraft: builderProject.builderProject.hasDraft,
-      sourceDefinitionId: builderProject.builderProject.sourceDefinitionId,
-    }),
+    () => convertProjectDetailsReadToBuilderProject(builderProject.builderProject),
     [builderProject.builderProject]
   );
 
