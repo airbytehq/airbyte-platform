@@ -176,7 +176,8 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
           {isNamespaceRow(row) ? (
             <NamespaceNameCell
               row={row}
-              updateStreamField={onUpdateStreamConfigWithStreamNode}
+              streams={streams}
+              onStreamsChanged={replace}
               syncCheckboxDisabled={!!filtering.length}
               namespaceFormat={watchedNamespaceFormat}
               namespaceDefinition={watchedNamespaceDefinition}

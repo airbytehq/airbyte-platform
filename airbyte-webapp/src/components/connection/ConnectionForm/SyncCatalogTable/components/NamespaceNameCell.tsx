@@ -9,7 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { AirbyteStreamConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 
@@ -20,14 +20,16 @@ import { getColumnFilterValue } from "../utils";
 
 interface NamespaceNameCellProps extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat"> {
   row: Row<SyncCatalogUIModel>;
-  updateStreamField: (streamNode: SyncStreamFieldWithId, updatedConfig: Partial<AirbyteStreamConfiguration>) => void;
+  streams: SyncStreamFieldWithId[];
+  onStreamsChanged: (streams: SyncStreamFieldWithId[]) => void;
   syncCheckboxDisabled?: boolean;
   columnFilters: ColumnFilter[];
 }
 
 export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
   row,
-  updateStreamField,
+  streams,
+  onStreamsChanged,
   syncCheckboxDisabled,
   namespaceDefinition,
   namespaceFormat,
@@ -37,23 +39,6 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
   const { name: namespaceName } = row.original;
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
-
-  const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
-    setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
-
-    if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
-      setValue("namespaceFormat", value.namespaceFormat);
-    }
-  };
-
-  const onToggleAllStreamsSyncSwitch = ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) => {
-    if (!row.original.subRows) {
-      return;
-    }
-    row.original.subRows.forEach(({ streamNode }) => {
-      updateStreamField(streamNode!, { selected: checked });
-    });
-  };
 
   const [allEnabled, partiallyEnabled, countedStreams, totalCount, showTotalCount] = useMemo(() => {
     const subRows = row.original.subRows || [];
@@ -69,13 +54,41 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
     return [allEnabled, partiallyEnabled, counted, totalCount, showTotalCount];
   }, [row.original.subRows, columnFilters]);
 
+  const onToggleAllStreamsInNamespace = ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) => {
+    const updateStream = (stream: SyncStreamFieldWithId) =>
+      ({
+        ...stream,
+        config: { ...stream.config, selected: checked },
+      }) as SyncStreamFieldWithId;
+
+    // if we have the only one namespace
+    if (totalCount === streams.length) {
+      onStreamsChanged(streams.map(updateStream));
+      return;
+    }
+
+    // if we have multiple namespaces
+    const namespaceStreamFieldIds = row.original.subRows?.map(({ streamNode }) => streamNode?.id);
+    onStreamsChanged(
+      streams.map((stream) => (namespaceStreamFieldIds?.includes(stream.id) ? updateStream(stream) : stream))
+    );
+  };
+
+  const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
+    setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
+
+    if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
+      setValue("namespaceFormat", value.namespaceFormat);
+    }
+  };
+
   return (
     <FlexContainer alignItems="center">
       <CheckBox
         checkboxSize="sm"
         indeterminate={partiallyEnabled}
         checked={allEnabled}
-        onChange={onToggleAllStreamsSyncSwitch}
+        onChange={onToggleAllStreamsInNamespace}
         disabled={syncCheckboxDisabled || mode === "readonly"}
       />
       {namespaceName && (
