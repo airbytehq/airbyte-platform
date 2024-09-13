@@ -102,13 +102,20 @@ class HashingMapper : Mapper {
     record: AirbyteRecord,
   ) {
     val (targetField, method, fieldNameSuffix) = getConfigValues(config.config)
+    val outputFieldName = "$targetField$fieldNameSuffix"
 
     if (record.has(targetField)) {
-      val data = record.get(targetField).asString().toByteArray()
+      try {
+        val data = record.get(targetField).asString().toByteArray()
 
-      val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
-      record.set(targetField + fieldNameSuffix, hashedAndEncodeValue)
-      record.remove(targetField)
+        val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
+        record.set(outputFieldName, hashedAndEncodeValue)
+      } catch (e: Exception) {
+        // TODO We should use a more precise Reason once available in the protocol
+        record.trackFieldError(outputFieldName, AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
+      } finally {
+        record.remove(targetField)
+      }
     }
   }
 

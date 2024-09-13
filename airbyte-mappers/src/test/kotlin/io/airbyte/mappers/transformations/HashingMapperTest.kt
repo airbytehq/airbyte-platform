@@ -4,6 +4,7 @@ import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.mappers.transformations.HashingMapper.Companion.supportedMethods
 import io.mockk.spyk
@@ -113,9 +114,15 @@ class HashingMapperTest {
         ),
       )
 
-    assertThrows(IllegalArgumentException::class.java) {
-      hashingMapper.map(config, TestRecordAdapter(StreamDescriptor().withName("any"), mapOf("field1" to "anything")))
-    }
+    val record = TestRecordAdapter(StreamDescriptor().withName("any"), mapOf("field1" to "anything"))
+    hashingMapper.map(config, record)
+
+    assertFalse(record.has("field1"))
+    assertFalse(record.has("field1_hashed"))
+    assertEquals(
+      listOf(TestRecordAdapter.Change("field1_hashed", AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)),
+      record.changes,
+    )
   }
 
   @Test
