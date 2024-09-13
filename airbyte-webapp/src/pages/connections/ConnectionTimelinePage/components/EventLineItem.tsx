@@ -3,6 +3,7 @@ import { InferType } from "yup";
 import { Box } from "components/ui/Box";
 
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
+import { trackError } from "core/utils/datadog";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { ClearEventItem } from "./ClearEventItem";
@@ -93,5 +94,6 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
     );
   }
 
+  trackError(new Error("Invalid connection timeline event"), { event });
   return null;
 };
