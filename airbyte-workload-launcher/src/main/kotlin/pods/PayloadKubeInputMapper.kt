@@ -42,7 +42,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -62,46 +61,6 @@ class PayloadKubeInputMapper(
   private val featureFlagClient: FeatureFlagClient,
   @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
-  fun toKubeInput(
-    workloadId: String,
-    input: ReplicationInput,
-    sharedLabels: Map<String, String>,
-  ): OrchestratorKubeInput {
-    val jobId = input.getJobId()
-    val attemptId = input.getAttemptId()
-
-    val orchestratorPodName = podNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
-    val orchestratorImage: String = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorPodInfo =
-      KubePodInfo(
-        namespace,
-        orchestratorPodName,
-        KubeContainerInfo(orchestratorImage, orchestratorKubeContainerInfo.pullPolicy),
-      )
-
-    val orchestratorReqs = input.getOrchestratorResourceReqs()
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
-
-    val runtimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      )
-
-    return OrchestratorKubeInput(
-      labeler.getReplicationOrchestratorLabels(orchestratorKubeContainerInfo.image) + sharedLabels,
-      labeler.getSourceLabels() + sharedLabels,
-      labeler.getDestinationLabels() + sharedLabels,
-      nodeSelectors,
-      orchestratorPodInfo,
-      orchestratorReqs,
-      replicationWorkerConfigs.workerKubeAnnotations,
-      runtimeEnvVars,
-    )
-  }
-
   fun toReplicationKubeInput(
     workloadId: String,
     input: ReplicationInput,
@@ -399,17 +358,6 @@ class PayloadKubeInputMapper(
     )
   }
 }
-
-data class OrchestratorKubeInput(
-  val orchestratorLabels: Map<String, String>,
-  val sourceLabels: Map<String, String>,
-  val destinationLabels: Map<String, String>,
-  val nodeSelectors: Map<String, String>,
-  val kubePodInfo: KubePodInfo,
-  val resourceReqs: AirbyteResourceRequirements?,
-  val annotations: Map<String, String>,
-  val extraEnv: List<EnvVar>,
-)
 
 data class ReplicationKubeInput(
   val podName: String,

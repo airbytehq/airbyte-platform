@@ -8,9 +8,6 @@ class KubeClientException(
 ) : Throwable(message, cause)
 
 enum class PodType {
-  ORCHESTRATOR,
-  SOURCE,
-  DESTINATION,
   REPLICATION,
 }
 

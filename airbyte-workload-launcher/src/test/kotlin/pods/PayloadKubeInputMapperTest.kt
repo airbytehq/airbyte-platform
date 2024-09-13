@@ -30,7 +30,6 @@ import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getActorType
@@ -53,90 +52,6 @@ import java.util.stream.Stream
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 class PayloadKubeInputMapperTest {
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `builds a kube input from a replication payload (orchestrator)`(customConnector: Boolean) {
-    val serializer: ObjectSerializer = mockk()
-    val labeler: PodLabeler = mockk()
-    val envVarFactory: RuntimeEnvVarFactory = mockk()
-    val namespace = "test-namespace"
-    val podNameGenerator = PodNameGenerator(namespace = namespace)
-    val containerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val replSelectors = mapOf("test-selector" to "normal-repl")
-    val replCustomSelectors = mapOf("test-selector" to "custom-repl")
-    val checkConfigs: WorkerConfigs = mockk()
-    val discoverConfigs: WorkerConfigs = mockk()
-    val specConfigs: WorkerConfigs = mockk()
-    val replConfigs: WorkerConfigs = mockk()
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
-    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
-    every { replConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value2")
-    val ffClient: TestClient = mockk()
-    every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
-    every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
-
-    val mapper =
-      PayloadKubeInputMapper(
-        serializer,
-        labeler,
-        podNameGenerator,
-        namespace,
-        containerInfo,
-        replConfigs,
-        checkConfigs,
-        discoverConfigs,
-        specConfigs,
-        envVarFactory,
-        ffClient,
-        listOf(),
-      )
-    val input: ReplicationInput = mockk()
-
-    mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
-    val jobId = "415"
-    val attemptId = 7654L
-    val resourceReqs = ResourceRequirements()
-
-    every { input.getJobId() } returns jobId
-    every { input.getAttemptId() } returns attemptId
-    every { input.getOrchestratorResourceReqs() } returns resourceReqs
-    every { input.usesCustomConnector() } returns customConnector
-    every { input.jobRunConfig } returns mockk<JobRunConfig>()
-    every { input.sourceLauncherConfig } returns mockk<IntegrationLauncherConfig>()
-    every { input.destinationLauncherConfig } returns mockk<IntegrationLauncherConfig>()
-    every { input.connectionId } returns mockk<UUID>()
-    every { input.workspaceId } returns mockk<UUID>()
-
-    val mockSerializedOutput = "Serialized Obj."
-    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
-
-    val orchestratorLabels = mapOf("orchestrator" to "labels")
-    val sourceLabels = mapOf("source" to "labels")
-    val destinationLabels = mapOf("dest" to "labels")
-    val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getReplicationOrchestratorLabels(containerInfo.image) } returns orchestratorLabels
-    every { labeler.getSourceLabels() } returns sourceLabels
-    every { labeler.getDestinationLabels() } returns destinationLabels
-    val workloadId = UUID.randomUUID().toString()
-    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
-
-    assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
-    assert(result.sourceLabels == sourceLabels + sharedLabels)
-    assert(result.destinationLabels == destinationLabels + sharedLabels)
-    assert(result.nodeSelectors == if (customConnector) replCustomSelectors else replSelectors)
-    assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
-    assert(result.resourceReqs == resourceReqs)
-    assert(
-      result.extraEnv ==
-        listOf(
-          EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-          EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-          EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-          EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-        ),
-    )
-  }
-
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a replication payload (mono-pod)`(customConnector: Boolean) {

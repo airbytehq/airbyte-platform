@@ -11,32 +11,26 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
-import io.airbyte.featureflag.ReplicationMonoPod
-import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.input.setDestinationLabels
-import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.checkLauncherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.connectorKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.discoverLauncherInput
-import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replLauncherInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replicationKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.specLauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
-import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
@@ -78,9 +72,6 @@ class KubePodClientTest {
   private lateinit var replicationPodFactory: ReplicationPodFactory
 
   @MockK
-  private lateinit var orchestratorPodFactory: OrchestratorPodFactory
-
-  @MockK
   private lateinit var checkPodFactory: ConnectorPodFactory
 
   @MockK
@@ -114,7 +105,6 @@ class KubePodClientTest {
         kubePodLauncher = launcher,
         labeler = labeler,
         mapper = mapper,
-        orchestratorPodFactory = orchestratorPodFactory,
         replicationPodFactory = replicationPodFactory,
         checkPodFactory = checkPodFactory,
         discoverPodFactory = discoverPodFactory,
@@ -157,26 +147,11 @@ class KubePodClientTest {
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
-    every { mapper.toKubeInput(WORKLOAD_ID, replInput, sharedLabels) } returns replKubeInput
-    every { mapper.toKubeInput(WORKLOAD_ID, resetInput, sharedLabels) } returns replKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels, "/log/path") } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
 
-    every {
-      orchestratorPodFactory.create(
-        any(),
-        replKubeInput.orchestratorLabels,
-        replKubeInput.resourceReqs,
-        replKubeInput.nodeSelectors,
-        replKubeInput.kubePodInfo,
-        replKubeInput.annotations,
-        replKubeInput.extraEnv,
-      )
-    } returns pod
-
     every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns true
-    every { featureFlagClient.boolVariation(ReplicationMonoPod, any()) } returns false
 
     every {
       podFactory.create(
@@ -199,89 +174,14 @@ class KubePodClientTest {
   }
 
   @Test
-  fun `launchReplication starts an orchestrator and waits on all 3 pods`() {
-    val orchestrator =
-      PodBuilder()
-        .withNewMetadata()
-        .withName("special")
-        .endMetadata()
-        .build()
-
+  fun `launchReplication propagates pod creation error`() {
+    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
-      orchestratorPodFactory.create(
-        any(),
-        replKubeInput.orchestratorLabels,
-        replKubeInput.resourceReqs,
-        replKubeInput.nodeSelectors,
-        replKubeInput.kubePodInfo,
-        replKubeInput.annotations,
-        replKubeInput.extraEnv,
+      replicationPodFactory.create(
+        any(), any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(),
       )
-    } returns orchestrator
-
-    client.launchReplication(replInput, replLauncherInput)
-
-    verify { launcher.create(orchestrator) }
-
-    verify(exactly = 0) { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
-
-    verify(exactly = 0) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, any()) }
-
-    verify(exactly = 1) { launcher.waitForPodInitComplete(orchestrator, POD_INIT_TIMEOUT_VALUE) }
-
-    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-
-    verify { launcher.waitForPodReadyOrTerminalByPod(orchestrator, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE) }
-
-    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  fun `launchReplication starts an orchestrator and waits on all 2 pods for resets`() {
-    val orchestrator =
-      PodBuilder()
-        .withNewMetadata()
-        .withName("special")
-        .endMetadata()
-        .build()
-
-    every {
-      orchestratorPodFactory.create(
-        any(),
-        replKubeInput.orchestratorLabels,
-        replKubeInput.resourceReqs,
-        replKubeInput.nodeSelectors,
-        replKubeInput.kubePodInfo,
-        replKubeInput.annotations,
-        replKubeInput.extraEnv,
-      )
-    } returns orchestrator
-
-    client.launchReplication(resetInput, replLauncherInput)
-
-    verify(exactly = 0) { launcher.waitForPodInitStartup(orchestrator, POD_INIT_TIMEOUT_VALUE) }
-
-    verify(exactly = 0) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, any()) }
-
-    verify(exactly = 0) { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-
-    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  fun `launchReplication sets pass-through labels for propagation to source and destination`() {
-    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(WORKLOAD_ID, replInput, sharedLabels) } returns replKubeInput
-
-    client.launchReplication(replInput, replLauncherInput)
-
-    val inputWithLabels = replInput.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
-
-    verify { mapper.toKubeInput(WORKLOAD_ID, inputWithLabels, sharedLabels) }
-  }
-
-  @Test
-  fun `launchReplication propagates orchestrator creation error`() {
+    } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
@@ -290,40 +190,15 @@ class KubePodClientTest {
   }
 
   @Test
-  fun `launchReplication propagates orchestrator wait for init timeout as kube exception`() {
-    every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchReplication(replInput, replLauncherInput)
-    }
-  }
-
-  @Test
-  fun `launchReplication propagates orchestrator init failures as normal errors`() {
-    every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
-
-    assertThrows<RuntimeException> {
-      client.launchReplication(replInput, replLauncherInput)
-    }
-  }
-
-  @Test
-  fun `launchReplication propagates source wait for init error`() {
-    every { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchReplication(replInput, replLauncherInput)
-    }
-  }
-
-  @Test
-  fun `launchReplication propagates destination wait for init error`() {
+  fun `launchReplication propagates pod wait for init timeout as kube exception`() {
+    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
-      launcher.waitForPodReadyOrTerminal(
-        replKubeInput.destinationLabels,
-        REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE,
+      replicationPodFactory.create(
+        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
       )
-    } throws RuntimeException("bang")
+    } returns pod
+    every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
 
     assertThrows<KubeClientException> {
       client.launchReplication(replInput, replLauncherInput)
@@ -559,8 +434,6 @@ class KubePodClientTest {
     every { syncResourceRequirements.source } returns resourceRequirements
     replInput.withSyncResourceRequirements(syncResourceRequirements)
     every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
-    every { featureFlagClient.boolVariation(ReplicationMonoPod, any()) } returns true
-    every { featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, any()) } returns 32
     every {
       replicationPodFactory.create(
         kubeInput.podName,
@@ -617,17 +490,10 @@ class KubePodClientTest {
     every { syncResourceRequirements.source } returns resourceRequirements
     replInput.withSyncResourceRequirements(syncResourceRequirements)
     every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
-    every { featureFlagClient.boolVariation(ReplicationMonoPod, any()) } returns true
-    every { featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, any()) } returns 32
     every {
-      orchestratorPodFactory.create(
-        replInput.connectionId,
-        kubeInput.labels,
-        resourceRequirements,
-        kubeInput.nodeSelectors,
-        any(),
-        kubeInput.annotations,
-        kubeInput.orchestratorRuntimeEnvVars,
+      replicationPodFactory.create(
+        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
       )
     } returns pod
 
@@ -636,13 +502,12 @@ class KubePodClientTest {
       launcherInput = replLauncherInput,
     )
 
-    verify(exactly = 1) { orchestratorPodFactory.create(any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { launcher.create(pod) }
     verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
   }
 
   @Test
-  internal fun testLaunchingMonoPodWithError() {
+  internal fun `launch replication handles error case`() {
     val kubeInput =
       ReplicationKubeInput(
         podName = "podName",
@@ -661,7 +526,10 @@ class KubePodClientTest {
       )
     every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
     every {
-      replicationPodFactory.create(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+      replicationPodFactory.create(
+        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
+      )
     } returns pod
     every { launcher.create(pod) } throws RuntimeException("test")
 
@@ -678,16 +546,21 @@ class KubePodClientTest {
   }
 
   object Fixtures {
-    val replKubeInput =
-      OrchestratorKubeInput(
-        mapOf("test-orch-label" to "val1"),
-        mapOf("test-source-label" to "val2"),
-        mapOf("test-dest-label" to "val3"),
-        mapOf("test-selector" to "val4"),
-        KubePodInfo("test-namespace", "test-name", null),
-        ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
-        mapOf("test-annotation" to "val6"),
-        listOf(EnvVar("extra-env", "val7", null)),
+    val replicationKubeInput =
+      ReplicationKubeInput(
+        "pod-name",
+        emptyMap(),
+        emptyMap(),
+        emptyMap(),
+        "orchestrator-image",
+        "source-image",
+        "destination-image",
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        emptyList(),
+        emptyList(),
+        emptyList(),
       )
 
     val connectorKubeInput =

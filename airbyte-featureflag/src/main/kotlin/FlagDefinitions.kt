@@ -174,20 +174,11 @@ object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-st
 
 object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
 
-object RefreshConfigBeforeSecretHydrationInitContainer : Temporary<Boolean>(
-  key = "platform.refresh-config-before-secret-hydration-init-container",
-  default = false,
-)
-
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
 object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
 
-object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = true)
-
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
-
-object ReplicationMonoPodMemoryTolerance : Temporary<Int>(key = "platform.replication-mono-pod-memory-tolerance-gb", default = 256)
 
 object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
 
