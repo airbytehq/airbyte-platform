@@ -4,15 +4,13 @@ import {
   ExpandedState,
   flexRender,
   getCoreRowModel,
-  getExpandedRowModel,
-  getFilteredRowModel,
   getGroupedRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import classnames from "classnames";
 import set from "lodash/set";
-import React, { FC, useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
+import React, { FC, useCallback, useMemo, useState, useDeferredValue } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
@@ -46,6 +44,8 @@ import { StreamFieldNameCell } from "./components/StreamFieldCell";
 import { StreamNameCell } from "./components/StreamNameCell";
 import { FilterTabId, StreamsFilterTabs } from "./components/StreamsFilterTabs";
 import { SyncModeCell } from "./components/SyncModeCell";
+import { getExpandedRowModel } from "./getExpandedRowModel";
+import { getFilteredRowModel } from "./getFilteredRowModel";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getRowChangeStatus, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
@@ -330,6 +330,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   });
 
   const rows = getRowModel().rows;
+
   const initialTopMostItemIndex = useInitialRowIndex(rows);
 
   const [isAllStreamRowsExpanded, setIsAllStreamRowsExpanded] = useState(false);
@@ -346,22 +347,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     },
     [initialExpandedState, toggleAllRowsExpanded]
   );
-
-  useEffect(() => {
-    // collapse all rows if global filter is empty and all rows are expanded
-    if (!filtering && isAllStreamRowsExpanded) {
-      toggleAllStreamRowsExpanded(false);
-      return;
-    }
-
-    // if global filter is empty or all rows already expanded then return
-    if (!filtering || (filtering && isAllStreamRowsExpanded)) {
-      return;
-    }
-
-    toggleAllStreamRowsExpanded(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtering]);
 
   const Table: TableComponents["Table"] = ({ style, ...props }) => (
     <table className={classnames(styles.table)} {...props} style={style} />
@@ -480,6 +465,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
               // We do not want to submit the connection form when pressing Enter in the search field
               e.key === "Enter" && e.preventDefault();
             }}
+            data-testid="sync-catalog-search"
           />
           <FlexContainer>
             <FlexContainer justifyContent="flex-end" alignItems="center" direction="row" gap="lg">
