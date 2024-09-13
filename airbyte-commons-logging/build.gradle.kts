@@ -13,6 +13,8 @@ dependencies {
   api(libs.commons.io)
 
   // Dependencies for specific cloud clients
+  // TODO: This is deprecated, but required to make the real van logging solution happy.
+  implementation("com.microsoft.azure:azure-storage:8.6.6")
   api(libs.azure.storage)
   api(libs.aws.java.sdk.s3)
   api(libs.aws.java.sdk.sts)
