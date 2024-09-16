@@ -93,7 +93,9 @@ export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof
       </Box>
     );
   }
-
-  trackError(new Error("Invalid connection timeline event"), { event });
+  // if the event was created after jul 20, 2024 (when we guaranteed began logging complete events) log the event
+  if (!event.createdAt || event.createdAt > 1721433600) {
+    trackError(new Error("Invalid connection timeline event"), { event });
+  }
   return null;
 };
