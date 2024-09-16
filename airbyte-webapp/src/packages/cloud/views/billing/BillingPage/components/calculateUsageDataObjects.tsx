@@ -223,15 +223,6 @@ function appendTimeframeUsage(
 
   if (existingTimeChunk) {
     existingTimeChunk[usageType] += timeframeUsage.quantity;
-  } else {
-    usagePerTimeChunk.push({
-      timeChunkLabel,
-      freeUsage: usageType === "freeUsage" ? timeframeUsage.quantity : 0,
-      billedCost: usageType === "billedCost" ? timeframeUsage.quantity : 0,
-      internalUsage: usageType === "internalUsage" ? timeframeUsage.quantity : 0,
-      startTime: timeframeUsage.timeframeStart,
-      endTime: timeframeUsage.timeframeEnd,
-    });
   }
 }
 

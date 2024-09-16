@@ -1,7 +1,6 @@
 import { HTMLAttributes, Ref, forwardRef, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
-import { InferType } from "yup";
 
 import { LoadingPage } from "components";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -16,7 +15,6 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 
 import { EventLineItem } from "./components/EventLineItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
-import { jobRunningSchema } from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
 
 // Virtuoso's `List` ref is an HTMLDivElement so we're coercing some types here
@@ -61,25 +59,28 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     createdAtEnd: filterValues.endDate !== "" ? filterValues.endDate : undefined,
   });
 
-  const showRunningJob =
-    isRunning &&
-    !!syncProgressData &&
-    (filterValues.endDate === "" || parseInt(filterValues.endDate) > (syncProgressData.syncStartedAt ?? 0)) &&
-    (filterValues.startDate === "" || parseInt(filterValues.startDate) < (syncProgressData.syncStartedAt ?? 0)) &&
-    filterValues.status === "" &&
-    (filterValues.eventCategory === "" ||
-      filterValues.eventCategory === syncProgressData.configType ||
-      (filterValues.eventCategory === "clear" && syncProgressData.configType === "reset_connection"));
+  const endDateShowRunningJob =
+    filterValues.endDate === "" || parseInt(filterValues.endDate) > (syncProgressData?.syncStartedAt ?? 0);
+  const startDateShowRunningJob =
+    filterValues.startDate === "" || parseInt(filterValues.startDate) < (syncProgressData?.syncStartedAt ?? 0);
+  const statusFilterShowRunningJob =
+    filterValues.status === "" ||
+    filterValues.eventCategory === syncProgressData?.configType ||
+    (filterValues.eventCategory === "clear" && syncProgressData?.configType === "reset_connection");
+
+  const filtersShouldShowRunningJob = startDateShowRunningJob && endDateShowRunningJob && statusFilterShowRunningJob;
+
+  const showRunningJob = isRunning && !!syncProgressData && filtersShouldShowRunningJob;
 
   const connectionEventsToShow = useMemo(() => {
     const events = [
-      ...(showRunningJob
+      ...(showRunningJob && !!syncProgressData.jobId && !!syncProgressData.syncStartedAt
         ? [
             {
               id: "running",
               eventType: "RUNNING_JOB",
               connectionId: connection.connectionId,
-              createdAt: syncProgressData.syncStartedAt,
+              createdAt: syncProgressData.syncStartedAt ?? Date.now() / 1000,
               summary: {
                 streams: syncProgressData.streams.map((stream) => {
                   return {
@@ -91,7 +92,8 @@ export const ConnectionTimelineAllEventsList: React.FC<{
                 configType: syncProgressData.configType,
                 jobId: syncProgressData.jobId,
               },
-            } as unknown as InferType<typeof jobRunningSchema>,
+              user: { email: "", name: "", id: "" },
+            },
           ]
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),

@@ -7,7 +7,7 @@ import io.airbyte.config.Field
 import io.airbyte.config.MapperOperationName
 import io.airbyte.mappers.transformations.HashingMapper
 
-internal const val DEFAULT_HASHING_METHOD = HashingMapper.SHA1
+internal const val DEFAULT_HASHING_METHOD = HashingMapper.SHA256
 internal const val DEFAULT_HASHING_SUFFIX = "_hashed"
 
 /**

@@ -15,6 +15,7 @@ typealias ModelConnectorRollout = io.airbyte.config.ConnectorRollout
 fun EntityConnectorRolloutStateType.toConfigModel(): ModelConnectorRolloutStateType {
   return when (this) {
     EntityConnectorRolloutStateType.initialized -> ModelConnectorRolloutStateType.INITIALIZED
+    EntityConnectorRolloutStateType.workflow_started -> ModelConnectorRolloutStateType.WORKFLOW_STARTED
     EntityConnectorRolloutStateType.in_progress -> ModelConnectorRolloutStateType.IN_PROGRESS
     EntityConnectorRolloutStateType.paused -> ModelConnectorRolloutStateType.PAUSED
     EntityConnectorRolloutStateType.finalizing -> ModelConnectorRolloutStateType.FINALIZING
@@ -28,6 +29,7 @@ fun EntityConnectorRolloutStateType.toConfigModel(): ModelConnectorRolloutStateT
 fun ModelConnectorRolloutStateType.toEntity(): EntityConnectorRolloutStateType {
   return when (this) {
     ModelConnectorRolloutStateType.INITIALIZED -> EntityConnectorRolloutStateType.initialized
+    ModelConnectorRolloutStateType.WORKFLOW_STARTED -> EntityConnectorRolloutStateType.workflow_started
     ModelConnectorRolloutStateType.IN_PROGRESS -> EntityConnectorRolloutStateType.in_progress
     ModelConnectorRolloutStateType.PAUSED -> EntityConnectorRolloutStateType.paused
     ModelConnectorRolloutStateType.FINALIZING -> EntityConnectorRolloutStateType.finalizing
@@ -57,21 +59,22 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout {
   return ModelConnectorRollout()
     .withId(this.id)
+    .withWorkflowRunId(this.workflowRunId)
     .withActorDefinitionId(this.actorDefinitionId)
     .withReleaseCandidateVersionId(this.releaseCandidateVersionId)
     .withInitialVersionId(this.initialVersionId)
     .withState(this.state.toConfigModel())
-    .withInitialRolloutPct(this.initialRolloutPct.toLong())
+    .withInitialRolloutPct(this.initialRolloutPct?.toLong())
     .withCurrentTargetRolloutPct(this.currentTargetRolloutPct?.toLong())
-    .withFinalTargetRolloutPct(this.finalTargetRolloutPct.toLong())
+    .withFinalTargetRolloutPct(this.finalTargetRolloutPct?.toLong())
     .withHasBreakingChanges(this.hasBreakingChanges)
-    .withRolloutStrategy(this.rolloutStrategy.toConfigModel())
-    .withMaxStepWaitTimeMins(this.maxStepWaitTimeMins.toLong())
+    .withRolloutStrategy(this.rolloutStrategy?.toConfigModel())
+    .withMaxStepWaitTimeMins(this.maxStepWaitTimeMins?.toLong())
     .withUpdatedBy(this.updatedBy)
     .withCreatedAt(this.createdAt?.toEpochSecond())
     .withUpdatedAt(this.updatedAt?.toEpochSecond())
     .withCompletedAt(this.completedAt?.toEpochSecond())
-    .withExpiresAt(this.expiresAt.toEpochSecond())
+    .withExpiresAt(this.expiresAt?.toEpochSecond())
     .withErrorMsg(this.errorMsg)
     .withFailedReason(this.failedReason)
 }
@@ -79,21 +82,22 @@ fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout {
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout {
   return EntityConnectorRollout(
     id = this.id,
+    workflowRunId = this.workflowRunId,
     actorDefinitionId = this.actorDefinitionId,
     releaseCandidateVersionId = this.releaseCandidateVersionId,
     initialVersionId = this.initialVersionId,
     state = this.state.toEntity(),
-    initialRolloutPct = this.initialRolloutPct.toInt(),
+    initialRolloutPct = this.initialRolloutPct?.toInt(),
     currentTargetRolloutPct = this.currentTargetRolloutPct?.toInt(),
-    finalTargetRolloutPct = this.finalTargetRolloutPct.toInt(),
+    finalTargetRolloutPct = this.finalTargetRolloutPct?.toInt(),
     hasBreakingChanges = this.hasBreakingChanges,
-    rolloutStrategy = this.rolloutStrategy.toEntity(),
-    maxStepWaitTimeMins = this.maxStepWaitTimeMins.toInt(),
+    rolloutStrategy = this.rolloutStrategy?.toEntity(),
+    maxStepWaitTimeMins = this.maxStepWaitTimeMins?.toInt(),
     updatedBy = this.updatedBy,
-    createdAt = this.createdAt.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
-    updatedAt = this.updatedAt.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+    createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+    updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     completedAt = this.completedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
-    expiresAt = this.expiresAt.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+    expiresAt = this.expiresAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
   )

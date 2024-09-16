@@ -16,7 +16,7 @@ import { updatePrimaryKey } from "../../../syncCatalog/SyncCatalog/streamConfigH
 import { checkCursorAndPKRequirements, getFieldPathType } from "../../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { pathDisplayName } from "../utils";
+import { checkIsFieldHashed, pathDisplayName } from "../utils";
 
 interface NextPKCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -36,9 +36,23 @@ export const PKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) =>
   const pkOptions: Option[] =
     row.original.subRows
       ?.filter((subRow) => subRow?.field && !SyncSchemaFieldObject.isNestedField(subRow?.field))
-      .map((subRow) => subRow?.field?.cleanedName ?? "")
-      .sort()
-      .map((name) => ({ value: name })) ?? [];
+      .map<SyncCatalogUIModel & { disabled?: boolean; disabledReason?: React.ReactNode }>((subRow) => {
+        const { field, streamNode } = subRow;
+        // typescript validation
+        if (!field || !streamNode?.config || field.path.length > 1) {
+          return subRow;
+        }
+        return checkIsFieldHashed(field, streamNode.config) ? { ...subRow, disabled: true } : subRow;
+      })
+      .map((subRow) => ({ subRow, cleanedName: subRow?.field?.cleanedName ?? "" }))
+      .sort((a, b) => {
+        return a.cleanedName.localeCompare(b.cleanedName);
+      })
+      .map(({ cleanedName, subRow }) => ({
+        value: cleanedName,
+        disabled: subRow.disabled,
+        disabledReason: <FormattedMessage id="connectionForm.hashing.preventing.tip" />,
+      })) ?? [];
 
   const pkConfigValidationError: ValidationError | undefined = get(
     errors,

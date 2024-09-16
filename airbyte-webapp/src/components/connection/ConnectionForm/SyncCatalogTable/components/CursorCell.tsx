@@ -18,7 +18,7 @@ import { updateCursorField } from "../../../syncCatalog/SyncCatalog/streamConfig
 import { checkCursorAndPKRequirements, getFieldPathType } from "../../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { pathDisplayName } from "../utils";
+import { checkIsFieldHashed, pathDisplayName } from "../utils";
 
 interface NextCursorCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -39,9 +39,23 @@ export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamFie
   const cursorOptions: Option[] =
     row.original.subRows
       ?.filter((subRow) => subRow?.field && !SyncSchemaFieldObject.isNestedField(subRow?.field))
-      .map((subRow) => subRow?.field?.cleanedName ?? "")
-      .sort()
-      .map((name) => ({ value: name })) ?? [];
+      .map<SyncCatalogUIModel & { disabled?: boolean; disabledReason?: React.ReactNode }>((subRow) => {
+        const { field, streamNode } = subRow;
+        // typescript validation
+        if (!field || !streamNode?.config || field.path.length > 1) {
+          return subRow;
+        }
+        return checkIsFieldHashed(field, streamNode.config) ? { ...subRow, disabled: true } : subRow;
+      })
+      .map((subRow) => ({ subRow, cleanedName: subRow?.field?.cleanedName ?? "" }))
+      .sort((a, b) => {
+        return a.cleanedName.localeCompare(b.cleanedName);
+      })
+      .map(({ cleanedName, subRow }) => ({
+        value: cleanedName,
+        disabled: subRow.disabled,
+        disabledReason: <FormattedMessage id="connectionForm.hashing.preventing.tip" />,
+      })) ?? [];
 
   const cursorValue =
     cursorType === "sourceDefined"

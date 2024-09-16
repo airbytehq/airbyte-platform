@@ -10,6 +10,7 @@ import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
+import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
@@ -86,6 +87,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}
       supportLevel={selectedSourceDefinition?.supportLevel}
+      leftFooterSlot={selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}
     />
   );
 };

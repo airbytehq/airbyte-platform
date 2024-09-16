@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.AirbyteRecordMessageMeta
+import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
 
 class JsonValueAdapter(private val node: JsonNode) : Value {
   override fun asBoolean(): Boolean = node.asBoolean()
@@ -38,6 +40,30 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
     data.set<JsonNode>(fieldName, createNode(value))
   }
 
+  override fun trackFieldError(
+    fieldName: String,
+    change: AirbyteRecord.Change,
+    reason: AirbyteRecord.Reason,
+  ) {
+    val metaChange =
+      AirbyteRecordMessageMetaChange()
+        .withChange(change.toProtocol())
+        .withField(fieldName)
+        .withReason(reason.toProtocol())
+
+    // handling all the cascading layers of potential null objects
+    // very thread-unsafe
+    if (message.record != null) {
+      if (message.record.meta == null) {
+        message.record.withMeta(AirbyteRecordMessageMeta().withChanges(mutableListOf()))
+      }
+      if (message.record.meta.changes == null) {
+        message.record.meta.withChanges(mutableListOf())
+      }
+      message.record.meta.changes.add(metaChange)
+    }
+  }
+
   private fun <T : Any> createNode(value: T): JsonNode =
     when (value) {
       is Boolean -> BooleanNode.valueOf(value)
@@ -45,5 +71,16 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
       is Int -> IntNode.valueOf(value)
       is String -> TextNode.valueOf(value)
       else -> TODO("Unsupported type ${value::class.java.name}")
+    }
+
+  private fun AirbyteRecord.Change.toProtocol() =
+    when (this) {
+      AirbyteRecord.Change.NULLED -> AirbyteRecordMessageMetaChange.Change.NULLED
+      AirbyteRecord.Change.TRUNCATED -> AirbyteRecordMessageMetaChange.Change.TRUNCATED
+    }
+
+  private fun AirbyteRecord.Reason.toProtocol() =
+    when (this) {
+      AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR -> AirbyteRecordMessageMetaChange.Reason.PLATFORM_SERIALIZATION_ERROR
     }
 }

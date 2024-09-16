@@ -19,6 +19,7 @@ import {
   updateDeclarativeManifestVersion,
   getDeclarativeManifestBaseImage,
   createForkedConnectorBuilderProject,
+  getConnectorBuilderProjectIdForDefinitionId,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -39,6 +40,7 @@ import {
   ContributionInfo,
   ConnectorBuilderProjectDetailsRead,
   SourceDefinitionId,
+  BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -54,6 +56,8 @@ const connectorBuilderProjectsKeys = {
   read: (projectId?: string, streamName?: string) =>
     [...connectorBuilderProjectsKeys.all, "read", projectId, streamName] as const,
   getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
+  getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
+    [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
 };
 
 export interface BuilderProject {
@@ -70,6 +74,8 @@ export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  contributionPullRequestUrl?: string;
+  contributionActorDefinitionId?: string;
 }
 
 export const useListBuilderProjects = () => {
@@ -259,9 +265,19 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest }) =>
+    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
       updateConnectorBuilderProject(
-        { workspaceId, builderProjectId: projectId, builderProject: { name, draftManifest: manifest, yamlManifest } },
+        {
+          workspaceId,
+          builderProjectId: projectId,
+          builderProject: {
+            name,
+            draftManifest: manifest,
+            yamlManifest,
+            contributionActorDefinitionId,
+            contributionPullRequestUrl,
+          },
+        },
         requestOptions
       ),
     {
@@ -554,5 +570,25 @@ export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequest
   return useQuery<DeclarativeManifestBaseImageRead>(
     connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
     () => getDeclarativeManifestBaseImage(params, requestOptions)
+  );
+};
+
+export const useGetBuilderProjectIdByDefinitionId = (sourceDefinitionId: string | undefined) => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useQuery<BuilderProjectForDefinitionResponse>(
+    connectorBuilderProjectsKeys.getProjectForDefinition(sourceDefinitionId),
+    () => {
+      if (sourceDefinitionId) {
+        return getConnectorBuilderProjectIdForDefinitionId(
+          { workspaceId, actorDefinitionId: sourceDefinitionId },
+          requestOptions
+        );
+      }
+      return {
+        builderProjectId: null,
+      };
+    }
   );
 };

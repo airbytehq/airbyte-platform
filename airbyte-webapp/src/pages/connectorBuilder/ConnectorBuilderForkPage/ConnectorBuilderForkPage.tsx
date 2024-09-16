@@ -18,24 +18,24 @@ import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/
 import styles from "./ConnectorBuilderForkPage.module.scss";
 import { AirbyteTitle } from "../components/AirbyteTitle";
 import { BackButton } from "../components/BackButton";
+import { useBuilderCompatibleSourceDefinitions } from "../components/useBuilderCompatibleSourceDefinitions";
 import { useCreateAndNavigate } from "../components/useCreateAndNavigate";
-import { useManifestOnlySourceDefinitions } from "../components/useManifestOnlySourceDefinitions";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 const ConnectorBuilderForkPageInner: React.FC = () => {
   const { formatMessage } = useIntl();
 
   const projects = useListBuilderProjects();
-  const { manifestOnlySourceDefinitions, sourceDefinitionMap } = useManifestOnlySourceDefinitions();
+  const { builderCompatibleSourceDefinitions, sourceDefinitionMap } = useBuilderCompatibleSourceDefinitions();
 
   const { createAndNavigate, forkAndNavigate, isLoading: isCreating } = useCreateAndNavigate();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (projects.length === 0 && manifestOnlySourceDefinitions.length === 0) {
+    if (projects.length === 0 && builderCompatibleSourceDefinitions.length === 0) {
       navigate(ConnectorBuilderRoutePaths.Create, { replace: true });
     }
-  }, [manifestOnlySourceDefinitions.length, navigate, projects.length]);
+  }, [builderCompatibleSourceDefinitions.length, navigate, projects.length]);
 
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const selection = useMemo(() => {
@@ -61,7 +61,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
       return { label: project.name, value: project.id };
     });
 
-    const sourceDefinitionOptions: Option[] = manifestOnlySourceDefinitions.map((sourceDefinition) => {
+    const sourceDefinitionOptions: Option[] = builderCompatibleSourceDefinitions.map((sourceDefinition) => {
       return {
         label: sourceDefinition.name,
         value: sourceDefinition.sourceDefinitionId,
@@ -73,7 +73,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
       { sectionTitle: "AIRBYTE", innerOptions: sourceDefinitionOptions },
       { sectionTitle: "Custom", innerOptions: builderProjectOptions },
     ];
-  }, [manifestOnlySourceDefinitions, projects]);
+  }, [builderCompatibleSourceDefinitions, projects]);
 
   const selectedProject = useMemo(
     () => (selection && selection.type === "builderProject" ? selection.project : undefined),

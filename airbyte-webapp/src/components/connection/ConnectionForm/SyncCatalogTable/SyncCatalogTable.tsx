@@ -103,8 +103,6 @@ export interface SyncCatalogUIModel {
 export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
   const { formatMessage } = useIntl();
   const { mode, connection } = useConnectionFormService();
-  const isHashingSupported = useFeature(FeatureItem.FieldHashing);
-  const isHashingEnabled = useExperiment("connection.hashingUI", false);
   const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const {
@@ -118,6 +116,10 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   const prefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
+
+  const isHashingSupported = useFeature(FeatureItem.FieldHashing);
+  const isHashingEnabled = useExperiment("connection.hashingUI", false);
+  const showHashing = isHashingSupported && isHashingEnabled;
 
   const debugTable = false;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -204,6 +206,26 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         tdClassName: styles.streamOrFieldNameCell,
       },
     }),
+    columnHelper.display({
+      id: "hashing",
+      cell: ({ row }) =>
+        isNamespaceRow(row) ? (
+          <FlexContainer alignItems="center" gap="none">
+            <Text size="sm" color="grey500">
+              <FormattedMessage id="connectionForm.hashing.title" />
+            </Text>
+            <InfoTooltip>
+              <FormattedMessage id="connectionForm.hashing.info" />
+            </InfoTooltip>
+          </FlexContainer>
+        ) : isStreamRow(row) ? null : (
+          <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+        ),
+      meta: {
+        thClassName: styles.hashCell,
+        tdClassName: styles.hashCell,
+      },
+    }),
     columnHelper.accessor("syncMode", {
       header: () => (
         <FlexContainer alignItems="center" gap="none">
@@ -229,8 +251,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
           </FlexContainer>
         ) : isStreamRow(row) ? (
           <SyncModeCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
-        ) : isHashingEnabled && isHashingSupported ? (
-          <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : null,
       meta: {
         thClassName: styles.syncModeCell,
@@ -309,6 +329,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       columnFilters,
       columnVisibility: {
         "stream.selected": false,
+        hashing: showHashing,
       },
     },
     initialState: {
@@ -497,6 +518,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
         totalCount={rows.length}
+        style={{ minHeight: 80 }} // namespace row height + stream row height
         initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
           Table,

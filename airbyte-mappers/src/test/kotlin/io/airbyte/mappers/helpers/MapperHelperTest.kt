@@ -45,7 +45,7 @@ class MapperHelperTest {
         config =
           mapOf(
             "targetField" to fieldName,
-            "method" to "SHA-1",
+            "method" to "SHA-256",
             "fieldNameSuffix" to "_hashed",
           ),
       )

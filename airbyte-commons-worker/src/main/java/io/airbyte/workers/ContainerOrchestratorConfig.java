@@ -5,8 +5,8 @@
 package io.airbyte.workers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.storage.StorageClient;
 import io.airbyte.config.Configs.WorkerEnvironment;
-import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.Map;

@@ -32,6 +32,7 @@ class DestinationCatalogGeneratorTest {
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
                   "properties" to mapOf("field1" to mapOf("type" to "string")),
+                  "additionalProperties" to true,
                 ),
               ),
             supportedSyncModes = listOf(),
@@ -47,6 +48,270 @@ class DestinationCatalogGeneratorTest {
     val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
     assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.catalog.streams[0].stream.jsonSchema)
+  }
+
+  @Test
+  fun testPreserveInitialCatalog() {
+    val catalogJson =
+      """
+            {
+        "streams": [
+          {
+            "fields": [
+              {
+                "name": "id",
+                "type": "STRING"
+              },
+              {
+                "name": "name",
+                "type": "STRING"
+              },
+              {
+                "name": "type",
+                "type": "STRING"
+              },
+              {
+                "name": "remote_id",
+                "type": "UNKNOWN"
+              },
+              {
+                "name": "created_at",
+                "type": "STRING"
+              },
+              {
+                "name": "modified_at",
+                "type": "STRING"
+              },
+              {
+                "name": "remote_data",
+                "type": "UNKNOWN"
+              },
+              {
+                "name": "parent_group",
+                "type": "UNKNOWN"
+              },
+              {
+                "name": "field_mappings",
+                "type": "UNKNOWN"
+              },
+              {
+                "name": "remote_was_deleted",
+                "type": "BOOLEAN"
+              }
+            ],
+            "stream": {
+              "name": "groups",
+              "json_schema": {
+                "type": "object",
+                "${'$'}schema": "http://json-schema.org/schema#",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "remote_id": {
+                    "type": "null"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "modified_at": {
+                    "type": "string"
+                  },
+                  "remote_data": {
+                    "type": "null"
+                  },
+                  "parent_group": {
+                    "type": "null"
+                  },
+                  "field_mappings": {
+                    "type": "null"
+                  },
+                  "remote_was_deleted": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "default_cursor_field": [
+                "modified_at"
+              ],
+              "supported_sync_modes": [
+                "full_refresh",
+                "incremental"
+              ],
+              "source_defined_cursor": true,
+              "source_defined_primary_key": [
+                [
+                  "id"
+                ]
+              ]
+            },
+            "mappers": [],
+            "sync_mode": "incremental",
+            "primary_key": [
+              [
+                "id"
+              ]
+            ],
+            "cursor_field": [
+              "modified_at"
+            ],
+            "destination_sync_mode": "append"
+          }
+        ]
+      }
+      """.trimIndent()
+    val catalogParsed = Jsons.deserialize(catalogJson, ConfiguredAirbyteCatalog::class.java)
+    val catalogGenerated = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalogParsed)
+
+    assertEquals(catalogParsed, catalogGenerated.catalog)
+  }
+
+  @Test
+  fun testMappersCanUpdateCursorAndPK() {
+    val catalogJson =
+      """
+            {
+        "streams": [
+          {
+            "fields": [
+              {
+                "name": "id",
+                "type": "STRING"
+              },
+              {
+                "name": "name",
+                "type": "STRING"
+              },
+              {
+                "name": "modified_at",
+                "type": "STRING"
+              }
+            ],
+            "stream": {
+              "name": "groups",
+              "json_schema": {
+                "type": "object",
+                "${'$'}schema": "http://json-schema.org/schema#",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "modified_at": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "default_cursor_field": [
+                "modified_at"
+              ],
+              "supported_sync_modes": [
+                "full_refresh",
+                "incremental"
+              ],
+              "source_defined_cursor": true,
+              "source_defined_primary_key": [
+                [
+                  "id"
+                ]
+              ]
+            },
+            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "sync_mode": "incremental",
+            "primary_key": [
+              [
+                "id"
+              ]
+            ],
+            "cursor_field": [
+              "modified_at"
+            ],
+            "destination_sync_mode": "append"
+          }
+        ]
+      }
+      """.trimIndent()
+
+    val expectedCatalogJson =
+      """
+            {
+        "streams": [
+          {
+            "fields": [
+              {
+                "name": "id_test",
+                "type": "STRING"
+              },
+              {
+                "name": "name_test",
+                "type": "STRING"
+              },
+              {
+                "name": "modified_at_test",
+                "type": "STRING"
+              }
+            ],
+            "stream": {
+              "name": "groups",
+              "json_schema": {
+                "type": "object",
+                "${'$'}schema": "http://json-schema.org/schema#",
+                "properties": {
+                  "id_test": {
+                    "type": "string"
+                  },
+                  "name_test": {
+                    "type": "string"
+                  },
+                  "modified_at_test": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "default_cursor_field": [
+                "modified_at"
+              ],
+              "supported_sync_modes": [
+                "full_refresh",
+                "incremental"
+              ],
+              "source_defined_cursor": true,
+              "source_defined_primary_key": [
+                [
+                  "id"
+                ]
+              ]
+            },
+            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "sync_mode": "incremental",
+            "primary_key": [
+              [
+                "id_test"
+              ]
+            ],
+            "cursor_field": [
+              "modified_at_test"
+            ],
+            "destination_sync_mode": "append"
+          }
+        ]
+      }
+      """.trimIndent()
+    val catalogParsed = Jsons.deserialize(catalogJson, ConfiguredAirbyteCatalog::class.java)
+    val catalogGenerated = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalogParsed)
+
+    assertEquals(Jsons.deserialize(expectedCatalogJson, ConfiguredAirbyteCatalog::class.java), catalogGenerated.catalog)
   }
 
   @Test
@@ -134,7 +399,7 @@ class DestinationCatalogGeneratorTest {
           ),
       )
 
-    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).field
+    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).slimStream.fields
 
     assertEquals(configuredUsersStream.fields, resultFields)
   }
@@ -157,7 +422,7 @@ class DestinationCatalogGeneratorTest {
         mappers = listOf(ConfiguredMapper("test", mapOf()), ConfiguredMapper("test", mapOf())),
       )
 
-    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).field
+    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).slimStream.fields
 
     assertEquals(
       listOf(
@@ -236,6 +501,7 @@ class DestinationCatalogGeneratorTest {
               "field1_1_test" to mapOf("type" to "string"),
               "field1_2_test" to mapOf("type" to "string"),
             ),
+          "additionalProperties" to true,
         ),
       ),
       catalogCopy.catalog.streams[0].stream.jsonSchema,
@@ -249,6 +515,7 @@ class DestinationCatalogGeneratorTest {
             mapOf(
               "field2_1_test" to mapOf("type" to "string"),
             ),
+          "additionalProperties" to true,
         ),
       ),
       catalogCopy.catalog.streams[1].stream.jsonSchema,
@@ -335,10 +602,13 @@ class DestinationCatalogGeneratorTest {
         input,
         Jsons.jsonNode(
           mapOf(
-            "fieldObject" to mapOf("type" to "object"),
-            "fieldArray" to mapOf("type" to "array"),
-            "fieldMulti" to mapOf("type" to "oneOf"),
-            "fieldUnknown" to mapOf("I" to "don't", "follow" to "specs"),
+            "properties" to
+              mapOf(
+                "fieldObject" to mapOf("type" to "object"),
+                "fieldArray" to mapOf("type" to "array"),
+                "fieldMulti" to mapOf("type" to "oneOf"),
+                "fieldUnknown" to mapOf("I" to "don't", "follow" to "specs"),
+              ),
           ),
         ),
       )

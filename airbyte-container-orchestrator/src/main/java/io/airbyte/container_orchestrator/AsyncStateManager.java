@@ -5,9 +5,9 @@
 package io.airbyte.container_orchestrator;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.storage.StorageClient;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodInfo;
-import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.WorkloadConstants;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;

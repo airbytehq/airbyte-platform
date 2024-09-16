@@ -14,6 +14,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { IconProps } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./CatalogComboBox.module.scss";
 import { TextHighlighter } from "../TextHighlighter";
@@ -171,7 +172,7 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
 ControlButton.displayName = "ControlButton";
 
 interface OptionsProps {
-  options: Option[];
+  options: Array<Option & { disabled?: boolean; disabledReason?: React.ReactNode }>;
   filterQuery: string;
 }
 const Options = React.forwardRef(({ options, filterQuery }: OptionsProps, ref: React.Ref<HTMLUListElement>) => {
@@ -188,22 +189,34 @@ const Options = React.forwardRef(({ options, filterQuery }: OptionsProps, ref: R
           <Text size="md">{formatMessage({ id: "ui.combobox.noOptions" })}</Text>
         </FlexContainer>
       ) : (
-        filteredOptions.map(({ value }) => (
-          <ComboboxOption className={styles.option} key={value} value={value}>
-            {({ focus, selected }) => (
-              <FlexContainer
-                className={classnames(styles.optionValue, {
-                  [styles.focus]: focus,
-                  [styles.selected]: selected,
-                })}
-                alignItems="center"
-              >
-                <CheckBox checkboxSize="sm" checked={selected} onClick={(e) => e.preventDefault()} readOnly />
-                <Text size="md">
-                  <TextHighlighter searchWords={[filterQuery]} textToHighlight={value} />
-                </Text>
-              </FlexContainer>
-            )}
+        filteredOptions.map(({ disabled, disabledReason, value }) => (
+          <ComboboxOption disabled={disabled} className={styles.option} key={value} value={value}>
+            {({ focus, selected }) => {
+              const control = (
+                <FlexContainer
+                  className={classnames(styles.optionValue, {
+                    [styles.focus]: focus,
+                    [styles.selected]: selected,
+                  })}
+                  alignItems="center"
+                >
+                  <CheckBox checkboxSize="sm" checked={selected} onClick={(e) => e.preventDefault()} readOnly />
+                  <Text size="md" color={disabled ? "grey" : "darkBlue"}>
+                    <TextHighlighter searchWords={[filterQuery]} textToHighlight={value} />
+                  </Text>
+                </FlexContainer>
+              );
+              return (
+                <Tooltip
+                  placement="top"
+                  disabled={!(disabled && disabledReason)}
+                  containerClassName={styles.block}
+                  control={control}
+                >
+                  {disabledReason}
+                </Tooltip>
+              );
+            }}
           </ComboboxOption>
         ))
       )}
