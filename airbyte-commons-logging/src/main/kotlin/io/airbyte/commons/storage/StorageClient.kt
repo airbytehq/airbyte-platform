@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.storage
+package io.airbyte.commons.storage
 
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
@@ -13,13 +13,6 @@ import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.io.IOs
-import io.airbyte.commons.logging.AzureStorageConfig
-import io.airbyte.commons.logging.GcsStorageConfig
-import io.airbyte.commons.logging.LocalStorageConfig
-import io.airbyte.commons.logging.MinioStorageConfig
-import io.airbyte.commons.logging.S3StorageConfig
-import io.airbyte.commons.logging.STORAGE_TYPE
-import io.airbyte.commons.logging.StorageConfig
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype

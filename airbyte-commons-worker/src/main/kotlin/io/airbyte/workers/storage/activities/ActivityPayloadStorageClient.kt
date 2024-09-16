@@ -1,12 +1,12 @@
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.storage.StorageClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}

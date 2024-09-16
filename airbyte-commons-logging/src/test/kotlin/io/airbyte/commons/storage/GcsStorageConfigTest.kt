@@ -2,9 +2,10 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.logging
+package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.commons.logging.LogClientType
 import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

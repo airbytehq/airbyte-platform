@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.storage
+package io.airbyte.commons.storage
 
 import com.azure.core.util.BinaryData
 import com.azure.storage.blob.BlobClient
@@ -11,12 +11,6 @@ import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
-import io.airbyte.commons.logging.AzureStorageConfig
-import io.airbyte.commons.logging.GcsStorageConfig
-import io.airbyte.commons.logging.LocalStorageConfig
-import io.airbyte.commons.logging.MinioStorageConfig
-import io.airbyte.commons.logging.S3StorageConfig
-import io.airbyte.commons.logging.StorageBucketConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

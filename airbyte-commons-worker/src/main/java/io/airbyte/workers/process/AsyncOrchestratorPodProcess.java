@@ -8,6 +8,7 @@ import static io.airbyte.commons.workers.config.WorkerConfigs.DEFAULT_JOB_KUBE_B
 
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.storage.StorageClient;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -15,7 +16,6 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.context.WorkloadSecurityContextProvider;
-import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;

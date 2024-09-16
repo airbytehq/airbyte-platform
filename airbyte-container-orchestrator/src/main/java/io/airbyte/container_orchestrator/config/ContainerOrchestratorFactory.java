@@ -5,6 +5,9 @@
 package io.airbyte.container_orchestrator.config;
 
 import io.airbyte.commons.envvar.EnvVar;
+import io.airbyte.commons.storage.DocumentType;
+import io.airbyte.commons.storage.StorageClient;
+import io.airbyte.commons.storage.StorageClientFactory;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
@@ -23,9 +26,6 @@ import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentType;
-import io.airbyte.workers.storage.StorageClient;
-import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;

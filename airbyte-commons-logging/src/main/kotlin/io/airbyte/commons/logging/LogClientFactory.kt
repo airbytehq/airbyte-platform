@@ -9,6 +9,11 @@ import com.azure.storage.blob.BlobServiceClientBuilder
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import io.airbyte.commons.storage.STORAGE_AZURE
+import io.airbyte.commons.storage.STORAGE_GCS
+import io.airbyte.commons.storage.STORAGE_MINIO
+import io.airbyte.commons.storage.STORAGE_S3
+import io.airbyte.commons.storage.STORAGE_TYPE
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named

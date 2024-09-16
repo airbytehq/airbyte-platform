@@ -5,12 +5,12 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.envvar.EnvVar;
+import io.airbyte.commons.storage.StorageClient;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;

@@ -3,6 +3,7 @@ package io.airbyte.commons.logging
 import com.azure.storage.blob.BlobClient
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.models.BlobItem
+import io.airbyte.commons.storage.StorageBucketConfig
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk

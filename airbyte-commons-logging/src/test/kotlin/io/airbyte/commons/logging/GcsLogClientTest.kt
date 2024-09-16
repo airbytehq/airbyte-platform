@@ -7,6 +7,7 @@ package io.airbyte.commons.logging
 import com.google.api.gax.paging.Page
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
+import io.airbyte.commons.storage.StorageBucketConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

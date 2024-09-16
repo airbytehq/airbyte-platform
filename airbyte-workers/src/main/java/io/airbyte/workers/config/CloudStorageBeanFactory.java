@@ -5,12 +5,12 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.json.JsonSerde;
+import io.airbyte.commons.storage.DocumentType;
+import io.airbyte.commons.storage.StorageClient;
+import io.airbyte.commons.storage.StorageClientFactory;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.workers.storage.DocumentType;
-import io.airbyte.workers.storage.StorageClient;
-import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Factory;

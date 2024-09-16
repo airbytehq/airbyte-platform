@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.logging
 
+import io.airbyte.commons.storage.StorageBucketConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

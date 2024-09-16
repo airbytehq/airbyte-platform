@@ -7,7 +7,7 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
 import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
-import io.airbyte.commons.logging.StorageConfig
+import io.airbyte.commons.storage.StorageConfig
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
