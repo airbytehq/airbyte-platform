@@ -452,6 +452,8 @@ components:
           type: array
           items:
             type: string
+        details:
+          type: object
     InvalidInputExceptionInfo:
       type: object
       required:
