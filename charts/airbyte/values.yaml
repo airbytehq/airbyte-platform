@@ -24,13 +24,13 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
-    enabled: false
+    enabled: true
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
       secretName: "airbyte-config-secrets"
       # -- The first name of the initial user
-      firstName: ""
+      firstName: "numocity"
       # -- The last name of the initial user
       lastName:  ""
       # -- The key within `emailSecretName` where the initial user's email is stored
