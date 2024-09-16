@@ -38,6 +38,7 @@ class PipelineStartupTest {
         claimProcessorTracker,
         metricPublisher,
         temporalWorkerController,
+        mockk(),
       )
 
     listener.onApplicationEvent(null)

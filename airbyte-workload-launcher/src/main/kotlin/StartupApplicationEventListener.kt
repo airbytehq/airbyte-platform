@@ -27,6 +27,7 @@ class StartupApplicationEventListener(
   private val claimProcessorTracker: ClaimProcessorTracker,
   private val customMetricPublisher: CustomMetricPublisher,
   private val temporalWorkerController: TemporalWorkerController,
+  private val launcherShutdownHelper: LauncherShutdownHelper,
 ) : ApplicationEventListener<ServiceReadyEvent> {
   @VisibleForTesting
   var processorThread: Thread? = null
@@ -40,7 +41,8 @@ class StartupApplicationEventListener(
         } catch (e: Exception) {
           customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_REHYDRATE_FAILURE)
           ApmTraceUtils.addExceptionToTrace(e)
-          logger.error(e) { "rehydrateAndProcessClaimed failed" }
+          logger.error(e) { "Failed to retrieve and resume claimed workloads, exiting." }
+          launcherShutdownHelper.shutdown(2)
         }
       }
 
