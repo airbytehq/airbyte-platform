@@ -25,6 +25,7 @@ global:
   auth:
     # -- Whether auth is enabled
     enabled: true
+    cookieSameSiteSetting: "None"
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
