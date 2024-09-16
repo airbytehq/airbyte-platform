@@ -1,6 +1,6 @@
-# airbyte-commons-logging
+# airbyte-commons-storage
 
-This module contains the logic for generating and retrieving logging output from Airbyte jobs.
+This module contains the logic for storage of objects from Airbyte jobs (logs, state, etc).
 
 ## Configuration
 
