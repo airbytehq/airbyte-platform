@@ -19,12 +19,12 @@
       licenseKeySecretKey: "license-key"
 
     # -- The URL where Airbyte will be reached; This should match your Ingress host
-    airbyteUrl: ""
+    airbyteUrl: "https://airbyte.example.com"
 
     # -- Auth configuration
     auth:
       # -- Whether auth is enabled
-      enabled: false
+      enabled: true
       # -- Admin user configuration
       instanceAdmin:
         # -- Secret name where the instanceAdmin configuration is stored
