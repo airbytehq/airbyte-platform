@@ -74,6 +74,8 @@ export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  contributionPullRequestUrl?: string;
+  contributionActorDefinitionId?: string;
 }
 
 export const useListBuilderProjects = () => {
@@ -263,9 +265,19 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest }) =>
+    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
       updateConnectorBuilderProject(
-        { workspaceId, builderProjectId: projectId, builderProject: { name, draftManifest: manifest, yamlManifest } },
+        {
+          workspaceId,
+          builderProjectId: projectId,
+          builderProject: {
+            name,
+            draftManifest: manifest,
+            yamlManifest,
+            contributionActorDefinitionId,
+            contributionPullRequestUrl,
+          },
+        },
         requestOptions
       ),
     {

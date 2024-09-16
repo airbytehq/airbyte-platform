@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
+import { useParams } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
 import * as yup from "yup";
 
@@ -20,11 +21,13 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import {
+  BuilderProjectWithManifest,
   GENERATE_CONTRIBUTION_NOTIFICATION_ID,
   useBuilderCheckContribution,
   useBuilderGenerateContribution,
   useGetBuilderProjectBaseImage,
   useListBuilderProjectVersions,
+  useUpdateBuilderProject,
 } from "core/api";
 import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
 import { useFormatError } from "core/errors";
@@ -427,6 +430,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const [imageNameError, setImageNameError] = useState<string | null>(null);
   const { mutateAsync: generateContribution, isLoading: isSubmittingContribution } = useBuilderGenerateContribution();
 
+  const { projectId } = useParams<{
+    projectId: string;
+  }>();
+  if (!projectId) {
+    throw new Error("Could not find project id in path");
+  }
+  const { mutateAsync: updateProject } = useUpdateBuilderProject(projectId);
+
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
 
   if (isLoadingBaseImage) {
@@ -485,6 +496,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
       base_image: baseImage,
     });
+    const newProject: BuilderProjectWithManifest = {
+      name: values.name,
+      manifest: jsonManifestWithDescription,
+      yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
+      contributionPullRequestUrl: contribution.pull_request_url,
+      contributionActorDefinitionId: contribution.actor_definition_id,
+    };
+    await updateProject(newProject);
     registerNotification({
       id: GENERATE_CONTRIBUTION_NOTIFICATION_ID,
       type: "success",
