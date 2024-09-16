@@ -518,6 +518,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
         totalCount={rows.length}
+        style={{ minHeight: 80 }} // namespace row height + stream row height
         initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
           Table,
