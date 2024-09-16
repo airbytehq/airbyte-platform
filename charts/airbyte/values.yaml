@@ -25,7 +25,7 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
-    enabled: true
+    enabled: false
     username: manjunath.kp@numocity.com
     password: Numocity@123
     # -- Admin user configuration
