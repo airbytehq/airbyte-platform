@@ -19,7 +19,7 @@ global:
     licenseKeySecretKey: "license-key"
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
-  airbyteUrl: "https://airbyte.numocity.in"
+  airbyteUrl: ""
 
   # -- Auth configuration
   auth:
