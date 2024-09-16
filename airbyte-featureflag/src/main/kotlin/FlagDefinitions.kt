@@ -176,7 +176,7 @@ object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connecto
 
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
-object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
+object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = true)
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
 
