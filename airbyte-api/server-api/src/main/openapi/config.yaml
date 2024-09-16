@@ -4995,7 +4995,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorRolloutReadResponse"
-
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -5004,25 +5005,75 @@ paths:
       tags:
         - connector_rollout
 
-  /v1/connector_rollout/update:
+  /v1/connector_rollout/start:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectorRolloutUpdateRequestBody"
+              $ref: "#/components/schemas/ConnectorRolloutStartRequestBody"
+      responses:
+        "200":
+          description: Started connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Start a connector rollout by ID. This will update the state of the rollout from INITIALIZED to WORKFLOW_STARTED, and add the Temporal run ID of the workflow to the rollout entry.
+      operationId: startConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/rollout:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutRequestBody"
       responses:
         "200":
           description: Updated connector rollout object
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutUpdateResponse"
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-      summary: Update a connector rollout by ID
-      operationId: updateConnectorRollout
+      summary: Roll out a release candidate. This will pin the actors to the release candidate version ID.
+      operationId: doConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/finalize:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutFinalizeRequestBody"
+      responses:
+        "200":
+          description: Finalized connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutFinalizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
+      operationId: finalizeConnectorRollout
       tags:
         - connector_rollout
 
@@ -6978,10 +7029,18 @@ components:
     # Connector Rollouts
     ConnectorRolloutRead:
       type: object
+      required:
+        - id
+        - actor_definition_id
+        - release_candidate_version_id
+        - initial_version_id
+        - state
       properties:
         id:
           type: string
           format: uuid
+        workflow_run_id:
+          type: string
         actor_definition_id:
           type: string
           format: uuid
@@ -6997,19 +7056,23 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         current_target_rollout_pct:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         final_target_rollout_pct:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         has_breaking_changes:
           type: boolean
         max_step_wait_time_mins:
           type: integer
           minimum: 0
+          format: int32
         updated_by:
           type: string
           format: uuid
@@ -7036,11 +7099,19 @@ components:
       type: string
       enum:
         - initialized
+        - workflow_started
         - in_progress
         - paused
         - finalizing
         - succeeded
         - errored
+        - failed_rolled_back
+        - canceled_rolled_back
+
+    ConnectorRolloutStateTerminal:
+      type: string
+      enum:
+        - succeeded
         - failed_rolled_back
         - canceled_rolled_back
 
@@ -7054,14 +7125,17 @@ components:
     ConnectorRolloutListRequestBody:
       type: object
       required:
-        - sourceDefinitionId
-        - dockerImageTag
+        - docker_repository
+        - docker_image_tag
+        - source_definition_id
       properties:
-        sourceDefinitionId:
+        docker_repository:
           type: string
-          format: UUID
-        dockerImageTag:
+        docker_image_tag:
           type: string
+        source_definition_id:
+          type: string
+          format: uuid
 
     ConnectorRolloutListResponse:
       type: object
@@ -7074,59 +7148,41 @@ components:
     ConnectorRolloutCreateRequestBody:
       type: object
       required:
-        - id
+        - docker_repository
+        - docker_image_tag
         - actor_definition_id
-        - release_candidate_version_id
-        - state
-        - initial_rollout_pct
-        - final_target_rollout_pct
-        - has_breaking_changes
-        - max_step_wait_time_mins
-        - expires_at
       properties:
-        id:
+        docker_repository:
           type: string
-          format: uuid
+        docker_image_tag:
+          type: string
         actor_definition_id:
           type: string
           format: uuid
-        release_candidate_version_id:
-          type: string
-          format: uuid
-        state:
-          $ref: "#/components/schemas/ConnectorRolloutState"
         initial_rollout_pct:
           type: integer
-          minimum: 1
-          maximum: 100
-        current_target_rollout_pct:
-          type: integer
+          format: int32
           minimum: 1
           maximum: 100
         final_target_rollout_pct:
           type: integer
+          format: int32
           minimum: 1
           maximum: 100
         has_breaking_changes:
           type: boolean
         max_step_wait_time_mins:
           type: integer
+          format: int32
           minimum: 0
-        updated_by:
-          type: string
-          format: uuid
-        error_msg:
-          type: string
-        failed_reason:
-          type: string
-        rollout_strategy:
-          $ref: "#/components/schemas/ConnectorRolloutStrategy"
         expires_at:
           type: string
           format: date-time
 
     ConnectorRolloutCreateResponse:
       type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
@@ -7142,24 +7198,89 @@ components:
 
     ConnectorRolloutReadResponse:
       type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
 
-    ConnectorRolloutUpdateRequestBody:
+    ConnectorRolloutStartRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - workflow_run_id
+        - rollout_strategy
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        workflow_run_id:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutStartResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutRequestBody:
       type: object
       required:
         - id
-        - data
+        - actor_ids
+        - rollout_strategy
       properties:
         id:
           type: string
           format: uuid
-        data:
-          $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+        actor_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorId"
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
 
-    ConnectorRolloutUpdateResponse:
+    ConnectorRolloutResponse:
       type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutFinalizeRequestBody:
+      type: object
+      required:
+        - id
+        - state
+        - rollout_strategy
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutStateTerminal"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutFinalizeResponse:
+      type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"

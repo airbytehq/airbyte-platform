@@ -23,6 +23,9 @@ properties:
     type: string
     format: uuid
     description: Unique ID of the rollout
+  workflow_run_id:
+    type: string
+    description: Run ID of the Temporal workflow managing the rollout
   actor_definition_id:
     type: string
     format: uuid

@@ -5,7 +5,8 @@ title: ConnectorEnumRolloutState
 description: ConnectorRollout state types
 type: string
 enum:
-  - initialized # The rollout workflow has started, but no connectors are using the release candidate.
+  - initialized # The rollout has been added to connector_rollouts but the workflow has not been started.
+  - workflow_started # The rollout workflow has started, but no connectors are using the release candidate.
   - in_progress # The rollout has started; some connectors are using the release candidate.
   - paused # Some connectors are using the release candidate, but we don't want to roll out to more at the moment (e.g. during investigation).
   - finalizing # The rollout has been deemed a success, and we've kicked off a GHA to publish the release candidate as the latest version of the connector. At this point, connections are still pinned.

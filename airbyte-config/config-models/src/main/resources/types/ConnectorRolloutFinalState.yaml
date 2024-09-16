@@ -1,7 +1,7 @@
 ---
 "$schema": http://json-schema.org/draft-07/schema#
-"$id": https://github.com/airbytehq/airbyte-platform/blob/main/airbyte-config/config-models/src/main/resources/types/ConnectorRolloutStateTerminal.yaml
-title: ConnectorRolloutStateTerminal
+"$id": https://github.com/airbytehq/airbyte-platform/blob/main/airbyte-config/config-models/src/main/resources/types/ConnectorRolloutFinalState.yaml
+title: ConnectorRolloutFinalState
 description: Terminal ConnectorRollout state types
 type: string
 enum:

@@ -1,6 +1,6 @@
 package io.airbyte.data.repositories
 
-import io.airbyte.config.ConnectorRolloutStateTerminal
+import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.data.repositories.entities.ConnectorRollout
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -27,7 +27,7 @@ import java.util.stream.Stream
 class ActiveStatesProvider : ArgumentsProvider {
   override fun provideArguments(context: org.junit.jupiter.api.extension.ExtensionContext): Stream<out Arguments> {
     val terminalStateLiterals =
-      ConnectorRolloutStateTerminal.entries
+      ConnectorRolloutFinalState.entries
         .map { it.value() }
         .toSet()
 
@@ -43,7 +43,7 @@ class ActiveStatesProvider : ArgumentsProvider {
 class TerminalStatesProvider : ArgumentsProvider {
   override fun provideArguments(context: org.junit.jupiter.api.extension.ExtensionContext): Stream<out Arguments> {
     val terminalStateLiterals =
-      ConnectorRolloutStateTerminal.entries
+      ConnectorRolloutFinalState.entries
         .map { it.value() }
         .toSet()
 
@@ -139,6 +139,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
   ): ConnectorRollout {
     return ConnectorRollout(
       id = rolloutId,
+      workflowRunId = UUID.randomUUID().toString(),
       actorDefinitionId = actorDefinitionId,
       releaseCandidateVersionId = UUID.randomUUID(),
       initialVersionId = UUID.randomUUID(),
@@ -157,6 +158,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     actual: ConnectorRollout,
   ) {
     assertEquals(expected.id, actual.id)
+    assertEquals(expected.workflowRunId, actual.workflowRunId)
     assertEquals(expected.actorDefinitionId, actual.actorDefinitionId)
     assertEquals(expected.releaseCandidateVersionId, actual.releaseCandidateVersionId)
     assertEquals(expected.initialVersionId, actual.initialVersionId)
@@ -166,7 +168,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     assertFalse(actual.hasBreakingChanges)
     assertEquals(expected.rolloutStrategy, actual.rolloutStrategy)
     assertEquals(expected.maxStepWaitTimeMins, actual.maxStepWaitTimeMins)
-    assertNull(actual.currentTargetRolloutPct)
+    assertEquals(0, actual.currentTargetRolloutPct)
     assertNull(actual.updatedBy)
     assertNull(actual.completedAt)
     assertNull(actual.errorMsg)
@@ -180,6 +182,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     val rollout =
       ConnectorRollout(
         id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         initialVersionId = UUID.randomUUID(),
@@ -281,6 +284,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     val rollout =
       ConnectorRollout(
         id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         initialVersionId = UUID.randomUUID(),
@@ -306,6 +310,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     val rollout1 =
       ConnectorRollout(
         id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         initialVersionId = UUID.randomUUID(),
@@ -324,6 +329,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     val rollout2 =
       ConnectorRollout(
         id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         initialVersionId = UUID.randomUUID(),
@@ -351,6 +357,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     connectorRolloutRepository.save(
       ConnectorRollout(
         id = rolloutId1,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = actorDefinitionId,
         releaseCandidateVersionId = releaseCandidateVersionId,
         initialVersionId = UUID.randomUUID(),
@@ -376,6 +383,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     connectorRolloutRepository.save(
       ConnectorRollout(
         id = rolloutId2,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = actorDefinitionId,
         releaseCandidateVersionId = releaseCandidateVersionId,
         initialVersionId = UUID.randomUUID(),
@@ -402,6 +410,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     connectorRolloutRepository.save(
       ConnectorRollout(
         id = rolloutId3,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         initialVersionId = UUID.randomUUID(),
@@ -429,6 +438,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     connectorRolloutRepository.update(
       ConnectorRollout(
         id = rolloutId1,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = actorDefinitionId,
         releaseCandidateVersionId = releaseCandidateVersionId,
         initialVersionId = UUID.randomUUID(),
@@ -456,6 +466,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     connectorRolloutRepository.save(
       ConnectorRollout(
         id = rolloutId4,
+        workflowRunId = UUID.randomUUID().toString(),
         actorDefinitionId = actorDefinitionId,
         releaseCandidateVersionId = releaseCandidateVersionId,
         initialVersionId = UUID.randomUUID(),

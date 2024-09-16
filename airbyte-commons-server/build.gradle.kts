@@ -74,6 +74,7 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(project(":oss:airbyte-test-utils"))
+  testImplementation("org.jetbrains.kotlin:kotlin-reflect")
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
