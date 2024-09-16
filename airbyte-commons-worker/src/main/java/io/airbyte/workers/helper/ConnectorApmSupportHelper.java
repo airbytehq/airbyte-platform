@@ -74,10 +74,13 @@ public class ConnectorApmSupportHelper {
    * @return The name extracted from the image, or the originally provided string if blank.
    */
   public static String getImageName(final String image) {
-    final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
-    if (delimeterIndex >= 0) {
-      return image.substring(0, delimeterIndex);
+    if (StringUtils.isNotEmpty(image)) {
+      final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+      if (delimeterIndex >= 0) {
+        return image.substring(0, delimeterIndex);
+      }
     }
+    // If image is null, empty, or does not contain a delimiter, return the original string.
     return image;
   }
 
@@ -90,10 +93,13 @@ public class ConnectorApmSupportHelper {
    * @return The version extracted from the image, or the originally provided string if blank.
    */
   public static String getImageVersion(final String image) {
-    final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
-    if (delimeterIndex >= 0 && image.length() > delimeterIndex + 1) {
-      return image.substring(delimeterIndex + 1);
+    if (StringUtils.isNotEmpty(image)) {
+      final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+      if (delimeterIndex >= 0 && image.length() > delimeterIndex + 1) {
+        return image.substring(delimeterIndex + 1);
+      }
     }
+    // If image is null, empty, or does not contain a delimiter, return the original string.
     return image;
   }
 
