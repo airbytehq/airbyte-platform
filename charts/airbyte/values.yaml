@@ -27,8 +27,6 @@ global:
     enabled: true
     # -- Admin user configuration
     instanceAdmin:
-      # -- Secret name where the instanceAdmin configuration is stored
-      secretName: "airbyte-config-secrets"
       # -- The first name of the initial user
       firstName: "numocity"
       # -- The last name of the initial user
