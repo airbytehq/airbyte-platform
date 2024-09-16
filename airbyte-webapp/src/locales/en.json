@@ -1342,6 +1342,7 @@
   "ui.combobox.buttonErrorText": "Please select an option",
   "ui.combobox.buttonAddText": "Add option",
   "ui.combobox.buttonEditText": "Edit option",
+  "ui.badge.alpha": "Alpha",
 
   "airbyte.datatype.string": "String",
   "airbyte.datatype.binary_data": "Binary Data",

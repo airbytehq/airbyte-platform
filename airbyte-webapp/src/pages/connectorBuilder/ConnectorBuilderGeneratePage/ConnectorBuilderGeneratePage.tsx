@@ -14,6 +14,7 @@ import {
 } from "components/connectorBuilder/types";
 import { Form, FormControl } from "components/forms";
 import { HeadTitle } from "components/HeadTitle";
+import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -142,6 +143,9 @@ const ConnectorBuilderGenerateForm: React.FC<{
               <Heading as="h3" size="sm" className={styles.assistTitle}>
                 {formatMessage({ id: "connectorBuilder.generatePage.title" })}
               </Heading>
+              <Badge variant="blue">
+                <FormattedMessage id="ui.badge.alpha" />
+              </Badge>
             </FlexContainer>
             <Text size="sm" color="grey">
               <FormattedMessage id="connectorBuilder.generatePage.description" />

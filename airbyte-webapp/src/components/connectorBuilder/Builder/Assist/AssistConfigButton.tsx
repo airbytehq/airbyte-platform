@@ -1,7 +1,8 @@
 import { useFloating, offset, flip, autoUpdate } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
-import { useIntl } from "react-intl";
+import { useIntl, FormattedMessage } from "react-intl";
 
+import { Badge } from "components/ui/Badge";
 import { Button, ButtonProps } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -73,6 +74,9 @@ const AssistTitle = () => {
       <Heading as="h3" size="sm" className={styles.assistTitle}>
         {formatMessage({ id: "connectorBuilder.assist.config.title" })}
       </Heading>
+      <Badge variant="blue">
+        <FormattedMessage id="ui.badge.alpha" />
+      </Badge>
     </FlexContainer>
   );
 };
