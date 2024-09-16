@@ -18,7 +18,7 @@ export const SyncRunningItem: React.FC<SyncRunningItemProps> = ({ startedAt, job
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   return (
-    <ConnectionTimelineEventItem centered>
+    <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="sync" running />
       <ConnectionTimelineEventSummary>
         <Text bold>
