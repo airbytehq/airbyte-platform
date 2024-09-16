@@ -203,6 +203,13 @@ version: ""
 
 webapp:
   enabled: true
+
+  authSecret:
+    existingSecret: airbyte-auth-secrets
+    adminClientIdKey: instance-admin-client-id
+    adminClientSecretKey: instance-admin-client-secret
+    adminPasswordKey: instance-admin-password
+    jwtSecretKey: jwt-signature-secret
   # -- Number of webapp replicas
   replicaCount: 1
 
