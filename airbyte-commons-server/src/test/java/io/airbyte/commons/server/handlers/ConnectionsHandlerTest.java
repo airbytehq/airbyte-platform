@@ -2124,13 +2124,15 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2152,13 +2154,15 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2179,19 +2183,22 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1, "anotherCursor"),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1WithOtherCursorOrder = getStreamConfiguration(
           List.of("anotherCursor", CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2216,25 +2223,29 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1, PK3)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1WithOtherPkOrder = getStreamConfiguration(
           List.of(CURSOR1),
           List.of(List.of(PK3, PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2), List.of(PK3)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2WithOtherPkOrder = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK3), List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2259,13 +2270,15 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2286,19 +2299,22 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1CursorDiff = getStreamConfiguration(
           List.of(CURSOR1, "anotherCursor"),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2323,25 +2339,29 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1WithPkDiff = getStreamConfiguration(
           List.of(CURSOR1),
           List.of(List.of(PK1, PK3)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2WithPkDiff = getStreamConfiguration(
           List.of(CURSOR1),
           List.of(List.of(PK1), List.of(PK3)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2367,19 +2387,22 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1CursorDiff = getStreamConfiguration(
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2463,19 +2486,22 @@ class ConnectionsHandlerTest {
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND_DEDUP);
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration1CursorDiff = getStreamConfiguration(
           List.of(CURSOR1),
           List.of(List.of(PK1)),
           SyncMode.INCREMENTAL,
-          DestinationSyncMode.APPEND);
+          DestinationSyncMode.APPEND,
+          null);
 
       final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
           List.of(CURSOR2),
           List.of(List.of(PK2)),
           SyncMode.FULL_REFRESH,
-          DestinationSyncMode.OVERWRITE);
+          DestinationSyncMode.OVERWRITE,
+          null);
 
       final AirbyteCatalog catalog1 = new AirbyteCatalog()
           .streams(
@@ -2492,6 +2518,120 @@ class ConnectionsHandlerTest {
       assertFalse(changedSd.isEmpty());
       assertEquals(1, changedSd.size());
       assertEquals(Set.of(new StreamDescriptor().name(STREAM1)), changedSd);
+    }
+
+    @Test
+    void testDiffAddedFieldHash() {
+      final AirbyteStreamConfiguration streamConfiguration1 = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
+
+      final AirbyteStreamConfiguration streamConfigurationWithHashedFields = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          List.of(new SelectedFieldInfo().fieldPath(List.of("field"))));
+
+      final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
+
+      final AirbyteCatalog catalog1 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfiguration1),
+                  getStreamAndConfig(STREAM2, streamConfiguration2)));
+      final AirbyteCatalog catalog2 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfigurationWithHashedFields),
+                  getStreamAndConfig(STREAM2, streamConfiguration2)));
+
+      final Set<StreamDescriptor> changedSd = connectionsHandler.getConfigurationDiff(catalog1, catalog2);
+      assertFalse(changedSd.isEmpty());
+      assertEquals(1, changedSd.size());
+      assertEquals(Set.of(new StreamDescriptor().name(STREAM1)), changedSd);
+    }
+
+    @Test
+    void testDiffRemovingSecondFieldHash() {
+      final AirbyteStreamConfiguration streamConfiguration1 = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          List.of(
+              new SelectedFieldInfo().fieldPath(List.of("field_1")),
+              new SelectedFieldInfo().fieldPath(List.of("field_2"))));
+
+      final AirbyteStreamConfiguration streamConfigurationWithHashedFields = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          List.of(new SelectedFieldInfo().fieldPath(List.of("field_1"))));
+
+      final AirbyteStreamConfiguration streamConfiguration2 = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          null);
+
+      final AirbyteCatalog catalog1 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfiguration1),
+                  getStreamAndConfig(STREAM2, streamConfiguration2)));
+      final AirbyteCatalog catalog2 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfigurationWithHashedFields),
+                  getStreamAndConfig(STREAM2, streamConfiguration2)));
+
+      final Set<StreamDescriptor> changedSd = connectionsHandler.getConfigurationDiff(catalog1, catalog2);
+      assertFalse(changedSd.isEmpty());
+      assertEquals(1, changedSd.size());
+      assertEquals(Set.of(new StreamDescriptor().name(STREAM1)), changedSd);
+    }
+
+    @Test
+    void testNoDiffWhenFieldHashOrderDiffers() {
+      final AirbyteStreamConfiguration streamConfiguration = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          List.of(
+              new SelectedFieldInfo().fieldPath(List.of("field_1")),
+              new SelectedFieldInfo().fieldPath(List.of("field_2"))));
+
+      final AirbyteStreamConfiguration streamConfigurationWithReorderedHashedFields = getStreamConfiguration(
+          List.of(CURSOR1),
+          List.of(List.of(PK1)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND_DEDUP,
+          List.of(
+              new SelectedFieldInfo().fieldPath(List.of("field_2")),
+              new SelectedFieldInfo().fieldPath(List.of("field_1"))));
+
+      final AirbyteCatalog catalog1 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfiguration)));
+      final AirbyteCatalog catalog2 = new AirbyteCatalog()
+          .streams(
+              List.of(
+                  getStreamAndConfig(STREAM1, streamConfigurationWithReorderedHashedFields)));
+
+      assertTrue(connectionsHandler.getConfigurationDiff(catalog1, catalog2).isEmpty());
     }
 
     @Test
@@ -2528,12 +2668,14 @@ class ConnectionsHandlerTest {
     private AirbyteStreamConfiguration getStreamConfiguration(final List<String> cursors,
                                                               final List<List<String>> primaryKeys,
                                                               final SyncMode syncMode,
-                                                              final DestinationSyncMode destinationSyncMode) {
+                                                              final DestinationSyncMode destinationSyncMode,
+                                                              final List<SelectedFieldInfo> hashedFields) {
       return new AirbyteStreamConfiguration()
           .cursorField(cursors)
           .primaryKey(primaryKeys)
           .syncMode(syncMode)
-          .destinationSyncMode(destinationSyncMode);
+          .destinationSyncMode(destinationSyncMode)
+          .hashedFields(hashedFields);
 
     }
 
