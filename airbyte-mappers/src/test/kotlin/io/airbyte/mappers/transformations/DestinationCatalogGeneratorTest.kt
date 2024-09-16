@@ -174,6 +174,147 @@ class DestinationCatalogGeneratorTest {
   }
 
   @Test
+  fun testMappersCanUpdateCursorAndPK() {
+    val catalogJson =
+      """
+            {
+        "streams": [
+          {
+            "fields": [
+              {
+                "name": "id",
+                "type": "STRING"
+              },
+              {
+                "name": "name",
+                "type": "STRING"
+              },
+              {
+                "name": "modified_at",
+                "type": "STRING"
+              }
+            ],
+            "stream": {
+              "name": "groups",
+              "json_schema": {
+                "type": "object",
+                "${'$'}schema": "http://json-schema.org/schema#",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "modified_at": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "default_cursor_field": [
+                "modified_at"
+              ],
+              "supported_sync_modes": [
+                "full_refresh",
+                "incremental"
+              ],
+              "source_defined_cursor": true,
+              "source_defined_primary_key": [
+                [
+                  "id"
+                ]
+              ]
+            },
+            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "sync_mode": "incremental",
+            "primary_key": [
+              [
+                "id"
+              ]
+            ],
+            "cursor_field": [
+              "modified_at"
+            ],
+            "destination_sync_mode": "append"
+          }
+        ]
+      }
+      """.trimIndent()
+
+    val expectedCatalogJson =
+      """
+            {
+        "streams": [
+          {
+            "fields": [
+              {
+                "name": "id_test",
+                "type": "STRING"
+              },
+              {
+                "name": "name_test",
+                "type": "STRING"
+              },
+              {
+                "name": "modified_at_test",
+                "type": "STRING"
+              }
+            ],
+            "stream": {
+              "name": "groups",
+              "json_schema": {
+                "type": "object",
+                "${'$'}schema": "http://json-schema.org/schema#",
+                "properties": {
+                  "id_test": {
+                    "type": "string"
+                  },
+                  "name_test": {
+                    "type": "string"
+                  },
+                  "modified_at_test": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "default_cursor_field": [
+                "modified_at"
+              ],
+              "supported_sync_modes": [
+                "full_refresh",
+                "incremental"
+              ],
+              "source_defined_cursor": true,
+              "source_defined_primary_key": [
+                [
+                  "id"
+                ]
+              ]
+            },
+            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "sync_mode": "incremental",
+            "primary_key": [
+              [
+                "id_test"
+              ]
+            ],
+            "cursor_field": [
+              "modified_at_test"
+            ],
+            "destination_sync_mode": "append"
+          }
+        ]
+      }
+      """.trimIndent()
+    val catalogParsed = Jsons.deserialize(catalogJson, ConfiguredAirbyteCatalog::class.java)
+    val catalogGenerated = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalogParsed)
+
+    assertEquals(Jsons.deserialize(expectedCatalogJson, ConfiguredAirbyteCatalog::class.java), catalogGenerated.catalog)
+  }
+
+  @Test
   fun `test generateDestinationCatalogMissingMapper`() {
     val mapperConfig = ConfiguredMapper("test", mapOf())
     val configuredUsersStream =
@@ -258,7 +399,7 @@ class DestinationCatalogGeneratorTest {
           ),
       )
 
-    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).field
+    val resultFields = destinationCatalogGeneratorWithoutMapper.applyMapperToFields(configuredUsersStream).slimStream.fields
 
     assertEquals(configuredUsersStream.fields, resultFields)
   }
@@ -281,7 +422,7 @@ class DestinationCatalogGeneratorTest {
         mappers = listOf(ConfiguredMapper("test", mapOf()), ConfiguredMapper("test", mapOf())),
       )
 
-    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).field
+    val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).slimStream.fields
 
     assertEquals(
       listOf(

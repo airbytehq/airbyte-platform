@@ -1,11 +1,11 @@
 package io.airbyte.mappers.mocks
 
 import io.airbyte.config.ConfiguredMapper
-import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperSpecification
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.Mapper
+import io.airbyte.mappers.transformations.SlimStream
 
 class TestMapper : Mapper {
   override val name: String = "test"
@@ -14,11 +14,12 @@ class TestMapper : Mapper {
 
   override fun schema(
     config: ConfiguredMapper,
-    streamFields: List<Field>,
-  ): List<Field> =
-    streamFields.map {
-      it.copy(it.name + "_test", FieldType.STRING)
-    }
+    slimStream: SlimStream,
+  ): SlimStream =
+    slimStream.deepCopy()
+      .apply {
+        fields.forEach { field -> redefineField(field.name, "${field.name}_test", FieldType.STRING) }
+      }
 
   override fun map(
     config: ConfiguredMapper,
@@ -37,8 +38,8 @@ class FailingTestMapper : Mapper {
 
   override fun schema(
     config: ConfiguredMapper,
-    streamFields: List<Field>,
-  ): List<Field> = throw RuntimeException("Failed to generate schema")
+    slimStream: SlimStream,
+  ): SlimStream = throw RuntimeException("Failed to generate schema")
 
   override fun map(
     config: ConfiguredMapper,

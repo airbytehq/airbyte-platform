@@ -34,27 +34,27 @@ class HashingMapperTest {
   fun schemaTransformsFieldNamesCorrectly() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE))
-    val result = hashingMapper.schema(config, fields)
-    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result)
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE)))
+    val result = hashingMapper.schema(config, slimStream)
+    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result.fields)
   }
 
   @Test
   fun schemaTransformsFieldNamesCorrectlyIfMissingSuffix() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1"))
-    val fields = listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE))
-    val result = hashingMapper.schema(config, fields)
-    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result)
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE)))
+    val result = hashingMapper.schema(config, slimStream)
+    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result.fields)
   }
 
   @Test
   fun schemaTransformsFailsIfFieldIsMissing() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("NotField1", FieldType.STRING))
+    val slimStream = SlimStream(listOf(Field("NotField1", FieldType.STRING)))
     assertThrows(IllegalStateException::class.java) {
-      hashingMapper.schema(config, fields)
+      hashingMapper.schema(config, slimStream)
     }
   }
 
@@ -62,9 +62,9 @@ class HashingMapperTest {
   fun schemaTransformFailsIfFieldCollision() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("field1", FieldType.STRING), Field("field1_hashed", FieldType.STRING))
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.STRING), Field("field1_hashed", FieldType.STRING)))
     assertThrows(IllegalStateException::class.java) {
-      hashingMapper.schema(config, fields)
+      hashingMapper.schema(config, slimStream)
     }
   }
 
