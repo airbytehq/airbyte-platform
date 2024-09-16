@@ -24,10 +24,11 @@ global:
 
   # -- Auth configuration
   auth:
-    # -- Whether auth is enabled
     enabled: true
-    username: admin
-    password: admin
+    instanceAdmin:
+      username: admin
+      password: admin
+      passwordSecretKey: airbyte-config-secrets
     # -- Admin user configuration
     # instanceAdmin:
     #   # -- Secret name where the instanceAdmin configuration is stored
