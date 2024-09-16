@@ -387,6 +387,8 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   unknownFields: undefined,
 };
 
+export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
+
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
 export const CUSTOM_PARTITION_ROUTER: CustomPartitionRouterType = "CustomPartitionRouter";
