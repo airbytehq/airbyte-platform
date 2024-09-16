@@ -15,6 +15,9 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.exception.KubeClientException
+import io.airbyte.workers.exception.KubeCommandType
+import io.airbyte.workers.exception.PodType
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput

@@ -10,6 +10,10 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.exception.KubeClientException
+import io.airbyte.workers.exception.KubeCommandType
+import io.airbyte.workers.exception.PodType
+import io.airbyte.workers.exception.ResourceConstraintException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
@@ -265,7 +269,7 @@ class KubePodClient(
       when (e) {
         is TimeoutException, is KubernetesClientTimeoutException -> {
           ApmTraceUtils.addExceptionToTrace(e)
-          throw KubeClientException(
+          throw ResourceConstraintException(
             "Unable to start the $podLogLabel pod. This may be due to insufficient system resources. Please check available resources and try again.",
             e,
             KubeCommandType.WAIT_INIT,

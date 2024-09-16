@@ -1,6 +1,6 @@
-package io.airbyte.workload.launcher.pods
+package io.airbyte.workers.exception
 
-class KubeClientException(
+open class KubeClientException(
   override val message: String,
   override val cause: Throwable,
   val commandType: KubeCommandType,
