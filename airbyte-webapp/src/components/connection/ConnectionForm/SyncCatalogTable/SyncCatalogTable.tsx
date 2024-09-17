@@ -29,7 +29,6 @@ import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { CursorCell } from "./components/CursorCell";
 import { ExpandCollapseAllControl } from "./components/ExpandCollapseAllControl";
 import { FieldCursorCell } from "./components/FieldCursorCell";
 import { FieldHashMapping } from "./components/FieldHashMapping";
@@ -37,11 +36,12 @@ import { FieldPKCell } from "./components/FieldPKCell";
 import { FormControls } from "./components/FormControls";
 import { HeaderNamespaceCell } from "./components/HeaderNamespaceCell";
 import { NamespaceNameCell } from "./components/NamespaceNameCell";
-import { PKCell } from "./components/PKCell";
 import { RefreshSchemaControl } from "./components/RefreshSchemaControl";
 import { SelectedFieldsCell } from "./components/SelectedFieldsCell";
+import { StreamCursorCell } from "./components/StreamCursorCell";
 import { StreamFieldNameCell } from "./components/StreamFieldCell";
 import { StreamNameCell } from "./components/StreamNameCell";
+import { StreamPKCell } from "./components/StreamPKCell";
 import { FilterTabId, StreamsFilterTabs } from "./components/StreamsFilterTabs";
 import { SyncModeCell } from "./components/SyncModeCell";
 import { getExpandedRowModel } from "./getExpandedRowModel";
@@ -261,7 +261,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <PKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <StreamPKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldPKCell row={row} />
         ),
@@ -274,7 +274,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <CursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <StreamCursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldCursorCell row={row} />
         ),
