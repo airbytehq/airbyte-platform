@@ -6,11 +6,12 @@ import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
-import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
+import { links } from "core/utils/links";
 
 import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./NextCursorCell.module.scss";
@@ -75,8 +76,8 @@ export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamFie
     updateStreamField(row.original.streamNode!, updatedConfig);
   };
 
-  return config?.selected && cursorType ? (
-    <FlexContainer direction="row" gap="xs" alignItems="center" data-testid="cursor-field-cell">
+  const cursorButton =
+    config?.selected && cursorType ? (
       <CatalogComboBox
         disabled={!shouldDefineCursor}
         options={cursorOptions}
@@ -97,6 +98,18 @@ export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamFie
         controlClassName={styles.control}
         controlBtnIcon="cursor"
       />
-    </FlexContainer>
-  ) : null;
+    ) : null;
+
+  return (
+    <div data-testid="cursor-field-cell">
+      {config?.selected && !shouldDefineCursor ? (
+        <Tooltip placement="bottom" control={cursorButton}>
+          <FormattedMessage id="form.field.sourceDefinedCursor" />
+          <TooltipLearnMoreLink url={links.sourceDefinedCursorLink} />
+        </Tooltip>
+      ) : (
+        cursorButton
+      )}
+    </div>
+  );
 };

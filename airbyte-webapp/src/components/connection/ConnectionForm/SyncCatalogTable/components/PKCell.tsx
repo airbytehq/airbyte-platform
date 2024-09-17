@@ -6,9 +6,11 @@ import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
+import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
+import { links } from "core/utils/links";
 
 import { MultiCatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./NextPKCell.module.scss";
@@ -70,8 +72,8 @@ export const PKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) =>
     updateStreamField(row.original.streamNode!, updatedConfig);
   };
 
-  return config?.selected && pkType ? (
-    <div data-testid="primary-key-cell">
+  const pkButton =
+    config?.selected && pkType ? (
       <MultiCatalogComboBox
         options={pkOptions}
         disabled={!shouldDefinePk}
@@ -85,6 +87,18 @@ export const PKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) =>
         controlClassName={styles.control}
         controlBtnIcon="keyCircle"
       />
+    ) : null;
+
+  return (
+    <div data-testid="primary-key-cell">
+      {config?.selected && !shouldDefinePk ? (
+        <Tooltip placement="bottom" control={pkButton}>
+          <FormattedMessage id="form.field.sourceDefinedPK" />
+          <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
+        </Tooltip>
+      ) : (
+        pkButton
+      )}
     </div>
-  ) : null;
+  );
 };
