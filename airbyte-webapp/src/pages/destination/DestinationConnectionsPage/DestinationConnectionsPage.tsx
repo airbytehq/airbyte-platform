@@ -12,6 +12,8 @@ import { useGetDestinationFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList, useSourceList } from "core/api";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
+import styles from "./DestinationConnectionsPage.module.scss";
+
 export const DestinationConnectionsPage = () => {
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
@@ -52,7 +54,7 @@ export const DestinationConnectionsPage = () => {
   return (
     <>
       {connections.length ? (
-        <FlexContainer direction="column" gap="xl">
+        <FlexContainer direction="column" gap="xl" className={styles.fullHeight}>
           <TableItemTitle
             type="source"
             dropdownOptions={sourceDropdownOptions}

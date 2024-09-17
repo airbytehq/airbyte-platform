@@ -48,7 +48,7 @@ describe("StreamsList", () => {
       <TestWrapper>
         <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
           <StreamsListContextProvider>
-            <StreamsList />
+            <StreamsList customScrollParent={null} />
           </StreamsListContextProvider>
         </VirtuosoMockContext.Provider>
       </TestWrapper>

@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, forwardRef, useMemo } from "react";
+import { useRef, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -27,7 +27,7 @@ import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
-export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
+export const StreamsList: React.FC<{ customScrollParent: HTMLElement | null }> = ({ customScrollParent }) => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
@@ -114,9 +114,6 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
     recordsLoaded,
   } = useConnectionStatus(connection.connectionId);
 
-  const customScrollParent =
-    typeof outerRef !== "function" && outerRef && outerRef.current ? outerRef.current : undefined;
-
   return (
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
@@ -151,10 +148,9 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
           }
           sorting={false}
           virtualized
-          virtualizedProps={{ customScrollParent, useWindowScroll: true }}
+          virtualizedProps={{ customScrollParent: customScrollParent ?? undefined, useWindowScroll: true }}
         />
       </FlexContainer>
     </Card>
   );
-});
-StreamsList.displayName = "StreamsList";
+};

@@ -25,7 +25,7 @@ export const StreamStatusPage = () => {
         <ScrollableContainer ref={ref} className={styles.container}>
           <ConnectionStatusMessages />
           <ConnectionSyncStatusCard />
-          <StreamsList ref={ref} />
+          <StreamsList customScrollParent={ref.current} />
         </ScrollableContainer>
       </StreamsListContextProvider>
     </ConnectionSyncContextProvider>
