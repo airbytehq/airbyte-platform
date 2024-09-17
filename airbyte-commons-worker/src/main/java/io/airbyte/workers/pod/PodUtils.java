@@ -61,7 +61,7 @@ public class PodUtils {
    * Extract the shortname of the image from the full path.
    */
   static String getShortImageName(final String fullImagePath) {
-    if (fullImagePath == null || fullImagePath.length() < 1) {
+    if (fullImagePath == null || fullImagePath.isEmpty()) {
       return null;
     }
     return DockerImageNameHelper.extractShortImageName(fullImagePath);
@@ -70,15 +70,17 @@ public class PodUtils {
   /**
    * Docker image names are by convention separated by slashes. The last portion is the image's name.
    * This is followed by a colon and a version number. e.g. airbyte/scheduler:v1 or
-   * gcr.io/my-project/image-name:v2.
-   * <p>
+   * gcr.io/my-project/image-name:v2. Registry name may also include port number, e.g.
+   * registry.internal:1234/my-project/image-name:v2
+   * <p />
    * Get the image version by returning the substring following a colon.
    */
   static String getImageVersion(final String fullImagePath) {
-    if (fullImagePath == null || fullImagePath.length() < 1) {
+    if (fullImagePath == null || fullImagePath.isEmpty()) {
       return null;
     }
-    int colonIndex = fullImagePath.indexOf(":");
+    // Use the last colon to find the image tag
+    int colonIndex = fullImagePath.lastIndexOf(":");
     if (colonIndex != -1 && fullImagePath.length() > colonIndex + 1) {
       return fullImagePath.substring(colonIndex + 1);
     }
