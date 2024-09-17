@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthConfiguration;
 import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
@@ -34,6 +35,7 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +64,7 @@ public class InstanceConfigurationHandler {
   private final String trackingStrategy;
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
+  private final Clock clock;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -73,7 +76,8 @@ public class InstanceConfigurationHandler {
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence,
                                       final AuthConfigs authConfigs,
-                                      final PermissionService permissionService) {
+                                      final PermissionService permissionService,
+                                      final Optional<Clock> clock) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -85,6 +89,7 @@ public class InstanceConfigurationHandler {
     this.organizationPersistence = organizationPersistence;
     this.authConfigs = authConfigs;
     this.permissionService = permissionService;
+    this.clock = clock.orElse(Clock.systemUTC());
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
@@ -212,7 +217,7 @@ public class InstanceConfigurationHandler {
           .usedNodes(0)
           .maxEditors(license.maxEditors().orElse(null))
           .maxNodes(license.maxNodes().orElse(null))
-          .licenseStatus(LicenseStatus.PRO);
+          .licenseStatus(getLicenseStatus());
     }
     return null;
   }
@@ -233,6 +238,23 @@ public class InstanceConfigurationHandler {
         .filter(p -> EDITOR_ROLES.contains(p.getPermissionType()))
         .map(Permission::getUserId).collect(Collectors.toSet());
     return editors.size();
+  }
+
+  @VisibleForTesting
+  LicenseStatus currentLicenseStatus() {
+    if (activeAirbyteLicense.isEmpty()
+        || activeAirbyteLicense.get().getLicense().isEmpty()
+        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID) {
+      return LicenseStatus.INVALID;
+    }
+    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense().get();
+    if (actualLicense.expirationDate().map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
+      return LicenseStatus.EXPIRED;
+    }
+    if (actualLicense.maxEditors().map(m -> editorsUsage() > m).orElse(false)) {
+      return LicenseStatus.EXCEEDED;
+    }
+    return LicenseStatus.PRO;
   }
 
 }

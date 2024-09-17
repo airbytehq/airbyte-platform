@@ -28,6 +28,7 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
@@ -36,9 +37,13 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -159,7 +164,8 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService);
+        permissionService,
+        Optional.empty());
 
     final var result = handler.getInstanceConfiguration();
 
@@ -280,6 +286,67 @@ class InstanceConfigurationHandlerTest {
     assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
   }
 
+  @Test
+  void testInvalidLicenseTest() {
+    final ActiveAirbyteLicense license = new ActiveAirbyteLicense();
+    license.setLicense(null);
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(license),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty());
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
+  }
+
+  @Test
+  void testExpiredLicenseTest() {
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())));
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
+  }
+
+  @Test
+  void testExceededEditorsLicenseTest() {
+
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty());
+    when(permissionService.listPermissions()).thenReturn(
+        Stream.generate(UUID::randomUUID)
+            .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
+            .limit(MAX_EDITORS + 10).toList());
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXCEEDED);
+  }
+
   private void stubGetDefaultUser() throws IOException {
     when(mUserPersistence.getDefaultUser()).thenReturn(
         Optional.of(new AuthenticatedUser()
@@ -317,7 +384,8 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService);
+        permissionService,
+        Optional.empty());
   }
 
 }
