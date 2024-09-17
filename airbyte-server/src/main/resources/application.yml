@@ -287,9 +287,6 @@ airbyte:
           container:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
-        sidecar:
-          container:
-            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
     isolated:
       kube:

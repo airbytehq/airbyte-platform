@@ -61,7 +61,6 @@ object OrchestratorConstants {
           EnvVar.JOB_KUBE_NAMESPACE,
           EnvVar.JOB_KUBE_NODE_SELECTORS,
           EnvVar.JOB_KUBE_SERVICEACCOUNT,
-          EnvVar.JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY,
           EnvVar.JOB_KUBE_TOLERATIONS,
           EnvVar.JOB_MAIN_CONTAINER_CPU_LIMIT,
           EnvVar.JOB_MAIN_CONTAINER_CPU_REQUEST,

@@ -46,9 +46,6 @@ airbyte:
           container:
             image-pull-policy: ${UNUSED_VALUE:}
             image-pull-secret: ${UNUSED_VALUE:}
-        sidecar:
-          container:
-            image-pull-policy: ${UNUSED_VALUE:}
         tolerations: ${UNUSED_VALUE:}
     isolated:
       kube:

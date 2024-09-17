@@ -94,10 +94,6 @@ data:
   JOB_KUBE_BUSYBOX_IMAGE: {{ $.Values.global.jobs.kube.images.busybox | quote }}
   {{- end }}
 
-  {{- if $.Values.global.jobs.kube.images.socat }}
-  JOB_KUBE_SOCAT_IMAGE: {{ $.Values.global.jobs.kube.images.socat | quote }}
-  {{- end }}
-
   {{- if $.Values.global.jobs.kube.images.curl }}
   JOB_KUBE_CURL_IMAGE: {{ $.Values.global.jobs.kube.images.curl | quote }}
   {{- end }}

@@ -157,8 +157,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
                                @Value("${airbyte.worker.isolated.kube.node-selectors}") String isolatedNodeSelectors,
                                @Value("${airbyte.worker.isolated.kube.use-custom-node-selector}") boolean useCustomNodeSelector,
                                @Value("${airbyte.worker.job.kube.main.container.image-pull-secret}") List<String> mainContainerImagePullSecret,
-                               @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") String mainContainerImagePullPolicy,
-                               @Value("${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") String sidecarContainerImagePullPolicy) {
+                               @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") String mainContainerImagePullPolicy) {
 
   }
 
