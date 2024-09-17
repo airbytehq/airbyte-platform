@@ -19,8 +19,6 @@ class StartupApplicationEventListenerTest {
     val eventListener =
       StartupApplicationEventListener(
         claimedProcessor = claimedProcessor,
-        workerFactory = mockk(),
-        highPriorityWorkerFactory = mockk(),
         claimProcessorTracker = mockk(relaxed = true),
         customMetricPublisher = mockk(relaxed = true),
         temporalWorkerController = mockk(relaxed = true),

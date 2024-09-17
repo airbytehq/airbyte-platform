@@ -13019,13 +13019,10 @@ components:
     DeploymentMetadataRead:
       type: object
       required:
-        - environment
         - id
         - mode
         - version
       properties:
-        environment:
-          type: string
         id:
           type: string
           format: uuid

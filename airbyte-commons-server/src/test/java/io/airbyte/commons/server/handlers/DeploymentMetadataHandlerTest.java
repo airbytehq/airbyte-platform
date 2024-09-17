@@ -33,19 +33,16 @@ class DeploymentMetadataHandlerTest {
     final DSLContext dslContext = mock(DSLContext.class);
     final Environment environment = mock(Environment.class);
     final Result<org.jooq.Record> result = mock(Result.class);
-    final String expectedEnvironment =
-        Environment.KUBERNETES.equals(activeEnvironment) ? Configs.WorkerEnvironment.KUBERNETES.name() : Configs.WorkerEnvironment.DOCKER.name();
 
     when(result.getValue(anyInt(), anyString())).thenReturn(deploymentId);
     when(dslContext.fetch(anyString())).thenReturn(result);
     when(environment.getActiveNames()).thenReturn(Set.of(activeEnvironment));
 
-    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, deploymentMode, dslContext, environment);
+    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, deploymentMode, dslContext);
 
     final DeploymentMetadataRead deploymentMetadataRead = handler.getDeploymentMetadata();
 
     assertEquals(deploymentId, deploymentMetadataRead.getId());
-    assertEquals(expectedEnvironment, deploymentMetadataRead.getEnvironment());
     assertEquals(deploymentMode.name(), deploymentMetadataRead.getMode());
     assertEquals(version, deploymentMetadataRead.getVersion());
   }

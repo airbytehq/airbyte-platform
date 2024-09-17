@@ -136,7 +136,6 @@ airbyte:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}

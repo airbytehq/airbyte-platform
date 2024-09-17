@@ -6,7 +6,6 @@ import io.airbyte.analytics.DEPLOYMENT_MODE_ENV_VAR
 import io.airbyte.analytics.SEGMENT_WRITE_KEY_ENV_VAR
 import io.airbyte.analytics.TRACKING_STRATEGY_ENV_VAR
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.config.EnvConfigs
 
 private const val LOG_LEVEL = "LOG_LEVEL"
 
@@ -30,8 +29,6 @@ object OrchestratorConstants {
           S3_PATH_STYLE_ACCESS,
         ),
       )
-      // add job shared envs
-      addAll(EnvConfigs.JOB_SHARED_ENVS.keys)
       // add tracking client
       addAll(
         setOf(
@@ -58,8 +55,6 @@ object OrchestratorConstants {
           EnvVar.JOB_ERROR_REPORTING_STRATEGY,
           EnvVar.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvVar.JOB_KUBE_ANNOTATIONS,
-          EnvVar.JOB_KUBE_BUSYBOX_IMAGE,
-          EnvVar.JOB_KUBE_CURL_IMAGE,
           EnvVar.JOB_KUBE_LABELS,
           EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY,
           EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET,
@@ -67,7 +62,6 @@ object OrchestratorConstants {
           EnvVar.JOB_KUBE_NODE_SELECTORS,
           EnvVar.JOB_KUBE_SERVICEACCOUNT,
           EnvVar.JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY,
-          EnvVar.JOB_KUBE_SOCAT_IMAGE,
           EnvVar.JOB_KUBE_TOLERATIONS,
           EnvVar.JOB_MAIN_CONTAINER_CPU_LIMIT,
           EnvVar.JOB_MAIN_CONTAINER_CPU_REQUEST,
@@ -84,8 +78,6 @@ object OrchestratorConstants {
           EnvVar.PUB_SUB_ENABLED,
           EnvVar.PUB_SUB_TOPIC_NAME,
           EnvVar.ROOTLESS_WORKLOAD,
-          EnvVar.SOCAT_KUBE_CPU_LIMIT,
-          EnvVar.SOCAT_KUBE_CPU_REQUEST,
           EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.STORAGE_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE,

@@ -8,7 +8,6 @@ import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
 import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.storage.StorageConfig
-import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
@@ -148,9 +147,9 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("checkEnvVars")
   fun checkEnvVars(
-    @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
-    return workerConfigs.envMap.toEnvVarList()
+    return metadataEnvMap.toEnvVarList()
   }
 
   /**
@@ -159,9 +158,9 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("discoverEnvVars")
   fun discoverEnvVars(
-    @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
-    return workerConfigs.envMap.toEnvVarList()
+    return metadataEnvMap.toEnvVarList()
   }
 
   /**
@@ -170,9 +169,9 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("specEnvVars")
   fun specEnvVars(
-    @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
-    return workerConfigs.envMap.toEnvVarList()
+    return metadataEnvMap.toEnvVarList()
   }
 
   /**
@@ -181,10 +180,10 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("readEnvVars")
   fun readEnvVars(
-    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
     @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
   ): List<EnvVar> {
-    return workerConfigs.envMap.toEnvVarList() + ffEnvVars.toEnvVarList()
+    return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
   }
 
   /**
@@ -193,10 +192,10 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("writeEnvVars")
   fun writeEnvVars(
-    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+    @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
     @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
   ): List<EnvVar> {
-    return workerConfigs.envMap.toEnvVarList() + ffEnvVars.toEnvVarList()
+    return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
   }
 
   @Singleton
@@ -505,6 +504,20 @@ class EnvVarConfigBeanFactory {
       AirbyteEnvVar.DATABASE_URL.toString() to dbUrl,
       AirbyteEnvVar.DATABASE_USER.toString() to dbUsername,
       AirbyteEnvVar.DATABASE_PASSWORD.toString() to dbPassword,
+    )
+  }
+
+  @Singleton
+  @Named("airbyteMetadataEnvMap")
+  fun airbyteMetadataEnvMap(
+    @Value("\${airbyte.version}") version: String,
+    @Value("\${airbyte.role}") role: String,
+    @Value("\${airbyte.deployment-mode}") deploymentMode: String,
+  ): Map<String, String> {
+    return mapOf(
+      EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version,
+      EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to role,
+      EnvVarConstants.DEPLOYMENT_MODE_ENV_VAR to deploymentMode,
     )
   }
 }

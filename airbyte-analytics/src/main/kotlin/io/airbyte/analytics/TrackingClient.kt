@@ -121,7 +121,6 @@ class SegmentTrackingClient(
         // deployment
         put(AIRBYTE_VERSION_KEY, deployment.getDeploymentVersion())
         put("deployment_mode", deployment.getDeploymentMode())
-        put("deployment_env", deployment.getDeploymentEnvironment())
         put("deployment_id", deployment.getDeploymentId().toString())
 
         // workspace (includes info that in the future we would store in an organization)
@@ -385,8 +384,6 @@ class Deployment(private val deploymentMetadata: DeploymentMetadataRead) {
   fun getDeploymentMode(): String = deploymentMetadata.mode
 
   fun getDeploymentId(): UUID = deploymentMetadata.id
-
-  fun getDeploymentEnvironment(): String = deploymentMetadata.environment
 
   fun getDeploymentVersion(): String = deploymentMetadata.version
 }
