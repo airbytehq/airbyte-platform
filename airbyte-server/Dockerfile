@@ -6,7 +6,7 @@ ADD airbyte-app.tar /app
 
 FROM ${JDK_IMAGE} AS server
 EXPOSE 8000 5005
-ARG VERSION=dev
+ARG VERSION=0.64.5
 ENV APPLICATION airbyte-server
 ENV VERSION ${VERSION}
 WORKDIR /app
