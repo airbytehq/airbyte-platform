@@ -9,14 +9,18 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.connector_builder.exceptions.AssistProxyException
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.io.InputStreamReader
+
+private val logger = KotlinLogging.logger {}
 
 class AssistProxy(private val proxyConfig: AssistConfiguration) {
   fun post(
     path: String,
     jsonBody: JsonNode?,
   ): JsonNode {
+    logger.info { "Calling Assist API with path: $path" }
     val connection = proxyConfig.getConnection(path)
     connection.apply {
       requestMethod = "POST"
@@ -34,6 +38,7 @@ class AssistProxy(private val proxyConfig: AssistConfiguration) {
 
     try {
       responseCode = connection.responseCode
+      logger.info { "Assist API response code: $responseCode" }
       val inputStream =
         if (responseCode in 200..299) {
           connection.inputStream
