@@ -62,7 +62,14 @@ export const SimpleAuthLoginForm: React.FC = () => {
         <Box mt="2xl">
           <FlexContainer justifyContent="center">
             <Text color="red" align="center">
-              {loginError === "invalid-credentials" && <FormattedMessage id="login.failed" />}
+              {loginError === "invalid-credentials" && (
+                <FormattedMessage
+                  id="login.failed"
+                  values={{
+                    link: (children) => <ExternalLink href={links.ossAuthentication}>{children}</ExternalLink>,
+                  }}
+                />
+              )}
               {loginError === "missing-cookie" && (
                 <FormattedMessage
                   id="login.likelyMissingCookie"

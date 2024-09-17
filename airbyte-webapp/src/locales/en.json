@@ -573,7 +573,7 @@
   "connection.saveWithoutRefresh.description": "Note: If you do not refresh the affected streams, unexpected behavior may occur",
 
   "connection.clearDataRecommended": "Clear streams recommended",
-  "connection.clearDataHint": "Due to changes in the stream configuration, we recommend clearing the affected streams. This will delete data in the destination for those streams.  Please sync after clearing to bring your data up to date.",
+  "connection.clearDataHint": "Due to changes in the stream configuration, we recommend clearing the affected streams. This will delete data in the destination for those streams. Please sync after clearing to bring your data up to date.",
   "connection.saveWithDataClear": "Clear data from affected streams (recommended)",
   "connection.saveWithFullDataClear": "Clear all data (recommended)",
   "connection.saveWithClear": "Save configuration and clear streams (recommended)",
@@ -787,7 +787,7 @@
   "connectionAutoDisabledReason.WORKSPACE_IS_DELINQUENT": "Airbyte disabled the connection due to a billing issue. Resolve your billing status to re-enable the connection.",
   "connectionAutoDisabledReason.SCHEMA_CHANGE_AUTO_PROPAGATE": "Airbyte disabled the connection automatically due to schema changes.",
 
-  "connection.actions.error": "There was an error starting this job.  Please try again.",
+  "connection.actions.error": "There was an error starting this job. Please try again.",
   "connection.actions.refreshData": "Refresh your data",
   "connection.actions.refreshConnection": "Refresh connection",
   "connection.actions.refreshData.runningJobTooltip": "Cannot refresh data during a running sync",
@@ -797,7 +797,7 @@
 
   "connection.actions.refreshData.description": "Refreshing your data will replace all data in your destination by reloading all data from the source.",
   "connection.actions.refreshData.confirm.title": "Are you sure you want to refresh this connection?",
-  "connection.actions.refreshData.affectedStreamsList.title": "This action will refresh the following {affected} / {total} enabled streams.  It will also sync all enabled streams:",
+  "connection.actions.refreshData.affectedStreamsList.title": "This action will refresh the following {affected} / {total} enabled streams. It will also sync all enabled streams:",
   "connection.actions.refreshData.affectedStreamsList.seeMore": "+ See {count} more streams",
   "connection.actions.refreshStream.description": "A refresh pulls all historical data from the source. During the refresh, all existing sync schedules will be paused until the refresh is complete.",
   "connection.actions.refreshStream.description.note": "<b>Note:</b> A refresh will also sync all enabled streams in the connection. This can incur additional costs to load the data into the destination.",
@@ -1265,7 +1265,7 @@
   "credits.maxCreditsError": "The maximum credit purchase is {maximum} credits.",
   "credits.checkoutModalTitle": "Select credit quantity",
   "credits.checkout": "Checkout",
-  "credits.checkout.creditExpiration": "Credits are valid for 12 months.  Visit our <lnk>pricing page</lnk> to learn more.",
+  "credits.checkout.creditExpiration": "Credits are valid for 12 months. Visit our <lnk>pricing page</lnk> to learn more.",
   "credits.aboveMaxCredits": "To buy large quantities of credits, talk to our <lnk>Sales team</lnk>.",
   "credits.numberOfCredits": "Number of credits",
   "credits.pricePerCredit": "Price per credit",
@@ -1831,7 +1831,7 @@
 
   "jobHistory.logs.title": "Logs: {connectionName}",
   "jobHistory.logs.noLogs": "No logs",
-  "jobHistory.logs.noAttempts": "An unknown error prevented this job from generating any attempts.  No logs are available.",
+  "jobHistory.logs.noAttempts": "An unknown error prevented this job from generating any attempts. No logs are available.",
   "jobHistory.logs.nextMatchLabel": "Jump to next match",
   "jobHistory.logs.previousMatchLabel": "Jump to previous match",
   "jobHistory.logs.downloadLogs": "Download logs",
@@ -1870,7 +1870,7 @@
   "login.haveAccount": "Already have an account?",
   "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
-  "login.failed": "Invalid username or password",
+  "login.failed": "Invalid username or password. <link>Learn more.</link>",
   "login.likelyMissingCookie": "Your credentials were correct, but the server failed to set a cookie. You appear to have deployed over HTTP. Make sure you have <link>disabled secure cookies</link>.",
   "login.getUserFailed": "Failed to get user after login. Check the network tab for more details.",
   "login.signup": "Sign up",
