@@ -90,6 +90,7 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
         checked={allEnabled}
         onChange={onToggleAllStreamsInNamespace}
         disabled={syncCheckboxDisabled || mode === "readonly"}
+        data-testid="sync-namespace-checkbox"
       />
       {namespaceName && (
         <Text

@@ -20,6 +20,7 @@ export const ExpandCollapseAllControl: React.FC<ExpandCollapseAllControlProps> =
         icon={isAllRowsExpanded ? "collapseAll" : "expandAll"}
         variant="secondary"
         type="button"
+        data-testid="expand-collapse-all-streams-control"
         onClick={() => toggleAllRowsExpanded(!isAllRowsExpanded)}
       />
     }
