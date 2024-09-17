@@ -35,6 +35,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.Database;
+import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate.Builder;
@@ -240,8 +241,10 @@ public class AcceptanceTestsResources {
         StreamStatusJobType.SYNC);
   }
 
-  void runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
-    LOGGER.info("Starting runSmallSyncForAWorkspaceId()");
+  record SyncIds(UUID connectionId, Long jobId, Integer attemptNumber) {}
+
+  SyncIds runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
+    LOGGER.info("Starting runSmallSyncForAWorkspaceId(" + workspaceId + ")");
     final UUID sourceId = testHarness.createPostgresSource(workspaceId).getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination(workspaceId).getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
@@ -289,12 +292,15 @@ public class AcceptanceTestsResources {
         WITHOUT_SCD_TABLE);
     Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
+
+    return new SyncIds(connectionId, connectionSyncRead1.getJob().getId(), connectionSyncRead1.getAttempts().size() - 1);
   }
 
   void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     final AirbyteApiClient airbyteApiClient =
         createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api",
             Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE));
+    final TestFlagsSetter testFlagsSetter = new TestFlagsSetter(AIRBYTE_SERVER_HOST);
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
@@ -326,7 +332,7 @@ public class AcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId, testFlagsSetter);
 
     testHarness.ensureCleanSlate();
   }

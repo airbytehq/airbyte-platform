@@ -25,6 +25,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.bundles.flyway)
   implementation(libs.temporal.sdk)

@@ -100,6 +100,7 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
+import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.airbyte.test.container.AirbyteTestContainer;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -226,6 +227,7 @@ public class AcceptanceTestHarness {
 
   private AirbyteTestContainer airbyteTestContainer;
   private final AirbyteApiClient apiClient;
+  private final TestFlagsSetter testFlagsSetter;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
 
@@ -253,10 +255,19 @@ public class AcceptanceTestHarness {
   public AcceptanceTestHarness(final AirbyteApiClient apiClient,
                                final UUID defaultWorkspaceId,
                                final String postgresSqlInitFile)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, null, defaultWorkspaceId, postgresSqlInitFile);
+  }
+
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient,
+                               final TestFlagsSetter testFlagsSetter,
+                               final UUID defaultWorkspaceId,
+                               final String postgresSqlInitFile)
       throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // reads env vars to assign static variables
     assignEnvVars();
     this.apiClient = apiClient;
+    this.testFlagsSetter = testFlagsSetter;
     this.defaultWorkspaceId = defaultWorkspaceId;
     this.postgresSqlInitFile = postgresSqlInitFile;
 
@@ -323,6 +334,19 @@ public class AcceptanceTestHarness {
   public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId)
       throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     this(apiClient, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
+  }
+
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId, final TestFlagsSetter testFlagsSetter)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, testFlagsSetter, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
+  }
+
+  public AirbyteApiClient getApiClient() {
+    return apiClient;
+  }
+
+  public TestFlagsSetter getTestFlagsSetter() {
+    return testFlagsSetter;
   }
 
   public void stopDbAndContainers() {

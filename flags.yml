@@ -52,7 +52,6 @@ flags:
       - type: "workspace"
         include:
           - "1bdcfb61-219b-4290-be4f-12f9ac5461be"
-          - "3851861d-ac0b-440c-bd60-408cf9e7fc0e"
         serve: true
   - name: platform.fail-sync-on-invalid-checksum
     serve: false
