@@ -54,6 +54,8 @@ class DestinationCatalogGenerator(
     stream.stream.jsonSchema = Jsons.deserialize(jsonSchema)
     stream.cursorField = updateFields.cursor
     stream.primaryKey = updateFields.primaryKey
+    stream.stream.sourceDefinedPrimaryKey = updateFields.sourceDefinedPrimaryKey
+    stream.stream.defaultCursorField = updateFields.sourceDefaultCursor
 
     return errors
   }
@@ -79,7 +81,13 @@ class DestinationCatalogGenerator(
       }
         .fold(
           MapperToFieldAccumulator(
-            SlimStream(stream.fields ?: listOf(), stream.cursorField, stream.primaryKey),
+            SlimStream(
+              fields = stream.fields ?: listOf(),
+              cursor = stream.cursorField,
+              primaryKey = stream.primaryKey,
+              sourceDefinedPrimaryKey = stream.stream.sourceDefinedPrimaryKey,
+              sourceDefaultCursor = stream.stream.defaultCursorField,
+            ),
             listOf(),
             mapOf(),
           ),

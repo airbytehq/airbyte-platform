@@ -280,7 +280,7 @@ class DestinationCatalogGeneratorTest {
                 "additionalProperties": true
               },
               "default_cursor_field": [
-                "modified_at"
+                "modified_at_test"
               ],
               "supported_sync_modes": [
                 "full_refresh",
@@ -289,7 +289,7 @@ class DestinationCatalogGeneratorTest {
               "source_defined_cursor": true,
               "source_defined_primary_key": [
                 [
-                  "id"
+                  "id_test"
                 ]
               ]
             },
