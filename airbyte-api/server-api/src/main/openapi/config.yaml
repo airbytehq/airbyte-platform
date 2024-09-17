@@ -4609,6 +4609,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
+  /v1/billing/organization_balance:
+    post:
+      summary: Get the current balance of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getOrganizationBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully got organization's balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationBalanceRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -10431,6 +10450,56 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
+    OrganizationBalanceRead:
+      type: object
+      required:
+        - upcomingInvoice
+        - planType
+      properties:
+        planType:
+          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
+          type: string
+          enum:
+            - in_arrears
+            - prepaid
+          deprecated: true
+        upcomingInvoice:
+          type: object
+          required:
+            - currency
+            - amount
+            - dueDate
+          properties:
+            currency:
+              type: string
+            amount:
+              type: string
+              description: The amount of the next upcoming invoice formatted as a decimal number wrapped inside a string.
+            dueDate:
+              $ref: "#/components/schemas/LocalDate"
+        credits:
+          type: object
+          required:
+            - balance
+            - blocks
+          properties:
+            balance:
+              type: number
+              format: double
+            blocks:
+              type: array
+              items:
+                $ref: "#/components/schemas/CreditBlockRead"
+    CreditBlockRead:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+        expiryDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
 
     # ORGANIZATIONS
     OrganizationId:
@@ -14250,10 +14319,15 @@ components:
         - destination
       x-sdk-component: true
 
+    LocalDate:
+      type: string
+      format: date
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
     ISO8601DateTime:
       type: string
       format: date-time
-      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSS''Z''")'
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSSZ")'
 
     DiagnosticReportRequestBody:
       type: object
