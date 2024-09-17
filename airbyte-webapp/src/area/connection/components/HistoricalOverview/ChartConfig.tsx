@@ -6,7 +6,7 @@ import { scaleLinear } from "victory-vendor/d3-scale";
 import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection } from "core/api";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { nextOpenJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
@@ -111,7 +111,7 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   const { openModal } = useModalService();
   const isTimelineEnabled = useExperiment("connection.timeline", false);
 
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const createLink = useCurrentWorkspaceLink();
 
   const jobId = chartState.activePayload?.at(0)?.payload?.jobId;

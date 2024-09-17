@@ -17,7 +17,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { activeStatuses } from "area/connection/utils";
 import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection } from "core/api";
 
 import { DataFreshnessCell } from "./DataFreshnessCell";
 import { LatestSyncCell } from "./LatestSyncCell";
@@ -29,7 +29,7 @@ import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
 export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
   const trackCountRef = useRef(0);
   useTrackSyncProgress(connection.connectionId, trackCountRef);

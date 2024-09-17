@@ -7,12 +7,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
-import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { useCurrentConnection, useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ModalOptions, ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -81,7 +80,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   attemptCount,
 }) => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { openModal } = useModalService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
 

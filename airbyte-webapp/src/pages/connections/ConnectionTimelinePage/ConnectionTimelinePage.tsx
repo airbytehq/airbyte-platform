@@ -9,9 +9,8 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useFilters, useGetConnectionEvent } from "core/api";
+import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 
 import { EventLineItem } from "./components/EventLineItem";
@@ -28,7 +27,7 @@ const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eve
 export const ConnectionTimelinePage = () => {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TIMELINE);
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { openModal } = useModalService();
 
   const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<TimelineFilterValues>({

@@ -33,6 +33,7 @@ jest.mock("core/api", () => ({
   useListStreamsStatuses: () => [],
   useGetConnectionSyncProgress: () => ({ data: {} }),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
 }));
 jest.mock("area/connection/utils/useUiStreamsStates");
 jest.mock("area/connection/utils/useStreamsTableAnalytics");

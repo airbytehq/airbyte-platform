@@ -1,8 +1,7 @@
 import { useMemo, ComponentPropsWithoutRef } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-import { useGetConnectionDataHistory } from "core/api";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection, useGetConnectionDataHistory } from "core/api";
 
 import { CHART_BASE_HEIGHT, CHART_MAX_HEIGHT, CHART_MIN_HEIGHT, CHART_STREAM_ROW_HEIGHT } from "./constants";
 import styles from "./DataMovedGraph.module.scss";
@@ -25,7 +24,7 @@ class PositionedBar extends Bar {
 }
 
 export const DataMovedGraph: React.FC = () => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const data = useGetConnectionDataHistory(connection.connectionId);
   const hasData = data.some(({ recordsCommitted }) => recordsCommitted > 0);
 

@@ -28,6 +28,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnectionQuery: jest.fn(() => async () => mockConnection),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
   useUpdateConnection: () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,

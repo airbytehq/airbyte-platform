@@ -13,10 +13,9 @@ import { useConnectionStatus } from "components/connection/ConnectionStatus/useC
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { getStreamKey } from "area/connection/utils";
-import { useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
+import { useCurrentConnection, useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
 import { ConnectionSyncProgressRead, ConnectionUptimeHistoryRead, JobStatus } from "core/api/types/AirbyteClient";
 import { assertNever } from "core/utils/asserts";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
@@ -221,7 +220,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
     setColorMap(colorMap);
   }, [colorValues]);
 
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const uptimeHistoryData = useGetConnectionUptimeHistory(connection.connectionId);
   const { isRunning } = useConnectionStatus(connection.connectionId);
   const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);

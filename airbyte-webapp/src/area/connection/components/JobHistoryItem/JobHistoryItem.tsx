@@ -17,12 +17,11 @@ import { JobWithAttempts } from "area/connection/types/jobs";
 import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
 import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { useCurrentConnection, useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
 import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -50,7 +49,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
   const { name: workspaceName } = useCurrentWorkspace();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
 
   useEffectOnce(() => {
     if (attemptLink.jobId === String(jobWithAttempts.job.id)) {

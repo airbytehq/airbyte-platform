@@ -9,9 +9,8 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
-import { useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
+import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { EventLineItem } from "./components/EventLineItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
@@ -31,7 +30,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
   filterValues: TimelineFilterValues;
   scrollElement: HTMLDivElement | null;
 }> = ({ filterValues, scrollElement }) => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { isRunning } = useConnectionStatus(connection.connectionId);
   const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
 

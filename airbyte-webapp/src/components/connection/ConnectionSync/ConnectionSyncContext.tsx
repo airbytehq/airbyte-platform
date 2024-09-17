@@ -13,6 +13,7 @@ import {
   connectionsKeys,
   useClearConnection,
   useClearConnectionStream,
+  useCurrentConnection,
 } from "core/api";
 import {
   ConnectionStatus,
@@ -24,7 +25,6 @@ import {
 } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { CancelJobModalBody } from "./CancelJobModalBody";
 
@@ -233,7 +233,7 @@ export const useConnectionSyncContext = () => {
 };
 
 export const ConnectionSyncContextProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const context = useConnectionSyncContextInit(connection);
 
   return <connectionSyncContext.Provider value={context}>{children}</connectionSyncContext.Provider>;
