@@ -73,6 +73,7 @@ export const FieldHashMapping: React.FC<FieldHashMappingProps> = ({ row, updateS
         onChangeFieldHashing(field.path, value === "hashed");
       }}
       placement="bottom-start"
+      data-testid="field-hashing-listbox"
     />
   );
 
