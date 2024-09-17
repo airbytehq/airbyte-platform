@@ -5198,6 +5198,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
 
+  /v1/diagnostic_tool/generate_report:
+    post:
+      summary: Generate a diagnostic report
+      tags:
+        - diagnostic_tool
+      operationId: generateDiagnosticReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticReportRequestBody"
+      responses:
+        "200":
+          description: Successfully generated diagnostic report
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -14232,6 +14254,14 @@ components:
       type: string
       format: date-time
       x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSS''Z''")'
+
+    DiagnosticReportRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
 
   responses:
     NotFoundResponse:
