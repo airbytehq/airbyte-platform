@@ -72,7 +72,7 @@ class ConnectorRolloutCLI : Runnable {
   private var rolloutId: UUID? = null
 
   @Option(
-    names = ["-c", "--actor-ids"],
+    names = ["--actor-ids"],
     description = ["List of actor IDs (required for `rollout` command)"],
     split = ",",
     required = false,
