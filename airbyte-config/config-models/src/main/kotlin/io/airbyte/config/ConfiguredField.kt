@@ -25,7 +25,7 @@ enum class FieldType(val type: String, val format: String? = null, val airbyteTy
         "type" to type,
       )
     format?.let { result["format"] = it }
-    airbyteType?.let { result["airbyteType"] = it }
+    airbyteType?.let { result["airbyte_type"] = it }
 
     return result
   }

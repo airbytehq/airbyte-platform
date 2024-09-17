@@ -563,22 +563,22 @@ class DestinationCatalogGeneratorTest {
         "fieldTimestampWithoutTimezone": {
           "type": "string",
           "format": "date-time",
-          "airbyteType": "timestamp_without_timezone"
+          "airbyte_type": "timestamp_without_timezone"
         },
         "fieldTimestampWithTimezone": {
           "type": "string",
           "format": "date-time",
-          "airbyteType": "timestamp_with_timezone"
+          "airbyte_type": "timestamp_with_timezone"
         },
         "fieldTimeWithoutTimezone": {
           "type": "string",
           "format": "time",
-          "airbyteType": "time_without_timezone"
+          "airbyte_type": "time_without_timezone"
         },
         "fieldTimeWithTimezone": {
           "type": "string",
           "format": "time",
-          "airbyteType": "time_with_timezone"
+          "airbyte_type": "time_with_timezone"
         },
         "fieldObject": {
           "type": "object"
