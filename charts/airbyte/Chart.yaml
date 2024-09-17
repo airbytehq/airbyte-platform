@@ -81,6 +81,10 @@ dependencies:
     name: connector-builder-server
     repository: https://airbytehq.github.io/helm-charts/
     version: 0.620.2
+  - condition: connector-rollout-worker.enabled
+    name: connector-rollout-worker
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.620.2
   - condition: keycloak.enabled
     name: keycloak
     repository: https://airbytehq.github.io/helm-charts/
