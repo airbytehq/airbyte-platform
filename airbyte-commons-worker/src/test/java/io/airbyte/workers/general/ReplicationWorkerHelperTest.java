@@ -132,7 +132,6 @@ class ReplicationWorkerHelperTest {
         mock(ThreadedTimeTracker.class),
         mock(VoidCallable.class),
         workloadApiClient,
-        false,
         analyticsMessageTracker,
         Optional.empty(),
         airbyteApiClient,

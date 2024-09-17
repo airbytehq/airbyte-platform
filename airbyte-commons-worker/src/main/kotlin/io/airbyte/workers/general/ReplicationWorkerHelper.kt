@@ -100,7 +100,6 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
   private val workloadApiClient: WorkloadApiClient,
-  private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
@@ -473,10 +472,6 @@ class ReplicationWorkerHelper(
     return internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
       .let { mapper.mapMessage(it) }
       .let { Optional.ofNullable(it) }
-  }
-
-  fun isWorkerV2TestEnabled(): Boolean {
-    return workloadEnabled
   }
 
   fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {

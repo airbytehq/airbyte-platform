@@ -58,16 +58,9 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    launchReplicationMonoPod(replicationInput, launcherInput)
-  }
-
-  fun launchReplicationMonoPod(
-    replicationInput: ReplicationInput,
-    launcherInput: LauncherInput,
-  ) {
     val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
 
-    val kubeInput = mapper.toReplicationKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
 
     var pod =
       replicationPodFactory.create(

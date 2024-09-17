@@ -13,7 +13,6 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.MaxWorkersConfig;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
-import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
@@ -162,10 +161,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
     // Configure logging client
     logClientManager.setWorkspaceMdc(Path.of(workspaceRoot, SCHEDULER_LOGS));
-
-    if (environment.getActiveNames().contains(Environment.KUBERNETES)) {
-      KubePortManagerSingleton.init(temporalWorkerPorts);
-    }
 
     configureTemporal(temporalUtils, temporalService);
   }

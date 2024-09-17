@@ -16,9 +16,7 @@ import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -40,7 +38,6 @@ import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.EmptyAirbyteDestination;
 import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
-import io.airbyte.workers.general.LimitedIntegrationLauncher;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
@@ -50,11 +47,11 @@ import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AnalyticsMessageTracker;
-import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
+import io.airbyte.workers.internal.LocalContainerAirbyteSource;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
@@ -63,7 +60,6 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;
@@ -146,21 +142,15 @@ public abstract class ReplicationWorkerPerformanceTest {
     final var replicationInput = mock(ReplicationInput.class);
     when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false));
 
-    // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
-    // LimitedThinRecordSourceProcess());
-    final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new LimitedFatRecordSourceProcess());
-
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
     final ConfiguredAirbyteCatalogMigrator catalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
     catalogMigrator.initialize();
-    final var migratorFactory = new AirbyteProtocolVersionedMigratorFactory(msgMigrator, catalogMigrator);
 
     final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
-    final var versionedAbSource =
-        new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
-            false, mock(MetricClient.class));
+    // TODO: This needs to be fixed to pass a NOOP tracker and a proper container IO handle
+    final var versionedAbSource = new LocalContainerAirbyteSource(heartbeatMonitor, versionFac, null, null);
     final var workspaceID = UUID.randomUUID();
     final FeatureFlagClient featureFlagClient = new TestClient(Map.of("heartbeat.failSync", false));
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
@@ -202,7 +192,7 @@ public abstract class ReplicationWorkerPerformanceTest {
 
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
-            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false, analyticsMessageTracker,
+            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, analyticsMessageTracker,
             Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
             recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class));
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);

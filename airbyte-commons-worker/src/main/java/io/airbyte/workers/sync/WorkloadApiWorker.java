@@ -32,7 +32,7 @@ import io.airbyte.workers.exception.WorkloadMonitorException;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.process.Metadata;
+import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;

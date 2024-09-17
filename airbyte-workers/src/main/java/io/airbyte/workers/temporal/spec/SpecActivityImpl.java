@@ -23,7 +23,7 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.models.SpecInput;
-import io.airbyte.workers.process.Metadata;
+import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;

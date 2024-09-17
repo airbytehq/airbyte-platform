@@ -23,7 +23,6 @@ airbyte:
     base-url: ${FEATURE_FLAG_BASEURL:}
   init:
     operation: ${OPERATION_TYPE:}
-    monopod: ${MONO_POD:false}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

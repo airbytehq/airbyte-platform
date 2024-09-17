@@ -14,18 +14,6 @@ private const val LOG_LEVEL = "LOG_LEVEL"
 private const val S3_PATH_STYLE_ACCESS = "S3_PATH_STYLE_ACCESS"
 
 object OrchestratorConstants {
-  // See the application.yml of the container-orchestrator for value
-  const val SERVER_PORT = 9000
-
-  // define two ports for stdout/stderr usage on the container orchestrator pod
-  const val PORT1 = 9877
-  const val PORT2 = 9878
-  const val PORT3 = 9879
-  const val PORT4 = 9880
-
-  @JvmField
-  val PORTS = setOf(PORT1, PORT2, PORT3, PORT4)
-
   /**
    * Set of all the environment variables necessary for the container orchestrator to run.
    */

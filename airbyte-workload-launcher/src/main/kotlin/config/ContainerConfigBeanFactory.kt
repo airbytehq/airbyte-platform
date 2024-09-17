@@ -7,7 +7,7 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ResourceRequirements
-import io.airbyte.workers.process.KubeContainerInfo
+import io.airbyte.workers.pod.KubeContainerInfo
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.TolerationBuilder

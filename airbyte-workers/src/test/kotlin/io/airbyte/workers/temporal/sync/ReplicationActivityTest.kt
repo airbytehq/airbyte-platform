@@ -8,7 +8,6 @@ import io.airbyte.config.State
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.workers.ReplicationInputHydrator
-import io.airbyte.workers.orchestrator.OrchestratorHandleFactory
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -30,7 +29,6 @@ class ReplicationActivityTest {
   val workloadClient: WorkloadClient = mockk()
   val jobOutputDocStore: JobOutputDocStore = mockk()
   val workloadIdGenerator: WorkloadIdGenerator = mockk()
-  val orchestratorHandleFactory: OrchestratorHandleFactory = mockk()
   val metricClient: MetricClient = mockk()
   val featureFlagClient: FeatureFlagClient = mockk()
   val payloadChecker: PayloadChecker = mockk()
@@ -49,7 +47,6 @@ class ReplicationActivityTest {
         workloadApiClient,
         workloadClient,
         workloadIdGenerator,
-        orchestratorHandleFactory,
         metricClient,
         featureFlagClient,
         payloadChecker,

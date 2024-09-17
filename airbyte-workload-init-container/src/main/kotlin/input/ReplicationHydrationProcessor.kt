@@ -31,7 +31,6 @@ private val logger = KotlinLogging.logger {}
  * Parses, hydrates and writes input files for the replication pod.
  */
 @Requires(property = "airbyte.init.operation", pattern = "sync")
-@Requires(property = "airbyte.init.monopod", pattern = "true")
 @Singleton
 class ReplicationHydrationProcessor(
   private val replicationInputHydrator: ReplicationInputHydrator,

@@ -5,10 +5,6 @@
 package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
-import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.resources.MoreResources
-import io.airbyte.config.ResourceRequirements
-import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
@@ -21,8 +17,8 @@ import io.airbyte.workers.exception.PodType
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
-import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.WORKLOAD_ID
@@ -178,7 +174,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates pod creation error`() {
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(), any(),
@@ -194,7 +190,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates pod wait for init timeout as kube exception`() {
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(),
@@ -363,7 +359,7 @@ class KubePodClientTest {
   }
 
   @Test
-  internal fun testLaunchingMonoPod() {
+  internal fun `launch replication happy path`() {
     val kubeInput =
       ReplicationKubeInput(
         podName = "podName",
@@ -380,7 +376,7 @@ class KubePodClientTest {
         sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
       )
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
     every {
       replicationPodFactory.create(
         kubeInput.podName,
@@ -399,107 +395,6 @@ class KubePodClientTest {
         replInput.connectionId,
       )
     } returns pod
-    client.launchReplicationMonoPod(
-      replicationInput = replInput,
-      launcherInput = replLauncherInput,
-    )
-
-    verify(exactly = 1) { launcher.create(pod) }
-    verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  internal fun testLaunchingMonoPodBelowMemoryTolerance() {
-    val resourceRequirements =
-      Jsons.deserialize(
-        MoreResources.readResource("resource.requirements/small-resource-requirements.json"),
-        ResourceRequirements::class.java,
-      )
-    val kubeInput =
-      ReplicationKubeInput(
-        podName = "podName",
-        labels = mapOf("label" to "value"),
-        annotations = mapOf("annotation" to "value"),
-        nodeSelectors = mapOf("selector" to "value"),
-        orchestratorImage = "orch-image",
-        sourceImage = "source-image",
-        destinationImage = "destination-image",
-        orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-        sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-        destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-      )
-    val syncResourceRequirements = mockk<SyncResourceRequirements>()
-    every { syncResourceRequirements.destination } returns resourceRequirements
-    every { syncResourceRequirements.orchestrator } returns resourceRequirements
-    every { syncResourceRequirements.source } returns resourceRequirements
-    replInput.withSyncResourceRequirements(syncResourceRequirements)
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
-    every {
-      replicationPodFactory.create(
-        kubeInput.podName,
-        kubeInput.labels,
-        kubeInput.annotations,
-        kubeInput.nodeSelectors,
-        kubeInput.orchestratorImage,
-        kubeInput.sourceImage,
-        kubeInput.destinationImage,
-        kubeInput.orchestratorReqs,
-        kubeInput.sourceReqs,
-        kubeInput.destinationReqs,
-        kubeInput.orchestratorRuntimeEnvVars,
-        kubeInput.sourceRuntimeEnvVars,
-        kubeInput.destinationRuntimeEnvVars,
-        replInput.connectionId,
-      )
-    } returns pod
-    client.launchReplication(
-      replicationInput = replInput,
-      launcherInput = replLauncherInput,
-    )
-
-    verify(exactly = 1) { launcher.create(pod) }
-    verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  internal fun testLaunchingMonoPodAboveMemoryTolerance() {
-    val resourceRequirements =
-      Jsons.deserialize(
-        MoreResources.readResource("resource.requirements/large-resource-requirements.json"),
-        ResourceRequirements::class.java,
-      )
-    val kubeInput =
-      ReplicationKubeInput(
-        podName = "podName",
-        labels = mapOf("label" to "value"),
-        annotations = mapOf("annotation" to "value"),
-        nodeSelectors = mapOf("selector" to "value"),
-        orchestratorImage = "orch-image",
-        sourceImage = "source-image",
-        destinationImage = "destination-image",
-        orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
-        orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-        sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-        destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
-      )
-    val syncResourceRequirements = mockk<SyncResourceRequirements>()
-    every { syncResourceRequirements.destination } returns resourceRequirements
-    every { syncResourceRequirements.orchestrator } returns resourceRequirements
-    every { syncResourceRequirements.source } returns resourceRequirements
-    replInput.withSyncResourceRequirements(syncResourceRequirements)
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
-    every {
-      replicationPodFactory.create(
-        any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
-      )
-    } returns pod
-
     client.launchReplication(
       replicationInput = replInput,
       launcherInput = replLauncherInput,
@@ -527,7 +422,7 @@ class KubePodClientTest {
         sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
       )
-    every { mapper.toReplicationKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(),
@@ -538,7 +433,7 @@ class KubePodClientTest {
 
     val error =
       Assertions.assertThrows(KubeClientException::class.java) {
-        client.launchReplicationMonoPod(
+        client.launchReplication(
           replicationInput = replInput,
           launcherInput = replLauncherInput,
         )

@@ -25,11 +25,11 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workers.pod.KubeContainerInfo
+import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -61,7 +61,7 @@ class PayloadKubeInputMapper(
   private val featureFlagClient: FeatureFlagClient,
   @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
-  fun toReplicationKubeInput(
+  fun toKubeInput(
     workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
@@ -73,10 +73,9 @@ class PayloadKubeInputMapper(
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = KubePodProcess.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchestratorReqs = PodUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
     val orchRuntimeEnvVars =
       listOf(
-        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
@@ -84,11 +83,11 @@ class PayloadKubeInputMapper(
       )
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
-    val sourceReqs = KubePodProcess.buildResourceRequirements(input.getSourceResourceReqs())
+    val sourceReqs = PodUtils.buildResourceRequirements(input.getSourceResourceReqs())
     val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
-    val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationReqs = PodUtils.buildResourceRequirements(input.getDestinationResourceReqs())
     val destinationRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig)
 
     val labels =

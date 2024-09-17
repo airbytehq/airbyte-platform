@@ -10,8 +10,8 @@ import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.storage.StorageConfig
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
-import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
-import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
+import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
+import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.constants.EnvVarConstants.LOCAL_SECRETS_MICRONAUT_ENV
 import io.airbyte.workload.launcher.model.toEnvVarList
@@ -218,7 +218,7 @@ class EnvVarConfigBeanFactory {
   }
 
   /**
-   * To be injected into orchestrator pods, so they can start AWS connector pods that use assumed role access.
+   * To be injected into the replication pod, for the connectors that use assumed role access.
    */
   @Singleton
   @Named("awsAssumedRoleSecretEnv")

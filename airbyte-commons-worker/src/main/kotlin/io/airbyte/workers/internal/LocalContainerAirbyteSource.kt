@@ -68,7 +68,7 @@ class LocalContainerAirbyteSource(
         messageIterator =
           streamFactory.create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
             .peek { message: AirbyteMessage ->
-              if (DefaultAirbyteSource.shouldBeat(message.type)) {
+              if (shouldBeat(message.type)) {
                 heartbeatMonitor.beat()
               }
             }
@@ -100,5 +100,9 @@ class LocalContainerAirbyteSource(
 
   override fun cancel() {
     close()
+  }
+
+  private fun shouldBeat(airbyteMessageType: AirbyteMessage.Type): Boolean {
+    return airbyteMessageType == AirbyteMessage.Type.STATE || airbyteMessageType == AirbyteMessage.Type.RECORD
   }
 }

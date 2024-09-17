@@ -7,7 +7,7 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.process.KubeContainerInfo
+import io.airbyte.workers.pod.KubeContainerInfo
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar

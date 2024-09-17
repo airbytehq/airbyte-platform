@@ -16,7 +16,6 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -26,7 +25,6 @@ import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -50,27 +48,20 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final Configs configs;
   private final JobRunConfig jobRunConfig;
   private final ReplicationWorkerFactory replicationWorkerFactory;
-  // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
-  private final Optional<AsyncStateManager> asyncStateManager;
   private final WorkloadApiClient workloadApiClient;
-  private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
 
   public ReplicationJobOrchestrator(final String configDir,
                                     final Configs configs,
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
-                                    final Optional<AsyncStateManager> asyncStateManager,
                                     final WorkloadApiClient workloadApiClient,
-                                    final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
     this.configDir = Path.of(configDir);
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
-    this.asyncStateManager = asyncStateManager;
     this.workloadApiClient = workloadApiClient;
-    this.workloadEnabled = workloadEnabled;
     this.jobOutputDocStore = jobOutputDocStore;
   }
 
@@ -97,9 +88,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
-    final Optional<String> workloadId = workloadEnabled ? Optional.of(JobOrchestrator.workloadId()) : Optional.empty();
+    final Optional<String> workloadId = Optional.of(JobOrchestrator.workloadId());
     final ReplicationWorker replicationWorker =
-        replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning,
+        replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {},
             workloadId);
 
     log.info("Running replication worker...");
@@ -107,23 +98,19 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
 
     final ReplicationOutput replicationOutput;
-    if (workloadEnabled) {
-      replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot, workloadId.get());
-      jobOutputDocStore.writeSyncOutput(workloadId.get(), replicationOutput);
-      updateStatusInWorkloadApi(replicationOutput, workloadId.get());
-    } else {
-      replicationOutput = replicationWorker.run(replicationInput, jobRoot);
-    }
+    replicationOutput = run(replicationWorker, replicationInput, jobRoot, workloadId.get());
+    jobOutputDocStore.writeSyncOutput(workloadId.get(), replicationOutput);
+    updateStatusInWorkloadApi(replicationOutput, workloadId.get());
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));
   }
 
   @VisibleForTesting
-  ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker,
-                                           final ReplicationInput replicationInput,
-                                           final Path jobRoot,
-                                           final String workloadId)
+  ReplicationOutput run(final ReplicationWorker replicationWorker,
+                        final ReplicationInput replicationInput,
+                        final Path jobRoot,
+                        final String workloadId)
       throws WorkerException, IOException {
 
     final Long jobId = Long.parseLong(jobRunConfig.getJobId());
@@ -172,10 +159,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
 
   private void succeedWorkload(final String workloadId) throws IOException {
     workloadApiClient.getWorkloadApi().workloadSuccess(new WorkloadSuccessRequest(workloadId));
-  }
-
-  private void markJobRunning() {
-    asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.RUNNING));
   }
 
 }

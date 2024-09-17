@@ -149,8 +149,6 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workload:
-    enabled: false
   workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:

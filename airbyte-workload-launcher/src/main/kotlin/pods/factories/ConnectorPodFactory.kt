@@ -7,9 +7,9 @@ import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.KubeContainerInfo
+import io.airbyte.workers.pod.KubePodInfo
+import io.airbyte.workers.pod.PodUtils
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -66,7 +66,7 @@ class ConnectorPodFactory(
       secretVolumeMounts.add(dataPlaneCreds.mount)
     }
 
-    val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
+    val connectorResourceReqs = PodUtils.getResourceRequirementsBuilder(connectorReqs).build()
     val internalVolumeMounts = volumeMounts + secretVolumeMounts
 
     val init: Container =
@@ -143,7 +143,7 @@ class ConnectorPodFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
+      .withResources(PodUtils.getResourceRequirementsBuilder(sidecarReqs).build())
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }

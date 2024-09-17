@@ -27,10 +27,10 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
@@ -54,7 +54,7 @@ import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  fun `builds a kube input from a replication payload (mono-pod)`(customConnector: Boolean) {
+  fun `builds a kube input from a replication payload`(customConnector: Boolean) {
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
@@ -153,7 +153,7 @@ class PayloadKubeInputMapperTest {
       )
     } returns replLabels
     val workloadId = UUID.randomUUID().toString()
-    val result = mapper.toReplicationKubeInput(workloadId, input, sharedLabels)
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assertEquals(podName, result.podName)
     assertEquals(replLabels + sharedLabels, result.labels)
@@ -162,13 +162,12 @@ class PayloadKubeInputMapperTest {
     assertEquals(containerInfo.image, result.orchestratorImage)
     assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
     assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
-    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
-    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs2), result.sourceReqs)
-    assertEquals(KubePodProcess.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+    assertEquals(PodUtils.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
+    assertEquals(PodUtils.buildResourceRequirements(resourceReqs2), result.sourceReqs)
+    assertEquals(PodUtils.buildResourceRequirements(resourceReqs3), result.destinationReqs)
 
     val expectedOrchestratorRuntimeEnvVars =
       listOf(
-        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),

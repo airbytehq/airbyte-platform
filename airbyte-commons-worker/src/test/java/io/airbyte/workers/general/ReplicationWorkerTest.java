@@ -29,7 +29,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -1091,23 +1090,10 @@ abstract class ReplicationWorkerTest {
   }
 
   @Test
-  void testDontCallHeartbeat() throws WorkerException {
-    sourceStub.setMessages(RECORD_MESSAGE1);
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    doReturn(Boolean.FALSE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
-  }
-
-  @Test
   void testCallHeartbeat() throws WorkerException {
     sourceStub.setMessages(RECORD_MESSAGE1);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
-    doReturn(Boolean.TRUE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
 
     worker.run(replicationInput, jobRoot);
 

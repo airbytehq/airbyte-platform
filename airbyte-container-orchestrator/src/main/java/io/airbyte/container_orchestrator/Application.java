@@ -8,12 +8,10 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
-import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,14 +48,11 @@ public class Application {
 
   private final String application;
   private final JobOrchestrator<?> jobOrchestrator;
-  private final Optional<AsyncStateManager> asyncStateManager;
 
   public Application(@Value("${airbyte.application}") final String application,
-                     final JobOrchestrator<?> jobOrchestrator,
-                     final Optional<AsyncStateManager> asyncStateManager) {
+                     final JobOrchestrator<?> jobOrchestrator) {
     this.application = application;
     this.jobOrchestrator = jobOrchestrator;
-    this.asyncStateManager = asyncStateManager;
   }
 
   /**
@@ -75,12 +70,9 @@ public class Application {
         .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
         .build()) {
 
-      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.INITIALIZING));
       final String result = jobOrchestrator.runJob().orElse("");
-      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.SUCCEEDED, result));
     } catch (final Throwable t) {
       log.error("Killing orchestrator because of an Exception", t);
-      asyncStateManager.ifPresent(manager -> manager.write((AsyncKubePodStatus.FAILED)));
       return 1;
     }
 

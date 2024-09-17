@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.process;
+package io.airbyte.workers.pod;
 
 /**
  * The following variables help, either via names or labels, add metadata to processes actually
