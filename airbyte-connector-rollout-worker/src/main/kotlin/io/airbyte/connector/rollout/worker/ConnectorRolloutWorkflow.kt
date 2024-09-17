@@ -8,8 +8,8 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputUpdate
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
 import io.temporal.workflow.UpdateMethod
 import io.temporal.workflow.UpdateValidatorMethod
@@ -40,10 +40,10 @@ interface ConnectorRolloutWorkflow {
   fun getRolloutValidator(input: ConnectorRolloutActivityInputGet)
 
   @UpdateMethod
-  fun updateRollout(input: ConnectorRolloutActivityInputUpdate): ConnectorRolloutOutput
+  fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput
 
-  @UpdateValidatorMethod(updateName = "updateRollout")
-  fun updateRolloutValidator(input: ConnectorRolloutActivityInputUpdate)
+  @UpdateValidatorMethod(updateName = "doRollout")
+  fun doRolloutValidator(input: ConnectorRolloutActivityInputRollout)
 
   @UpdateMethod
   fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput

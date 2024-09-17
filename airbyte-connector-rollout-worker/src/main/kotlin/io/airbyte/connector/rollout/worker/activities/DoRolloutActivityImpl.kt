@@ -10,7 +10,7 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorRolloutConnection
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputUpdate
+import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
 import io.temporal.activity.Activity
 import jakarta.inject.Singleton
@@ -20,15 +20,15 @@ import java.io.IOException
 import java.util.UUID
 
 @Singleton
-class UpdateRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : UpdateRolloutActivity {
-  private val log = LoggerFactory.getLogger(UpdateRolloutActivityImpl::class.java)
+class DoRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : DoRolloutActivity {
+  private val log = LoggerFactory.getLogger(DoRolloutActivityImpl::class.java)
 
   init {
-    log.info("Initialized UpdateRolloutActivityImpl")
+    log.info("Initialized DoRolloutActivityImpl")
   }
 
-  override fun updateRollout(input: ConnectorRolloutActivityInputUpdate): ConnectorRolloutOutput {
-    log.info("Updating rollout for ${input.dockerRepository}:${input.dockerImageTag}")
+  override fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    log.info("Doing rollout for ${input.dockerRepository}:${input.dockerImageTag}")
 
     val client: ConnectorRolloutApi = airbyteApiClient.connectorRolloutApi
     val body =
@@ -40,7 +40,7 @@ class UpdateRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) 
 
     return try {
       val response: ConnectorRolloutResponse = client.doConnectorRollout(body)
-      log.info("ConnectorRolloutUpdateResponse = ${response.data}")
+      log.info("ConnectorRolloutResponse = ${response.data}")
       ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
     } catch (e: IOException) {
       throw Activity.wrap(e)

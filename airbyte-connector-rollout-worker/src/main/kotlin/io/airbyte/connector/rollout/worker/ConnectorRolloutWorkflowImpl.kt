@@ -6,16 +6,16 @@ package io.airbyte.connector.rollout.worker
 
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivity
-import io.airbyte.connector.rollout.worker.activities.UpdateRolloutActivity
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputUpdate
 import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
 import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
@@ -57,9 +57,9 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       activityOptions,
     )
 
-  private val updateRolloutActivity =
+  private val doRolloutActivity =
     Workflow.newActivityStub(
-      UpdateRolloutActivity::class.java,
+      DoRolloutActivity::class.java,
       activityOptions,
     )
 
@@ -144,22 +144,22 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     }
   }
 
-  override fun updateRollout(input: ConnectorRolloutActivityInputUpdate): ConnectorRolloutOutput {
-    log.info("updateRollout: calling updateRolloutActivity")
-    val output = updateRolloutActivity.updateRollout(input)
-    log.info("updateRolloutActivity.updateRollout pinned_connections = ${output.actorIds}")
+  override fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    log.info("doRollout: calling doRolloutActivity")
+    val output = doRolloutActivity.doRollout(input)
+    log.info("doRolloutActivity.doRollout pinned_connections = ${output.actorIds}")
     return output
   }
 
-  override fun updateRolloutValidator(input: ConnectorRolloutActivityInputUpdate) {
-    log.info("updateRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}")
+  override fun doRolloutValidator(input: ConnectorRolloutActivityInputRollout) {
+    log.info("doRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}")
     require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot update rollout; invalid input: ${mapAttributesToString(input)}"
+      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
     }
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
-    log.info("finalizeRollout: calling updateRolloutActivity")
+    log.info("finalizeRollout: calling finalizeRolloutActivity")
     val rolloutResult = finalizeRolloutActivity.finalizeRollout(input)
     log.info("finalizeRolloutActivity.finalizeRollout rolloutResult = $rolloutResult")
     when (input.result) {
@@ -182,7 +182,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           input.result == null
       ),
     ) {
-      "Cannot update rollout; invalid input: ${mapAttributesToString(input)}"
+      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
     }
   }
 

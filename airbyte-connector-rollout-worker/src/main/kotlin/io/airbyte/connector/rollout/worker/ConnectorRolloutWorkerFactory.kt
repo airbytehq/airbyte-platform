@@ -4,11 +4,11 @@
 
 package io.airbyte.connector.rollout.worker
 
+import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
-import io.airbyte.connector.rollout.worker.activities.UpdateRolloutActivityImpl
 import io.micronaut.context.annotation.Factory
 import io.temporal.client.WorkflowClient
 import io.temporal.worker.Worker
@@ -28,7 +28,7 @@ class ConnectorRolloutWorkerFactory {
     startRolloutActivityImpl: StartRolloutActivityImpl,
     getRolloutActivityImpl: GetRolloutActivityImpl,
     findRolloutActivityImpl: FindRolloutActivityImpl,
-    updateRolloutActivityImpl: UpdateRolloutActivityImpl,
+    updateRolloutActivityImpl: DoRolloutActivityImpl,
     finalizeRolloutActivityImpl: FinalizeRolloutActivityImpl,
   ): WorkerFactory {
     log.info("ConnectorRolloutWorkerFactory registering workflow")

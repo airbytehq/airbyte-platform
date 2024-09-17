@@ -2,7 +2,7 @@ package io.airbyte.connector.rollout.worker.models
 
 import java.util.UUID
 
-data class ConnectorRolloutActivityInputUpdate(
+data class ConnectorRolloutActivityInputRollout(
   var dockerRepository: String,
   var dockerImageTag: String,
   var actorDefinitionId: UUID,
