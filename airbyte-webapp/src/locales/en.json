@@ -1024,6 +1024,7 @@
   "settings.organization.members.title": "Organization members",
   "settings.organization.billing.notSetUp": "Billing has not yet been set up for this organization. Start by adding a payment method.",
   "settings.organization.billing.title": "Billing",
+  "settings.organization.billing.manualPaymentStatus": "Reach out to <lnk>Sales</lnk> if you have any questions about your plan.",
   "settings.organization.billing.billingInformation": "Billing information",
   "settings.organization.billing.billingInformationError": "Error loading billing information",
   "settings.organization.billing.update": "Update",

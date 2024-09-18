@@ -10,6 +10,7 @@ import { Heading } from "components/ui/Heading";
 
 import { useCurrentOrganizationInfo } from "core/api";
 
+import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
 import { PaymentMethod } from "./PaymentMethod";
@@ -27,6 +28,8 @@ export const OrganizationBillingPage: React.FC = () => {
           <Heading as="h1" size="md">
             <FormattedMessage id="settings.organization.billing.title" />
           </Heading>
+
+          <BillingBanners />
 
           <BorderedTiles>
             <BorderedTile>
