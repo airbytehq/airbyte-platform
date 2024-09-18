@@ -238,7 +238,10 @@ export const connectionSettingsUpdateEventSummarySchema = yup.object({
     // pull `originalValue` from the test context as the obj argument provided has all of the known fields set to non-confirming objects
     .test((_, testContext) => {
       const { originalValue } = testContext as unknown as { originalValue: Record<string, unknown> };
-      return Object.keys(originalValue).some((key) => (patchFields as string[]).includes(key));
+      return Object.keys(originalValue).some(
+        // resourceRequirements is a valid patch, and we want to continue logging it, but we do not want to surface it in the UI at this time.
+        (key) => (patchFields as string[]).includes(key) || key === "resourceRequirements"
+      );
     })
     .required(),
 });
