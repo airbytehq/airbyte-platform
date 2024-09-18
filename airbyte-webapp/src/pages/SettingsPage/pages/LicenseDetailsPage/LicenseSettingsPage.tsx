@@ -55,7 +55,7 @@ export const LicenseSettingsPage: React.FC = () => {
   const licenseData = useGetLicenseDetails();
 
   const nodesClassname = classNames({
-    [styles.error]: !!licenseData.maxNodes && licenseData.maxNodes < licenseData.usedNodes,
+    [styles.error]: !!licenseData.maxNodes && !!licenseData.usedNodes && licenseData.maxNodes < licenseData.usedNodes,
   });
 
   const editorsClassname = classNames({
