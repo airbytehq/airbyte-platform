@@ -27,7 +27,7 @@ export const BaseConnectorInfo: React.FC<BaseConnectorInfoProps> = ({
   name,
   documentationUrl,
 }) => {
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
   if (!isContributeEditsEnabled) {
     return null;
   }

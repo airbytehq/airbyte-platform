@@ -122,7 +122,7 @@ const AIButton = (props: ButtonProps) => {
 };
 
 const AssistConfigButton = () => {
-  const isAIEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
+  const isAIEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
 
   const { x, y, reference, floating, strategy } = useFloating({
     middleware: [offset(5), flip()],

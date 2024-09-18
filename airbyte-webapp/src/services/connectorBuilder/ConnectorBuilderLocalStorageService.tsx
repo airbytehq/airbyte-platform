@@ -17,7 +17,7 @@ interface LocalStorageContext {
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const useAssistEnabled = () => {
-  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
+  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
   const [assistProjects, setAssistProjects] = useLocalStorage("airbyte_ai-assist-projects", {});
 
   const isAssistProjectEnabled = (projectId: string) => projectId in assistProjects && isAIFeatureEnabled;

@@ -32,7 +32,7 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
     });
   }, [createForkedProject, createProjectEditLink, sourceDefinition]);
 
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
   if (!sourceDefinition || !isContributeEditsEnabled) {
     return null;
   }

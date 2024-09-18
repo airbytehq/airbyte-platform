@@ -71,8 +71,8 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage", false);
-  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
 
   useExperimentContext("organization", workspace.organizationId);
 

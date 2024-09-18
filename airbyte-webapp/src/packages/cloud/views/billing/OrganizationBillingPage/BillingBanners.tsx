@@ -11,7 +11,7 @@ import { useExperiment } from "hooks/services/Experiment";
 export const BillingBanners: React.FC = () => {
   const { formatMessage } = useIntl();
   const { billing } = useCurrentOrganizationInfo();
-  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
+  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge");
 
   return (
     <>

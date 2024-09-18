@@ -54,7 +54,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
 
-  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
+  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {

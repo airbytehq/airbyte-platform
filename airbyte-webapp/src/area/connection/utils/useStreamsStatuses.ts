@@ -31,7 +31,7 @@ export const useStreamsStatuses = (
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
-  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI", false);
+  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI");
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference

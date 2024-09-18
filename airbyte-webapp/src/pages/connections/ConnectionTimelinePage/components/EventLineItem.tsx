@@ -30,7 +30,7 @@ import {
 } from "../types";
 
 export const EventLineItem: React.FC<{ event: ConnectionEvent | InferType<typeof jobRunningSchema> }> = ({ event }) => {
-  const showSchemaUpdates = useExperiment("connection.timeline.schemaUpdates", false);
+  const showSchemaUpdates = useExperiment("connection.timeline.schemaUpdates");
 
   if (jobRunningSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
     return (

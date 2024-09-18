@@ -109,7 +109,7 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   const { top: offsetTop = 0, bottom: offsetBottom = 0 } = offset!;
   const availableHeight = height - offsetTop - offsetBottom;
   const { openModal } = useModalService();
-  const isTimelineEnabled = useExperiment("connection.timeline", false);
+  const isTimelineEnabled = useExperiment("connection.timeline");
 
   const connection = useCurrentConnection();
   const createLink = useCurrentWorkspaceLink();

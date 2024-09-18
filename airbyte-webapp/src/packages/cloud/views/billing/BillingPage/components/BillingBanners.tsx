@@ -96,7 +96,7 @@ const LowCreditBalanceHint: React.FC = () => {
 export const BillingBanners: React.FC = () => {
   const { emailVerified } = useAuthService();
 
-  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
+  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge");
 
   return (
     <FlexContainer direction="column">

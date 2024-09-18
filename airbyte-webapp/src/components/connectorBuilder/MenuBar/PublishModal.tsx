@@ -611,7 +611,7 @@ const ConnectorImageNameInput: React.FC<{
   const [footer, setFooter] = useState<string | null>(null);
   const { getCachedCheck, fetchContributionCheck } = useBuilderCheckContribution();
 
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
 
   const updateErrorAndFooter = useCallback(
     (contributionCheck: CheckContributionRead) => {

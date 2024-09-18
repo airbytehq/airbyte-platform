@@ -91,7 +91,7 @@ const relevantConnectionKeys = [
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
   const getStateType = useGetStateTypeQuery();

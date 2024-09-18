@@ -1,10 +1,10 @@
-import type { Experiments } from "./experiments";
-
 import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
 
 import { isDevelopment } from "core/utils/isDevelopment";
+
+import { defaultExperimentValues, type Experiments } from "./experiments";
 
 export type ContextKind =
   | "user"
@@ -64,7 +64,7 @@ export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: st
   }, [kind, key, experimentService]);
 };
 
-function useExperimentHook<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K] {
+function useExperimentHook<K extends keyof Experiments>(key: K): Experiments[K] {
   const hasWindowOverwrites = window.hasOwnProperty("_e2eOverwrites");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const windowOverwriteValue = hasWindowOverwrites ? (window as any)._e2eOverwrites[key] : undefined;
@@ -79,17 +79,14 @@ function useExperimentHook<K extends keyof Experiments>(key: K, defaultValue: Ex
   const initialValue =
     windowOverwriteValue !== undefined
       ? windowOverwriteValue
-      : experimentService?.getExperiment(key, defaultValue) ?? defaultValue;
+      : experimentService?.getExperiment(key, defaultExperimentValues[key]) ?? defaultExperimentValues[key];
 
   return useObservable(onChanges$, initialValue);
 }
 
-function useExperimentWithOverwrites<K extends keyof Experiments>(
-  key: K,
-  defaultValue: Experiments[K]
-): Experiments[K] {
+function useExperimentWithOverwrites<K extends keyof Experiments>(key: K): Experiments[K] {
   // Load the regular experiments value via the prod hook
-  const value = useExperimentHook(key, defaultValue);
+  const value = useExperimentHook(key);
   // Use the overwrite value if it's available, otherwise the proper value
   return key in devOverwrites ? (devOverwrites[key] as Experiments[K]) : value;
 }

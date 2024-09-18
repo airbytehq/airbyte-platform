@@ -26,9 +26,9 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
-  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage", false);
-  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage", false);
+  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
   const canManageOrganizationBilling = useGeneratedIntent("ManageOrganizationBilling");
 
   return (

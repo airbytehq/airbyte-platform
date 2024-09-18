@@ -118,7 +118,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
 
   const isHashingSupported = useFeature(FeatureItem.FieldHashing);
-  const isHashingEnabled = useExperiment("connection.hashingUI", false);
+  const isHashingEnabled = useExperiment("connection.hashingUI");
   const showHashing = isHashingSupported && isHashingEnabled;
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);

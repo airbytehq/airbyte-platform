@@ -38,8 +38,8 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   bottomSlot,
   settingHighlight,
 }) => {
-  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage", false);
-  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
   const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 

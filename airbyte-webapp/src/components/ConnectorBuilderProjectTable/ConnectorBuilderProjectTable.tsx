@@ -346,7 +346,7 @@ const ContributionInfoDisplay: React.FC<ContributionInfo> = ({ actorDefinitionId
   // list instead of fetching definition individually to reuse cached request and avoid 404 for net-new definitions
   const sourceDefinition = useSourceDefinitionList().sourceDefinitionMap.get(actorDefinitionId);
 
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
   if (!isContributeEditsEnabled) {
     return null;
   }
