@@ -88,7 +88,7 @@ export const InvoiceGrid: React.FC<InvoiceGridProps> = ({ invoices, hasMore }) =
               <Text>
                 <ExternalLink href={invoice.invoiceUrl} opensInNewTab className={styles.invoiceGrid__openLink}>
                   <FlexContainer alignItems="center" gap="sm">
-                    <FormattedMessage id="settings.organization.billing.invoices.openInvoice" />
+                    <FormattedMessage id="settings.organization.billing.invoices.viewInvoice" />
                   </FlexContainer>
                 </ExternalLink>
               </Text>
