@@ -36,9 +36,13 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.validation.json.JsonSchemaValidator;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
@@ -46,6 +50,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -193,6 +198,16 @@ public class ApplicationBeanFactory {
       return configRepositoryProjectUpdater;
     } else {
       return new CompositeBuilderProjectUpdater(List.of(configRepositoryProjectUpdater, new LocalFileSystemBuilderProjectUpdater()));
+    }
+  }
+
+  @Singleton
+  @Requires(env = Environment.KUBERNETES)
+  public Optional<KubernetesClient> kubernetesClient() {
+    try {
+      return Optional.of(new KubernetesClientBuilder().build());
+    } catch (final Exception e) {
+      return Optional.empty();
     }
   }
 

@@ -12764,7 +12764,6 @@ components:
       required:
         - edition
         - licenseStatus
-        - usedNodes
         - usedEditors
         - expirationDate
       properties:

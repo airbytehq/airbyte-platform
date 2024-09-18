@@ -41,6 +41,8 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
+  implementation(libs.kubernetes.client)
+
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
   implementation(project(":oss:airbyte-api:problems-api"))

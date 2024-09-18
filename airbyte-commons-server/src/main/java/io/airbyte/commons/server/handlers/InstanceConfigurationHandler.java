@@ -31,6 +31,7 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -65,6 +66,7 @@ public class InstanceConfigurationHandler {
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
   private final Clock clock;
+  private final Optional<KubernetesClient> kubernetesClient;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -77,7 +79,8 @@ public class InstanceConfigurationHandler {
                                       final OrganizationPersistence organizationPersistence,
                                       final AuthConfigs authConfigs,
                                       final PermissionService permissionService,
-                                      final Optional<Clock> clock) {
+                                      final Optional<Clock> clock,
+                                      final Optional<KubernetesClient> kubernetesClient) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -90,6 +93,7 @@ public class InstanceConfigurationHandler {
     this.authConfigs = authConfigs;
     this.permissionService = permissionService;
     this.clock = clock.orElse(Clock.systemUTC());
+    this.kubernetesClient = kubernetesClient;
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
@@ -217,6 +221,7 @@ public class InstanceConfigurationHandler {
           .usedNodes(0)
           .maxEditors(license.maxEditors().orElse(null))
           .maxNodes(license.maxNodes().orElse(null))
+          .usedNodes(nodesUsage())
           .licenseStatus(getLicenseStatus());
     }
     return null;
@@ -255,6 +260,10 @@ public class InstanceConfigurationHandler {
       return LicenseStatus.EXCEEDED;
     }
     return LicenseStatus.PRO;
+  }
+
+  private Integer nodesUsage() {
+    return kubernetesClient.map(client -> client.nodes().list().getItems().size()).orElse(null);
   }
 
 }

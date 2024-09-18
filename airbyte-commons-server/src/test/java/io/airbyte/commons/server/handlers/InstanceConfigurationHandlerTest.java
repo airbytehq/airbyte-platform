@@ -36,6 +36,7 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
@@ -81,6 +82,8 @@ class InstanceConfigurationHandlerTest {
   private AuthConfigs mAuthConfigs;
   @Mock
   private PermissionService permissionService;
+  @Mock
+  private Optional<KubernetesClient> mKubernetesClient;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -165,7 +168,8 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
-        Optional.empty());
+        Optional.empty(),
+        mKubernetesClient);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -302,7 +306,8 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
-        Optional.empty());
+        Optional.empty(),
+        mKubernetesClient);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
   }
 
@@ -320,7 +325,8 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
-        Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())));
+        Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
+        mKubernetesClient);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
   }
 
@@ -339,7 +345,8 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
-        Optional.empty());
+        Optional.empty(),
+        mKubernetesClient);
     when(permissionService.listPermissions()).thenReturn(
         Stream.generate(UUID::randomUUID)
             .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
@@ -385,7 +392,8 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
-        Optional.empty());
+        Optional.empty(),
+        mKubernetesClient);
   }
 
 }
