@@ -7,6 +7,7 @@ import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
+import io.kotlintest.milliseconds
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -16,7 +17,12 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import reactor.core.publisher.Mono
+import java.net.ConnectException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.util.UUID
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 class ClaimedProcessorTest {
   private lateinit var workloadApi: WorkloadApi
@@ -45,6 +51,8 @@ class ClaimedProcessorTest {
         dataplaneId = "dataplane1",
         parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,
+        backoffDuration = 1.milliseconds.toKotlinDuration().toJavaDuration(),
+        backoffMaxDelay = 2.milliseconds.toKotlinDuration().toJavaDuration(),
       )
   }
 
@@ -80,5 +88,34 @@ class ClaimedProcessorTest {
       claimedProcessor.retrieveAndProcess()
     }
     verify(exactly = 0) { claimProcessorTracker.trackNumberOfClaimsToResume(any()) }
+  }
+
+  @Test
+  fun `test retrieve and process recovers after network issues`() {
+    every { workloadApi.workloadList(any()) }
+      .throwsMany(
+        (1..5).flatMap {
+          listOf(
+            ServerException("oops", 500),
+            ServerException("oops", 502),
+            SocketException(),
+            ConnectException(),
+            SocketTimeoutException(),
+          )
+        }.toList(),
+      )
+      .andThenAnswer {
+        WorkloadListResponse(
+          listOf(
+            Workload("1", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
+            Workload("2", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
+            Workload("3", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
+          ),
+        )
+      }
+    claimedProcessor.retrieveAndProcess()
+
+    verify { claimProcessorTracker.trackNumberOfClaimsToResume(3) }
+    verify(exactly = 3) { launchPipeline.buildPipeline(any()) }
   }
 }
