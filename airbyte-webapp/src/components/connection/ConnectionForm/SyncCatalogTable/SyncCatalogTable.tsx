@@ -121,7 +121,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   const isHashingEnabled = useExperiment("connection.hashingUI", false);
   const showHashing = isHashingSupported && isHashingEnabled;
 
-  const debugTable = false;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
   const deferredFilteringValue = useDeferredValue(filtering);
@@ -319,7 +318,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   );
   const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpandedState);
 
-  const { getHeaderGroups, getRowModel, getState, toggleAllRowsExpanded } = useReactTable<SyncCatalogUIModel>({
+  const { getHeaderGroups, getRowModel, toggleAllRowsExpanded } = useReactTable<SyncCatalogUIModel>({
     columns,
     data: preparedData,
     getSubRows: (row) => row.subRows,
@@ -347,7 +346,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setFiltering,
     getRowCanExpand: (row) => !!row.subRows.length,
-    debugTable,
   });
 
   const rows = getRowModel().rows;
@@ -461,19 +459,6 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
   return (
     <>
       <Box p="md" pl="xl" pr="xl" className={styles.stickyControlsContainer}>
-        {debugTable && (
-          <Box p="md">
-            {JSON.stringify(
-              {
-                globalFilter: getState().globalFilter,
-                columnFilters: getState().columnFilters,
-                totalRows: rows.length,
-              },
-              null,
-              2
-            )}
-          </Box>
-        )}
         <FlexContainer alignItems="center" justifyContent="space-between">
           <SearchInput
             value={filtering}
