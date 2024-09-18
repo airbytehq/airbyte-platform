@@ -113,6 +113,7 @@ tasks.register<JavaExec>("dumpJobsSchema") {
 val copyInitSql = tasks.register<Copy>("copyInitSql") {
   from("src/main/resources") {
     include("init.sql")
+    include("airbyte-entrypoint.sh")
   }
   into("build/airbyte/docker/bin")
 }
