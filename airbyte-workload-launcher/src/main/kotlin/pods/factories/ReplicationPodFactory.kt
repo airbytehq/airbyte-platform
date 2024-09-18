@@ -95,4 +95,64 @@ class ReplicationPodFactory(
       .endSpec()
       .build()
   }
+
+  fun createReset(
+    podName: String,
+    allLabels: Map<String, String>,
+    annotations: Map<String, String>,
+    nodeSelectors: Map<String, String>,
+    // TODO: Consider moving container creation to the caller to avoid prop drilling.
+    orchImage: String,
+    destImage: String,
+    orchResourceReqs: ResourceRequirements?,
+    destResourceReqs: ResourceRequirements?,
+    orchRuntimeEnvVars: List<EnvVar>,
+    destRuntimeEnvVars: List<EnvVar>,
+    connectionId: UUID,
+  ): Pod {
+    // TODO: We should inject the scheduler from the ENV and use this just for overrides
+    val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
+
+    val replicationVolumes = volumeFactory.replication()
+    val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars)
+
+    val orchContainer =
+      replContainerFactory.createOrchestrator(
+        orchResourceReqs,
+        replicationVolumes.orchVolumeMounts,
+        orchRuntimeEnvVars,
+        orchImage,
+        connectionId,
+      )
+
+    val destContainer =
+      replContainerFactory.createDestination(
+        destResourceReqs,
+        replicationVolumes.destVolumeMounts,
+        destRuntimeEnvVars,
+        destImage,
+      )
+
+    return PodBuilder()
+      .withApiVersion("v1")
+      .withNewMetadata()
+      .withName(podName)
+      .withLabels<Any, Any>(allLabels)
+      .withAnnotations<Any, Any>(annotations)
+      .endMetadata()
+      .withNewSpec()
+      .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
+      .withAutomountServiceAccountToken(true)
+      .withRestartPolicy("Never")
+      .withInitContainers(initContainer)
+      .withContainers(orchContainer, destContainer)
+      .withImagePullSecrets(imagePullSecrets)
+      .withVolumes(replicationVolumes.allVolumes)
+      .withNodeSelector<Any, Any>(nodeSelectors)
+      .withAutomountServiceAccountToken(false)
+      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
+      .endSpec()
+      .build()
+  }
 }

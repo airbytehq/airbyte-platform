@@ -9,6 +9,7 @@ open class KubeClientException(
 
 enum class PodType {
   REPLICATION,
+  RESET,
 }
 
 enum class KubeCommandType {

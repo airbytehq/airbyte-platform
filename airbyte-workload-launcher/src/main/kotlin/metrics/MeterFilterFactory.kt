@@ -37,6 +37,7 @@ class MeterFilterFactory(
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
     const val LAUNCH_REPLICATION_OPERATION_NAME = "launch-replication"
+    const val LAUNCH_RESET_OPERATION_NAME = "launch-reset"
     const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
     const val SUCCESS_STATUS = "ok"
     const val FAILURE_STATUS = "error"

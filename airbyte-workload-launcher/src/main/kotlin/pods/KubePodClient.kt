@@ -19,6 +19,7 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_RESET_OPERATION_NAME
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
@@ -95,6 +96,53 @@ class KubePodClient(
         e,
         KubeCommandType.CREATE,
         PodType.REPLICATION,
+      )
+    }
+
+    // NOTE: might not be necessary depending on when `serversideApply` returns.
+    // If it blocks until it moves from PENDING, then we are good. Otherwise, we
+    // need this or something similar to wait for the pod to be running on the node.
+    waitForPodInitComplete(pod, PodType.REPLICATION.toString())
+  }
+
+  @Trace(operationName = LAUNCH_RESET_OPERATION_NAME)
+  fun launchReset(
+    replicationInput: ReplicationInput,
+    launcherInput: LauncherInput,
+  ) {
+    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+
+    var pod =
+      replicationPodFactory.createReset(
+        kubeInput.podName,
+        kubeInput.labels,
+        kubeInput.annotations,
+        kubeInput.nodeSelectors,
+        kubeInput.orchestratorImage,
+        kubeInput.destinationImage,
+        kubeInput.orchestratorReqs,
+        kubeInput.destinationReqs,
+        kubeInput.orchestratorRuntimeEnvVars,
+        kubeInput.destinationRuntimeEnvVars,
+        replicationInput.connectionId,
+      )
+
+    logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }
+    logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
+    logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
+
+    try {
+      pod =
+        kubePodLauncher.create(pod)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubeClientException(
+        "Failed to create pod ${kubeInput.podName}.",
+        e,
+        KubeCommandType.CREATE,
+        PodType.RESET,
       )
     }
 
