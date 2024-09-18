@@ -125,6 +125,8 @@ $gradient-secondary-start: #{var(--color-blue-50)};
 $gradient-secondary-stop: #{var(--color-orange-50)};
 $gradient-secondary: linear-gradient(90deg, $gradient-secondary-start, $gradient-secondary-stop);
 
+$gradient-light-background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, $foreground 90%);
+
 // LEGACY - DEPRECATED
 
 $primaryColor12: rgba(103, 87, 255, 12%);

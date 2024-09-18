@@ -13,10 +13,8 @@
     width: 100%;
     height: 100%;
     z-index: z-indices.$schemaChangesBackdrop;
-    align-items: center;
-    justify-content: center;
     border-radius: variables.$border-radius-lg;
-    background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, colors.$foreground 92.54%);
+    background: colors.$gradient-light-background;
 
     &--visible {
       display: block;
