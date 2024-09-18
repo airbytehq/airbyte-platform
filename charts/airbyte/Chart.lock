@@ -4,48 +4,48 @@ dependencies:
   version: 1.17.1
 - name: airbyte-bootloader
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: temporal
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: temporal-ui
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: webapp
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: workload-api-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: workload-launcher
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: metrics
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: cron
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: connector-builder-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: connector-rollout-worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: keycloak
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
+  version: 1.0.0-alpha-df72e2940ca
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.623.0
-digest: sha256:095f9ff57da49deff8aa371a10b26eef282b10eb97f55dead03cf0dc8f28f807
-generated: "2024-09-18T14:36:11.468237834Z"
+  version: 1.0.0-alpha-df72e2940ca
+digest: sha256:61bdb976381e74f5b368189d2244b043f548fad86ac12289270f467a251d9ed5
+generated: "2024-09-18T18:49:20.17003329Z"
