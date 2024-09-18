@@ -106,7 +106,11 @@ public class ReplicationWorkerFactory {
   private final RecordMapper recordMapper;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
 
-  public static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
+  public static final MdcScope.Builder DESTINATION_LOG_MDC_BUILDER = new Builder()
+      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
+      .setPrefixColor(Color.YELLOW_BACKGROUND);
+
+  public static final MdcScope.Builder SOURCE_LOG_MDC_BUILDER = new Builder()
       .setLogPrefix(LoggingHelper.SOURCE_LOGGER_PREFIX)
       .setPrefixColor(Color.BLUE_BACKGROUND);
 
@@ -173,7 +177,7 @@ public class ReplicationWorkerFactory {
         ? new EmptyAirbyteSource()
         : new LocalContainerAirbyteSource(
             heartbeatMonitor,
-            getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), CONTAINER_LOG_MDC_BUILDER, invalidLineConfig),
+            getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
             new MessageMetricsTracker(metricClient),
             ContainerIOHandle.source());
 
@@ -183,7 +187,7 @@ public class ReplicationWorkerFactory {
             Optional.of(replicationInput.getCatalog()));
 
     final var airbyteDestination = new LocalContainerAirbyteDestination(
-        getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), CONTAINER_LOG_MDC_BUILDER, invalidLineConfig),
+        getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), DESTINATION_LOG_MDC_BUILDER, invalidLineConfig),
         new MessageMetricsTracker(metricClient),
         messageWriterFactory,
         destinationTimeout,
