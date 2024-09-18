@@ -126,14 +126,3 @@ $gradient-secondary-stop: #{var(--color-orange-50)};
 $gradient-secondary: linear-gradient(90deg, $gradient-secondary-start, $gradient-secondary-stop);
 
 $gradient-light-background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, $foreground 90%);
-
-// LEGACY - DEPRECATED
-
-$primaryColor12: rgba(103, 87, 255, 12%);
-
-$shadowColor: rgba(0, 0, 0, 25%);
-$cardShadowColor: rgba(26, 25, 77, 12%);
-
-$lightRedColor: #ff8870;
-
-$transparentColor: rgba(255, 255, 255, 0%);
