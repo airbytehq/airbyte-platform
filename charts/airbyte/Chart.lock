@@ -4,48 +4,48 @@ dependencies:
   version: 1.17.1
 - name: airbyte-bootloader
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: temporal
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: temporal-ui
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: webapp
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: workload-api-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: workload-launcher
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: metrics
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: cron
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: connector-builder-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: connector-rollout-worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: keycloak
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.623.0
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
-digest: sha256:b936d93598f541a9c67d45f4658e7cfa571e6aec4241d15edf144bdfb0560cc3
-generated: "2024-09-17T20:33:32.000484522Z"
+  version: 0.623.0
+digest: sha256:095f9ff57da49deff8aa371a10b26eef282b10eb97f55dead03cf0dc8f28f807
+generated: "2024-09-18T14:36:11.468237834Z"
