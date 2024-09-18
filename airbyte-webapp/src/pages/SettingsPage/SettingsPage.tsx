@@ -19,10 +19,13 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const canViewLicenseSettings = useIntent("ViewLicenseDetails", { workspaceId });
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const { formatMessage } = useIntl();
+  const showLicenseUi = licenseUi && canViewLicenseSettings;
 
   return (
     <SettingsLayout>
@@ -100,6 +103,13 @@ export const SettingsPage: React.FC = () => {
                   />
                 )}
               </>
+            )}
+            {showLicenseUi && (
+              <SettingsLink
+                iconType="license"
+                name={formatMessage({ id: "settings.license" })}
+                to={SettingsRoutePaths.License}
+              />
             )}
             {canViewWorkspaceSettings && (
               <>

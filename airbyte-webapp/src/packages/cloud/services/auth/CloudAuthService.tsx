@@ -120,13 +120,19 @@ function clearLocalStorageOidcSessions() {
 }
 
 // Removes OIDC params from URL, but doesn't remove other params that might be present
-export function createUriWithoutSsoParams() {
+export function createUriWithoutSsoParams(checkLicense?: boolean) {
   // state, code and session_state are from keycloak. realm is added by us to indicate which realm the user is signing in to.
   const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "realm"];
 
   const searchParams = new URLSearchParams(window.location.search);
 
   SSO_SEARCH_PARAMS.forEach((param) => searchParams.delete(param));
+
+  // Add a searchParam to trigger a license check upon redirect
+  // This should only be passed in as true from EnterpriseAuthService
+  if (checkLicense === true) {
+    searchParams.set("checkLicense", "true");
+  }
 
   return searchParams.toString().length > 0
     ? `${window.location.origin}?${searchParams.toString()}`

@@ -20,6 +20,7 @@ export enum FeatureItem {
   DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
+  EnterpriseLicenseChecking = "ENTERPRISE_LICENSE_CHECKING",
   ExternalInvitations = "EXTERNAL_INVITATIONS",
   FieldHashing = "FIELD_HASHING",
   IndicateGuestUsers = "INDICATE_GUEST_USERS",

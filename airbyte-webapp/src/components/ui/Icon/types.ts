@@ -70,6 +70,7 @@ export type IconType =
   | "keyCircle"
   | "layers"
   | "lens"
+  | "license"
   | "lightbulb"
   | "link"
   | "loading"
