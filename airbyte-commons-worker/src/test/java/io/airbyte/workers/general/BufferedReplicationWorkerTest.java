@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
 
   @Override
-  ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
+  BufferedReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
@@ -63,7 +63,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in readFromSource")).when(source).attemptRead();
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -74,7 +74,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in processMessage")).when(messageTracker).acceptFromSource(any());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -85,7 +85,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in writeToDest")).when(destination).accept(any());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -96,7 +96,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in readFromDest")).when(destination).attemptRead();
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());

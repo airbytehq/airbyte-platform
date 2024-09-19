@@ -20,7 +20,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.general.ReplicationWorker;
+import io.airbyte.workers.general.BufferedReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
@@ -89,7 +89,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
     final Optional<String> workloadId = Optional.of(JobOrchestrator.workloadId());
-    final ReplicationWorker replicationWorker =
+    final BufferedReplicationWorker replicationWorker =
         replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {},
             workloadId);
 
@@ -107,7 +107,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   }
 
   @VisibleForTesting
-  ReplicationOutput run(final ReplicationWorker replicationWorker,
+  ReplicationOutput run(final BufferedReplicationWorker replicationWorker,
                         final ReplicationInput replicationInput,
                         final Path jobRoot,
                         final String workloadId)

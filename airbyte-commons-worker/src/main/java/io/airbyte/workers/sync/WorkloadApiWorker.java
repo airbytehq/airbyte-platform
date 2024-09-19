@@ -25,10 +25,10 @@ import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.exception.WorkloadLauncherException;
 import io.airbyte.workers.exception.WorkloadMonitorException;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Worker implementation that uses workload API instead of starting kube pods directly.
  */
-public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
+public class WorkloadApiWorker implements ReplicationWorker {
 
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";

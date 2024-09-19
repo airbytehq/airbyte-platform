@@ -13,9 +13,11 @@ import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.ReplicationOutput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.Worker;
+import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import java.io.IOException;
@@ -34,14 +36,14 @@ import org.slf4j.LoggerFactory;
  * persisted to the db.
  */
 @SuppressWarnings({"PMD.UnusedFormalParameter", "PMD.AvoidCatchingThrowable", "PMD.UnusedLocalVariable"})
-public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT> {
+public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TemporalAttemptExecution.class);
 
   private final JobRunConfig jobRunConfig;
   private final Path jobRoot;
-  private final Worker<INPUT, OUTPUT> worker;
-  private final INPUT input;
+  private final ReplicationWorker worker;
+  private final ReplicationInput input;
   private final Consumer<Path> mdcSetter;
   private final Supplier<String> workflowIdProvider;
   private final AirbyteApiClient airbyteApiClient;
@@ -51,8 +53,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
 
   public TemporalAttemptExecution(final Path workspaceRoot,
                                   final JobRunConfig jobRunConfig,
-                                  final Worker<INPUT, OUTPUT> worker,
-                                  final INPUT input,
+                                  final ReplicationWorker worker,
+                                  final ReplicationInput input,
                                   final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
                                   final Supplier<ActivityExecutionContext> activityContext,
@@ -72,8 +74,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
 
   public TemporalAttemptExecution(final Path workspaceRoot,
                                   final JobRunConfig jobRunConfig,
-                                  final Worker<INPUT, OUTPUT> worker,
-                                  final INPUT input,
+                                  final ReplicationWorker worker,
+                                  final ReplicationInput input,
                                   final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
                                   final Supplier<ActivityExecutionContext> activityContext,
@@ -95,8 +97,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   @VisibleForTesting
   TemporalAttemptExecution(final Path workspaceRoot,
                            final JobRunConfig jobRunConfig,
-                           final Worker<INPUT, OUTPUT> worker,
-                           final INPUT input,
+                           final ReplicationWorker worker,
+                           final ReplicationInput input,
                            final Consumer<Path> mdcSetter,
                            final AirbyteApiClient airbyteApiClient,
                            final Supplier<String> workflowIdProvider,
@@ -118,7 +120,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   }
 
   @Override
-  public OUTPUT get() {
+  public ReplicationOutput get() {
     try {
       try (final var mdcScope = new MdcScope.Builder()
           .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)

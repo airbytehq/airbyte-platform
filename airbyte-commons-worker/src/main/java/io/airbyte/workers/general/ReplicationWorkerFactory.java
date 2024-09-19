@@ -70,7 +70,6 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +79,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Factory for the DefaultReplicationWorker.
+ * Factory for the BufferedReplicationWorker.
  * <p>
  * This factory is bridging the gap between what services can be directly injected and the ones that
  * currently depend on input data in their constructor. This factory would disappear if all the
@@ -102,7 +101,6 @@ public class ReplicationWorkerFactory {
   private final WorkloadApiClient workloadApiClient;
   private final StreamStatusCompletionTracker streamStatusCompletionTracker;
   private final StreamStatusTrackerFactory streamStatusTrackerFactory;
-  private final Clock clock;
   private final RecordMapper recordMapper;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
 
@@ -127,7 +125,6 @@ public class ReplicationWorkerFactory {
                                   final TrackingClient trackingClient,
                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                   final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                  final Clock clock,
                                   final RecordMapper recordMapper,
                                   final DestinationCatalogGenerator destinationCatalogGenerator) {
     this.serDeProvider = serDeProvider;
@@ -142,7 +139,6 @@ public class ReplicationWorkerFactory {
     this.trackingClient = trackingClient;
     this.streamStatusCompletionTracker = streamStatusCompletionTracker;
     this.streamStatusTrackerFactory = streamStatusTrackerFactory;
-    this.clock = clock;
     this.recordMapper = recordMapper;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
   }
@@ -150,12 +146,12 @@ public class ReplicationWorkerFactory {
   /**
    * Create a ReplicationWorker.
    */
-  public ReplicationWorker create(final ReplicationInput replicationInput,
-                                  final JobRunConfig jobRunConfig,
-                                  final IntegrationLauncherConfig sourceLauncherConfig,
-                                  final IntegrationLauncherConfig destinationLauncherConfig,
-                                  final VoidCallable onReplicationRunning,
-                                  final Optional<String> workloadId)
+  public BufferedReplicationWorker create(final ReplicationInput replicationInput,
+                                          final JobRunConfig jobRunConfig,
+                                          final IntegrationLauncherConfig sourceLauncherConfig,
+                                          final IntegrationLauncherConfig destinationLauncherConfig,
+                                          final VoidCallable onReplicationRunning,
+                                          final Optional<String> workloadId)
       throws IOException {
     final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(
         new SourceIdRequestBody(replicationInput.getSourceId())).getSourceDefinitionId();
@@ -301,28 +297,28 @@ public class ReplicationWorkerFactory {
   /**
    * Create ReplicationWorker.
    */
-  private static ReplicationWorker createReplicationWorker(final AirbyteSource source,
-                                                           final AirbyteDestination destination,
-                                                           final AirbyteMessageTracker messageTracker,
-                                                           final SyncPersistence syncPersistence,
-                                                           final RecordSchemaValidator recordSchemaValidator,
-                                                           final FieldSelector fieldSelector,
-                                                           final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
-                                                           final FeatureFlagClient featureFlagClient,
-                                                           final JobRunConfig jobRunConfig,
-                                                           final ReplicationInput replicationInput,
-                                                           final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper,
-                                                           final VoidCallable onReplicationRunning,
-                                                           final DestinationTimeoutMonitor destinationTimeout,
-                                                           final WorkloadApiClient workloadApiClient,
-                                                           final AnalyticsMessageTracker analyticsMessageTracker,
-                                                           final Optional<String> workloadId,
-                                                           final AirbyteApiClient airbyteApiClient,
-                                                           final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                           final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                                           final MetricClient metricClient,
-                                                           final RecordMapper recordMapper,
-                                                           final DestinationCatalogGenerator destinationCatalogGenerator) {
+  private static BufferedReplicationWorker createReplicationWorker(final AirbyteSource source,
+                                                                   final AirbyteDestination destination,
+                                                                   final AirbyteMessageTracker messageTracker,
+                                                                   final SyncPersistence syncPersistence,
+                                                                   final RecordSchemaValidator recordSchemaValidator,
+                                                                   final FieldSelector fieldSelector,
+                                                                   final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
+                                                                   final FeatureFlagClient featureFlagClient,
+                                                                   final JobRunConfig jobRunConfig,
+                                                                   final ReplicationInput replicationInput,
+                                                                   final ReplicationAirbyteMessageEventPublishingHelper replEventPublishingHelper,
+                                                                   final VoidCallable onReplicationRunning,
+                                                                   final DestinationTimeoutMonitor destinationTimeout,
+                                                                   final WorkloadApiClient workloadApiClient,
+                                                                   final AnalyticsMessageTracker analyticsMessageTracker,
+                                                                   final Optional<String> workloadId,
+                                                                   final AirbyteApiClient airbyteApiClient,
+                                                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                                                   final StreamStatusTrackerFactory streamStatusTrackerFactory,
+                                                                   final MetricClient metricClient,
+                                                                   final RecordMapper recordMapper,
+                                                                   final DestinationCatalogGenerator destinationCatalogGenerator) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
 
     final int bufferSize = featureFlagClient.intVariation(ReplicationBufferOverride.INSTANCE, flagContext);
@@ -344,7 +340,7 @@ public class ReplicationWorkerFactory {
         fieldSelector,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient, flagContext),
-        replicationEventPublishingHelper,
+        replEventPublishingHelper,
         onReplicationRunning,
         destinationTimeout,
         workloadApiClient,
@@ -383,35 +379,35 @@ public class ReplicationWorkerFactory {
     return new Multi(contexts);
   }
 
-  private static ReplicationWorker buildReplicationWorkerInstance(final String jobId,
-                                                                  final int attempt,
-                                                                  final AirbyteSource source,
-                                                                  final AirbyteMapper mapper,
-                                                                  final AirbyteDestination destination,
-                                                                  final AirbyteMessageTracker messageTracker,
-                                                                  final SyncPersistence syncPersistence,
-                                                                  final RecordSchemaValidator recordSchemaValidator,
-                                                                  final FieldSelector fieldSelector,
-                                                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                                                  final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                                                  final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                                  final VoidCallable onReplicationRunning,
-                                                                  final DestinationTimeoutMonitor destinationTimeout,
-                                                                  final WorkloadApiClient workloadApiClient,
-                                                                  final AnalyticsMessageTracker analyticsMessageTracker,
-                                                                  final Optional<String> workloadId,
-                                                                  final AirbyteApiClient airbyteApiClient,
-                                                                  final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                                  final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                                                  final BufferConfiguration bufferConfiguration,
-                                                                  final MetricClient metricClient,
-                                                                  final ReplicationInput replicationInput,
-                                                                  final RecordMapper recordMapper,
-                                                                  final FeatureFlagClient featureFlagClient,
-                                                                  final DestinationCatalogGenerator destinationCatalogGenerator) {
+  private static BufferedReplicationWorker buildReplicationWorkerInstance(final String jobId,
+                                                                          final int attempt,
+                                                                          final AirbyteSource source,
+                                                                          final AirbyteMapper mapper,
+                                                                          final AirbyteDestination destination,
+                                                                          final AirbyteMessageTracker messageTracker,
+                                                                          final SyncPersistence syncPersistence,
+                                                                          final RecordSchemaValidator recordSchemaValidator,
+                                                                          final FieldSelector fieldSelector,
+                                                                          final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                                                          final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                                                          final ReplicationAirbyteMessageEventPublishingHelper msgEventPublisher,
+                                                                          final VoidCallable onReplicationRunning,
+                                                                          final DestinationTimeoutMonitor destinationTimeout,
+                                                                          final WorkloadApiClient workloadApiClient,
+                                                                          final AnalyticsMessageTracker analyticsMessageTracker,
+                                                                          final Optional<String> workloadId,
+                                                                          final AirbyteApiClient airbyteApiClient,
+                                                                          final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                                                          final StreamStatusTrackerFactory streamStatusTrackerFactory,
+                                                                          final BufferConfiguration bufferConfiguration,
+                                                                          final MetricClient metricClient,
+                                                                          final ReplicationInput replicationInput,
+                                                                          final RecordMapper recordMapper,
+                                                                          final FeatureFlagClient featureFlagClient,
+                                                                          final DestinationCatalogGenerator destinationCatalogGenerator) {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
-            messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
+            msgEventPublisher, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
             analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker,
             streamStatusTrackerFactory, recordMapper, featureFlagClient, destinationCatalogGenerator);
 

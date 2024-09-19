@@ -36,7 +36,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
-import io.airbyte.workers.Worker;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
@@ -194,13 +194,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         () -> {
           final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
           final ReplicationInput hydratedReplicationInput = workerAndReplicationInput.replicationInput;
-          final Worker<ReplicationInput, ReplicationOutput> worker = workerAndReplicationInput.worker;
+          final ReplicationWorker worker = workerAndReplicationInput.worker;
 
           LOGGER.info("connection {}, hydrated input: {}", replicationActivityInput.getConnectionId(), hydratedReplicationInput);
           cancellationCallback.set(worker::cancel);
 
-          final TemporalAttemptExecution<ReplicationInput, ReplicationOutput> temporalAttempt =
-              new TemporalAttemptExecution<>(
+          final TemporalAttemptExecution temporalAttempt =
+              new TemporalAttemptExecution(
                   workspaceRoot,
                   hydratedReplicationInput.getJobRunConfig(),
                   worker,
@@ -241,12 +241,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         context);
   }
 
-  record WorkerAndReplicationInput(Worker<ReplicationInput, ReplicationOutput> worker, ReplicationInput replicationInput) {}
+  record WorkerAndReplicationInput(ReplicationWorker worker, ReplicationInput replicationInput) {}
 
   @VisibleForTesting
   WorkerAndReplicationInput getWorkerAndReplicationInput(final ReplicationActivityInput replicationActivityInput) {
     final ReplicationInput hydratedReplicationInput;
-    final Worker<ReplicationInput, ReplicationOutput> worker;
+    final ReplicationWorker worker;
 
     hydratedReplicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
     worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,

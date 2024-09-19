@@ -57,7 +57,7 @@ import org.slf4j.MDC;
  * backpressure.
  */
 @SuppressWarnings({"PMD.UnusedLocalVariable", "PMD.ExceptionAsFlowControl"})
-public class BufferedReplicationWorker implements ReplicationWorker {
+public class BufferedReplicationWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BufferedReplicationWorker.class);
 
@@ -134,7 +134,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
-  @Override
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
@@ -276,7 +275,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         replicationInput.getDestinationLauncherConfig().getDockerImage(), sourceDefinitionId, destinationDefinitionId);
   }
 
-  @Override
+  // TODO cancel should be irrelevant on the BufferedReplicationWorker
   public void cancel() {
     boolean wasInterrupted = false;
 

@@ -36,10 +36,10 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.general.BufferedReplicationWorker;
 import io.airbyte.workers.general.EmptyAirbyteDestination;
 import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
-import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
@@ -80,24 +80,24 @@ public abstract class ReplicationWorkerPerformanceTest {
   public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.ofMillis(1);
   private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
 
-  public abstract ReplicationWorker getReplicationWorker(final String jobId,
-                                                         final int attempt,
-                                                         final AirbyteSource source,
-                                                         final AirbyteMapper mapper,
-                                                         final AirbyteDestination destination,
-                                                         final AirbyteMessageTracker messageTracker,
-                                                         final SyncPersistence syncPersistence,
-                                                         final RecordSchemaValidator recordSchemaValidator,
-                                                         final FieldSelector fieldSelector,
-                                                         final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                                         final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                                         final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                         final ReplicationWorkerHelper replicationWorkerHelper,
-                                                         final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                                         final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                         final MetricClient metricClient,
-                                                         final ReplicationInput replicationInput);
+  public abstract BufferedReplicationWorker getReplicationWorker(final String jobId,
+                                                                 final int attempt,
+                                                                 final AirbyteSource source,
+                                                                 final AirbyteMapper mapper,
+                                                                 final AirbyteDestination destination,
+                                                                 final AirbyteMessageTracker messageTracker,
+                                                                 final SyncPersistence syncPersistence,
+                                                                 final RecordSchemaValidator recordSchemaValidator,
+                                                                 final FieldSelector fieldSelector,
+                                                                 final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                                                 final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
+                                                                 final ReplicationWorkerHelper replicationWorkerHelper,
+                                                                 final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                                                 final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                                                 final MetricClient metricClient,
+                                                                 final ReplicationInput replicationInput);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
