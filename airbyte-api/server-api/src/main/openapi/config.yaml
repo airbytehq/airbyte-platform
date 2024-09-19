@@ -12702,6 +12702,7 @@ components:
         - initialSetupComplete
         - trackingStrategy
         - version
+        - licenseStatus
       properties:
         edition:
           type: string
@@ -12713,7 +12714,6 @@ components:
           type: string
         licenseStatus:
           $ref: "#/components/schemas/LicenseStatus"
-          nullable: true
         licenseExpirationDate:
           type: integer
           format: int64
