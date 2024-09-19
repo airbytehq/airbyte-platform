@@ -253,19 +253,19 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return commit
   }
 
-  fun createPullRequest(): GHPullRequest {
+  fun createPullRequest(description: String): GHPullRequest {
     val title = "$connectorImageName contribution from $username"
-    val body = "Auto-generated PR by the Connector Builder for $connectorImageName"
-    return airbyteRepository.createPullRequest(title, forkedContributonBranchName, airbyteRepository.defaultBranch, body)
+    return airbyteRepository.createPullRequest(title, forkedContributonBranchName, airbyteRepository.defaultBranch, description)
   }
 
-  fun getOrCreatePullRequest(): GHPullRequest {
+  fun getOrCreatePullRequest(description: String): GHPullRequest {
     val existingPullRequest = getExistingOpenPullRequest()
     if (existingPullRequest != null) {
+      existingPullRequest.body = description
       return existingPullRequest
     }
 
-    return createPullRequest()
+    return createPullRequest(description)
   }
 
   fun attemptUpdateForkedBranchAndRepoToLatest() {

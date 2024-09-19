@@ -143,7 +143,7 @@ class GithubContributionServiceTest {
 
   @Test
   fun `createPullRequest creates a new pull request successfully`() {
-    assertNotNull(contributionService.createPullRequest())
+    assertNotNull(contributionService.createPullRequest("dummy description"))
   }
 
   @Test

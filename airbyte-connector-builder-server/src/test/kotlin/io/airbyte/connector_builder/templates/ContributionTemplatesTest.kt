@@ -82,6 +82,31 @@ class ContributionTemplatesTest {
   }
 
   @Test
+  fun `test new connector PR description`() {
+    val contributionTemplates = ContributionTemplates()
+    val jacksonYaml = jacksonSerialize(serialzedYamlContent)
+    val manifestParser = ManifestParser(jacksonYaml)
+    val prDescription = contributionTemplates.renderNewContributionPullRequestDescription(newConnectorContributionInfo)
+
+    assert(prDescription.contains(newConnectorContributionInfo.connectorName))
+    assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
+    assert(prDescription.contains(newConnectorContributionInfo.description))
+
+    for (stream in manifestParser.streams) {
+      // Assert that the rendered PR description contains the stream name
+      assert(prDescription.contains("| ${stream["name"]} |"))
+    }
+
+    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val properties = connectionSpecification["properties"] as Map<String, Any>
+
+    for (prop in properties) {
+      // Assert that the rendered PR description contains the spec name
+      assert(prDescription.contains("| `${prop.key}` |"))
+    }
+  }
+
+  @Test
   fun `test privateKeyToString with Array`() {
     val contributionTemplates = ContributionTemplates()
     val expectedArrayPrivateKeyString = "id.name.age"

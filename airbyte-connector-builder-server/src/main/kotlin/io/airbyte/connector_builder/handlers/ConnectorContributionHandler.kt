@@ -104,7 +104,8 @@ class ConnectorContributionHandler(
     githubContributionService.commitFiles("Submission for ${contributionInfo.connectorImageName} from Connector Builder", filesToCommit)
 
     // Create / update pull request of branch
-    val pullRequest = githubContributionService.getOrCreatePullRequest()
+    val pullRequestDescription = contributionTemplates.renderNewContributionPullRequestDescription(contributionInfo)
+    val pullRequest = githubContributionService.getOrCreatePullRequest(pullRequestDescription)
 
     return GenerateContributionResponse()
       .pullRequestUrl(pullRequest.htmlUrl.toString())

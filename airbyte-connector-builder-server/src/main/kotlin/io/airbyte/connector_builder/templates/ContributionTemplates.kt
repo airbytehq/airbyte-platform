@@ -158,4 +158,19 @@ class ContributionTemplates {
     val context = mapOf("connectorImageName" to contributionInfo.connectorImageName)
     return renderTemplateString("contribution_templates/acceptance-test-config.yml.peb", context)
   }
+
+  fun renderNewContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
+    val streams = toTemplateStreams(manifestParser.streams)
+    val specProperties = toTemplateSpecProperties(manifestParser.spec)
+    val context =
+      mapOf(
+        "connectorImageName" to contributionInfo.connectorImageName,
+        "connectorName" to contributionInfo.connectorName,
+        "description" to contributionInfo.description,
+        "specProperties" to specProperties,
+        "streams" to streams,
+      )
+    return renderTemplateString("contribution_templates/pull-request-new-connector.md.peb", context)
+  }
 }
