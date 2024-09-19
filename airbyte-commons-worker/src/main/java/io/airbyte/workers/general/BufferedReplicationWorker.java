@@ -463,7 +463,21 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!replicationWorkerHelper.getShouldAbort() && !writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
+      while (true) {
+        if (replicationWorkerHelper.getShouldAbort()) {
+          LOGGER.info("Abort signaled — exiting read dest...");
+          break;
+        }
+        if (writeToDestFailed) {
+          LOGGER.info("Write to destination failed — exiting read dest...");
+          break;
+        }
+        destinationIsFinished = destinationIsFinished();
+        if (destinationIsFinished) {
+          LOGGER.info("Destination finished successfully — exiting read dest...");
+          break;
+        }
+
         final Optional<AirbyteMessage> messageOptional;
         try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
