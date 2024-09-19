@@ -7,6 +7,9 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.airbyte.config.JsonsSchemaConstants.PROPERTIES
+import io.airbyte.config.JsonsSchemaConstants.TYPE
+import io.airbyte.config.JsonsSchemaConstants.TYPE_OBJECT
 import io.airbyte.config.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -43,9 +46,9 @@ class DestinationCatalogGenerator(
     val jsonSchema =
       """ 
       { 
-        "type": "object", 
+        "$TYPE": "$TYPE_OBJECT", 
         "${'$'}schema": "http://json-schema.org/schema#", 
-        "properties":
+        "$PROPERTIES":
           ${generateJsonSchemaFromFields(updateFields.fields, stream.stream.jsonSchema)},
         "additionalProperties": true
       } 
@@ -124,7 +127,7 @@ class DestinationCatalogGenerator(
     return Jsons.serialize(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
-          Pair(it.name, jsonSchema.get("properties").get(it.name))
+          Pair(it.name, jsonSchema.get(PROPERTIES).get(it.name))
         } else {
           Pair(it.name, Jsons.jsonNode(it.type.toMap()))
         }
