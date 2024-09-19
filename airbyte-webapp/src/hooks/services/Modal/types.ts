@@ -8,6 +8,7 @@ export interface ModalOptions<T> {
   preventCancel?: boolean;
   content: React.ComponentType<ModalContentProps<T>>;
   testId?: string;
+  allowNavigation?: boolean;
 }
 
 export type ModalResult<T> = { type: "canceled" } | { type: "completed"; reason: T };

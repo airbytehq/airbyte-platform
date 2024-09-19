@@ -26,7 +26,7 @@ interface StreamActionsMenuProps {
 }
 
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
   const { mode, connection } = useConnectionFormService();

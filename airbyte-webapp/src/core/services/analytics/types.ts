@@ -85,6 +85,7 @@ export const enum Action {
   PUBLISH_PROJECT = "PublishProject",
   RELEASE_NEW_PROJECT_VERSION = "ReleaseNewProjectVersion",
   CONNECTOR_BUILDER_DELETE = "ConnectorBuilderDelete",
+  CONTRIBUTE_FORM_FOCUSED = "ContributeFormFocused",
   CONTRIBUTE_SUCCESS = "ContributeSuccess",
   CONTRIBUTE_FAILURE = "ContributeFailure",
   PUBLISH_DROPDOWN_SELECTED = "PublishDropdownSelected",

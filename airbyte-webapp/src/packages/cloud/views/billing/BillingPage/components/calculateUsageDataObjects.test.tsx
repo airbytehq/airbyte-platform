@@ -3,6 +3,7 @@ import {
   mockConsumptionThirtyDay,
   mockConsumptionYear,
 } from "test-utils/mock-data/mockBillingData";
+import { mockWorkspaceUsage } from "test-utils/mock-data/mockWorkspaceUsage";
 
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 
@@ -10,6 +11,7 @@ import {
   calculateFreeAndPaidUsageByConnection,
   calculateFreeAndPaidUsageByTimeChunk,
   generateArrayForTimeWindow,
+  getWorkspaceUsageByConnection,
 } from "./calculateUsageDataObjects";
 
 describe("calculateUsageDataObjects", () => {
@@ -110,5 +112,21 @@ describe("calculateUsageDataObjects", () => {
       expect(result[2].usage).toHaveLength(30);
       expect(result[2].totalUsage).toEqual(24);
     });
+  });
+});
+
+describe(`${getWorkspaceUsageByConnection.name}`, () => {
+  it("should calculate the correct usage with an empty set of filteredConsumptionData", () => {
+    const result = getWorkspaceUsageByConnection([], ConsumptionTimeWindow.lastMonth);
+    expect(result).toHaveLength(0);
+  });
+
+  it("should calculate the correct usage with internal, free and regular usage", () => {
+    const result = getWorkspaceUsageByConnection(mockWorkspaceUsage.data, ConsumptionTimeWindow.lastMonth);
+    expect(result).toHaveLength(2);
+    expect(result[0].totalFreeUsage).toEqual(10);
+    expect(result[0].totalInternalUsage).toEqual(10);
+    expect(result[0].totalBilledCost).toEqual(53.5);
+    expect(result[0].totalUsage).toEqual(73.5);
   });
 });

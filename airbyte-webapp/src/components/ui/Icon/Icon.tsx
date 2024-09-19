@@ -74,6 +74,7 @@ import IntegrationsIcon from "./icons/integrationsIcon.svg?react";
 import KeyCircleIcon from "./icons/keyCircleIcon.svg?react";
 import LayersIcon from "./icons/layersIcon.svg?react";
 import LensIcon from "./icons/lensIcon.svg?react";
+import LicenseIcon from "./icons/licenseIcon.svg?react";
 import LightbulbIcon from "./icons/lightbulbIcon.svg?react";
 import LinkIcon from "./icons/linkIcon.svg?react";
 import LoadingIcon from "./icons/loadingIcon.svg?react";
@@ -157,7 +158,7 @@ const colorMap: Record<IconColor, string> = {
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
   foreground: styles[`icon--foreground`],
-  highlight: styles[`icon--highlight`],
+  magic: styles[`icon--magic`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -240,6 +241,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   keyCircle: KeyCircleIcon,
   layers: LayersIcon,
   lens: LensIcon,
+  license: LicenseIcon,
   lightbulb: LightbulbIcon,
   link: LinkIcon,
   loading: LoadingIcon,

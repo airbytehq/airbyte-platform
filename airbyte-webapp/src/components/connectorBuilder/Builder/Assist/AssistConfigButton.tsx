@@ -1,7 +1,8 @@
 import { useFloating, offset, flip, autoUpdate } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
-import { useIntl } from "react-intl";
+import { useIntl, FormattedMessage } from "react-intl";
 
+import { Badge } from "components/ui/Badge";
 import { Button, ButtonProps } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -27,16 +28,18 @@ export const AssistForm: React.FC = () => {
       <BuilderField
         type="string"
         optional
-        label={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.docsUrl" })}
-        placeholder={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.docsUrl.placeholder" })}
+        label={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.label" })}
+        placeholder={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.placeholder" })}
+        tooltip={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.tooltip" })}
         manifestPath="metadata.assist.docsUrl"
         path="formValues.assist.docsUrl"
       />
       <BuilderField
         type="string"
         optional
-        label={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.openApiSpecUrl" })}
-        placeholder={formatMessage({ id: "connectorBuilder.globalConfiguration.assist.openApiSpecUrl.placeholder" })}
+        label={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.label" })}
+        placeholder={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.placeholder" })}
+        tooltip={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.tooltip" })}
         manifestPath="metadata.assist.openApiSpecUrl"
         path="formValues.assist.openApiSpecUrl"
       />
@@ -67,10 +70,13 @@ const AssistTitle = () => {
 
   return (
     <FlexContainer direction="row" alignItems="center" gap="sm">
-      <Icon type="aiStars" color={assistEnabled ? "highlight" : "disabled"} size="md" />
+      <Icon type="aiStars" color={assistEnabled ? "magic" : "disabled"} size="md" />
       <Heading as="h3" size="sm" className={styles.assistTitle}>
-        {formatMessage({ id: "connectorBuilder.assist.configModal.title" })}
+        {formatMessage({ id: "connectorBuilder.assist.config.title" })}
       </Heading>
+      <Badge variant="blue">
+        <FormattedMessage id="ui.badge.beta" />
+      </Badge>
     </FlexContainer>
   );
 };
@@ -95,7 +101,7 @@ const AssistConfigPanel = () => {
         <AssistSwitch />
       </FlexContainer>
       <Text as="span" color="grey400" size="sm">
-        {formatMessage({ id: "connectorBuilder.assist.configModal.description" })}
+        {formatMessage({ id: "connectorBuilder.assist.config.description" })}
       </Text>
       <AssistForm />
     </FlexContainer>
@@ -106,17 +112,17 @@ const AIButton = (props: ButtonProps) => {
   const { formatMessage } = useIntl();
   const { assistEnabled } = useConnectorBuilderFormState();
 
-  const variant = assistEnabled ? "highlight" : "secondary";
+  const variant = assistEnabled ? "magic" : "secondary";
 
   return (
     <Button variant={variant} icon="aiStars" {...props} type="button">
-      {formatMessage({ id: "connectorBuilder.assist.configModal.button" })}
+      {formatMessage({ id: "connectorBuilder.assist.config.button" })}
     </Button>
   );
 };
 
 const AssistConfigButton = () => {
-  const isAIEnabled = useExperiment("connectorBuilder.aiAssist.enabled", false);
+  const isAIEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
 
   const { x, y, reference, floating, strategy } = useFloating({
     middleware: [offset(5), flip()],

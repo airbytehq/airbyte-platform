@@ -58,7 +58,7 @@ export const JobHistoryToTimelineRedirect = () => {
 };
 
 export const ConnectionsRoutes: React.FC = () => {
-  const showTimeline = useExperiment("connection.timeline", false);
+  const showTimeline = useExperiment("connection.timeline");
 
   return (
     <Suspense fallback={<LoadingPage />}>

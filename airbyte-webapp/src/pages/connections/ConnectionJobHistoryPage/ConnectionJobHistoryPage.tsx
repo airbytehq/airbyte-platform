@@ -21,7 +21,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 
 import { useAttemptLink } from "area/connection/utils/attemptLink";
-import { useFilters, useListJobs } from "core/api";
+import { useCurrentConnection, useFilters, useListJobs } from "core/api";
 import { JobStatus } from "core/api/types/AirbyteClient";
 import {
   getFrequencyFromScheduleData,
@@ -31,7 +31,6 @@ import {
   PageTrackingCodes,
   useAnalyticsService,
 } from "core/services/analytics";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
@@ -49,7 +48,7 @@ interface JobHistoryFilterValues {
 }
 
 export const ConnectionJobHistoryPage: React.FC = () => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
   const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<JobHistoryFilterValues>({
     jobStatus: "all",

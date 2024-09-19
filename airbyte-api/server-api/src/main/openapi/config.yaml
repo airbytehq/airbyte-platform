@@ -428,6 +428,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_usage:
+    post:
+      tags:
+        - workspace
+        - cloud-only
+      summary: Get usage for a workspace
+      operationId: getWorkspaceUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/tag_feedback_status_as_done:
     post:
       tags:
@@ -1006,6 +1029,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_builder_projects/get_for_definition_id:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project by source definition ID
+      operationId: getConnectorBuilderProjectIdForDefinitionId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectForDefinitionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProjectForDefinitionResponse"
   /v1/connector_builder_projects/update_testing_values:
     post:
       tags:
@@ -1044,6 +1086,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectStreamRead"
+  /v1/connector_builder_projects/fork:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Creates a new builder project that is a fork of an existing source definition
+      operationId: createForkedConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectForkRequestBody"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
   /v1/connector_documentation/get:
     post:
       tags:
@@ -2019,6 +2080,27 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ConnectionUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/update_with_reason:
+    post:
+      tags:
+        - connection
+      summary: Update a connection with reason
+      operationId: updateConnectionWithReason
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionUpdateWithReason"
         required: true
       responses:
         "200":
@@ -4388,7 +4470,19 @@ paths:
                 $ref: "#/components/schemas/InstanceConfigurationResponse"
         "401":
           description: Instance setup failed.
-
+  /v1/instance_configuration/license/info:
+    get:
+      summary: Fetch license limits and usage
+      tags:
+        - instance_configuration
+      operationId: licenseInfo
+      responses:
+        "200":
+          description: Successfully retrieve license usage information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseInfoResponse"
   /v1/jobs/retry_states/create_or_update:
     post:
       summary: Creates or updates a retry state for a job.
@@ -4515,6 +4609,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
+  /v1/billing/organization_balance:
+    post:
+      summary: Get the current balance of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getOrganizationBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully got organization's balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationBalanceRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -4840,6 +4953,149 @@ paths:
       tags:
         - scoped_configuration
 
+  # Connector Rollouts
+  /v1/connector_rollout/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutListRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getConnectorRolloutsList
+      summary: Get all connector rollouts matching the provided state
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+      responses:
+        "200":
+          description: Newly created connector rollout entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: createConnectorRollout
+      summary: Create a new connector rollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/get:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutReadRequestBody"
+
+      responses:
+        "200":
+          description: A connector rollout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutReadResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Get a connector rollout by actor definition ID and version
+      operationId: getConnectorRolloutById
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/start:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutStartRequestBody"
+      responses:
+        "200":
+          description: Started connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Start a connector rollout by ID. This will update the state of the rollout from INITIALIZED to WORKFLOW_STARTED, and add the Temporal run ID of the workflow to the rollout entry.
+      operationId: startConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/rollout:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Roll out a release candidate. This will pin the actors to the release candidate version ID.
+      operationId: doConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/finalize:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutFinalizeRequestBody"
+      responses:
+        "200":
+          description: Finalized connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutFinalizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
+      operationId: finalizeConnectorRollout
+      tags:
+        - connector_rollout
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -4960,6 +5216,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/diagnostic_tool/generate_report:
+    post:
+      summary: Generate a diagnostic report
+      tags:
+        - diagnostic_tool
+      operationId: generateDiagnosticReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticReportRequestBody"
+      responses:
+        "200":
+          description: Successfully generated diagnostic report
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # Airbyte API
   /public:
@@ -6789,6 +7067,265 @@ components:
           type: string
           format: uuid
 
+    # Connector Rollouts
+    ConnectorRolloutRead:
+      type: object
+      required:
+        - id
+        - actor_definition_id
+        - release_candidate_version_id
+        - initial_version_id
+        - state
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_run_id:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        release_candidate_version_id:
+          type: string
+          format: uuid
+        initial_version_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutState"
+        initial_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        current_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        final_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        has_breaking_changes:
+          type: boolean
+        max_step_wait_time_mins:
+          type: integer
+          minimum: 0
+          format: int32
+        updated_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutState:
+      type: string
+      enum:
+        - initialized
+        - workflow_started
+        - in_progress
+        - paused
+        - finalizing
+        - succeeded
+        - errored
+        - failed_rolled_back
+        - canceled_rolled_back
+
+    ConnectorRolloutStateTerminal:
+      type: string
+      enum:
+        - succeeded
+        - failed_rolled_back
+        - canceled_rolled_back
+
+    ConnectorRolloutStrategy:
+      type: string
+      enum:
+        - manual
+        - automated
+        - overridden
+
+    ConnectorRolloutListRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - source_definition_id
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        source_definition_id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutListResponse:
+      type: object
+      properties:
+        connectorRollouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutCreateRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        initial_rollout_pct:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        final_target_rollout_pct:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        has_breaking_changes:
+          type: boolean
+        max_step_wait_time_mins:
+          type: integer
+          format: int32
+          minimum: 0
+        expires_at:
+          type: string
+          format: date-time
+
+    ConnectorRolloutCreateResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutReadRequestBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutReadResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutStartRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - workflow_run_id
+        - rollout_strategy
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        workflow_run_id:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutStartResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutRequestBody:
+      type: object
+      required:
+        - id
+        - actor_ids
+        - rollout_strategy
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorId"
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutFinalizeRequestBody:
+      type: object
+      required:
+        - id
+        - state
+        - rollout_strategy
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutStateTerminal"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+
+    ConnectorRolloutFinalizeResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
     # WORKSPACE
     WorkspaceId:
       type: string
@@ -7181,6 +7718,85 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+    WorkspaceUsageRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - timeWindow
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+    WorkspaceUsageRead:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionUsageRead"
+    ConnectionUsageRead:
+      type: object
+      required:
+        - connection
+        - source
+        - sourceDefinition
+        - destination
+        - destinationDefinition
+        - usage
+      properties:
+        connection:
+          $ref: "#/components/schemas/ConnectionRead"
+        source:
+          $ref: "#/components/schemas/SourceRead"
+        sourceDefinition:
+          $ref: "#/components/schemas/SourceDefinitionRead"
+        destination:
+          $ref: "#/components/schemas/DestinationRead"
+        destinationDefinition:
+          $ref: "#/components/schemas/DestinationDefinitionRead"
+        usage:
+          type: object
+          required:
+            - free
+            - regular
+            - internal
+          properties:
+            free:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            regular:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+            internal:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeframeUsage"
+    TimeframeUsage:
+      type: object
+      required:
+        - timeframeStart
+        - timeframeEnd
+        - quantity
+      properties:
+        timeframeStart:
+          type: string
+        timeframeEnd:
+          type: string
+        quantity:
+          type: number
+          format: double
+    ConsumptionTimeWindow:
+      type: string
+      enum:
+        - lastMonth
+        - lastSixMonths
+        - lastYear
+      default: lastMonth
     WorkspaceGiveFeedback:
       type: object
       required:
@@ -7274,6 +7890,15 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         yamlManifest:
           type: string
+        baseActorDefinitionVersionId:
+          $ref: "#/components/schemas/NullableActorDefinitionVersionId"
+        contributionPullRequestUrl:
+          type: string
+          nullable: true
+        contributionActorDefinitionId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:
@@ -7291,6 +7916,41 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        baseActorDefinitionVersionInfo:
+          $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
+        contributionInfo:
+          $ref: "#/components/schemas/ContributionInfo"
+    BaseActorDefinitionVersionInfo:
+      type: object
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+        - actorDefinitionId
+        - icon
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        icon:
+          type: string
+        documentationUrl:
+          type: string
+    ContributionInfo:
+      type: object
+      required:
+        - pullRequestUrl
+        - actorDefinitionId
+      properties:
+        pullRequestUrl:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
@@ -7303,6 +7963,16 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         version:
           $ref: "#/components/schemas/ManifestVersion"
+    ConnectorBuilderProjectForkRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - baseActorDefinitionId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        baseActorDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     ExistingConnectorBuilderProjectWithWorkspaceId:
       type: object
       required:
@@ -7326,6 +7996,25 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProject:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    BuilderProjectForDefinitionRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - workspaceId
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    BuilderProjectForDefinitionResponse:
+      type: object
+      required:
+        - builderProjectId
+      properties:
+        builderProjectId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectRead:
       type: object
       required:
@@ -7624,6 +8313,8 @@ components:
         - sourceDefinitionId
         - dockerImageTag
       properties:
+        name:
+          type: string
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
         dockerImageTag:
@@ -8168,6 +8859,8 @@ components:
         - destinationDefinitionId
         - dockerImageag
       properties:
+        name:
+          type: string
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
         dockerImageTag:
@@ -8464,6 +9157,10 @@ components:
     ActorDefinitionVersionId:
       type: string
       format: uuid
+    NullableActorDefinitionVersionId:
+      type: string
+      format: uuid
+      nullable: true
     ActorDefinitionVersionRead:
       type: object
       required:
@@ -8845,6 +9542,18 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
+    ConnectionUpdateWithReason:
+      type: object
+      required:
+        - connectionUpdate
+      properties:
+        connectionUpdate:
+          $ref: "#/components/schemas/ConnectionUpdate"
+        updateReason:
+          type: string
+        autoUpdate:
+          type: boolean
+          default: false
     WebBackendConnectionUpdate:
       type: object
       description: Used to apply a patch-style update to a connection, which means that null properties remain unchanged
@@ -9745,6 +10454,56 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
+    OrganizationBalanceRead:
+      type: object
+      required:
+        - upcomingInvoice
+        - planType
+      properties:
+        planType:
+          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
+          type: string
+          enum:
+            - in_arrears
+            - prepaid
+          deprecated: true
+        upcomingInvoice:
+          type: object
+          required:
+            - currency
+            - amount
+            - dueDate
+          properties:
+            currency:
+              type: string
+            amount:
+              type: string
+              description: The amount of the next upcoming invoice formatted as a decimal number wrapped inside a string.
+            dueDate:
+              $ref: "#/components/schemas/LocalDate"
+        credits:
+          type: object
+          required:
+            - balance
+            - blocks
+          properties:
+            balance:
+              type: number
+              format: double
+            blocks:
+              type: array
+              items:
+                $ref: "#/components/schemas/CreditBlockRead"
+    CreditBlockRead:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+        expiryDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
 
     # ORGANIZATIONS
     OrganizationId:
@@ -10257,6 +11016,9 @@ components:
         selectedFields:
           description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
           $ref: "#/components/schemas/SelectedFields"
+        hashedFields:
+          description: Fields that should be hashed before being written to the destination.
+          $ref: "#/components/schemas/SelectedFields"
         minimumGenerationId:
           type: integer
           format: int64
@@ -10728,6 +11490,8 @@ components:
         - replication
         - persistence
         - airbyte_platform
+        - normalization # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
+        - dbt # no longer possible for new jobs, but needed to read historical deserialize historical jobs with this value
         - unknown
     FailureType:
       description: Categorizes well known errors into types for programmatic handling. If not set, the type of error is not well known.
@@ -11918,6 +12682,13 @@ components:
         defaultRealm:
           type: string
           default: "airbyte"
+    LicenseStatus:
+      type: string
+      enum:
+        - pro
+        - invalid
+        - exceeded
+        - expired
     InstanceConfigurationResponse:
       type: object
       required:
@@ -11940,11 +12711,12 @@ components:
         version:
           description: release version for the corresponding edition
           type: string
-        licenseType:
-          type: string
-          enum:
-            - pro
-            - invalid
+        licenseStatus:
+          $ref: "#/components/schemas/LicenseStatus"
+          nullable: true
+        licenseExpirationDate:
+          type: integer
+          format: int64
           nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
@@ -11991,6 +12763,29 @@ components:
         organizationName:
           description: Optional name of the organization to create. Defaults to 'Default Organization' if not specified.
           type: string
+    LicenseInfoResponse:
+      type: object
+      required:
+        - edition
+        - licenseStatus
+        - usedEditors
+        - expirationDate
+      properties:
+        edition:
+          type: string
+        licenseStatus:
+          $ref: "#/components/schemas/LicenseStatus"
+        maxNodes:
+          type: integer
+        maxEditors:
+          type: integer
+        usedNodes:
+          type: integer
+        usedEditors:
+          type: integer
+        expirationDate:
+          type: integer
+          format: int64
     StreamStatusRead:
       type: object
       required:
@@ -12227,13 +13022,10 @@ components:
     DeploymentMetadataRead:
       type: object
       required:
-        - environment
         - id
         - mode
         - version
       properties:
-        environment:
-          type: string
         id:
           type: string
           format: uuid
@@ -12282,6 +13074,8 @@ components:
           type: array
           items:
             type: string
+        details:
+          type: object
     InvalidInputExceptionInfo:
       type: object
       required:
@@ -13525,10 +14319,23 @@ components:
         - destination
       x-sdk-component: true
 
+    LocalDate:
+      type: string
+      format: date
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
     ISO8601DateTime:
       type: string
       format: date-time
-      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSS''Z''")'
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSSZ")'
+
+    DiagnosticReportRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
 
   responses:
     NotFoundResponse:

@@ -12,6 +12,9 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
+import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -40,6 +43,7 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("/api/v1/connector_builder_projects")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ConnectorBuilderProjectApiController implements ConnectorBuilderProjectApi {
 
   private final ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
@@ -55,6 +59,16 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(@Body final ConnectorBuilderProjectWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(project));
+  }
+
+  @Override
+  @Post(uri = "/fork")
+  @Status(HttpStatus.CREATED)
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public ConnectorBuilderProjectIdWithWorkspaceId createForkedConnectorBuilderProject(@Body final ConnectorBuilderProjectForkRequestBody connectorBuilderProjectForkRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(connectorBuilderProjectForkRequestBody));
   }
 
   @Override
@@ -135,6 +149,17 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   public JsonNode updateConnectorBuilderProjectTestingValues(@Body final ConnectorBuilderProjectTestingValuesUpdate connectorBuilderProjectTestingValuesUpdate) {
     return ApiHelper
         .execute(() -> connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(connectorBuilderProjectTestingValuesUpdate));
+  }
+
+  @Override
+  @Post(uri = "/get_by_definition_id")
+  @Status(HttpStatus.OK)
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public BuilderProjectForDefinitionResponse getConnectorBuilderProjectIdForDefinitionId(@Body final BuilderProjectForDefinitionRequestBody builderProjectForDefinitionRequestBody) {
+    return ApiHelper
+        .execute(() -> connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(builderProjectForDefinitionRequestBody));
   }
 
 }

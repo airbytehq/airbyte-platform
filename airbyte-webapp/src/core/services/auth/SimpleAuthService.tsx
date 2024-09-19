@@ -132,6 +132,7 @@ export const SimpleAuthService: React.FC<PropsWithChildren> = ({ children }) => 
   const contextValue = useMemo(() => {
     return {
       authType: "simple",
+      applicationSupport: "single",
       provider: null,
       emailVerified: false,
       ...authState,

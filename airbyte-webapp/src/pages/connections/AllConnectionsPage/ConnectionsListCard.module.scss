@@ -1,4 +1,25 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+$filters-fixed-height: 108px;
+
 .connections {
   min-width: 100%;
   width: fit-content;
+  position: relative;
+}
+
+.filters {
+  position: sticky;
+  top: 0;
+  z-index: z-indices.$tableStickyHeader;
+  background-color: colors.$foreground;
+  height: $filters-fixed-height;
+}
+
+.table {
+  thead {
+    top: $filters-fixed-height;
+  }
 }

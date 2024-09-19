@@ -70,6 +70,7 @@ export type IconType =
   | "keyCircle"
   | "layers"
   | "lens"
+  | "license"
   | "lightbulb"
   | "link"
   | "loading"
@@ -151,7 +152,7 @@ export type IconColor =
   | "error"
   | "warning"
   | "affordance"
-  | "highlight"
+  | "magic"
   | "foreground";
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 

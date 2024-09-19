@@ -22,7 +22,7 @@ import { DeleteApplicationControl } from "./DeleteApplicationControl";
 import { GenerateTokenControl } from "./GenerateTokenControl";
 
 export const ApplicationSettingsView = () => {
-  const { authType } = useAuthService();
+  const { applicationSupport } = useAuthService();
   const { applications } = useListApplications();
   const columnHelper = useMemo(() => createColumnHelper<ApplicationRead>(), []);
 
@@ -77,7 +77,7 @@ export const ApplicationSettingsView = () => {
                 clientId={props.row.original.clientId}
                 clientSecret={props.row.original.clientSecret}
               />
-              {authType !== "simple" && (
+              {applicationSupport === "multiple" && (
                 <DeleteApplicationControl
                   applicationId={props.row.original.id}
                   applicationName={props.row.original.name}
@@ -89,7 +89,7 @@ export const ApplicationSettingsView = () => {
         meta: { thClassName: styles.actionsColumn },
       }),
     ];
-  }, [columnHelper, authType]);
+  }, [columnHelper, applicationSupport]);
 
   return (
     <>
@@ -101,14 +101,16 @@ export const ApplicationSettingsView = () => {
           <Box pt="sm">
             <Text color="grey" size="sm">
               <FormattedMessage id="settings.applications.helptext" />
-              {authType !== "simple" && <FormattedMessage id="settings.applications.helptext.permissions" />}
+              {applicationSupport === "multiple" && (
+                <FormattedMessage id="settings.applications.helptext.permissions" />
+              )}
               <ExternalLink href={links.apiAccess}>
                 <FormattedMessage id="ui.learnMore" />
               </ExternalLink>
             </Text>
           </Box>
         </FlexItem>
-        <CreateApplicationControl />
+        {applicationSupport === "multiple" && <CreateApplicationControl />}
       </FlexContainer>
       <Box py="lg">
         {applications.length ? (

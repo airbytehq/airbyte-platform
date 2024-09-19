@@ -26,7 +26,8 @@ public class DockerImageNameHelper {
   /**
    * Docker image names are by convention separated by slashes. The last portion is the image's name.
    * This is followed by a colon and a version number. e.g. airbyte/scheduler:v1 or
-   * gcr.io/my-project/my-project:v2.
+   * gcr.io/my-project/image-name:v2. Registry name may also include port number, e.g.
+   * registry.internal:1234/my-project/image-name:v2
    *
    * @param fullImagePath the image name with repository and version ex
    *        gcr.io/my-project/image-name:v2
@@ -43,7 +44,7 @@ public class DockerImageNameHelper {
    * Extracts the image name without the version tag.
    *
    * @param fullImagePath the docker image name
-   * @return anything before ":"
+   * @return anything before last ":"
    */
   public static String extractImageNameWithoutVersion(final String fullImagePath) {
     return extractPartFromFullPath(fullImagePath, NAME_PARTS_INDEX);
@@ -53,7 +54,7 @@ public class DockerImageNameHelper {
    * Extracts the image version label as a string.
    *
    * @param fullImagePath the docker image name
-   * @return anything after ":"
+   * @return anything after last ":"
    */
   public static String extractImageVersionString(final String fullImagePath) {
     return extractPartFromFullPath(fullImagePath, VERSION_PART_INDEX);
@@ -78,8 +79,15 @@ public class DockerImageNameHelper {
   }
 
   private static String extractPartFromFullPath(final String fullImagePath, final int partIndex) {
-    final String[] parts = fullImagePath.split(VERSION_DELIMITER);
-    return parts.length > partIndex ? parts[partIndex] : null;
+    final int delimeterIndex = fullImagePath.lastIndexOf(VERSION_DELIMITER);
+    if (partIndex == NAME_PARTS_INDEX) {
+      return delimeterIndex >= 0 ? fullImagePath.substring(0, delimeterIndex) : fullImagePath;
+    } else if (partIndex == VERSION_PART_INDEX) {
+      return delimeterIndex >= 0 ? fullImagePath.substring(delimeterIndex + 1) : null;
+    } else {
+      LOGGER.warn("Invalid part index: {}", partIndex);
+      return null;
+    }
   }
 
 }

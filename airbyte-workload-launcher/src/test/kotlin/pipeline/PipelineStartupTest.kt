@@ -13,14 +13,11 @@ import io.mockk.Ordering
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import io.temporal.worker.WorkerFactory
 import org.junit.jupiter.api.Test
 
 class PipelineStartupTest {
   @Test
   fun `should process claimed workloads`() {
-    val workerFactory: WorkerFactory = mockk()
-    val highPriorityworkerFactory: WorkerFactory = mockk()
     val claimedProcessor: ClaimedProcessor = mockk()
     val claimProcessorTracker: ClaimProcessorTracker = mockk()
     val metricPublisher: CustomMetricPublisher = mockk()
@@ -33,11 +30,10 @@ class PipelineStartupTest {
     val listener =
       StartupApplicationEventListener(
         claimedProcessor,
-        workerFactory,
-        highPriorityworkerFactory,
         claimProcessorTracker,
         metricPublisher,
         temporalWorkerController,
+        mockk(),
       )
 
     listener.onApplicationEvent(null)

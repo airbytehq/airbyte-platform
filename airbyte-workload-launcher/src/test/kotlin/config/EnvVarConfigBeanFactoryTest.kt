@@ -4,8 +4,8 @@
 
 package config
 
-import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
-import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
+import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
+import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR

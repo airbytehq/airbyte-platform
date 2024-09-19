@@ -21,7 +21,7 @@ export const RefreshRunningItem: React.FC<RefreshRunningItemProps> = ({ jobId, s
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   return (
-    <ConnectionTimelineEventItem centered>
+    <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="rotate" running />
       <ConnectionTimelineEventSummary>
         <Text bold>

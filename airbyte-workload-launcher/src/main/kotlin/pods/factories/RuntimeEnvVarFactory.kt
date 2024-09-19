@@ -13,7 +13,7 @@ import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
-import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
+import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar

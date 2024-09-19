@@ -40,5 +40,6 @@ if [ -n "$KEYCLOAK_ADMIN_HOSTNAME_URL" ]; then
   CMD+=" --hostname-admin $KEYCLOAK_ADMIN_HOSTNAME_URL"
 fi
 
+./configure_keycloak.sh > /dev/null 2>&1 & disown
 # Execute the command
 eval $CMD

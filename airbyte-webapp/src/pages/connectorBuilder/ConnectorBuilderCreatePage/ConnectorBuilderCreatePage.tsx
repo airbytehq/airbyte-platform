@@ -21,6 +21,7 @@ import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
@@ -30,6 +31,7 @@ import LoadExistingConnectorImage from "./load-existing-connector.svg?react";
 import StartFromScratchImage from "./start-from-scratch.svg?react";
 import { AirbyteTitle } from "../components/AirbyteTitle";
 import { BackButton } from "../components/BackButton";
+import { useBuilderCompatibleSourceDefinitions } from "../components/useBuilderCompatibleSourceDefinitions";
 import { useCreateAndNavigate } from "../components/useCreateAndNavigate";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
@@ -38,6 +40,8 @@ const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const existingProjects = useListBuilderProjects();
+  const { builderCompatibleSourceDefinitions } = useBuilderCompatibleSourceDefinitions();
+
   const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const navigate = useNavigate();
 
@@ -49,6 +53,8 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
+
+  const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {
@@ -152,12 +158,12 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           }}
           dataTestId="import-yaml"
         />
-        {existingProjects.length > 0 && (
+        {(existingProjects.length > 0 || builderCompatibleSourceDefinitions.length > 0) && (
           <Tile
             image={<LoadExistingConnectorImage />}
-            title="connectorBuilder.createPage.loadExistingConnector.title"
-            description="connectorBuilder.createPage.loadExistingConnector.description"
-            buttonText="connectorBuilder.createPage.loadExistingConnector.button"
+            title="connectorBuilder.createPage.forkExistingConnector.title"
+            description="connectorBuilder.createPage.forkExistingConnector.description"
+            buttonText="connectorBuilder.createPage.forkExistingConnector.button"
             buttonProps={{ disabled: buttonsDisabledState }}
             onClick={() => {
               navigate(`../${ConnectorBuilderRoutePaths.Fork}`);
@@ -176,7 +182,11 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
               actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
-            createAndNavigate({ name: getConnectorName() });
+            if (isAIFeatureEnabled) {
+              navigate(`../${ConnectorBuilderRoutePaths.Generate}`);
+            } else {
+              createAndNavigate({ name: DEFAULT_CONNECTOR_NAME });
+            }
           }}
           dataTestId="start-from-scratch"
         />

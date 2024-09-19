@@ -549,6 +549,38 @@ components:
               default: An unexpected error occurred when creating your GitHub contribution.
             data:
               $ref: "#/components/schemas/GithubContributionProblemData"
+    BillingSubscriptionRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:billing/subscription/subscription-required
+            title:
+              type: string
+              default: A subscription is required for this operation to succeed.
+    BillingTooManyNonPrepaidSubscriptionsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:billing/subscription/too-many-incompatible-subscriptions
+            title:
+              type: string
+              default: Found more than one subscription with some not being prepaid.
     ProblemCronData:
       type: object
       properties:

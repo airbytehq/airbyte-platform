@@ -17,14 +17,23 @@ import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.State
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
+import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnableMappers
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.mappers.application.RecordMapper
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
@@ -91,12 +100,14 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
   private val workloadApiClient: WorkloadApiClient,
-  private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
+  private val recordMapper: RecordMapper,
+  private val featureFlagClient: FeatureFlagClient,
+  private val destinationCatalogGenerator: DestinationCatalogGenerator,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -118,6 +129,8 @@ class ReplicationWorkerHelper(
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<ConfiguredMapper>>
+  private var mapperEnabled by Delegates.notNull<Boolean>()
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -227,6 +240,15 @@ class ReplicationWorkerHelper(
     if (configuredAirbyteCatalog.streams.isEmpty()) {
       metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
     }
+
+    val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
+
+    mappersPerStreamDescriptor =
+      catalogWithoutInvalidMappers.catalog.streams.map { stream ->
+        stream.streamDescriptor to stream.mappers
+      }.toMap()
+
+    mapperEnabled = featureFlagClient.boolVariation(EnableMappers, Connection(ctx!!.connectionId))
   }
 
   fun startDestination(
@@ -335,7 +357,7 @@ class ReplicationWorkerHelper(
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.replicationStartTime)
         .withEndTime(System.currentTimeMillis())
-        .withPerformanceMetrics(performanceMetrics)
+        .withPerformanceMetrics(buildPerformanceMetrics(performanceMetrics))
 
     val output =
       ReplicationOutput()
@@ -360,6 +382,18 @@ class ReplicationWorkerHelper(
 
     LineGobbler.endSection("REPLICATION")
     return output
+  }
+
+  private fun buildPerformanceMetrics(performanceMetrics: PerformanceMetrics?): PerformanceMetrics {
+    val finalMetrics = PerformanceMetrics()
+    performanceMetrics?.let {
+      it.additionalProperties.map { (key, value) -> finalMetrics.setAdditionalProperty(key, value) }
+    }
+    val mapperMetrics = recordMapper.collectStopwatches()
+    if (mapperMetrics.isNotEmpty()) {
+      finalMetrics.setAdditionalProperty("mappers", mapperMetrics)
+    }
+    return finalMetrics
   }
 
   @VisibleForTesting
@@ -387,6 +421,10 @@ class ReplicationWorkerHelper(
     if (sourceRawMessage.type == Type.STATE) {
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
       recordStateStatsMetrics(metricClient, sourceRawMessage.state, AirbyteMessageOrigin.SOURCE, ctx!!)
+    }
+
+    if (sourceRawMessage.type == Type.RECORD) {
+      applyTransformationMappers(AirbyteJsonRecordAdapter(sourceRawMessage))
     }
 
     return sourceRawMessage
@@ -436,16 +474,21 @@ class ReplicationWorkerHelper(
       .let { Optional.ofNullable(it) }
   }
 
-  fun isWorkerV2TestEnabled(): Boolean {
-    return workloadEnabled
-  }
-
   fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {
     return airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId = sourceId)).sourceDefinitionId
   }
 
   fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
     return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
+  }
+
+  fun applyTransformationMappers(message: AirbyteRecord) {
+    if (mapperEnabled) {
+      val mappersForStream: List<ConfiguredMapper> =
+        mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
+
+      recordMapper.applyMappers(message, mappersForStream)
+    }
   }
 
   private fun getTotalStats(

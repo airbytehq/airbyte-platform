@@ -116,8 +116,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 }
 
-object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
-
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
@@ -137,8 +135,6 @@ object WorkloadHeartbeatTimeout : Permanent<Int>(key = "workload.heartbeat.timeo
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
-
-object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
@@ -168,10 +164,6 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
-object WorkloadLauncherEnabled : EnvVar(envVar = "WORKLOAD_LAUNCHER_ENABLED", default = false)
-
-object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED", default = false)
-
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
@@ -180,19 +172,12 @@ object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-st
 
 object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
 
-object RefreshConfigBeforeSecretHydrationInitContainer : Temporary<Boolean>(
-  key = "platform.refresh-config-before-secret-hydration-init-container",
-  default = false,
-)
-
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
-object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = false)
-
-object ReplicationMonoPod : Temporary<Boolean>(key = "replication-mono-pod", default = false)
+object EnableMappers : Temporary<Boolean>(key = "platform.enable-mappers", default = true)
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
 
-object ReplicationMonoPodMemoryTolerance : Temporary<Int>(key = "platform.replication-mono-pod-memory-tolerance-gb", default = 6)
-
 object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
+
+object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")

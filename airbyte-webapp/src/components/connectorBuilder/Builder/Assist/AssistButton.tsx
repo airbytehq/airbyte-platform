@@ -11,21 +11,23 @@ import { Button } from "components/ui/Button";
 import { IconColor } from "components/ui/Icon/types";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { HttpError } from "core/api";
+import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+
 import {
+  AssistKey,
+  convertToAssistFormValuesSync,
   BuilderAssistFindStreamsResponse,
+  BuilderAssistInputAllParams,
   BuilderAssistManifestResponse,
   useBuilderAssistFindAuth,
   useBuilderAssistFindUrlBase,
   useBuilderAssistFindStreamPaginator,
   useBuilderAssistStreamMetadata,
   useBuilderAssistStreamResponse,
-  HttpError,
-} from "core/api";
-import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
-import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import { AssistKey, convertToAssistFormValuesSync } from "./assist";
+} from "./assist";
 import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
 
 /**
@@ -144,65 +146,53 @@ export interface AssistButtonProps {
 }
 
 interface AssistButtonConfig {
-  useHook: (params: object) => UseQueryResult<BuilderAssistManifestResponse, HttpError<KnownExceptionInfo>>;
+  useHook: (
+    input: BuilderAssistInputAllParams
+  ) => UseQueryResult<BuilderAssistManifestResponse, HttpError<KnownExceptionInfo>>;
+  useHookParams: Array<keyof BuilderAssistInputAllParams>;
   formPathToSet: string | ((streamNum: number) => string);
   propertiesToPluck?: string[];
 }
 
-const assistButtonConfigs = {
+const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
   urlbase: {
     useHook: useBuilderAssistFindUrlBase,
+    useHookParams: [],
     formPathToSet: "global.urlBase",
   },
   auth: {
     useHook: useBuilderAssistFindAuth,
+    useHookParams: [],
     formPathToSet: "global.authenticator",
   },
   metadata: {
     useHook: useBuilderAssistStreamMetadata,
+    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}`,
     propertiesToPluck: ["urlPath", "httpMethod", "primaryKey"],
   },
   record_selector: {
     useHook: useBuilderAssistStreamResponse,
+    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.recordSelector`,
   },
   paginator: {
     useHook: useBuilderAssistFindStreamPaginator,
+    useHookParams: ["stream_name"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.paginator`,
   },
-} as const;
+};
 
 export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
-  const assistData: AssistData = useBuilderWatch("formValues.assist");
-  const app_name = useWatch({ name: "name" }) || "Connector";
-  const url_base = useWatch({ name: "formValues.global.urlBase" });
   const stream_name = useWatch({ name: `formValues.streams.${streamNum}.name` });
 
+  const config = assistButtonConfigs[assistKey];
+  const hookParams = useMemo(() => pick({ stream_name }, config.useHookParams), [stream_name, config.useHookParams]);
+
   const { assistEnabled } = useConnectorBuilderFormState();
-  if (!assistData || !assistEnabled) {
+  if (!assistEnabled) {
     return null;
   }
-
-  // TODO: this is a hack to get the docs_url and openapi_spec_url from the assistData
-  // Before we bring this to our customers we should hoist this error higher.
-  const docs_url = assistData?.docsUrl?.trim();
-  const openapi_spec_url = assistData?.openApiSpecUrl?.trim();
-
-  const config = assistButtonConfigs[assistKey] as AssistButtonConfig | undefined;
-  if (!config) {
-    console.error(`Unknown assist key: ${assistKey}`);
-    return null;
-  }
-
-  const hookParams = {
-    docs_url,
-    openapi_spec_url,
-    app_name,
-    url_base,
-    stream_name,
-    streamNum,
-  };
 
   return <InternalAssistButton assistKey={assistKey} hookParams={hookParams} streamNum={streamNum} {...config} />;
 };
@@ -257,7 +247,7 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
   const button = (
     <Button
       type="button"
-      variant="highlight"
+      variant="magic"
       onClick={onClick}
       icon="aiStars"
       disabled={assistButtonState.disabled}
@@ -278,8 +268,8 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
 
 interface InternalAssistButtonProps extends AssistButtonConfig {
   streamNum?: number;
-  hookParams: object;
   assistKey: AssistKey;
+  hookParams: BuilderAssistInputAllParams;
 }
 
 const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
@@ -385,7 +375,7 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
   const button = (
     <Button
       type="button"
-      variant="highlight"
+      variant="magic"
       onClick={buttonClickHandler}
       icon="aiStars"
       disabled={assistButtonState.disabled}

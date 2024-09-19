@@ -11,7 +11,13 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.featureflag.ConcurrentSourceStreamRead;
+import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LoggingHelper.Color;
+import io.airbyte.commons.logging.MdcScope;
+import io.airbyte.commons.logging.MdcScope.Builder;
+import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
+import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -19,6 +25,7 @@ import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationBufferOverride;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
@@ -26,6 +33,8 @@ import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceType;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.mappers.application.RecordMapper;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -33,33 +42,38 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
+import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.AnalyticsMessageTracker;
+import io.airbyte.workers.internal.ContainerIOHandle;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
+import io.airbyte.workers.internal.LocalContainerAirbyteDestination;
+import io.airbyte.workers.internal.LocalContainerAirbyteSource;
+import io.airbyte.workers.internal.MessageMetricsTracker;
 import io.airbyte.workers.internal.NamespacingMapper;
+import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
+import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
-import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workload.api.client.WorkloadApiClient;
-import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -76,7 +90,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ReplicationWorkerFactory {
 
-  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
+  private final AirbyteMessageSerDeProvider serDeProvider;
+  private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
+  private final GsonPksExtractor gsonPksExtractor;
   private final AirbyteApiClient airbyteApiClient;
   private final SyncPersistenceFactory syncPersistenceFactory;
   private final FeatureFlagClient featureFlagClient;
@@ -84,13 +100,24 @@ public class ReplicationWorkerFactory {
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final TrackingClient trackingClient;
   private final WorkloadApiClient workloadApiClient;
-  private final boolean workloadEnabled;
   private final StreamStatusCompletionTracker streamStatusCompletionTracker;
   private final StreamStatusTrackerFactory streamStatusTrackerFactory;
   private final Clock clock;
+  private final RecordMapper recordMapper;
+  private final DestinationCatalogGenerator destinationCatalogGenerator;
+
+  public static final MdcScope.Builder DESTINATION_LOG_MDC_BUILDER = new Builder()
+      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
+      .setPrefixColor(Color.YELLOW_BACKGROUND);
+
+  public static final MdcScope.Builder SOURCE_LOG_MDC_BUILDER = new Builder()
+      .setLogPrefix(LoggingHelper.SOURCE_LOGGER_PREFIX)
+      .setPrefixColor(Color.BLUE_BACKGROUND);
 
   public ReplicationWorkerFactory(
-                                  final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
+                                  final AirbyteMessageSerDeProvider serDeProvider,
+                                  final AirbyteProtocolVersionedMigratorFactory migratorFactory,
+                                  final GsonPksExtractor gsonPksExtractor,
                                   final AirbyteApiClient airbyteApiClient,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
@@ -98,23 +125,26 @@ public class ReplicationWorkerFactory {
                                   final MetricClient metricClient,
                                   final WorkloadApiClient workloadApiClient,
                                   final TrackingClient trackingClient,
-                                  @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                   final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                  final Clock clock) {
-    this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
+                                  final Clock clock,
+                                  final RecordMapper recordMapper,
+                                  final DestinationCatalogGenerator destinationCatalogGenerator) {
+    this.serDeProvider = serDeProvider;
+    this.migratorFactory = migratorFactory;
+    this.gsonPksExtractor = gsonPksExtractor;
     this.airbyteApiClient = airbyteApiClient;
     this.syncPersistenceFactory = syncPersistenceFactory;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
-
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
     this.workloadApiClient = workloadApiClient;
-    this.workloadEnabled = workloadEnabled;
     this.trackingClient = trackingClient;
     this.streamStatusCompletionTracker = streamStatusCompletionTracker;
     this.streamStatusTrackerFactory = streamStatusTrackerFactory;
     this.clock = clock;
+    this.recordMapper = recordMapper;
+    this.destinationCatalogGenerator = destinationCatalogGenerator;
   }
 
   /**
@@ -135,19 +165,33 @@ public class ReplicationWorkerFactory {
     final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
-    // Enable concurrent stream reads for testing purposes
-    maybeEnableConcurrentStreamReads(sourceLauncherConfig, replicationInput);
-
     log.info("Setting up source...");
+    final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
+        new Multi(List.of(
+            new Connection(sourceLauncherConfig.getConnectionId()),
+            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
+    final var invalidLineConfig = new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks);
+
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
         ? new EmptyAirbyteSource()
-        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
-            replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), heartbeatMonitor);
+        : new LocalContainerAirbyteSource(
+            heartbeatMonitor,
+            getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
+            new MessageMetricsTracker(metricClient),
+            ContainerIOHandle.source());
 
     log.info("Setting up destination...");
-    final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), destinationTimeout);
+    final AirbyteMessageBufferedWriterFactory messageWriterFactory =
+        new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
+            Optional.of(replicationInput.getCatalog()));
+
+    final var airbyteDestination = new LocalContainerAirbyteDestination(
+        getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), DESTINATION_LOG_MDC_BUILDER, invalidLineConfig),
+        new MessageMetricsTracker(metricClient),
+        messageWriterFactory,
+        destinationTimeout,
+        ContainerIOHandle.dest());
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
@@ -163,43 +207,9 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, replicationInput, replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning, destinationTimeout, workloadApiClient, workloadEnabled, analyticsMessageTracker,
-        workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory, metricClient);
-  }
-
-  /**
-   * Enables concurrent stream reads for the current sync if the correct configuration is present. If
-   * present, a environment variable ({@code CONCURRENT_SOURCE_STREAM_READ}) is added to the map of
-   * environment variables passed to the source.
-   *
-   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
-   * @param replicationInput The input for the current sync.
-   */
-  private void maybeEnableConcurrentStreamReads(final IntegrationLauncherConfig sourceLauncherConfig, final ReplicationInput replicationInput) {
-    final Boolean isEnabled = shouldEnableConcurrentSourceRead(sourceLauncherConfig, replicationInput.getConnectionId());
-    final Map<String, String> concurrentReadEnvVars = Map.of("CONCURRENT_SOURCE_STREAM_READ", isEnabled.toString());
-    log.info("Concurrent stream read enabled? {}", isEnabled);
-    if (CollectionUtils.isNotEmpty(sourceLauncherConfig.getAdditionalEnvironmentVariables())) {
-      sourceLauncherConfig.getAdditionalEnvironmentVariables().putAll(concurrentReadEnvVars);
-    } else {
-      sourceLauncherConfig.setAdditionalEnvironmentVariables(concurrentReadEnvVars);
-    }
-  }
-
-  /**
-   * Tests whether the concurrent source reads are enabled by interpreting a feature flag for the
-   * feature, connection ID associated with the current sync and the associated source Docker image.
-   *
-   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
-   * @param connectionId The id of the connection being synced.
-   * @return {@code true} if concurrent source reads should be enabled or {@code false} otherwise.
-   */
-  private Boolean shouldEnableConcurrentSourceRead(final IntegrationLauncherConfig sourceLauncherConfig, final UUID connectionId) {
-    if (sourceLauncherConfig.getDockerImage().startsWith("airbyte/source-mysql")) {
-      return featureFlagClient.boolVariation(ConcurrentSourceStreamRead.INSTANCE, new Connection(connectionId));
-    } else {
-      return false;
-    }
+        onReplicationRunning, destinationTimeout, workloadApiClient, analyticsMessageTracker,
+        workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory, metricClient, recordMapper,
+        destinationCatalogGenerator);
   }
 
   /**
@@ -305,13 +315,14 @@ public class ReplicationWorkerFactory {
                                                            final VoidCallable onReplicationRunning,
                                                            final DestinationTimeoutMonitor destinationTimeout,
                                                            final WorkloadApiClient workloadApiClient,
-                                                           final boolean workloadEnabled,
                                                            final AnalyticsMessageTracker analyticsMessageTracker,
                                                            final Optional<String> workloadId,
                                                            final AirbyteApiClient airbyteApiClient,
                                                            final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                            final StreamStatusTrackerFactory streamStatusTrackerFactory,
-                                                           final MetricClient metricClient) {
+                                                           final MetricClient metricClient,
+                                                           final RecordMapper recordMapper,
+                                                           final DestinationCatalogGenerator destinationCatalogGenerator) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
 
     final int bufferSize = featureFlagClient.intVariation(ReplicationBufferOverride.INSTANCE, flagContext);
@@ -337,7 +348,6 @@ public class ReplicationWorkerFactory {
         onReplicationRunning,
         destinationTimeout,
         workloadApiClient,
-        workloadEnabled,
         analyticsMessageTracker,
         workloadId,
         airbyteApiClient,
@@ -345,7 +355,10 @@ public class ReplicationWorkerFactory {
         streamStatusTrackerFactory,
         bufferConfiguration,
         metricClient,
-        replicationInput);
+        replicationInput,
+        recordMapper,
+        featureFlagClient,
+        destinationCatalogGenerator);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -385,7 +398,6 @@ public class ReplicationWorkerFactory {
                                                                   final VoidCallable onReplicationRunning,
                                                                   final DestinationTimeoutMonitor destinationTimeout,
                                                                   final WorkloadApiClient workloadApiClient,
-                                                                  final boolean workloadEnabled,
                                                                   final AnalyticsMessageTracker analyticsMessageTracker,
                                                                   final Optional<String> workloadId,
                                                                   final AirbyteApiClient airbyteApiClient,
@@ -393,11 +405,15 @@ public class ReplicationWorkerFactory {
                                                                   final StreamStatusTrackerFactory streamStatusTrackerFactory,
                                                                   final BufferConfiguration bufferConfiguration,
                                                                   final MetricClient metricClient,
-                                                                  final ReplicationInput replicationInput) {
+                                                                  final ReplicationInput replicationInput,
+                                                                  final RecordMapper recordMapper,
+                                                                  final FeatureFlagClient featureFlagClient,
+                                                                  final DestinationCatalogGenerator destinationCatalogGenerator) {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
             messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
-            workloadEnabled, analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory);
+            analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker,
+            streamStatusTrackerFactory, recordMapper, featureFlagClient, destinationCatalogGenerator);
 
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
         srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout, streamStatusCompletionTracker,
@@ -414,6 +430,15 @@ public class ReplicationWorkerFactory {
     return syncPersistenceFactory.get(replicationInput.getConnectionId(), replicationInput.getWorkspaceId(),
         Long.parseLong(sourceLauncherConfig.getJobId()),
         sourceLauncherConfig.getAttemptId().intValue(), replicationInput.getCatalog());
+  }
+
+  private AirbyteStreamFactory getStreamFactory(final IntegrationLauncherConfig launcherConfig,
+                                                final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
+                                                final MdcScope.Builder mdcScopeBuilder,
+                                                final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
+    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
+        Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder,
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
 }

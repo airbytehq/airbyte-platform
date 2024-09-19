@@ -4,14 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class ConnectionSettingsChangedEvent(
-  private val startTimeEpochSeconds: Long,
   private val patches: Map<String, Map<String, Object>>,
   private val updateReason: String? = null,
 ) : ConnectionEvent {
-  fun getStartTimeEpochSeconds(): Long {
-    return startTimeEpochSeconds
-  }
-
   fun getPatches(): Map<String, Map<String, Object>> {
     return patches
   }

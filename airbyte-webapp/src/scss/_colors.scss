@@ -1,4 +1,5 @@
 /* stylelint-disable color-no-hex, color-hex-length  */
+
 $blue-30: var(--color-blue-30);
 $blue-40: var(--color-blue-40);
 $blue-50: var(--color-blue-50);
@@ -116,13 +117,12 @@ $loading-skeleton-base: var(--color-loading-skeleton-base);
 $loading-skeleton-stop-1: var(--color-loading-skeleton-gradient-stop-1);
 $loading-skeleton-stop-2: var(--color-loading-skeleton-gradient-stop-2);
 
-// LEGACY - DEPRECATED
+$gradient-primary-start: #{var(--color-blue-400)};
+$gradient-primary-stop: #{var(--color-orange-400)};
+$gradient-primary: linear-gradient(90deg, $gradient-primary-start, $gradient-primary-stop);
 
-$primaryColor12: rgba(103, 87, 255, 12%);
+$gradient-secondary-start: #{var(--color-blue-50)};
+$gradient-secondary-stop: #{var(--color-orange-50)};
+$gradient-secondary: linear-gradient(90deg, $gradient-secondary-start, $gradient-secondary-stop);
 
-$shadowColor: rgba(0, 0, 0, 25%);
-$cardShadowColor: rgba(26, 25, 77, 12%);
-
-$lightRedColor: #ff8870;
-
-$transparentColor: rgba(255, 255, 255, 0%);
+$gradient-light-background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, $foreground 90%);

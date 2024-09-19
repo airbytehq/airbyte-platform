@@ -63,6 +63,29 @@ export function updateFieldSelected({
   };
 }
 
+interface updateFieldHashingArguments {
+  config: AirbyteStreamConfiguration;
+  fieldPath: string[];
+  isFieldHashed: boolean;
+}
+export function updateFieldHashing({
+  config,
+  fieldPath,
+  isFieldHashed,
+}: updateFieldHashingArguments): Partial<AirbyteStreamConfiguration> {
+  if (isFieldHashed) {
+    return { hashedFields: [...(config.hashedFields ?? []), { fieldPath }] };
+  }
+
+  const nextConfig: Partial<AirbyteStreamConfiguration> = {
+    hashedFields: (config.hashedFields ?? []).filter((f) => !isEqual(f.fieldPath, fieldPath)),
+  };
+  if (nextConfig.hashedFields?.length === 0) {
+    nextConfig.hashedFields = undefined;
+  }
+  return nextConfig;
+}
+
 /**
  * Updates the cursor field in AirbyteStreamConfiguration
  */

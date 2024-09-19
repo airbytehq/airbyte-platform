@@ -12,10 +12,6 @@ $row-height: 40px;
   border-spacing: 0;
   max-width: 100%;
   border-radius: $border-radius;
-
-  tbody {
-    min-height: 100px; // for empty state placeholder
-  }
 }
 
 .thead {
@@ -55,6 +51,8 @@ $row-height: 40px;
   height: $row-height;
 
   &.emptyPlaceholder {
+    height: $row-height * 2;
+
     &:hover {
       background-color: colors.$foreground;
     }
@@ -86,6 +84,17 @@ $row-height: 40px;
 
   &:last-child > td:last-child {
     border-bottom-right-radius: $border-radius;
+  }
+
+  [data-showonhover="true"] {
+    visibility: hidden;
+  }
+
+  &:hover,
+  &:focus-within {
+    [data-showonhover] {
+      visibility: visible;
+    }
   }
 
   @keyframes highlight {
@@ -125,7 +134,8 @@ $row-height: 40px;
 }
 
 .pkCell,
-.cursorCell {
+.cursorCell,
+.hashCell {
   width: 10%;
 }
 

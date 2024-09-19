@@ -38,7 +38,8 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   bottomSlot,
   settingHighlight,
 }) => {
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
   const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
@@ -87,7 +88,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
           />
-          {!isBillingInArrearsActive && (
+          {!isOrganizationBillingPageVisible && !isWorkspaceUsagePageVisible && (
             <IfFeatureEnabled feature={FeatureItem.Billing}>
               <NavItem
                 icon="credits"

@@ -1,13 +1,13 @@
 @use "scss/variables";
 @use "scss/colors";
 @use "scss/z-indices";
+@use "scss/mixins";
 
 .popoverPanel {
-  background-color: colors.$foreground;
   z-index: z-indices.$modal;
   border-radius: variables.$border-radius-md;
   box-shadow: variables.$box-shadow-popup;
-  border: 1px solid colors.$yellow-600;
+  @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary);
 }
 
 .assistConfigPanel {

@@ -85,6 +85,7 @@ abstract class AbstractConfigRepositoryTest {
   val declarativeManifestImageVersionRepository = context.getBean(DeclarativeManifestImageVersionRepository::class.java)!!
   val permissionRepository = context.getBean(PermissionRepository::class.java)!!
   val scopedConfigurationRepository = context.getBean(ScopedConfigurationRepository::class.java)!!
+  val connectorRolloutRepository = context.getBean(ConnectorRolloutRepository::class.java)!!
   val userInvitationRepository = context.getBean(UserInvitationRepository::class.java)!!
   val organizationEmailDomainRepository = context.getBean(OrganizationEmailDomainRepository::class.java)!!
   val authRefreshTokenRepository = context.getBean(AuthRefreshTokenRepository::class.java)!!

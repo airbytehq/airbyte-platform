@@ -26,8 +26,9 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
   const canManageOrganizationBilling = useGeneratedIntent("ManageOrganizationBilling");
 
   return (
@@ -95,7 +96,7 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
 
-          {isBillingInArrearsActive && (
+          {isWorkspaceUsagePageVisible && (
             <SettingsLink
               iconType="chart"
               name={formatMessage({ id: "settings.usage" })}
@@ -106,11 +107,16 @@ export const CloudSettingsPage: React.FC = () => {
         {canViewOrgSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
             <SettingsLink
-              iconType="community"
+              iconType="gear"
               name={formatMessage({ id: "settings.general" })}
               to={CloudSettingsRoutePaths.Organization}
             />
-            {isBillingInArrearsActive && canManageOrganizationBilling && (
+            <SettingsLink
+              iconType="community"
+              name={formatMessage({ id: "settings.members" })}
+              to={CloudSettingsRoutePaths.OrganizationMembers}
+            />
+            {isOrganizationBillingPageVisible && canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}

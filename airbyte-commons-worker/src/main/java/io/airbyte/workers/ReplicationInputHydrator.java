@@ -42,12 +42,10 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.RefreshConfigBeforeSecretHydrationInitContainer;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.helper.BackfillHelper;
@@ -57,7 +55,6 @@ import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,11 +83,6 @@ public class ReplicationInputHydrator {
     this.featureFlagClient = featureFlagClient;
   }
 
-  private Boolean shouldRefreshSecretsReferences(final ReplicationActivityInput input) {
-    final Multi context = new Multi(Arrays.asList(new Connection(input.getConnectionId()), new Workspace(input.getWorkspaceId())));
-    return featureFlagClient.boolVariation(RefreshConfigBeforeSecretHydrationInitContainer.INSTANCE, context);
-  }
-
   private <T> T retry(final CheckedSupplier<T> supplier) {
     return Failsafe.with(
         RetryPolicy.builder()
@@ -100,7 +92,7 @@ public class ReplicationInputHydrator {
         .get(supplier);
   }
 
-  private void refreshSecretsReferences(ReplicationActivityInput parsed) {
+  private void refreshSecretsReferences(final ReplicationActivityInput parsed) {
     final Object jobInput = retry(() -> airbyteApiClient.getJobsApi().getJobInput(
         new SyncInput(
             Long.parseLong(parsed.getJobRunConfig().getJobId()),
@@ -134,9 +126,7 @@ public class ReplicationInputHydrator {
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
     ApmTraceUtils.addTagsToTrace(Map.of("api_base_url", airbyteApiClient.getDestinationApi().getBaseUrl()));
-    if (shouldRefreshSecretsReferences(replicationActivityInput)) {
-      refreshSecretsReferences(replicationActivityInput);
-    }
+    refreshSecretsReferences(replicationActivityInput);
     final var destination =
         airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
     final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
@@ -158,7 +148,8 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
+    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo, shouldEnableMappers)) {
       streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
@@ -279,7 +270,9 @@ public class ReplicationInputHydrator {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
-    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
+    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
+    final ConfiguredAirbyteCatalog catalog =
+        CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog(), shouldEnableMappers);
     return catalog;
   }
 

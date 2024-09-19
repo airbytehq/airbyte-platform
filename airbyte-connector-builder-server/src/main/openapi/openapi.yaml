@@ -206,10 +206,15 @@ components:
       type: object
       required:
         - pull_request_url
+        - actor_definition_id
       properties:
         pull_request_url:
           type: string
           description: URL of the PR that was created or updated
+        actor_definition_id:
+          type: string
+          format: UUID
+          description: The definition ID of the connector that was contributed to
     StreamRead:
       type: object
       required:
@@ -447,6 +452,8 @@ components:
           type: array
           items:
             type: string
+        details:
+          type: object
     InvalidInputExceptionInfo:
       type: object
       required:

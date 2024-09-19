@@ -109,6 +109,7 @@ class ReplicationInputHydratorTest {
               null,
               null,
               null,
+              null,
               null))));
   private static final ConnectionState CONNECTION_STATE_RESPONSE = Jsons.deserialize(String
       .format("""
@@ -235,9 +236,7 @@ class ReplicationInputHydratorTest {
         "unused",
         "unused",
         null, // unused
-        new ConnectionContext().withOrganizationId(UUID.randomUUID()),
-        false,
-        false);
+        new ConnectionContext().withOrganizationId(UUID.randomUUID()));
   }
 
   @ParameterizedTest
@@ -331,7 +330,7 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", true, false, "ns2"),
             new StreamAttemptMetadata("s2", true, true, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
@@ -359,7 +358,7 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", false, true, null),
             new StreamAttemptMetadata("s2", false, true, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
@@ -387,7 +386,7 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", true, false, "ns2"),
             new StreamAttemptMetadata("s2", true, false, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());

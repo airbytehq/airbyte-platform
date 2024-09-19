@@ -49,6 +49,8 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status, valu
       ? formatMessage({
           id: "connection.pendingSync",
         })
+      : status === Status.CANCELLED
+      ? "connection.cancelledSync"
       : formatMessage({
           id: "connection.failedSync",
         });

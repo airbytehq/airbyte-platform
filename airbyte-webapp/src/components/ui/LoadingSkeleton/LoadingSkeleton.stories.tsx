@@ -11,12 +11,20 @@ export default {
 } as StoryObj<typeof LoadingSkeleton>;
 
 export const Default: StoryObj<typeof LoadingSkeleton> = {
-  args: {},
-  render: () => (
+  args: {
+    variant: "shimmer",
+  },
+  argTypes: {
+    variant: {
+      control: { type: "radio" },
+      options: ["shimmer", "magic"],
+    },
+  },
+  render: ({ variant }) => (
     <FlexContainer direction="column" gap="xl">
-      <LoadingSkeleton />
-      <LoadingSkeleton />
-      <LoadingSkeleton />
+      <LoadingSkeleton variant={variant} />
+      <LoadingSkeleton variant={variant} />
+      <LoadingSkeleton variant={variant} />
     </FlexContainer>
   ),
 };

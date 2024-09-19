@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pods
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
@@ -9,6 +10,7 @@ import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
@@ -23,11 +25,11 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workers.pod.KubeContainerInfo
+import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -40,7 +42,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -64,58 +65,17 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
-  ): OrchestratorKubeInput {
-    val jobId = input.getJobId()
-    val attemptId = input.getAttemptId()
-
-    val orchestratorPodName = podNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
-    val orchestratorImage: String = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorPodInfo =
-      KubePodInfo(
-        namespace,
-        orchestratorPodName,
-        KubeContainerInfo(orchestratorImage, orchestratorKubeContainerInfo.pullPolicy),
-      )
-
-    val orchestratorReqs = input.getOrchestratorResourceReqs()
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
-
-    val runtimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      )
-
-    return OrchestratorKubeInput(
-      labeler.getReplicationOrchestratorLabels(orchestratorKubeContainerInfo.image) + sharedLabels,
-      labeler.getSourceLabels() + sharedLabels,
-      labeler.getDestinationLabels() + sharedLabels,
-      nodeSelectors,
-      orchestratorPodInfo,
-      orchestratorReqs,
-      replicationWorkerConfigs.workerKubeAnnotations,
-      runtimeEnvVars,
-    )
-  }
-
-  fun toReplicationKubeInput(
-    workloadId: String,
-    input: ReplicationInput,
-    sharedLabels: Map<String, String>,
   ): ReplicationKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
     val podName = podNameGenerator.getReplicationPodName(jobId, attemptId)
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = KubePodProcess.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchestratorReqs = PodUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
     val orchRuntimeEnvVars =
       listOf(
-        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
@@ -123,11 +83,11 @@ class PayloadKubeInputMapper(
       )
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
-    val sourceReqs = KubePodProcess.buildResourceRequirements(input.getSourceResourceReqs())
+    val sourceReqs = PodUtils.buildResourceRequirements(input.getSourceResourceReqs())
     val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
-    val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationReqs = PodUtils.buildResourceRequirements(input.getDestinationResourceReqs())
     val destinationRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig)
 
     val labels =
@@ -291,11 +251,26 @@ class PayloadKubeInputMapper(
   private fun getNodeSelectors(
     usesCustomConnector: Boolean,
     workerConfigs: WorkerConfigs,
+    connectionId: UUID? = null,
   ): Map<String, String> {
     return if (usesCustomConnector) {
       workerConfigs.workerIsolatedKubeNodeSelectors.orElse(workerConfigs.getworkerKubeNodeSelectors())
     } else {
-      workerConfigs.getworkerKubeNodeSelectors()
+      getNodeSelectorsOverride(connectionId) ?: workerConfigs.getworkerKubeNodeSelectors()
+    }
+  }
+
+  private fun getNodeSelectorsOverride(connectionId: UUID?): Map<String, String>? {
+    if (contexts.isEmpty() && connectionId == null) {
+      return null
+    }
+
+    val flagContext = Multi(contexts.toMutableList().also { contextList -> connectionId?.let { contextList.add(Connection(it)) } })
+    val nodeSelectorOverride = featureFlagClient.stringVariation(NodeSelectorOverride, flagContext)
+    return if (nodeSelectorOverride.isBlank()) {
+      null
+    } else {
+      nodeSelectorOverride.toNodeSelectorMap()
     }
   }
 
@@ -383,17 +358,6 @@ class PayloadKubeInputMapper(
   }
 }
 
-data class OrchestratorKubeInput(
-  val orchestratorLabels: Map<String, String>,
-  val sourceLabels: Map<String, String>,
-  val destinationLabels: Map<String, String>,
-  val nodeSelectors: Map<String, String>,
-  val kubePodInfo: KubePodInfo,
-  val resourceReqs: AirbyteResourceRequirements?,
-  val annotations: Map<String, String>,
-  val extraEnv: List<EnvVar>,
-)
-
 data class ReplicationKubeInput(
   val podName: String,
   val labels: Map<String, String>,
@@ -419,3 +383,11 @@ data class ConnectorKubeInput(
   val extraEnv: List<EnvVar>,
   val workspaceId: UUID,
 )
+
+@VisibleForTesting
+internal fun String.toNodeSelectorMap(): Map<String, String> =
+  split(";")
+    .associate {
+      val (key, value) = it.split("=")
+      key.trim() to value.trim()
+    }

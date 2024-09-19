@@ -1,4 +1,4 @@
-ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine3.18
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine3.20
 FROM ${NGINX_IMAGE}
 
 ARG BUILD_DIR=bin/build

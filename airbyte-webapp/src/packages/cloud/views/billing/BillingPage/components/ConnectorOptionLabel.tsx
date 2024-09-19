@@ -1,13 +1,12 @@
 import { ConnectorIcon } from "components/ConnectorIcon";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import styles from "./ConnectorOptionLabel.module.scss";
 import { AvailableDestination, AvailableSource } from "./CreditsUsageContext";
 
 interface ConnectorOptionLabelProps {
-  connector: AvailableSource | AvailableDestination;
+  connector: AvailableSource | AvailableDestination | { name: string; icon: string };
 }
 
 export const ConnectorOptionLabel: React.FC<ConnectorOptionLabelProps> = ({ connector }) => (
@@ -16,8 +15,5 @@ export const ConnectorOptionLabel: React.FC<ConnectorOptionLabelProps> = ({ conn
     <Text color="darkBlue" className={styles.connectorName}>
       {connector.name}
     </Text>
-    <FlexItem>
-      <SupportLevelBadge supportLevel={connector.supportLevel} custom={connector.custom} />
-    </FlexItem>
   </FlexContainer>
 );

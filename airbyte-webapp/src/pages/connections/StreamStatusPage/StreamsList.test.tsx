@@ -33,6 +33,7 @@ jest.mock("core/api", () => ({
   useListStreamsStatuses: () => [],
   useGetConnectionSyncProgress: () => ({ data: {} }),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
 }));
 jest.mock("area/connection/utils/useUiStreamsStates");
 jest.mock("area/connection/utils/useStreamsTableAnalytics");
@@ -47,7 +48,7 @@ describe("StreamsList", () => {
       <TestWrapper>
         <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
           <StreamsListContextProvider>
-            <StreamsList />
+            <StreamsList customScrollParent={null} />
           </StreamsListContextProvider>
         </VirtuosoMockContext.Provider>
       </TestWrapper>

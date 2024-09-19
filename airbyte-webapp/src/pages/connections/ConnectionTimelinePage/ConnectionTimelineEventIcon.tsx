@@ -8,9 +8,14 @@ export const ConnectionTimelineEventIcon: React.FC<{
   icon: IconProps["type"];
   statusIcon?: IconProps["type"];
   running?: boolean;
-}> = ({ icon, statusIcon, running }) => {
+  size?: "lg" | "sm";
+}> = ({ icon, statusIcon, running, size = "sm" }) => {
   return (
-    <div className={classNames(styles.connectionTimelineEventIcon)}>
+    <div
+      className={classNames(styles.connectionTimelineEventIcon, {
+        [styles["connectionTimelineEventIcon--lg"]]: size === "lg",
+      })}
+    >
       {statusIcon && (
         <div className={styles.connectionTimelineEventIcon__statusIndicator}>
           <Icon
@@ -34,7 +39,7 @@ export const ConnectionTimelineEventIcon: React.FC<{
       {running && !statusIcon && (
         <CircleLoader title="syncing" className={styles.connectionTimelineEventIcon__running} />
       )}
-      <Icon type={icon} size="sm" color="disabled" className={styles.connectionTimelineEventIcon__icon} />
+      <Icon type={icon} size={size} color="disabled" className={styles.connectionTimelineEventIcon__icon} />
     </div>
   );
 };

@@ -30,7 +30,8 @@ data class ContainerIOHandle(
   private val terminationFile: File,
 ) {
   companion object {
-    const val EXIT_CODE_CHECK_FAILURE = "No exit code found."
+    const val EXIT_CODE_CHECK_EXISTS_FAILURE = "No exit code found."
+    const val EXIT_CODE_CHECK_NOT_EMPTY_FAILURE = "Exit code file empty."
     const val TERMINATION_FILE_BODY = "TERMINATE"
 
     /**
@@ -100,8 +101,8 @@ data class ContainerIOHandle(
   fun exitCodeExists(): Boolean = exitValueFile.exists()
 
   fun getExitCode(): Int {
-    check(exitCodeExists()) { EXIT_CODE_CHECK_FAILURE }
-    check(exitValueFile.readText().isNotEmpty()) { EXIT_CODE_CHECK_FAILURE }
+    check(exitCodeExists()) { EXIT_CODE_CHECK_EXISTS_FAILURE }
+    check(exitValueFile.readText().isNotEmpty()) { EXIT_CODE_CHECK_NOT_EMPTY_FAILURE }
     return exitValueFile.readText().trim().toInt()
   }
 

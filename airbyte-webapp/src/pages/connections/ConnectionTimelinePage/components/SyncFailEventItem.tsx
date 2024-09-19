@@ -43,7 +43,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
             <JobFailureDetails failureUiDetails={failureUiDetails} />
           </Box>
         )}
-        {showExtendedStats && (
+        {!failureUiDetails && showExtendedStats && (
           <Text as="span" color="grey400" size="sm">
             <FormattedMessage id="jobs.jobId" values={{ id: syncEvent.summary.jobId }} />
           </Text>

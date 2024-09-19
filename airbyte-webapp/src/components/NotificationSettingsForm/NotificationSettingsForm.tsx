@@ -28,7 +28,7 @@ import { notificationSettingsToFormValues } from "./notificationSettingsToFormVa
 
 export const NotificationSettingsForm: React.FC = () => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
-  const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications", false);
+  const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications");
   const updateNotificationSettings = useUpdateNotificationSettings();
   const { notificationSettings } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);

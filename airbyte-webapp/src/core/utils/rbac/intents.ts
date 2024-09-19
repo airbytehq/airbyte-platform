@@ -7,6 +7,7 @@ export const intentToRbacQuery = {
   UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
   UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
+  ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
 
   // workspace
   UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },

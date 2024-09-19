@@ -242,12 +242,10 @@ public class ConnectionTimelineEventHelper {
                                                         final boolean autoUpdate) {
     if (status != null) {
       if (status == ConnectionStatus.ACTIVE) {
-        final ConnectionEnabledEvent event = new ConnectionEnabledEvent(
-            Instant.now().getEpochSecond());
+        final ConnectionEnabledEvent event = new ConnectionEnabledEvent();
         connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
       } else if (status == ConnectionStatus.INACTIVE) {
-        final ConnectionDisabledEvent event = new ConnectionDisabledEvent(
-            Instant.now().getEpochSecond(), updateReason);
+        final ConnectionDisabledEvent event = new ConnectionDisabledEvent(updateReason);
         connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
       }
     }
@@ -297,8 +295,7 @@ public class ConnectionTimelineEventHelper {
         patch.getNonBreakingChangesPreference());
     addPatchIfFieldIsChanged(patches, "backfillPreference", originalConnectionRead.getBackfillPreference(), patch.getBackfillPreference());
     if (!patches.isEmpty()) {
-      final ConnectionSettingsChangedEvent event = new ConnectionSettingsChangedEvent(
-          Instant.now().getEpochSecond(), patches, updateReason);
+      final ConnectionSettingsChangedEvent event = new ConnectionSettingsChangedEvent(patches, updateReason);
       connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
     }
   }

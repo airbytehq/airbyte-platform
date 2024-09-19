@@ -8,22 +8,15 @@ import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.LogClientManager
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
-import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivityImpl.DISCOVER_CATALOG_SNAP_DURATION
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -45,17 +38,9 @@ import java.util.Optional
 import java.util.UUID
 
 class DiscoverCatalogActivityTest {
-  private val workerConfigsProvider: WorkerConfigsProvider = mockk()
-  private val processFactory: ProcessFactory = mockk()
-  private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
   private val workspaceRoot: Path = Path.of("workspace-root")
   private val airbyteApiClient: AirbyteApiClient = mockk()
-  private val airbyteVersion = ""
-  private val serDeProvider: AirbyteMessageSerDeProvider = mockk()
-  private val migratorFactory: AirbyteProtocolVersionedMigratorFactory = mockk()
-  private val metricClient: MetricClient = mockk()
   private val featureFlagClient: FeatureFlagClient = spyk(TestClient())
-  private val gsonPksExtractor: GsonPksExtractor = mockk()
   private val workloadApi: WorkloadApi = mockk()
   private val connectionApi: ConnectionApi = mockk()
   private val workloadApiClient: WorkloadApiClient = mockk()
@@ -71,17 +56,9 @@ class DiscoverCatalogActivityTest {
     discoverCatalogActivity =
       spyk(
         DiscoverCatalogActivityImpl(
-          workerConfigsProvider,
-          processFactory,
-          secretsRepositoryReader,
           workspaceRoot,
           airbyteApiClient,
-          airbyteVersion,
-          serDeProvider,
-          migratorFactory,
-          metricClient,
           featureFlagClient,
-          gsonPksExtractor,
           WorkloadClient(workloadApiClient, jobOutputDocStore),
           workloadIdGenerator,
           logClientManager,

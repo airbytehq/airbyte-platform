@@ -13,8 +13,8 @@ import { getSortedDiff } from "./utils";
 
 interface CatalogDiffModalProps {
   catalogDiff: CatalogDiff;
-  catalog: AirbyteCatalog;
-  onComplete: () => void;
+  catalog?: AirbyteCatalog;
+  onComplete?: () => void;
 }
 
 export const CatalogDiffModal: React.FC<CatalogDiffModalProps> = ({ catalogDiff, catalog, onComplete }) => {
@@ -32,11 +32,13 @@ export const CatalogDiffModal: React.FC<CatalogDiffModalProps> = ({ catalogDiff,
           {changedItems.length > 0 && <FieldSection streams={changedItems} diffVerb="changed" />}
         </div>
       </ModalBody>
-      <ModalFooter>
-        <Button onClick={onComplete} data-testid="update-schema-confirm-btn">
-          <FormattedMessage id="connection.updateSchema.confirm" />
-        </Button>
-      </ModalFooter>
+      {onComplete && (
+        <ModalFooter>
+          <Button onClick={onComplete} data-testid="update-schema-confirm-btn">
+            <FormattedMessage id="connection.updateSchema.confirm" />
+          </Button>
+        </ModalFooter>
+      )}
     </>
   );
 };

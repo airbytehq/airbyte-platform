@@ -42,6 +42,7 @@ dependencies {
   implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
+  implementation(libs.kubernetes.client)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:problems-api"))
@@ -51,7 +52,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-logging"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
   implementation(project(":oss:airbyte-commons-temporal"))

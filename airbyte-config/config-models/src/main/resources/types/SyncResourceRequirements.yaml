@@ -12,27 +12,9 @@ properties:
   destination:
     description: Resource requirements for the main source container
     $ref: ResourceRequirements.yaml
-  destinationStdErr:
-    description: Resource requirements for the socat stderr container of the destination
-    $ref: ResourceRequirements.yaml
-  destinationStdIn:
-    description: Resource requirements for the socat stdin container of the destination
-    $ref: ResourceRequirements.yaml
-  destinationStdOut:
-    description: Resource requirements for the socat stdout container of the destination
-    $ref: ResourceRequirements.yaml
   orchestrator:
     description: Resource requirements for the main orchestrator container
     $ref: ResourceRequirements.yaml
   source:
     description: Resource requirements for the main source container
-    $ref: ResourceRequirements.yaml
-  sourceStdErr:
-    description: Resource requirements for the socat stderr container
-    $ref: ResourceRequirements.yaml
-  sourceStdOut:
-    description: Resource requirements for the socat stdout container of the source
-    $ref: ResourceRequirements.yaml
-  heartbeat:
-    description: Resource requirements for the heartbeat containers
     $ref: ResourceRequirements.yaml

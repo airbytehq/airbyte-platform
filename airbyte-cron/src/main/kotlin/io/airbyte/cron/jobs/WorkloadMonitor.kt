@@ -125,7 +125,7 @@ open class WorkloadMonitor(
     failWorkloads(
       nonHeartbeatingWorkloads.workloads,
       "Airbyte could not track the sync progress. " +
-        "No heartbeat within the time limit indicates the process might have died.",
+        "Sync process exited without reporting status.",
       CHECK_HEARTBEAT,
     )
   }

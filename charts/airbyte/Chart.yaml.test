@@ -41,6 +41,10 @@ dependencies:
     name: temporal
     repository: "file://../airbyte-temporal"
     version: "*"
+  - condition: temporal-ui.enabled
+    name: temporal-ui
+    repository: "file://../airbyte-temporal-ui"
+    version: "*"
   - condition: webapp.enabled
     name: webapp
     repository: "file://../airbyte-webapp"
@@ -76,6 +80,10 @@ dependencies:
   - condition: connector-builder-server.enabled
     name: connector-builder-server
     repository: "file://../airbyte-connector-builder-server"
+    version: "*"
+  - condition: connector-rollout-worker.enabled
+    name: connector-rollout-worker
+    repository: "file://../airbyte-connector-rollout-worker"
     version: "*"
   - condition: keycloak.enabled
     name: keycloak

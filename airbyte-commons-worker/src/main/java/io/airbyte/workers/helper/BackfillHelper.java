@@ -40,14 +40,17 @@ public class BackfillHelper {
    * @param connectionInfo details about the connection to determine whether backfill is enabled
    * @return true if at least one stream should be backfilled
    */
-  public static boolean syncShouldBackfill(final ReplicationActivityInput replicationActivityInput, final ConnectionRead connectionInfo) {
+  public static boolean syncShouldBackfill(final ReplicationActivityInput replicationActivityInput,
+                                           final ConnectionRead connectionInfo,
+                                           final boolean enableMappers) {
     final boolean backfillEnabledForConnection =
         connectionInfo.getBackfillPreference() != null && connectionInfo.getBackfillPreference().equals(SchemaChangeBackfillPreference.ENABLED);
     final boolean hasSchemaDiff =
         replicationActivityInput.getSchemaRefreshOutput() != null && replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff() != null
             && !replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff().getTransforms().isEmpty();
     final boolean schemaDiffNeedsBackfill =
-        hasSchemaDiff && atLeastOneStreamNeedsBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), connectionInfo);
+        hasSchemaDiff
+            && atLeastOneStreamNeedsBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), connectionInfo, enableMappers);
     return backfillEnabledForConnection && hasSchemaDiff && schemaDiffNeedsBackfill;
   }
 
@@ -131,8 +134,11 @@ public class BackfillHelper {
     }
   }
 
-  private static boolean atLeastOneStreamNeedsBackfill(final CatalogDiff appliedDiff, final ConnectionRead connectionInfo) {
-    return !getStreamsToBackfill(appliedDiff, CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog())).isEmpty();
+  private static boolean atLeastOneStreamNeedsBackfill(final CatalogDiff appliedDiff,
+                                                       final ConnectionRead connectionInfo,
+                                                       final boolean enableMappers) {
+    return !getStreamsToBackfill(appliedDiff, CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog(), enableMappers))
+        .isEmpty();
   }
 
   private static boolean shouldBackfillStream(final StreamTransform transform, final ConfiguredAirbyteCatalog catalog) {

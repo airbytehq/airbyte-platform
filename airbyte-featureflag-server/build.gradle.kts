@@ -26,6 +26,7 @@ dependencies {
   implementation(libs.jackson.databind)
   implementation(libs.jackson.dataformat)
   implementation(libs.jackson.kotlin)
+  implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
 

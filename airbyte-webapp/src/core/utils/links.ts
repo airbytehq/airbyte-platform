@@ -58,6 +58,7 @@ export const links = {
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
+  ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
 } as const;
 
 export type OutboundLinks = typeof links;

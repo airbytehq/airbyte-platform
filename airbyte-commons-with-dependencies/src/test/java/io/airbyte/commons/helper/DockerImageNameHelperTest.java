@@ -20,21 +20,22 @@ import org.junit.jupiter.params.provider.CsvSource;
 class DockerImageNameHelperTest {
 
   @ParameterizedTest
-  @CsvSource({"hello:1,hello", "hello/world:2,world", "foo/bar/fizz/buzz:3,buzz", "hello,hello"})
+  @CsvSource({"hello:1,hello", "hello/world:2,world", "foo/bar/fizz/buzz:3,buzz", "hello,hello", "registry.internal:1234/foo/bar:1,bar"})
   void testExtractShortImageName(final String fullName, final String expected) {
     final var actual = DockerImageNameHelper.extractShortImageName(fullName);
     Assertions.assertEquals(expected, actual);
   }
 
   @ParameterizedTest
-  @CsvSource({"hello:1,hello", "hello/world:2,hello/world", "foo/bar/fizz/buzz:3,foo/bar/fizz/buzz", "hello,hello", "hello:1.1-foo,hello"})
+  @CsvSource({"hello:1,hello", "hello/world:2,hello/world", "foo/bar/fizz/buzz:3,foo/bar/fizz/buzz", "hello,hello", "hello:1.1-foo,hello",
+    "registry.internal:1234/foo/bar:1,registry.internal:1234/foo/bar"})
   void testExtractImageNameWithoutVersion(final String fullName, final String expected) {
     final var actual = DockerImageNameHelper.extractImageNameWithoutVersion(fullName);
     Assertions.assertEquals(expected, actual);
   }
 
   @ParameterizedTest
-  @CsvSource({"hello:1,1", "hello/world:2,2", "foo/bar/fizz/buzz:3,3", "hello,", "hello:1.1-foo,1.1-foo"})
+  @CsvSource({"hello:1,1", "hello/world:2,2", "foo/bar/fizz/buzz:3,3", "hello,", "hello:1.1-foo,1.1-foo", "registry.internal:1234/foo/bar:1,1"})
   void testExtractImageVersionString(final String fullName, final String expected) {
     final var actual = DockerImageNameHelper.extractImageVersionString(fullName);
     Assertions.assertEquals(expected, actual);
@@ -49,7 +50,8 @@ class DockerImageNameHelperTest {
           Arguments.of("hello:1", null),
           Arguments.of("hello:dev", new Version("dev")),
           Arguments.of("hello", null),
-          Arguments.of("hello/foo/bar:1.2.3", new Version("1.2.3")));
+          Arguments.of("hello/foo/bar:1.2.3", new Version("1.2.3")),
+          Arguments.of("registry.internal:1234/foo/bar:1.0.0", new Version("1.0.0")));
     }
 
   }

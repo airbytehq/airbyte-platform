@@ -37,8 +37,7 @@ object ContainerCommandFactory {
    */
   fun orchestrator() =
     """
-    trap "touch $SOURCE_DIR/$TERMINATION_MARKER_FILE" EXIT
-    trap "touch $DEST_DIR/$TERMINATION_MARKER_FILE" EXIT
+    trap "touch $SOURCE_DIR/$TERMINATION_MARKER_FILE $DEST_DIR/$TERMINATION_MARKER_FILE" EXIT
     $ORCHESTRATOR_APPLICATION_EXECUTABLE
     """.trimIndent()
 

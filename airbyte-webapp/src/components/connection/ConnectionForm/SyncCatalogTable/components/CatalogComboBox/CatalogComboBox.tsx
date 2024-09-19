@@ -13,7 +13,9 @@ import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
 import { IconProps } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./CatalogComboBox.module.scss";
 import { TextHighlighter } from "../TextHighlighter";
@@ -171,58 +173,68 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
 ControlButton.displayName = "ControlButton";
 
 interface OptionsProps {
-  options: Option[];
+  options: Array<Option & { disabled?: boolean; disabledReason?: React.ReactNode }>;
   filterQuery: string;
+  multiple?: boolean;
 }
-const Options = React.forwardRef(({ options, filterQuery }: OptionsProps, ref: React.Ref<HTMLUListElement>) => {
-  const { formatMessage } = useIntl();
-  const filteredOptions =
-    filterQuery === ""
-      ? options
-      : options.filter((option) => option.value.toLowerCase().includes(filterQuery.toLowerCase()));
+const Options = React.forwardRef(
+  ({ options, filterQuery, multiple }: OptionsProps, ref: React.Ref<HTMLUListElement>) => {
+    const { formatMessage } = useIntl();
+    const filteredOptions =
+      filterQuery === ""
+        ? options
+        : options.filter((option) => option.value.toLowerCase().includes(filterQuery.toLowerCase()));
 
-  return (
-    <ComboboxOptions ref={ref} className={styles.optionsMenu}>
-      {filteredOptions.length === 0 ? (
-        <FlexContainer className={styles.optionValue} alignItems="center">
-          <Text size="md">{formatMessage({ id: "ui.combobox.noOptions" })}</Text>
-        </FlexContainer>
-      ) : (
-        filteredOptions.map(({ value }) => (
-          <ComboboxOption className={styles.option} key={value} value={value}>
-            {({ focus, selected }) => (
-              <FlexContainer
-                className={classnames(styles.optionValue, {
-                  [styles.focus]: focus,
-                  [styles.selected]: selected,
-                })}
-                alignItems="center"
-              >
-                <CheckBox checkboxSize="sm" checked={selected} onClick={(e) => e.preventDefault()} readOnly />
-                <Text size="md">
-                  <TextHighlighter searchWords={[filterQuery]} textToHighlight={value} />
-                </Text>
-              </FlexContainer>
-            )}
-          </ComboboxOption>
-        ))
-      )}
-    </ComboboxOptions>
-  );
-});
+    return (
+      <ComboboxOptions ref={ref} className={styles.optionsMenu}>
+        {filteredOptions.length === 0 ? (
+          <FlexContainer className={styles.optionValue} alignItems="center">
+            <Text size="md">{formatMessage({ id: "ui.combobox.noOptions" })}</Text>
+          </FlexContainer>
+        ) : (
+          filteredOptions.map(({ disabled, disabledReason, value }) => (
+            <ComboboxOption disabled={disabled} className={styles.option} key={value} value={value}>
+              {({ focus, selected }) => {
+                const control = (
+                  <FlexContainer
+                    className={classnames(styles.optionValue, {
+                      [styles.focus]: focus,
+                      [styles.selected]: selected,
+                    })}
+                    alignItems="center"
+                  >
+                    {multiple ? (
+                      <CheckBox checkboxSize="sm" checked={selected} onClick={(e) => e.preventDefault()} readOnly />
+                    ) : (
+                      <RadioButton checked={selected} onClick={(e) => e.preventDefault()} readOnly />
+                    )}
+                    <Text size="md" color={disabled ? "grey" : "darkBlue"}>
+                      <TextHighlighter searchWords={[filterQuery]} textToHighlight={value} />
+                    </Text>
+                  </FlexContainer>
+                );
+                return (
+                  <Tooltip
+                    placement="top"
+                    disabled={!(disabled && disabledReason)}
+                    containerClassName={styles.block}
+                    control={control}
+                  >
+                    {disabledReason}
+                  </Tooltip>
+                );
+              }}
+            </ComboboxOption>
+          ))
+        )}
+      </ComboboxOptions>
+    );
+  }
+);
 Options.displayName = "Options";
 
 export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({ value, options, onChange, ...restControlProps }) => {
   const [filterQuery, setFilterQuery] = useState("");
-
-  const onChangeHandler = (newValue: string) => {
-    // add ability to unselect the option
-    if (value !== newValue) {
-      onChange(newValue);
-    } else {
-      onChange("");
-    }
-  };
 
   const onCloseOptionsMenu = () => {
     // reset filter value after closing the options menu
@@ -234,7 +246,7 @@ export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({ value, options
   return (
     <Combobox
       value={value}
-      onChange={onChangeHandler}
+      onChange={onChange}
       disabled={restControlProps.disabled}
       onClose={onCloseOptionsMenu}
       immediate
@@ -290,7 +302,7 @@ export const MultiCatalogComboBox: React.FC<MultiCatalogComboBoxProps> = ({
       {({ open }) => (
         <FloatLayout>
           <ControlButton open={open} value={selectedOptions} setFilterQuery={setFilterQuery} {...restControlProps} />
-          <Options options={options} filterQuery={filterQuery} />
+          <Options options={options} filterQuery={filterQuery} multiple />
         </FloatLayout>
       )}
     </Combobox>

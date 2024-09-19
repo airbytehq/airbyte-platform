@@ -19,12 +19,13 @@ import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
 import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -70,7 +71,8 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
+  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -121,14 +123,17 @@ const MainRoutes: React.FC = () => {
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
-          {canViewOrgSettings && (
-            <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+          {isWorkspaceUsagePageVisible && (
+            <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
           )}
-          {isBillingInArrearsActive && (
+          {canViewOrgSettings && (
             <>
-              <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
-              <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
+              <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
             </>
+          )}
+          {canViewOrgSettings && isOrganizationBillingPageVisible && (
+            <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />

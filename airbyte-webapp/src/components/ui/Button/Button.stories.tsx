@@ -97,9 +97,9 @@ SecondaryDark.args = {
   disabled: false,
 };
 
-export const Highlight = Template.bind({});
-Highlight.args = {
-  variant: "highlight",
+export const Magic = Template.bind({});
+Magic.args = {
+  variant: "magic",
   icon: "aiStars",
   iconPosition: "left",
   disabled: false,

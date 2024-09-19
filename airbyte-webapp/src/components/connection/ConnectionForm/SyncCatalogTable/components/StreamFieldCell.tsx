@@ -1,4 +1,5 @@
 import { Row } from "@tanstack/react-table";
+import isEqual from "lodash/isEqual";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -25,7 +26,7 @@ import { updateFieldSelected } from "../../../syncCatalog/SyncCatalog/streamConf
 import { getFieldPathDisplayName } from "../../../syncCatalog/utils";
 import { SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { checkIsFieldSelected } from "../utils";
+import { checkIsFieldHashed, checkIsFieldSelected } from "../utils";
 
 interface StreamFieldNameCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -38,7 +39,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const { formatMessage } = useIntl();
   const { mode } = useConnectionFormService();
 
@@ -60,6 +61,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isChildFieldCursor = checkIsChildFieldCursor(config, field.path);
   const isPrimaryKey = checkIsPrimaryKey(config, field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(config, field.path);
+  const isHashed = checkIsFieldHashed(field, config);
 
   const isDisabled =
     !config?.selected ||
@@ -99,6 +101,8 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
     updateStreamField(row.original.streamNode, {
       ...updatedConfig,
       selectedFields: !updatedConfig?.fieldSelectionEnabled ? [] : updatedConfig?.selectedFields,
+      // remove this field if it was part of hashedFields
+      hashedFields: config.hashedFields?.filter((f) => !isEqual(f.fieldPath, fieldPath)),
     });
   };
 
@@ -128,11 +132,20 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
         )}
       </FlexContainer>
       <TextWithOverflowTooltip size="sm">
-        <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
+        {isHashed ? (
+          <>
+            {getFieldPathDisplayName(field.path)}
+            <Text as="span" bold>
+              _hashed
+            </Text>
+          </>
+        ) : (
+          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
+        )}
       </TextWithOverflowTooltip>
-      <Text size="sm" color="grey300">
+      <Text size="sm" color="grey300" bold={isHashed}>
         <FormattedMessage
-          id={`${getDataType(field)}`}
+          id={isHashed ? "airbyte.datatype.string" : `${getDataType(field)}`}
           defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
         />
       </Text>

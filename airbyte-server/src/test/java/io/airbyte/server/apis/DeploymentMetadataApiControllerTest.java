@@ -25,7 +25,6 @@ class DeploymentMetadataApiControllerTest extends BaseControllerTest {
   void testFetchDeploymentMetadata() {
     final DeploymentMetadataRead deploymentMetadataRead = new DeploymentMetadataRead()
         .id(UUID.randomUUID())
-        .environment(Configs.WorkerEnvironment.KUBERNETES.name())
         .mode(Configs.DeploymentMode.OSS.name())
         .version("0.2.3");
     when(deploymentMetadataHandler.getDeploymentMetadata()).thenReturn(deploymentMetadataRead);

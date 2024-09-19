@@ -99,6 +99,13 @@ public class SourceDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
+  public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+    return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
+  }
+
   @VisibleForTesting
   SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
                                                  final ActorDefinitionVersion sourceVersion) {
@@ -217,10 +224,7 @@ public class SourceDefinitionsHandler {
 
   public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
-    return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
+    return buildSourceDefinitionRead(sourceDefinitionIdRequestBody.getSourceDefinitionId());
   }
 
   public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
@@ -292,6 +296,23 @@ public class SourceDefinitionsHandler {
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
 
+    final StandardSourceDefinition newSource = buildSourceDefinitionUpdate(currentSourceDefinition, sourceDefinitionUpdate);
+
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
+
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
+    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
+
+    final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
+    supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
+
+    return buildSourceDefinitionRead(newSource, newVersion);
+  }
+
+  @VisibleForTesting
+  StandardSourceDefinition buildSourceDefinitionUpdate(final StandardSourceDefinition currentSourceDefinition,
+                                                       final SourceDefinitionUpdate sourceDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
@@ -308,16 +329,11 @@ public class SourceDefinitionsHandler {
         .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
-    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
+    if (sourceDefinitionUpdate.getName() != null && currentSourceDefinition.getCustom()) {
+      newSource.withName(sourceDefinitionUpdate.getName());
+    }
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
-    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
-
-    final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
-    supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
-
-    return buildSourceDefinitionRead(newSource, newVersion);
+    return newSource;
   }
 
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)

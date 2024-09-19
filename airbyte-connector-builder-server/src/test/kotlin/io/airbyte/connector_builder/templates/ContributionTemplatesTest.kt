@@ -3,7 +3,11 @@
 package io.airbyte.connector_builder.templates
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.connector_builder.services.GithubContributionService
+import io.airbyte.connector_builder.utils.BuilderContributionInfo
 import io.airbyte.connector_builder.utils.ManifestParser
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -18,52 +22,50 @@ fun jacksonSerialize(input: String): String {
 }
 
 class ContributionTemplatesTest {
+  val serialzedYamlContent = this::class.java.getResource("/valid_manifest.yaml")!!.readText()
+
+  val newConnectorContributionInfo =
+    BuilderContributionInfo(
+      connectorName = "Test Connector",
+      connectorImageName = "test",
+      actorDefinitionId = "test-uuid",
+      description = "This is a test connector.",
+      githubToken = "test-token",
+      manifestYaml = serialzedYamlContent,
+      baseImage = "test-base-image",
+      versionTag = "0.0.1",
+      authorUsername = "testuser",
+      changelogMessage = "Initial release by [@testuser](https://github.com/testuser) via Connector Builder",
+      updateDate = "2021-01-01",
+    )
+
   @Test
   fun `test readme template`() {
     val contributionTemplates = ContributionTemplates()
-    val connectorImageName = "test"
-    val connectorName = "Test Connector"
-    val description = "This is a test connector."
-    val readme = contributionTemplates.renderContributionReadmeMd(connectorImageName, connectorName, description)
+    val readme = contributionTemplates.renderContributionReadmeMd(newConnectorContributionInfo)
 
     // Assert that the rendered readme contains the connector name
-    assert(readme.contains(connectorName))
+    assert(readme.contains(newConnectorContributionInfo.connectorName))
 
     // Assert that the rendered readme contains the connector description
-    assert(readme.contains(description))
+    assert(readme.contains(newConnectorContributionInfo.description))
   }
 
   @Test
   fun `test docs template`() {
     val contributionTemplates = ContributionTemplates()
-    val connectorImageName = "test"
-    val connectorName = "Test Connector"
-    val description = "This is a test connector."
-    val versionTag = "0.0.1"
-    val releaseDate = "2021-01-01"
-    val username = "testuser"
 
-    val serialzedYamlContent = this::class.java.getResource("/valid_manifest.yaml")!!.readText()
     val jacksonYaml = jacksonSerialize(serialzedYamlContent)
 
     val manifestParser = ManifestParser(jacksonYaml)
 
-    val docs =
-      contributionTemplates.renderContributionDocsMd(
-        connectorImageName = connectorImageName,
-        connectorName = connectorName,
-        connectorVersionTag = versionTag,
-        description = description,
-        releaseDate = releaseDate,
-        manifestParser = manifestParser,
-        authorUsername = username,
-      )
+    val docs = contributionTemplates.renderContributionDocsMd(newConnectorContributionInfo)
 
-    assert(docs.contains(connectorName))
-    assert(docs.contains(description))
-    assert(docs.contains(versionTag))
-    assert(docs.contains(releaseDate))
-    assert(docs.contains(username))
+    assert(docs.contains(newConnectorContributionInfo.connectorName))
+    assert(docs.contains(newConnectorContributionInfo.description))
+    assert(docs.contains(newConnectorContributionInfo.versionTag))
+    assert(docs.contains(newConnectorContributionInfo.updateDate)) // Release date = updateDate
+    assert(docs.contains(newConnectorContributionInfo.changelogMessage))
 
     for (stream in manifestParser.streams) {
       // Assert that the rendered docs contains the stream name
@@ -76,6 +78,31 @@ class ContributionTemplatesTest {
     for (prop in properties) {
       // Assert that the rendered docs contains the spec name
       assert(docs.contains("| `${prop.key}` |"))
+    }
+  }
+
+  @Test
+  fun `test new connector PR description`() {
+    val contributionTemplates = ContributionTemplates()
+    val jacksonYaml = jacksonSerialize(serialzedYamlContent)
+    val manifestParser = ManifestParser(jacksonYaml)
+    val prDescription = contributionTemplates.renderNewContributionPullRequestDescription(newConnectorContributionInfo)
+
+    assert(prDescription.contains(newConnectorContributionInfo.connectorName))
+    assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
+    assert(prDescription.contains(newConnectorContributionInfo.description))
+
+    for (stream in manifestParser.streams) {
+      // Assert that the rendered PR description contains the stream name
+      assert(prDescription.contains("| ${stream["name"]} |"))
+    }
+
+    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val properties = connectionSpecification["properties"] as Map<String, Any>
+
+    for (prop in properties) {
+      // Assert that the rendered PR description contains the spec name
+      assert(prDescription.contains("| `${prop.key}` |"))
     }
   }
 
@@ -203,17 +230,10 @@ class ContributionTemplatesTest {
   @Test
   fun `render metadata file formatting`() {
     val contributionTemplates = ContributionTemplates()
+    val githubContributionService = mockk<GithubContributionService>()
+    every { githubContributionService.connectorDocsSlug } returns "test-docs-slug"
     val renderedYaml =
-      contributionTemplates.renderContributionMetadataYaml(
-        connectorImageName = "test",
-        connectorName = "Test Connector",
-        actorDefinitionId = "test-id",
-        versionTag = "0.0.1",
-        baseImage = "test-base-image",
-        allowedHosts = listOf("*"),
-        connectorDocsSlug = "test-docs-slug",
-        releaseDate = "2021-01-01",
-      )
+      contributionTemplates.renderContributionMetadataYaml(newConnectorContributionInfo, githubContributionService)
     val expectedOutput =
       """
     |metadataSpecVersion: "1.0"
@@ -234,7 +254,7 @@ class ContributionTemplatesTest {
     |    baseImage: test-base-image
     |  connectorSubtype: api
     |  connectorType: source
-    |  definitionId: test-id
+    |  definitionId: test-uuid
     |  dockerImageTag: 0.0.1
     |  dockerRepository: airbyte/test
     |  githubIssueLabel: test

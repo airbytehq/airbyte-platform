@@ -5,6 +5,7 @@
 package io.airbyte.config.specs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.io.Resources;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.util.MoreIterators;
+import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -151,7 +153,7 @@ class RemoteDefinitionsProviderTest {
     });
 
     assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
-    assertTrue(ex.getCause() instanceof IOException);
+    assertInstanceOf(IOException.class, ex.getCause());
   }
 
   @Test
@@ -176,26 +178,34 @@ class RemoteDefinitionsProviderTest {
 
   @ParameterizedTest
   @CsvSource({"OSS", "CLOUD"})
-  void testGetRegistryUrl(final String deploymentMode) {
-    final String baseUrl = "https://connectors.airbyte.com/files/";
+  void testGetPaths(final String deploymentMode) {
     final RemoteDefinitionsProvider definitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
-    final URL registryUrl = definitionsProvider.getRegistryUrl();
-    assertEquals(String.format("https://connectors.airbyte.com/files/registries/v0/%s_registry.json", deploymentMode.toLowerCase()),
-        registryUrl.toString());
-  }
-
-  @ParameterizedTest
-  @CsvSource({"OSS", "CLOUD"})
-  void testGetRegistryEntryUrl(final String deploymentMode) {
-    final String baseUrl = "https://connectors.airbyte.com/files/";
     final String connectorName = "airbyte/source-github";
     final String version = "1.0.0";
+
+    final String registryPath = definitionsProvider.getRegistryPath();
+    assertEquals(String.format("registries/v0/%s_registry.json", deploymentMode.toLowerCase()), registryPath);
+
+    final String metadataPath = definitionsProvider.getRegistryEntryPath(connectorName, version);
+    assertEquals(String.format("metadata/airbyte/source-github/1.0.0/%s.json", deploymentMode.toLowerCase()), metadataPath);
+
+    final String docsPath = RemoteDefinitionsProvider.getDocPath(connectorName, version);
+    assertEquals("metadata/airbyte/source-github/1.0.0/doc.md", docsPath);
+
+    final String manifestPath = RemoteDefinitionsProvider.getManifestPath(connectorName, version);
+    assertEquals("metadata/airbyte/source-github/1.0.0/manifest.yaml", manifestPath);
+  }
+
+  @Test
+  void getRemoteRegistryUrlForPath() {
+    final String baseUrl = "https://connectors.airbyte.com/files/";
     final RemoteDefinitionsProvider definitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
-    final URL registryEntryUrl = definitionsProvider.getRegistryEntryUrl(connectorName, version);
-    assertEquals(String.format("https://connectors.airbyte.com/files/metadata/airbyte/source-github/1.0.0/%s.json", deploymentMode.toLowerCase()),
-        registryEntryUrl.toString());
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(1));
+    final String registryPath = "registries/v0/oss_registry.json";
+
+    final URL registryUrl = definitionsProvider.getRemoteRegistryUrlForPath(registryPath);
+    assertEquals("https://connectors.airbyte.com/files/registries/v0/oss_registry.json", registryUrl.toString());
   }
 
   @Test
@@ -278,6 +288,38 @@ class RemoteDefinitionsProviderTest {
     final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(documentationResult.isPresent());
     assertEquals(documentationResult.get(), connectorDocumentationBody);
+  }
+
+  @Test
+  void testGetMissingConnectorDocumentation() {
+    webServer.enqueue(makeResponse(404, "not found"));
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+    assertTrue(documentationResult.isEmpty());
+  }
+
+  @Test
+  void testGetConnectorManifest() {
+    final String connectorManifestBody = "key: value";
+
+    final MockResponse validResponse = makeResponse(200, connectorManifestBody);
+    webServer.enqueue(validResponse);
+
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<JsonNode> manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+    assertTrue(manifestResult.isPresent());
+    assertEquals(manifestResult.get(), Yamls.deserialize(connectorManifestBody));
+  }
+
+  @Test
+  void getMissingConnectorManifest() {
+    webServer.enqueue(makeResponse(404, "not found"));
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<JsonNode> manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+    assertTrue(manifestResult.isEmpty());
   }
 
 }

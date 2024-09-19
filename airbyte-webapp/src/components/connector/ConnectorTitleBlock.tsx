@@ -8,6 +8,8 @@ import { Text } from "components/ui/Text";
 
 import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, ConnectorDefinition } from "core/domain/connector";
+import { isSourceDefinition } from "core/domain/connector/source";
+import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 
 import { BreakingChangeBanner } from "./BreakingChangeBanner";
 import styles from "./ConnectorTitleBlock.module.scss";
@@ -35,17 +37,23 @@ export const ConnectorTitleBlock = <T extends Connector>({
   );
   return (
     <FlexContainer direction="column" gap="xl">
-      <FlexContainer alignItems="center">
-        <ConnectorIcon icon={connector.icon} className={styles.icon} />
-        <FlexContainer direction="column" gap="sm">
-          <Heading as="h1" size="md">
-            {connector.name}
-          </Heading>
-          <FlexContainer alignItems="center">
-            <Text color="grey">{titleInfo}</Text>
-            <SupportLevelBadge supportLevel={actorDefinitionVersion.supportLevel} custom={connectorDefinition.custom} />
+      <FlexContainer alignItems="center" justifyContent="space-between">
+        <FlexContainer alignItems="center">
+          <ConnectorIcon icon={connector.icon} className={styles.icon} />
+          <FlexContainer direction="column" gap="sm">
+            <Heading as="h1" size="md">
+              {connector.name}
+            </Heading>
+            <FlexContainer alignItems="center">
+              <Text color="grey">{titleInfo}</Text>
+              <SupportLevelBadge
+                supportLevel={actorDefinitionVersion.supportLevel}
+                custom={connectorDefinition.custom}
+              />
+            </FlexContainer>
           </FlexContainer>
         </FlexContainer>
+        {isSourceDefinition(connectorDefinition) && <ForkConnectorButton sourceDefinition={connectorDefinition} />}
       </FlexContainer>
       {shouldDisplayBreakingChangeBanner(actorDefinitionVersion) && (
         <BreakingChangeBanner

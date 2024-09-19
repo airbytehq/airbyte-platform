@@ -134,6 +134,7 @@ public class BaseConfigDatabaseTest {
               connection_operation,
               connection_timeline_event,
               connector_builder_project,
+              connector_rollout,
               declarative_manifest,
               notification_configuration,
               operation,
