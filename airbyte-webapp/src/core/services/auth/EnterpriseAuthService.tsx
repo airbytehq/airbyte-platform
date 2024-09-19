@@ -126,6 +126,7 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
   const contextValue = useMemo((): AuthContextApi => {
     return {
       authType: "oidc",
+      applicationSupport: "multiple",
       user: airbyteUser,
       inited,
       emailVerified: false,

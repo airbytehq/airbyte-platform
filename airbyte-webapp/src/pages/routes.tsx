@@ -72,7 +72,7 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const { applicationSupport } = useAuthService();
   const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
@@ -104,7 +104,7 @@ const MainViewRoutes: React.FC = () => {
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
           <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
             <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
-            {isTokenManagementEnabled && (
+            {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
             {canViewWorkspaceSettings && multiWorkspaceUI && (

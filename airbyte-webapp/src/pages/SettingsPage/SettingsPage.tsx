@@ -8,6 +8,7 @@ import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
 import { useCurrentWorkspace, useGetInstanceConfiguration } from "core/api";
 import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
+import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -18,7 +19,7 @@ export const SettingsPage: React.FC = () => {
   const { trackingStrategy } = useGetInstanceConfiguration();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const { applicationSupport } = useAuthService();
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const canViewLicenseSettings = useIntent("ViewLicenseDetails", { workspaceId });
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
@@ -36,7 +37,7 @@ export const SettingsPage: React.FC = () => {
             name={formatMessage({ id: "settings.account" })}
             to={SettingsRoutePaths.Account}
           />
-          {apiTokenManagement && (
+          {applicationSupport !== "none" && (
             <SettingsLink
               iconType="grid"
               name={formatMessage({ id: "settings.applications" })}

@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
-import { AuthConfigurationMode, InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
+import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -13,12 +13,6 @@ const featureServiceContext = React.createContext<FeatureServiceContext | null>(
 
 const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
   return featureList.reduce((set, val) => ({ ...set, [val]: true }), {} as FeatureSet);
-};
-
-const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
-  return {
-    [FeatureItem.APITokenManagement]: instanceConfig.auth.mode !== AuthConfigurationMode.none,
-  };
 };
 
 interface FeatureServiceProps {
@@ -68,7 +62,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
-      ...(instanceConfig ? featureSetFromInstanceConfig(instanceConfig) : {}),
       ...overwrittenFeatures,
       ...envOverwrites,
     };

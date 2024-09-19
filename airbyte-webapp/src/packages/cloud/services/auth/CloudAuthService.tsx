@@ -408,6 +408,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     if (authState.isAuthenticated) {
       return {
         authType: "cloud",
+        applicationSupport: "multiple",
         inited: true,
         user: authState.airbyteUser,
         emailVerified: authState.keycloakUser?.profile.email_verified ?? false,
@@ -434,6 +435,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     // The context value for an unauthenticated user
     return {
       authType: "cloud",
+      applicationSupport: "none",
       user: null,
       inited: authState.didInitialize,
       emailVerified: false,
