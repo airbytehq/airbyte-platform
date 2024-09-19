@@ -20,7 +20,7 @@ data:
   {{- if $airbyteYmlDict }}
   AIRBYTE_URL: {{ (index $airbyteYmlDict "webapp-url") | quote }}
   {{- else}}
-  AIRBYTE_URL: {{ .Values.global.airbyteUrl }}
+  AIRBYTE_URL: {{ .Values.global.airbyteUrl | quote }}
   {{- end }}
 
   AIRBYTE_SERVER_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
