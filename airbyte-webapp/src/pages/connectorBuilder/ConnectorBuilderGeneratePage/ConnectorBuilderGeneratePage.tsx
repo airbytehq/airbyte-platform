@@ -144,7 +144,7 @@ const ConnectorBuilderGenerateForm: React.FC<{
                 {formatMessage({ id: "connectorBuilder.generatePage.title" })}
               </Heading>
               <Badge variant="blue">
-                <FormattedMessage id="ui.badge.alpha" />
+                <FormattedMessage id="ui.badge.beta" />
               </Badge>
             </FlexContainer>
             <Text size="sm" color="grey">

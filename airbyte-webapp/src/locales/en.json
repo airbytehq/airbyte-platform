@@ -1383,6 +1383,7 @@
   "ui.combobox.buttonAddText": "Add option",
   "ui.combobox.buttonEditText": "Edit option",
   "ui.badge.alpha": "Alpha",
+  "ui.badge.beta": "Beta",
 
   "airbyte.datatype.string": "String",
   "airbyte.datatype.binary_data": "Binary Data",
