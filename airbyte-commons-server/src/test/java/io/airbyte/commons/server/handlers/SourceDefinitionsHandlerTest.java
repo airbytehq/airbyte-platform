@@ -805,6 +805,37 @@ class SourceDefinitionsHandlerTest {
   }
 
   @Test
+  @DisplayName("does not update the name of a non-custom connector definition")
+  void testBuildSourceDefinitionUpdateNameNonCustom() {
+    final StandardSourceDefinition existingSourceDefinition = sourceDefinition;
+
+    final SourceDefinitionUpdate sourceDefinitionUpdate = new SourceDefinitionUpdate()
+        .sourceDefinitionId(existingSourceDefinition.getSourceDefinitionId())
+        .name("Some name that gets ignored");
+
+    final StandardSourceDefinition newSourceDefinition =
+        sourceDefinitionsHandler.buildSourceDefinitionUpdate(existingSourceDefinition, sourceDefinitionUpdate);
+
+    assertEquals(newSourceDefinition.getName(), existingSourceDefinition.getName());
+  }
+
+  @Test
+  @DisplayName("updates the name of a custom connector definition")
+  void testBuildSourceDefinitionUpdateNameCustom() {
+    final String NEW_NAME = "My new connector name";
+    final StandardSourceDefinition existingCustomSourceDefinition = generateSourceDefinition().withCustom(true);
+
+    final SourceDefinitionUpdate sourceDefinitionUpdate = new SourceDefinitionUpdate()
+        .sourceDefinitionId(existingCustomSourceDefinition.getSourceDefinitionId())
+        .name(NEW_NAME);
+
+    final StandardSourceDefinition newSourceDefinition =
+        sourceDefinitionsHandler.buildSourceDefinitionUpdate(existingCustomSourceDefinition, sourceDefinitionUpdate);
+
+    assertEquals(newSourceDefinition.getName(), NEW_NAME);
+  }
+
+  @Test
   @DisplayName("updateSourceDefinition should not update a sourceDefinition "
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateSource() throws ConfigNotFoundException, IOException,

@@ -8313,6 +8313,8 @@ components:
         - sourceDefinitionId
         - dockerImageTag
       properties:
+        name:
+          type: string
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
         dockerImageTag:
@@ -8857,6 +8859,8 @@ components:
         - destinationDefinitionId
         - dockerImageag
       properties:
+        name:
+          type: string
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
         dockerImageTag:

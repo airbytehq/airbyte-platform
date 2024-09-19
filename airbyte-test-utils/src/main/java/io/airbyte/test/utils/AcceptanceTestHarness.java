@@ -1048,6 +1048,7 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
+            null,
             dockerImageTag,
             null));
   }
@@ -1057,6 +1058,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            null,
             null));
   }
 

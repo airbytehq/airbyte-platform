@@ -754,6 +754,37 @@ class DestinationDefinitionsHandlerTest {
   }
 
   @Test
+  @DisplayName("does not update the name of a non-custom connector definition")
+  void testBuildDestinationDefinitionUpdateNameNonCustom() {
+    final StandardDestinationDefinition existingDestinationDefinition = destinationDefinition;
+
+    final DestinationDefinitionUpdate destinationDefinitionUpdate = new DestinationDefinitionUpdate()
+        .destinationDefinitionId(existingDestinationDefinition.getDestinationDefinitionId())
+        .name("Some name that gets ignored");
+
+    final StandardDestinationDefinition newDestinationDefinition =
+        destinationDefinitionsHandler.buildDestinationDefinitionUpdate(existingDestinationDefinition, destinationDefinitionUpdate);
+
+    assertEquals(newDestinationDefinition.getName(), existingDestinationDefinition.getName());
+  }
+
+  @Test
+  @DisplayName("updates the name of a custom connector definition")
+  void testBuildDestinationDefinitionUpdateNameCustom() {
+    final String NEW_NAME = "My new connector name";
+    final StandardDestinationDefinition existingCustomDestinationDefinition = generateDestinationDefinition().withCustom(true);
+
+    final DestinationDefinitionUpdate destinationDefinitionUpdate = new DestinationDefinitionUpdate()
+        .destinationDefinitionId(existingCustomDestinationDefinition.getDestinationDefinitionId())
+        .name(NEW_NAME);
+
+    final StandardDestinationDefinition newDestinationDefinition = destinationDefinitionsHandler.buildDestinationDefinitionUpdate(
+        existingCustomDestinationDefinition, destinationDefinitionUpdate);
+
+    assertEquals(newDestinationDefinition.getName(), NEW_NAME);
+  }
+
+  @Test
   @DisplayName("updateDestinationDefinition should not update a destinationDefinition "
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateDestination() throws ConfigNotFoundException, IOException,

@@ -296,6 +296,23 @@ public class SourceDefinitionsHandler {
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
 
+    final StandardSourceDefinition newSource = buildSourceDefinitionUpdate(currentSourceDefinition, sourceDefinitionUpdate);
+
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
+
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
+    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
+
+    final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
+    supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
+
+    return buildSourceDefinitionRead(newSource, newVersion);
+  }
+
+  @VisibleForTesting
+  StandardSourceDefinition buildSourceDefinitionUpdate(final StandardSourceDefinition currentSourceDefinition,
+                                                       final SourceDefinitionUpdate sourceDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
@@ -312,16 +329,11 @@ public class SourceDefinitionsHandler {
         .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
-    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
+    if (sourceDefinitionUpdate.getName() != null && currentSourceDefinition.getCustom()) {
+      newSource.withName(sourceDefinitionUpdate.getName());
+    }
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
-    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
-
-    final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
-    supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
-
-    return buildSourceDefinitionRead(newSource, newVersion);
+    return newSource;
   }
 
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
