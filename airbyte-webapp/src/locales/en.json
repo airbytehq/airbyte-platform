@@ -1193,7 +1193,7 @@
 
   "settings.license": "License",
   "settings.license.plan.teams": "Teams",
-  "settings.license.plan.selfManagedEnterprise": "Self-Managed Enteperise",
+  "settings.license.plan.selfManagedEnterprise": "Self-Managed Enterperise",
   "settings.license.expired": "Expired",
   "settings.license.exceeded": "Exceeded",
   "settings.license.invalidLicense": "Invalid license",
