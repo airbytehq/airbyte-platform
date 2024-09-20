@@ -7,9 +7,12 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 
-import { useCurrentOrganizationInfo } from "core/api";
+import { useCurrentOrganizationInfo, useCurrentWorkspace, useGetOrganizationBillingBalance } from "core/api";
+import { useFormatCredits } from "core/utils/numberHelper";
 
+import { AccountBalance } from "./AccountBalance";
 import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
@@ -18,8 +21,12 @@ import { useRedirectToCustomerPortal } from "../useRedirectToCustomerPortal";
 
 export const OrganizationBillingPage: React.FC = () => {
   const { formatMessage } = useIntl();
+  const { organizationId } = useCurrentWorkspace();
   const { billing } = useCurrentOrganizationInfo();
   const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("portal");
+  const { formatCredits } = useFormatCredits();
+
+  const { data: balance } = useGetOrganizationBillingBalance(organizationId);
 
   return (
     <PageContainer>
@@ -32,6 +39,10 @@ export const OrganizationBillingPage: React.FC = () => {
           <BillingBanners />
 
           <BorderedTiles>
+            <BorderedTile>
+              <AccountBalance />
+            </BorderedTile>
+
             <BorderedTile>
               <BillingInformation />
             </BorderedTile>
@@ -46,16 +57,30 @@ export const OrganizationBillingPage: React.FC = () => {
           </Box>
         </FlexContainer>
       ) : (
-        <Box py="2xl">
-          <EmptyState
-            text={formatMessage({ id: "settings.organization.billing.notSetUp" })}
-            button={
-              <Button variant="primary" onClick={goToCustomerPortal} isLoading={redirecting}>
-                <FormattedMessage id="settings.organization.billing.paymentMethod.add" />
-              </Button>
-            }
-          />
-        </Box>
+        <FlexContainer gap="2xl" direction="column">
+          {!!balance?.credits?.balance && balance?.credits?.balance > 0 && (
+            <Message
+              text={
+                <FormattedMessage
+                  id="settings.organization.billing.remainingCreditsBanner"
+                  values={{
+                    amount: formatCredits(balance.credits.balance),
+                  }}
+                />
+              }
+            />
+          )}
+          <Box py="2xl">
+            <EmptyState
+              text={formatMessage({ id: "settings.organization.billing.notSetUp" })}
+              button={
+                <Button variant="primary" onClick={goToCustomerPortal} isLoading={redirecting}>
+                  <FormattedMessage id="settings.organization.billing.paymentMethod.add" />
+                </Button>
+              }
+            />
+          </Box>
+        </FlexContainer>
       )}
     </PageContainer>
   );
