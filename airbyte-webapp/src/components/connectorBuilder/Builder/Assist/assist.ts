@@ -3,8 +3,8 @@ import merge from "lodash/merge";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
-import { AssistV1ProcessRequestBody } from "core/api/types/ConnectorBuilderClient";
+import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
+import { AssistV1ProcessRequestBody, KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
@@ -157,7 +157,7 @@ const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequir
   // session id on form
   const params: BuilderAssistUseProject = {
     docs_url: useBuilderWatch("formValues.assist.docsUrl"),
-    openapi_spec_url: useBuilderWatch("formValues.assist.openApiSpecUrl"),
+    openapi_spec_url: useBuilderWatch("formValues.assist.openapiSpecUrl"),
     app_name: useBuilderWatch("name") || "Connector",
     url_base: useBuilderWatch("formValues.global.urlBase"),
     project_id: projectId,
@@ -242,4 +242,68 @@ export interface BuilderAssistCreateConnectorResponse extends BuilderAssistBaseR
 export const useBuilderAssistCreateConnectorMutation = () => {
   const { params: globalParams } = useAssistGlobalContext();
   return useAssistApiMutation<BuilderAssistCreateConnectorParams, BuilderAssistCreateConnectorResponse>(globalParams);
+};
+
+const assistErrorCodesToi18n = {
+  url_format_error: "connectorBuilder.assist.error.urlFormatError",
+  url_not_reachable: "connectorBuilder.assist.error.urlNotReachable",
+};
+
+export interface ExpectedAssistErrorFormError {
+  field?: string;
+  error_type?: string;
+  message?: string;
+}
+
+export interface AssistErrorFormError {
+  fieldName: string;
+  errorType: string;
+  errorMessage: string;
+}
+
+/**
+ * Applies i18n to an assist error message.
+ *
+ * Note: This uses the "error_code" appended to the end of some error message to look up the i18n key.
+ * This is not part of the public API and may change.
+ */
+const applyi18n = (errorMessage: string): string => {
+  const [message, error_code] = errorMessage.split("error_code:").map((s) => s.trim());
+  if (error_code) {
+    const i18nKey = assistErrorCodesToi18n[error_code as keyof typeof assistErrorCodesToi18n];
+    return i18nKey ?? errorMessage;
+  }
+  return message;
+};
+
+/**
+ * Safely casts an assist validation error to a form error.
+ */
+export const safeCastAssistValidationError = (
+  apiValidationError: ExpectedAssistErrorFormError
+): AssistErrorFormError => {
+  const { field, error_type, message } = apiValidationError;
+  const fieldName = field ?? "";
+  const errorType = error_type ?? "";
+  const errorMessage = applyi18n(message ?? "");
+
+  return {
+    fieldName,
+    errorType,
+    errorMessage: errorMessage.trim(),
+  };
+};
+
+export const parseAssistErrorToFormErrors = (assistError: Error | null): AssistErrorFormError[] => {
+  if (!assistError || !(assistError instanceof HttpError)) {
+    return [];
+  }
+
+  const details = (assistError as HttpError<KnownExceptionInfo>).response?.details;
+  if (!details) {
+    return [];
+  }
+
+  const validationErrors = details?.validation_errors;
+  return validationErrors?.map(safeCastAssistValidationError) ?? [];
 };

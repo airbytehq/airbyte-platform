@@ -27,6 +27,7 @@ import {
   useBuilderAssistFindStreamPaginator,
   useBuilderAssistStreamMetadata,
   useBuilderAssistStreamResponse,
+  parseAssistErrorToFormErrors,
 } from "./assist";
 import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
 
@@ -109,7 +110,7 @@ const getAssistButtonState = ({
   if (errorMessage) {
     return {
       stateKey: "defaultError",
-      tooltipContent: "connectorBuilder.assist.tooltip.defaultError",
+      tooltipContent: errorMessage,
       iconColor: "error",
       disabled: true,
     };
@@ -223,7 +224,7 @@ export const AssistAddStreamButton: React.FC<AssistAddStreamProps> = ({
   const { formatMessage } = useIntl();
 
   const docs_url = assistData?.docsUrl?.trim();
-  const openapi_spec_url = assistData?.openApiSpecUrl?.trim();
+  const openapi_spec_url = assistData?.openapiSpecUrl?.trim();
   const hasRequiredData = !!docs_url || !!openapi_spec_url;
 
   const errorMessage =
@@ -298,7 +299,7 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
 
   const assistData: AssistData = useBuilderWatch("formValues.assist");
   const docs_url = assistData?.docsUrl?.trim();
-  const openapi_spec_url = assistData?.openApiSpecUrl?.trim();
+  const openapi_spec_url = assistData?.openapiSpecUrl?.trim();
   const hasRequiredData = !!docs_url || !!openapi_spec_url;
 
   const formKey = `formValues.${formPath}`;
@@ -317,8 +318,20 @@ const InternalAssistButton: React.FC<InternalAssistButtonProps> = ({
   const previewValue = propertiesToPluck ? pick(pathAssistValue, propertiesToPluck) : pathAssistValue;
   const valueToSet = propertiesToPluck ? merge({}, currentValue, previewValue) : previewValue;
 
-  const errorMessage =
-    isError || error ? error?.message || formatMessage({ id: "connectorBuilder.assist.tooltip.defaultError" }) : "";
+  // Process the error from the assist mutation
+  const errorMessage = useMemo(() => {
+    const formErrors = parseAssistErrorToFormErrors(error);
+    if (formErrors.length > 0) {
+      return formErrors[0].errorMessage;
+    }
+
+    if (isError) {
+      return error?.message || "connectorBuilder.assist.tooltip.defaultError";
+    }
+
+    return undefined;
+  }, [error, isError]);
+
   const assistButtonState = useMemo(
     () =>
       getAssistButtonState({

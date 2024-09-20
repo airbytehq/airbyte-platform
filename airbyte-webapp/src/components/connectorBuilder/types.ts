@@ -74,7 +74,7 @@ export interface BuilderState {
 
 export interface AssistData {
   docsUrl?: string;
-  openApiSpecUrl?: string;
+  openapiSpecUrl?: string;
 }
 
 export interface BuilderFormInput {
@@ -347,7 +347,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   assist: {
     docsUrl: "",
-    openApiSpecUrl: "",
+    openapiSpecUrl: "",
   },
   inputs: [],
   streams: [],

@@ -37,11 +37,11 @@ export const AssistForm: React.FC = () => {
       <BuilderField
         type="string"
         optional
-        label={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.label" })}
-        placeholder={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.placeholder" })}
-        tooltip={formatMessage({ id: "connectorBuilder.assist.config.openApiSpecUrl.tooltip" })}
-        manifestPath="metadata.assist.openApiSpecUrl"
-        path="formValues.assist.openApiSpecUrl"
+        label={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.label" })}
+        placeholder={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.placeholder" })}
+        tooltip={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.tooltip" })}
+        manifestPath="metadata.assist.openapiSpecUrl"
+        path="formValues.assist.openapiSpecUrl"
       />
     </FlexContainer>
   );
