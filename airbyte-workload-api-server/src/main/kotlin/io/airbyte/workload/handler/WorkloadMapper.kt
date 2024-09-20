@@ -69,6 +69,7 @@ fun DomainWorkload.toApi(): ApiWorkload {
     terminationReason = this.terminationReason,
     terminationSource = this.terminationSource,
     autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
+    signalInput = this.signalInput,
   )
 }
 

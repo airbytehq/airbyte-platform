@@ -106,6 +106,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
         WorkloadType.DISCOVER,
         Objects.requireNonNull(WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString())),
         null,
+        null,
         null);
 
     workloadClient.createWorkload(workloadCreateRequest);

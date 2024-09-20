@@ -113,6 +113,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         WorkloadType.CHECK,
         WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
         null,
+        null,
         null);
 
     workloadClient.createWorkload(workloadCreateRequest);

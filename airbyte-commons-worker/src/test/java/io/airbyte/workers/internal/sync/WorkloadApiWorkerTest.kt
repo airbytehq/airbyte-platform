@@ -356,6 +356,7 @@ internal class WorkloadApiWorkerTest {
       this.workspaceId = workspaceId
       this.connectionId = connectionId
       this.jobRunConfig = jobRunConfig
+      this.signalInput = "signalInputValue"
     }
 
     replicationActivityInput.apply {

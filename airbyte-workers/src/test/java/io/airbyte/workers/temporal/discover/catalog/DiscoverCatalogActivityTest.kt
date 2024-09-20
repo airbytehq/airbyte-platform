@@ -29,7 +29,7 @@ import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -102,6 +102,7 @@ class DiscoverCatalogActivityTest {
       every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
     }
     every { discoverCatalogActivity.getGeography(Optional.of(connectionId), Optional.of(workspaceId)) }.returns(Geography.AUTO)
+
     every { workloadApi.workloadCreate(any()) }.returns(Unit)
     every {
       workloadApi.workloadGet(workloadId)
@@ -111,6 +112,6 @@ class DiscoverCatalogActivityTest {
         .withDiscoverCatalogId(UUID.randomUUID())
     every { jobOutputDocStore.read(workloadId) }.returns(Optional.of(output))
     val actualOutput = discoverCatalogActivity.runWithWorkload(input)
-    Assertions.assertEquals(output, actualOutput)
+    assertEquals(output, actualOutput)
   }
 }

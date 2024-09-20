@@ -45,6 +45,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -96,8 +98,9 @@ class CheckConnectionActivityTest {
     when(logClientManager.fullLogPath(any())).then(i -> Path.of(i.getArguments()[0].toString(), DEFAULT_LOG_FILENAME).toString());
   }
 
-  @Test
-  void testStartWithWorkload() throws Exception {
+  @ParameterizedTest
+  @EnumSource(ActorType.class)
+  void testStartWithWorkload(final ActorType actorType) throws Exception {
     final CheckConnectionInput input = getCheckInput();
 
     when(jobOutputDocStore.read(WORKLOAD_ID)).thenReturn(Optional.of(new ConnectorJobOutput()
@@ -156,7 +159,8 @@ class CheckConnectionActivityTest {
         null,
         null,
         null,
-        null);
+        null,
+        "");
   }
 
 }

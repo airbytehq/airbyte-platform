@@ -80,6 +80,7 @@ public class SpecActivityImpl implements SpecActivity {
         WorkloadType.SPEC,
         WorkloadPriority.HIGH,
         null,
+        null,
         null);
 
     workloadClient.createWorkload(workloadCreateRequest);

@@ -23,4 +23,5 @@ data class Workload(
   // This is an uniq ID allowing to identify a workload. It is needed in addition of the workloadId to be able to add
   // this identifier to the kube pod label.
   var autoId: UUID = UUID.randomUUID(),
+  var signalInput: String? = null,
 )

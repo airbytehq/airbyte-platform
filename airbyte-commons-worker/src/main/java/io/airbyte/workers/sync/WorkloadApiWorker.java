@@ -135,7 +135,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
         WorkloadType.SYNC,
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
-        null);
+        null,
+        replicationInput.getSignalInput() == null ? null : Jsons.serialize(replicationInput.getSignalInput()));
 
     // Create the workload
     try {

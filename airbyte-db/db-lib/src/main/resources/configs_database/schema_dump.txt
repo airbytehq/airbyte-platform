@@ -453,6 +453,7 @@ create table "public"."workload" (
   "termination_reason" text,
   "auto_id" uuid,
   "deadline" timestamp(6) with time zone,
+  "signal_input" text,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (

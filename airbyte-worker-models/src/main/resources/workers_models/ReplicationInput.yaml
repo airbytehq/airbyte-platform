@@ -82,3 +82,6 @@ properties:
     description: whether the destination supports refreshes
     type: boolean
     default: false
+  signalInput:
+    description: Signal input for the sync
+    type: string

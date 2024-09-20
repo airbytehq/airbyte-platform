@@ -18,4 +18,5 @@ data class WorkloadCreateRequest(
   var type: WorkloadType = WorkloadType.SYNC,
   var deadline: OffsetDateTime? = null,
   var priority: WorkloadPriority = WorkloadPriority.HIGH,
+  var signalInput: String? = null,
 )
