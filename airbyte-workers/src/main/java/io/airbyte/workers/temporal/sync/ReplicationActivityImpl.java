@@ -18,7 +18,10 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ReplicationAttemptSummary;
@@ -54,6 +57,7 @@ import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -147,6 +151,68 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.logClientManager = logClientManager;
   }
 
+  record TracingContext(UUID connectionId, String jobId, Long attemptNumber, Map<String, Object> traceAttributes) {}
+
+  @SuppressWarnings({"PMD.UnusedLocalVariable"})
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public String startReplication(final ReplicationActivityInput replicationActivityInput) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
+
+    try (final var mdcScope = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
+      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+
+      ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
+
+      if (replicationActivityInput.getIsReset()) {
+        metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+      }
+
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+
+      LOGGER.info("connection {}, input: {}", tracingContext.connectionId, workerAndReplicationInput.replicationInput);
+
+      return worker.createWorkload(workerAndReplicationInput.replicationInput, jobRoot);
+    } catch (final Exception e) {
+      ApmTraceUtils.addActualRootCauseToTrace(e);
+      throw Activity.wrap(e);
+    } finally {
+      logClientManager.setJobMdc(null);
+    }
+  }
+
+  @SuppressWarnings({"PMD.UnusedLocalVariable"})
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public StandardSyncOutput getReplicationOutput(final ReplicationActivityInput replicationActivityInput, final String workloadId) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
+
+    try (final var mdcScope = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
+
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+
+      final var output = worker.getOutput(workloadId);
+      return finalizeOutput(replicationActivityInput, output);
+    } catch (final Exception e) {
+      ApmTraceUtils.addActualRootCauseToTrace(e);
+      throw Activity.wrap(e);
+    } finally {
+      logClientManager.setJobMdc(null);
+    }
+  }
+
   /**
    * Performs the replication activity.
    * <p>
@@ -158,28 +224,14 @@ public class ReplicationActivityImpl implements ReplicationActivity {
    * @param replicationActivityInput the input to the replication activity
    * @return output from the replication activity, populated in the StandardSyncOutput
    */
+  @Deprecated
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public StandardSyncOutput replicateV2(final ReplicationActivityInput replicationActivityInput) {
     metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
 
-    final var connectionId = replicationActivityInput.getConnectionId();
-    final var jobId = replicationActivityInput.getJobRunConfig().getJobId();
-    final var attemptNumber = replicationActivityInput.getJobRunConfig().getAttemptId();
-
-    final Map<String, Object> traceAttributes =
-        Map.of(
-            CONNECTION_ID_KEY, connectionId,
-            JOB_ID_KEY, jobId,
-            ATTEMPT_NUMBER_KEY, attemptNumber,
-            DESTINATION_DOCKER_IMAGE_KEY, replicationActivityInput.getDestinationLauncherConfig().getDockerImage(),
-            SOURCE_DOCKER_IMAGE_KEY, replicationActivityInput.getSourceLauncherConfig().getDockerImage());
-    ApmTraceUtils
-        .addTagsToTrace(traceAttributes);
-
-    final MetricAttribute[] metricAttributes = traceAttributes.entrySet().stream()
-        .map(e -> new MetricAttribute(ApmTraceUtils.formatTag(e.getKey()), e.getValue().toString()))
-        .collect(Collectors.toSet()).toArray(new MetricAttribute[] {});
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
 
     if (replicationActivityInput.getIsReset()) {
       metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
@@ -192,63 +244,74 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         cancellationCallback,
         () -> {
           final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
-          final ReplicationInput hydratedReplicationInput = workerAndReplicationInput.replicationInput;
+          final ReplicationInput replicationInput = workerAndReplicationInput.replicationInput;
           final ReplicationWorker worker = workerAndReplicationInput.worker;
 
-          LOGGER.info("connection {}, hydrated input: {}", replicationActivityInput.getConnectionId(), hydratedReplicationInput);
+          LOGGER.info("connection {}, input: {}", tracingContext.connectionId, replicationInput);
           cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution temporalAttempt =
               new TemporalAttemptExecution(
                   workspaceRoot,
-                  hydratedReplicationInput.getJobRunConfig(),
+                  replicationInput.getJobRunConfig(),
                   worker,
-                  hydratedReplicationInput,
+                  replicationInput,
                   airbyteVersion,
                   logClientManager);
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
-          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
-
-          final String standardSyncOutputString = standardSyncOutput.toString();
-          LOGGER.info("sync summary: {}", standardSyncOutputString);
-          if (standardSyncOutputString.length() > MAX_TEMPORAL_MESSAGE_SIZE) {
-            LOGGER.error("Sync output exceeds the max temporal message size of {}, actual is {}.", MAX_TEMPORAL_MESSAGE_SIZE,
-                standardSyncOutputString.length());
-          } else {
-            LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
-          }
-
-          if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
-            final var uri = catalogStorageClient.persist(
-                attemptOutput.getOutputCatalog(),
-                connectionId,
-                Long.parseLong(jobId),
-                attemptNumber.intValue(),
-                metricAttributes);
-
-            standardSyncOutput.setCatalogUri(uri);
-          }
-
-          payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
-
-          return standardSyncOutput;
+          return finalizeOutput(replicationActivityInput, attemptOutput);
         },
         context);
   }
 
-  record WorkerAndReplicationInput(ReplicationWorker worker, ReplicationInput replicationInput) {}
+  private StandardSyncOutput finalizeOutput(final ReplicationActivityInput replicationActivityInput, final ReplicationOutput attemptOutput) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
+
+    final MetricAttribute[] metricAttributes = tracingContext.traceAttributes.entrySet().stream()
+        .map(e -> new MetricAttribute(ApmTraceUtils.formatTag(e.getKey()), e.getValue().toString()))
+        .collect(Collectors.toSet()).toArray(new MetricAttribute[] {});
+
+    final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
+
+    final String standardSyncOutputString = standardSyncOutput.toString();
+    LOGGER.info("sync summary: {}", standardSyncOutputString);
+    if (standardSyncOutputString.length() > MAX_TEMPORAL_MESSAGE_SIZE) {
+      LOGGER.error("Sync output exceeds the max temporal message size of {}, actual is {}.", MAX_TEMPORAL_MESSAGE_SIZE,
+          standardSyncOutputString.length());
+    } else {
+      LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
+    }
+
+    if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(tracingContext.connectionId))) {
+      final var uri = catalogStorageClient.persist(
+          attemptOutput.getOutputCatalog(),
+          tracingContext.connectionId,
+          Long.parseLong(tracingContext.jobId),
+          tracingContext.attemptNumber.intValue(),
+          metricAttributes);
+
+      standardSyncOutput.setCatalogUri(uri);
+    }
+
+    payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
+
+    return standardSyncOutput;
+  }
+
+  record WorkerAndReplicationInput(WorkloadApiWorker worker, ReplicationInput replicationInput) {}
 
   @VisibleForTesting
   WorkerAndReplicationInput getWorkerAndReplicationInput(final ReplicationActivityInput replicationActivityInput) {
-    final ReplicationInput hydratedReplicationInput;
-    final ReplicationWorker worker;
+    final ReplicationInput replicationInput;
+    final WorkloadApiWorker worker;
 
-    hydratedReplicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
+    replicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
     worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
         workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
 
-    return new WorkerAndReplicationInput(worker, hydratedReplicationInput);
+    return new WorkerAndReplicationInput(worker, replicationInput);
   }
 
   private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final MetricAttribute[] metricAttributes) {
@@ -294,6 +357,22 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     if (!tags.isEmpty()) {
       ApmTraceUtils.addTagsToTrace(tags);
     }
+  }
+
+  private TracingContext buildTracingContext(final ReplicationActivityInput replicationActivityInput) {
+    final var connectionId = replicationActivityInput.getConnectionId();
+    final var jobId = replicationActivityInput.getJobRunConfig().getJobId();
+    final var attemptNumber = replicationActivityInput.getJobRunConfig().getAttemptId();
+
+    final Map<String, Object> traceAttributes =
+        Map.of(
+            CONNECTION_ID_KEY, connectionId,
+            JOB_ID_KEY, jobId,
+            ATTEMPT_NUMBER_KEY, attemptNumber,
+            DESTINATION_DOCKER_IMAGE_KEY, replicationActivityInput.getDestinationLauncherConfig().getDockerImage(),
+            SOURCE_DOCKER_IMAGE_KEY, replicationActivityInput.getSourceLauncherConfig().getDockerImage());
+
+    return new TracingContext(connectionId, jobId, attemptNumber, traceAttributes);
   }
 
 }

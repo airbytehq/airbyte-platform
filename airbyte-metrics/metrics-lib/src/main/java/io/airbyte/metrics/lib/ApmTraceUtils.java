@@ -6,6 +6,7 @@ package io.airbyte.metrics.lib;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 
@@ -192,6 +193,14 @@ public class ApmTraceUtils {
    */
   public static String formatTag(final String tagKey, final String tagPrefix) {
     return String.format(TAG_FORMAT, tagPrefix, tagKey);
+  }
+
+  public static void addActualRootCauseToTrace(final Exception e) {
+    Throwable inner = e;
+    while (inner.getCause() != null) {
+      inner = inner.getCause();
+    }
+    ApmTraceUtils.addTagsToTrace(Map.of(ERROR_ACTUAL_TYPE_KEY, inner.getClass().getName()));
   }
 
 }

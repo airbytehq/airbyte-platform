@@ -103,6 +103,12 @@ public class WorkloadApiWorker implements ReplicationWorker {
   @Override
   @SuppressWarnings("PMD.AssignmentInOperand")
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
+    final String workloadId = createWorkload(replicationInput, jobRoot);
+    waitForWorkload(workloadId);
+    return getOutput(workloadId);
+  }
+
+  public String createWorkload(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
     workloadId = workloadIdGenerator.generateSyncWorkloadId(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
@@ -141,7 +147,10 @@ public class WorkloadApiWorker implements ReplicationWorker {
         log.info("Workload {} has already been created, reconnecting...", workloadId);
       }
     }
+    return workloadId;
+  }
 
+  public void waitForWorkload(final String workloadId) {
     // Wait until workload reaches a terminal status
     // TODO merge this with WorkloadApiHelper.waitForWorkload. The only difference currently is the
     // progress log.
@@ -173,7 +182,10 @@ public class WorkloadApiWorker implements ReplicationWorker {
     if (workload.getStatus() == WorkloadStatus.CANCELLED) {
       throw new CancellationException("Replication cancelled by " + workload.getTerminationSource());
     }
+  }
 
+  public ReplicationOutput getOutput(final String workloadId) throws WorkerException {
+    final Workload workload = getWorkload(workloadId);
     final ReplicationOutput output;
     try {
       output = getReplicationOutput(workloadId);

@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.temporal;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LoggingHelper;
@@ -18,7 +16,6 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.temporal.activity.Activity;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -90,19 +87,11 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
       }
 
     } catch (final Exception e) {
-      addActualRootCauseToTrace(e);
+      ApmTraceUtils.addActualRootCauseToTrace(e);
       throw Activity.wrap(e);
     } finally {
       mdcSetter.accept(null);
     }
-  }
-
-  private void addActualRootCauseToTrace(final Exception e) {
-    Throwable inner = e;
-    while (inner.getCause() != null) {
-      inner = inner.getCause();
-    }
-    ApmTraceUtils.addTagsToTrace(Map.of(ERROR_ACTUAL_TYPE_KEY, e.getClass().getName()));
   }
 
 }
