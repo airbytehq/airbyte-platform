@@ -1025,49 +1025,6 @@ class DefaultJobPersistenceTest {
   }
 
   @Nested
-  class TemporalWorkflowInfo {
-
-    @Test
-    void testSuccessfulGet() throws IOException, SQLException {
-      final var jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-      final var attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
-
-      final var defaultWorkflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber);
-      assertTrue(defaultWorkflowId.isEmpty());
-
-      jobDatabase.query(ctx -> ctx.execute(
-          "UPDATE attempts SET temporal_workflow_id = '56a81f3a-006c-42d7-bce2-29d675d08ea4' WHERE job_id = ? AND attempt_number =?", jobId,
-          attemptNumber));
-      final var workflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber).get();
-      assertEquals(workflowId, "56a81f3a-006c-42d7-bce2-29d675d08ea4");
-    }
-
-    @Test
-    void testGetMissingAttempt() throws IOException {
-      assertTrue(jobPersistence.getAttemptTemporalWorkflowId(0, 0).isEmpty());
-    }
-
-    @Test
-    void testSuccessfulSet() throws IOException, SQLException {
-      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-      final var attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
-      final var temporalWorkflowId = "test-id-usually-uuid";
-      final var syncQueue = "SYNC";
-
-      jobPersistence.setAttemptTemporalWorkflowInfo(jobId, attemptNumber, temporalWorkflowId, syncQueue);
-
-      final var workflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber).get();
-      assertEquals(workflowId, temporalWorkflowId);
-
-      final var taskQueue = jobDatabase.query(ctx -> ctx.fetch(
-          "SELECT processing_task_queue FROM attempts WHERE job_id = ? AND attempt_number =?", jobId,
-          attemptNumber)).stream().findFirst().get().get("processing_task_queue", String.class);
-      assertEquals(syncQueue, taskQueue);
-    }
-
-  }
-
-  @Nested
   class GetAndSetVersion {
 
     @Test

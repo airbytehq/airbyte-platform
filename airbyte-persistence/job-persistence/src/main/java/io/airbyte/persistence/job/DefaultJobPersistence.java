@@ -749,20 +749,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public Optional<String> getAttemptTemporalWorkflowId(final long jobId, final int attemptNumber) throws IOException {
-    final var result = jobDatabase.query(ctx -> ctx.fetch(
-        " SELECT temporal_workflow_id from attempts WHERE job_id = ? AND attempt_number = ?",
-        jobId,
-        attemptNumber)).stream().findFirst();
-
-    if (result.isEmpty() || result.get().get("temporal_workflow_id") == null) {
-      return Optional.empty();
-    }
-
-    return Optional.of(result.get().get("temporal_workflow_id", String.class));
-  }
-
-  @Override
   public Optional<Attempt> getAttemptForJob(final long jobId, final int attemptNumber) throws IOException {
     final var result = jobDatabase.query(ctx -> ctx.fetch(
         ATTEMPT_SELECT,
