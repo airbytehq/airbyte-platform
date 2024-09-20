@@ -17,6 +17,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
+  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultCloudFeatures = [
@@ -33,4 +34,6 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
+  FeatureItem.SyncCatalogV2,
+  FeatureItem.FieldHashing, // also goverened by connection.hashingUI experiment
 ];

@@ -28,6 +28,7 @@ import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -92,6 +93,8 @@ export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
   const getStateType = useGetStateTypeQuery();
@@ -300,5 +303,5 @@ export const ConnectionReplicationPage: React.FC = () => {
       <LoadingSchema />
     );
 
-  return <div className={styles.container}>{isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
+  return <div className={styles.container}>{useSyncCatalogV2 ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
 };

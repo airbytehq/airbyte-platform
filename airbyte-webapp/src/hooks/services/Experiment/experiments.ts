@@ -37,11 +37,11 @@ export const defaultExperimentValues: Experiments = {
   "billing.organizationBillingPage": false,
   "billing.workspaceUsagePage": false,
   "connection.columnSelection": true,
-  "connection.hashingUI": false,
+  "connection.hashingUI": true, // also requires FeatureItem.FieldHashing and FeatureItem.SyncCatalogV2
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,
-  "connection.syncCatalogV2": false,
+  "connection.syncCatalogV2": true, // also requires FeatureItem.SyncCatalogV2
   "connection.timeline": false,
   "connection.timeline.schemaUpdates": false,
   "connector.airbyteCloudIpAddresses":

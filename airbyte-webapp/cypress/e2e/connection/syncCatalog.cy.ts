@@ -4,7 +4,7 @@ import {
   createFakerSourceViaApi,
 } from "@cy/commands/connection";
 import { visit } from "@cy/pages/connection/connectionPageObject";
-import { setFeatureFlags } from "@cy/support/e2e";
+import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
 import { DestinationRead, SourceRead, WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 
 const CATALOG_SEARCH_INPUT = '[data-testid="sync-catalog-search"]';
@@ -16,6 +16,7 @@ describe("Sync catalog", () => {
 
   before(() => {
     setFeatureFlags({ "connection.syncCatalogV2": true });
+    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
 
     createFakerSourceViaApi()
       .then((source) => {
