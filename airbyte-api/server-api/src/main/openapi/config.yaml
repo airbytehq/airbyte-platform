@@ -4199,26 +4199,6 @@ paths:
                 properties:
                   attemptNumber:
                     $ref: "#/components/schemas/AttemptNumber"
-  /v1/attempt/set_workflow_in_attempt:
-    post:
-      tags:
-        - attempt
-        - internal
-      summary: For worker to register the workflow id in attempt.
-      operationId: setWorkflowInAttempt
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetWorkflowInAttemptRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalOperationResult"
   /v1/attempt/save_stream_metadata:
     post:
       tags:
@@ -12445,22 +12425,6 @@ components:
       format: int32
     WorkflowId:
       type: string
-    SetWorkflowInAttemptRequestBody:
-      type: object
-      required:
-        - jobId
-        - attemptNumber
-        - workflowId
-      properties:
-        jobId:
-          $ref: "#/components/schemas/JobId"
-        attemptNumber:
-          $ref: "#/components/schemas/AttemptNumber"
-        workflowId:
-          $ref: "#/components/schemas/WorkflowId"
-        processingTaskQueue:
-          type: string
-          default: ""
     SaveStatsRequestBody:
       type: object
       required:

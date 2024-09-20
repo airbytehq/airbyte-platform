@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +32,6 @@ import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
-import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.api.model.generated.StreamAttemptMetadata;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -147,57 +145,6 @@ class AttemptHandlerTest {
       .withFailures(Collections.singletonList(
           new FailureReason()
               .withFailureOrigin(FailureOrigin.SOURCE)));
-
-  @Test
-  void testInternalWorkerHandlerSetsTemporalWorkflowId() throws Exception {
-    final String workflowId = UUID.randomUUID().toString();
-
-    final ArgumentCaptor<Integer> attemptNumberCapture = ArgumentCaptor.forClass(Integer.class);
-    final ArgumentCaptor<Long> jobIdCapture = ArgumentCaptor.forClass(Long.class);
-    final ArgumentCaptor<String> workflowIdCapture = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<String> queueCapture = ArgumentCaptor.forClass(String.class);
-
-    final SetWorkflowInAttemptRequestBody requestBody =
-        new SetWorkflowInAttemptRequestBody().attemptNumber(ATTEMPT_NUMBER).jobId(JOB_ID).workflowId(workflowId)
-            .processingTaskQueue(PROCESSING_TASK_QUEUE);
-
-    assertTrue(handler.setWorkflowInAttempt(requestBody).getSucceeded());
-
-    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
-        queueCapture.capture());
-
-    assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
-    assertEquals(JOB_ID, jobIdCapture.getValue());
-    assertEquals(workflowId, workflowIdCapture.getValue());
-    assertEquals(PROCESSING_TASK_QUEUE, queueCapture.getValue());
-  }
-
-  @Test
-  void testInternalWorkerHandlerSetsTemporalWorkflowIdThrows() throws Exception {
-    final String workflowId = UUID.randomUUID().toString();
-
-    doThrow(IOException.class).when(jobPersistence).setAttemptTemporalWorkflowInfo(anyLong(), anyInt(),
-        any(), any());
-
-    final ArgumentCaptor<Integer> attemptNumberCapture = ArgumentCaptor.forClass(Integer.class);
-    final ArgumentCaptor<Long> jobIdCapture = ArgumentCaptor.forClass(Long.class);
-    final ArgumentCaptor<String> workflowIdCapture = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<String> queueCapture = ArgumentCaptor.forClass(String.class);
-
-    final SetWorkflowInAttemptRequestBody requestBody =
-        new SetWorkflowInAttemptRequestBody().attemptNumber(ATTEMPT_NUMBER).jobId(JOB_ID).workflowId(workflowId)
-            .processingTaskQueue(PROCESSING_TASK_QUEUE);
-
-    assertFalse(handler.setWorkflowInAttempt(requestBody).getSucceeded());
-
-    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
-        queueCapture.capture());
-
-    assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
-    assertEquals(JOB_ID, jobIdCapture.getValue());
-    assertEquals(workflowId, workflowIdCapture.getValue());
-    assertEquals(PROCESSING_TASK_QUEUE, queueCapture.getValue());
-  }
 
   @Test
   @SuppressWarnings("PMD")

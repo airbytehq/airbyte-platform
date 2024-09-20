@@ -32,7 +32,6 @@ open class Attempt(
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
   var endedAt: java.time.OffsetDateTime? = null,
-  var temporalWorkflowId: String? = null,
   @field:TypeDef(type = DataType.JSON)
   var failureSummary: JsonNode? = null,
   var processingTaskQueue: String? = null,
@@ -51,7 +50,6 @@ class AttemptWithAssociations(
   createdAt: java.time.OffsetDateTime? = null,
   updatedAt: java.time.OffsetDateTime? = null,
   endedAt: java.time.OffsetDateTime? = null,
-  temporalWorkflowId: String? = null,
   failureSummary: JsonNode? = null,
   processingTaskQueue: String? = null,
   attemptSyncConfig: JsonNode? = null,
@@ -67,7 +65,6 @@ class AttemptWithAssociations(
     createdAt = createdAt,
     updatedAt = updatedAt,
     endedAt = endedAt,
-    temporalWorkflowId = temporalWorkflowId,
     failureSummary = failureSummary,
     processingTaskQueue = processingTaskQueue,
     attemptSyncConfig = attemptSyncConfig,
