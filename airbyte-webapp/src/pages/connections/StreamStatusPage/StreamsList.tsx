@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useContext } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -11,6 +11,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -27,7 +28,7 @@ import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
-export const StreamsList: React.FC<{ customScrollParent: HTMLElement | null }> = ({ customScrollParent }) => {
+export const StreamsList: React.FC = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
@@ -113,6 +114,8 @@ export const StreamsList: React.FC<{ customScrollParent: HTMLElement | null }> =
     recordsExtracted,
     recordsLoaded,
   } = useConnectionStatus(connection.connectionId);
+
+  const customScrollParent = useContext(ScrollParentContext);
 
   return (
     <Card noPadding>
