@@ -54,7 +54,6 @@ import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -205,10 +204,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   hydratedReplicationInput.getJobRunConfig(),
                   worker,
                   hydratedReplicationInput,
-                  airbyteApiClient,
                   airbyteVersion,
-                  () -> context,
-                  Optional.ofNullable(replicationActivityInput.getTaskQueue()),
                   logClientManager);
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();

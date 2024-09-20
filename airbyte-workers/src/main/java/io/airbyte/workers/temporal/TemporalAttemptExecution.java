@@ -7,8 +7,6 @@ package io.airbyte.workers.temporal;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
@@ -19,14 +17,10 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.temporal.activity.Activity;
-import io.temporal.activity.ActivityExecutionContext;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,24 +34,18 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TemporalAttemptExecution.class);
 
-  private final JobRunConfig jobRunConfig;
   private final Path jobRoot;
   private final ReplicationWorker worker;
   private final ReplicationInput input;
   private final Consumer<Path> mdcSetter;
-  private final Supplier<String> workflowIdProvider;
-  private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
-  private final Optional<String> replicationTaskQueue;
   private final LogClientManager logClientManager;
 
   public TemporalAttemptExecution(final Path workspaceRoot,
                                   final JobRunConfig jobRunConfig,
                                   final ReplicationWorker worker,
                                   final ReplicationInput input,
-                                  final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
-                                  final Supplier<ActivityExecutionContext> activityContext,
                                   final LogClientManager logClientManager) {
     this(
         workspaceRoot,
@@ -65,32 +53,7 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
         worker,
         input,
         (logClientManager::setJobMdc),
-        airbyteApiClient,
-        () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        Optional.empty(),
-        logClientManager);
-  }
-
-  public TemporalAttemptExecution(final Path workspaceRoot,
-                                  final JobRunConfig jobRunConfig,
-                                  final ReplicationWorker worker,
-                                  final ReplicationInput input,
-                                  final AirbyteApiClient airbyteApiClient,
-                                  final String airbyteVersion,
-                                  final Supplier<ActivityExecutionContext> activityContext,
-                                  final Optional<String> replicationTaskQueue,
-                                  final LogClientManager logClientManager) {
-    this(
-        workspaceRoot,
-        jobRunConfig,
-        worker,
-        input,
-        (logClientManager::setJobMdc),
-        airbyteApiClient,
-        () -> activityContext.get().getInfo().getWorkflowId(),
-        airbyteVersion,
-        replicationTaskQueue,
         logClientManager);
   }
 
@@ -100,22 +63,14 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
                            final ReplicationWorker worker,
                            final ReplicationInput input,
                            final Consumer<Path> mdcSetter,
-                           final AirbyteApiClient airbyteApiClient,
-                           final Supplier<String> workflowIdProvider,
                            final String airbyteVersion,
-                           final Optional<String> replicationTaskQueue,
                            final LogClientManager logClientManager) {
-    this.jobRunConfig = jobRunConfig;
-
     this.jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
     this.worker = worker;
     this.input = input;
     this.mdcSetter = mdcSetter;
-    this.workflowIdProvider = workflowIdProvider;
 
-    this.airbyteApiClient = airbyteApiClient;
     this.airbyteVersion = airbyteVersion;
-    this.replicationTaskQueue = replicationTaskQueue;
     this.logClientManager = logClientManager;
   }
 
@@ -131,7 +86,6 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
 
         LOGGER.info("Using job log path: {}", logClientManager.fullLogPath(jobRoot));
         LOGGER.info("Executing worker wrapper. Airbyte version: {}", airbyteVersion);
-        saveWorkflowIdForCancellation(airbyteApiClient);
         return worker.run(input, jobRoot);
       }
 
@@ -149,25 +103,6 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
       inner = inner.getCause();
     }
     ApmTraceUtils.addTagsToTrace(Map.of(ERROR_ACTUAL_TYPE_KEY, e.getClass().getName()));
-  }
-
-  private void saveWorkflowIdForCancellation(final AirbyteApiClient airbyteApiClient) throws IOException {
-    // If the jobId is not a number, it means the job is a synchronous job. No attempt is created for
-    // it, and it cannot be cancelled, so do not save the workflowId. See
-    // SynchronousSchedulerClient.java for info.
-    //
-    // At this moment(Nov 2022), we decide to save workflowId for cancellation purpose only at
-    // replication activity level. We know now the only async workflow is SyncWorkflow,
-    // and under the same workflow, the workflowId would stay the same,
-    // so it's not needed to save it for multiple times.
-    if (NumberUtils.isCreatable(jobRunConfig.getJobId()) && replicationTaskQueue.isPresent()) {
-      final String workflowId = workflowIdProvider.get();
-      airbyteApiClient.getAttemptApi().setWorkflowInAttempt(new SetWorkflowInAttemptRequestBody(
-          Long.parseLong(jobRunConfig.getJobId()),
-          jobRunConfig.getAttemptId().intValue(),
-          workflowId,
-          replicationTaskQueue.get()));
-    }
   }
 
 }

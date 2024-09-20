@@ -7,15 +7,12 @@ package io.airbyte.workers.temporal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
@@ -26,7 +23,6 @@ import io.airbyte.workers.general.ReplicationWorker;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -58,9 +54,6 @@ class TemporalAttemptExecutionTest {
   private TemporalAttemptExecution attemptExecution;
 
   @Mock
-  private AttemptApi attemptApi;
-
-  @Mock
   private LogClientManager logClientManager;
 
   @BeforeAll
@@ -76,8 +69,6 @@ class TemporalAttemptExecutionTest {
   @BeforeEach
   void setup() throws IOException {
     final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
-    when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
-
     final Path workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_attempt_execution_test");
     jobRoot = workspaceRoot.resolve(JOB_ID).resolve(String.valueOf(ATTEMPT_NUMBER));
 
@@ -90,9 +81,7 @@ class TemporalAttemptExecutionTest {
         worker,
         new ReplicationInput(),
         mdcSetter,
-        airbyteApiClient,
-        () -> "workflow_id", configs.getAirbyteVersionOrWarning(),
-        Optional.of("SYNC"),
+        configs.getAirbyteVersionOrWarning(),
         logClientManager);
   }
 
@@ -113,8 +102,6 @@ class TemporalAttemptExecutionTest {
 
     verify(worker).run(any(), any());
     verify(mdcSetter, atLeast(1)).accept(jobRoot);
-    verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.parseLong(JOB_ID)));
   }
 
   @Test
@@ -125,8 +112,6 @@ class TemporalAttemptExecutionTest {
 
     verify(worker).run(any(), any());
     verify(mdcSetter).accept(jobRoot);
-    verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.parseLong(JOB_ID)));
   }
 
 }
