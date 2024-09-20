@@ -110,6 +110,7 @@ export const AccountBalance = () => {
 
 const ListOfCreditExpiryDates = ({ creditBlocks }: { creditBlocks: CreditBlockRead[] }) => {
   const { formatDate } = useIntl();
+  const { formatCredits } = useFormatCredits();
 
   const sortedCreditBlocks = useMemo(
     () => creditBlocks.sort((a, b) => (dayjs(a.expiryDate).isBefore(dayjs(b.expiryDate)) ? -1 : 1)),
@@ -123,7 +124,7 @@ const ListOfCreditExpiryDates = ({ creditBlocks }: { creditBlocks: CreditBlockRe
           <FormattedMessage
             id="settings.organization.billing.creditBlockExpiry"
             values={{
-              amount: creditBlock.amount,
+              amount: formatCredits(creditBlock.amount),
               expiryDate: formatDate(creditBlock.expiryDate, { dateStyle: "medium" }),
             }}
           />
