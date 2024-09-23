@@ -24,4 +24,10 @@ public interface ReplicationActivity {
   @ActivityMethod
   StandardSyncOutput getReplicationOutput(final ReplicationActivityInput replicationInput, final String workloadId);
 
+  @ActivityMethod
+  Boolean isTerminal(final ReplicationActivityInput replicationActivityInput, final String workloadId);
+
+  @ActivityMethod
+  void cancel(final ReplicationActivityInput replicationInput, final String workloadId);
+
 }

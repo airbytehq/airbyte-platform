@@ -151,6 +151,12 @@ public class WorkloadApiWorker implements ReplicationWorker {
     return workloadId;
   }
 
+  public boolean isWorkloadTerminal(final String workloadId) {
+    // TODO handle error
+    final Workload workload = getWorkload(workloadId);
+    return workload.getStatus() != null && TERMINAL_STATUSES.contains(workload.getStatus());
+  }
+
   public void waitForWorkload(final String workloadId) {
     // Wait until workload reaches a terminal status
     // TODO merge this with WorkloadApiHelper.waitForWorkload. The only difference currently is the
@@ -183,6 +189,13 @@ public class WorkloadApiWorker implements ReplicationWorker {
     if (workload.getStatus() == WorkloadStatus.CANCELLED) {
       throw new CancellationException("Replication cancelled by " + workload.getTerminationSource());
     }
+  }
+
+  public void cancelWorkload(final String workloadId) throws IOException {
+    callWithRetry(() -> {
+      workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+      return true;
+    });
   }
 
   public ReplicationOutput getOutput(final String workloadId) throws WorkerException {
@@ -223,7 +236,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
   public void cancel() {
     try {
       if (workloadId != null) {
-        workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+        cancelWorkload(workloadId);
       }
     } catch (final IOException e) {
       throw new RuntimeException(e);

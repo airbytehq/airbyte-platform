@@ -54,6 +54,7 @@ import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -173,6 +174,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
       }
 
+      LOGGER.info("Starting async replication");
+
       final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
       final WorkloadApiWorker worker = workerAndReplicationInput.worker;
 
@@ -184,6 +187,38 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       throw Activity.wrap(e);
     } finally {
       logClientManager.setJobMdc(null);
+    }
+  }
+
+  @Override
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  public Boolean isTerminal(final ReplicationActivityInput replicationActivityInput, final String workloadId) {
+    final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+    final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+    return worker.isWorkloadTerminal(workloadId);
+  }
+
+  @Override
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  public void cancel(final ReplicationActivityInput replicationActivityInput, final String workloadId) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
+
+    try (final var ignored = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
+
+      LOGGER.info("Canceling workload {}", workloadId);
+
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+      try {
+        worker.cancelWorkload(workloadId);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

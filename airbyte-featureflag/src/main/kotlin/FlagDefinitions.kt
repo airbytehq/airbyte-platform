@@ -181,3 +181,5 @@ object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-bu
 object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
 
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
+
+object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)

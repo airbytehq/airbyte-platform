@@ -43,8 +43,12 @@ import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
+import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
+import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,6 +81,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private InvokeOperationsActivity invokeOperationsActivity;
+
+  private Boolean shouldBlock;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -133,9 +139,41 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    final StandardSyncOutput syncOutput = replicationActivity
-        .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-            refreshSchemaOutput));
+    final ReplicationActivityInput replicationActivityInput =
+        generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+            refreshSchemaOutput);
+    final StandardSyncOutput syncOutput;
+
+    if (syncInput.getUseAsyncReplicate() == null || !syncInput.getUseAsyncReplicate()) {
+      syncOutput = replicationActivity.replicateV2(replicationActivityInput);
+    } else {
+      String workloadId = null;
+      try {
+        workloadId = replicationActivity.startReplication(replicationActivityInput);
+
+        shouldBlock = true;
+        while (shouldBlock) {
+          // TODO increase timeout from 1min to avoid burning through the history size too quickly once
+          // signals are implemented
+          Workflow.await(Duration.ofMinutes(1), () -> !shouldBlock);
+          shouldBlock = !replicationActivity.isTerminal(replicationActivityInput, workloadId);
+        }
+
+        syncOutput = replicationActivity.getReplicationOutput(replicationActivityInput, workloadId);
+      } catch (final CanceledFailure | ActivityFailure cf) {
+        if (workloadId != null) {
+          // This is in order to be usable from the detached scope
+          final String capturedWorkloadId = workloadId;
+          CancellationScope detached =
+              Workflow.newDetachedCancellationScope(() -> {
+                replicationActivity.cancel(replicationActivityInput, capturedWorkloadId);
+                shouldBlock = false;
+              });
+          detached.run();
+        }
+        throw cf;
+      }
+    }
 
     final WebhookOperationSummary webhookOperationSummary = invokeOperationsActivity.invokeOperations(
         syncInput.getOperationSequence(), syncInput, jobRunConfig);
