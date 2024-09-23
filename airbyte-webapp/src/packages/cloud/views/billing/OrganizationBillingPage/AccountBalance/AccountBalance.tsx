@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { FormattedDate, FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -43,21 +43,13 @@ export const AccountBalance = () => {
           <FlexContainer justifyContent="space-between" gap="lg" direction="column">
             {showCreditBalance && (
               <FlexItem>
-                <Tooltip
-                  disabled={balance?.credits?.blocks?.length === 0}
-                  control={
-                    <FlexContainer alignItems="center" gap="xs">
-                      <Text>
-                        <FormattedMessage id="settings.organization.billing.remainingCredits" />
-                      </Text>
-                      <Icon type="infoOutline" size="xs" />
-                    </FlexContainer>
-                  }
-                >
-                  {balance?.credits?.blocks?.length && balance.credits.blocks.length > 0 && (
-                    <ListOfCreditExpiryDates creditBlocks={balance.credits?.blocks} />
-                  )}
-                </Tooltip>
+                <FlexContainer alignItems="center" gap="xs">
+                  <Text>
+                    <FormattedMessage id="settings.organization.billing.remainingCredits" />
+                  </Text>
+                  {balance?.credits?.blocks?.length && <CreditExpiryTooltip creditBlocks={balance.credits.blocks} />}
+                </FlexContainer>
+
                 <Text size="lg">
                   <FormattedMessage
                     id="settings.organization.billing.remainingCreditsAmount"
@@ -108,19 +100,26 @@ export const AccountBalance = () => {
   );
 };
 
-const ListOfCreditExpiryDates = ({ creditBlocks }: { creditBlocks: CreditBlockRead[] }) => {
+const CreditExpiryTooltip = ({ creditBlocks }: { creditBlocks: CreditBlockRead[] }) => {
   const { formatDate } = useIntl();
   const { formatCredits } = useFormatCredits();
 
   const sortedCreditBlocks = useMemo(
-    () => creditBlocks.sort((a, b) => (dayjs(a.expiryDate).isBefore(dayjs(b.expiryDate)) ? -1 : 1)),
+    () =>
+      creditBlocks
+        .filter((block) => block.amount && block.expiryDate)
+        .sort((a, b) => (dayjs(a.expiryDate).isBefore(dayjs(b.expiryDate)) ? -1 : 1)),
     [creditBlocks]
   );
 
+  if (!sortedCreditBlocks.length) {
+    return null;
+  }
+
   return (
-    <>
-      {sortedCreditBlocks.map((creditBlock) => (
-        <>
+    <Tooltip control={<Icon type="calendar" size="xs" />}>
+      {sortedCreditBlocks.map((creditBlock, index) => (
+        <React.Fragment key={index}>
           <FormattedMessage
             id="settings.organization.billing.creditBlockExpiry"
             values={{
@@ -129,8 +128,8 @@ const ListOfCreditExpiryDates = ({ creditBlocks }: { creditBlocks: CreditBlockRe
             }}
           />
           <br />
-        </>
+        </React.Fragment>
       ))}
-    </>
+    </Tooltip>
   );
 };
