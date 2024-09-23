@@ -21,6 +21,7 @@ import io.airbyte.api.client.generated.OperationApi
 import io.airbyte.api.client.generated.OrganizationApi
 import io.airbyte.api.client.generated.PermissionApi
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
+import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.generated.SourceDefinitionApi
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi
@@ -81,6 +82,7 @@ class AirbyteApiClient(
   val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
   val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
   val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
+  val signalApi = SignalApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceDefinitionSpecificationApi =

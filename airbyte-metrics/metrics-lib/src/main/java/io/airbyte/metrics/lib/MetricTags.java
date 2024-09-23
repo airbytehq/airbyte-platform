@@ -74,6 +74,8 @@ public class MetricTags {
   public static final String PAYLOAD_NAME = "payload_name";
   public static final String IS_MATCH = "is_match";
   public static final String IS_MISS = "is_miss";
+  public static final String TASK_QUEUE = "task_queue";
+  public static final String WORKFLOW_TYPE = "workflow_type";
 
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.value() : UNKNOWN;

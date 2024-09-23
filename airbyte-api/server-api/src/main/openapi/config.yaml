@@ -5218,7 +5218,23 @@ paths:
                 format: binary
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
+  /v1/signal:
+    post:
+      tags:
+        - signal
+      summary: Signal that an operation is terminal
+      operationId: signal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalInput"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   # Airbyte API
   /public:
     get:
@@ -14300,7 +14316,19 @@ components:
       properties:
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
-
+    SignalInput:
+      type: object
+      required:
+        - workflowType
+        - workflowId
+        - taskQueue
+      properties:
+        workflowType:
+          type: string
+        workflowId:
+          type: string
+        taskQueue:
+          type: string
   responses:
     NotFoundResponse:
       description: Object with given id was not found.
