@@ -267,8 +267,12 @@
     color: colors.$inverse;
     @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
 
-    .buttonIcon {
+    & .buttonIcon {
+      // Note: The icon must support a gradient
+      // so we fallback to the start color
       color: colors.$gradient-primary-start;
+      --start-color: #{colors.$gradient-primary-start};
+      --stop-color: #{colors.$gradient-primary-stop};
     }
 
     &:hover {

@@ -33,6 +33,11 @@ export default defineConfig(() => {
       svgrPlugin({
         svgrOptions: {
           plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
+          jsx: {
+            babelConfig: {
+              plugins: ["react-inline-svg-unique-id"],
+            },
+          },
           titleProp: true,
           svgoConfig: {
             plugins: [
