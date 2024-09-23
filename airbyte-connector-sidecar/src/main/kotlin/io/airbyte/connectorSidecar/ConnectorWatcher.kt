@@ -51,20 +51,32 @@ class ConnectorWatcher(
   private val workloadApiClient: WorkloadApiClient,
   private val jobOutputDocStore: JobOutputDocStore,
   private val logContextFactory: SidecarLogContextFactory,
+  private val heartbeatMonitor: HeartbeatMonitor,
 ) {
   fun run() {
     val sidecarInput = readSidecarInput()
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
       LineGobbler.startSection(sidecarInput.operationType.toString())
-
+      var heartbeatStarted = false
       try {
+        heartbeatMonitor.startHeartbeatThread(sidecarInput)
+        heartbeatStarted = true
+
         waitForConnectorOutput(sidecarInput)
+
+        if (heartbeatMonitor.shouldAbort()) {
+          logger.warn { "Heartbeat indicates that the workload is in a terminal state, exiting process" }
+          exitInternalError()
+        }
         val connectorOutput = processConnectorOutput(sidecarInput)
         saveConnectorOutput(sidecarInput.workloadId, connectorOutput)
         markWorkloadSuccess(sidecarInput.workloadId)
       } catch (e: Exception) {
         handleException(sidecarInput, e)
       } finally {
+        if (heartbeatStarted) {
+          heartbeatMonitor.stopHeartbeatThread()
+        }
         LineGobbler.endSection(sidecarInput.operationType.toString())
         exitProperly()
       }
@@ -80,9 +92,13 @@ class ConnectorWatcher(
     val stopwatch = Stopwatch.createStarted()
     while (!areNeededFilesPresent()) {
       Thread.sleep(100)
+      if (heartbeatMonitor.shouldAbort()) {
+        logger.warn { "Heartbeat indicates that the workload is in a terminal state, exiting process" }
+        exitInternalError()
+      }
       val isWithinSync = input.discoverCatalogInput?.manual?.not() ?: false
       if (hasFileTimeoutReached(stopwatch, isWithinSync)) {
-        val message = "Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s). Is the connector still running?"
+        val message = "Failed to find output files from connector within timeout of $fileTimeoutMinutes minute(s). Is the connector still running?"
         logger.warn { message }
         val failureReason =
           FailureReason()
@@ -237,7 +253,7 @@ class ConnectorWatcher(
         .withFailureOrigin(failureOrigin)
         .withExternalMessage("The check connection failed due to an internal error.")
         .withInternalMessage(e.message)
-        .withStacktrace(e.toString())
+        .withStacktrace(e.stackTraceToString())
 
     val checkConnectionOutput =
       StandardCheckConnectionOutput()
@@ -260,7 +276,7 @@ class ConnectorWatcher(
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
         .withExternalMessage("The discover catalog failed due to an internal error for source: ${input.sourceId}")
         .withInternalMessage(e.message)
-        .withStacktrace(e.toString())
+        .withStacktrace(e.stackTraceToString())
 
     return ConnectorJobOutput()
       .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
@@ -278,7 +294,7 @@ class ConnectorWatcher(
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
         .withExternalMessage("The spec failed due to an internal error for connector: $dockerImage")
         .withInternalMessage(e.message)
-        .withStacktrace(e.toString())
+        .withStacktrace(e.stackTraceToString())
 
     return ConnectorJobOutput()
       .withOutputType(ConnectorJobOutput.OutputType.SPEC)
