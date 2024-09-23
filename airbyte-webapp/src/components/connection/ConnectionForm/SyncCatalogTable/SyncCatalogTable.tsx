@@ -10,13 +10,14 @@ import {
 } from "@tanstack/react-table";
 import classnames from "classnames";
 import set from "lodash/set";
-import React, { FC, useCallback, useMemo, useState, useDeferredValue } from "react";
+import React, { FC, useCallback, useMemo, useState, useDeferredValue, useContext } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { ColumnMeta } from "components/ui/Table/types";
 import { Text } from "components/ui/Text";
@@ -50,13 +51,6 @@ import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getRowChangeStatus, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../formConfig";
-
-export interface SyncCatalogTableProps {
-  /**
-   * Outer scrollable container element for virtualized sync catalog items
-   */
-  scrollParentContainer?: HTMLDivElement;
-}
 
 export interface SyncCatalogUIModel {
   rowType: "namespace" | "stream" | "field" | "nestedField";
@@ -100,7 +94,7 @@ export interface SyncCatalogUIModel {
   subRows?: SyncCatalogUIModel[];
 }
 
-export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
+export const SyncCatalogTable: FC = () => {
   const { formatMessage } = useIntl();
   const { mode, connection } = useConnectionFormService();
   const initialValues = useInitialFormValues(connection, mode);
@@ -456,6 +450,8 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     ]);
   };
 
+  const customScrollParent = useContext(ScrollParentContext);
+
   return (
     <>
       <Box p="md" pl="xl" pr="xl" className={styles.stickyControlsContainer}>
@@ -515,7 +511,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         fixedItemHeight={40}
         increaseViewportBy={50}
         useWindowScroll
-        customScrollParent={scrollParentContainer}
+        customScrollParent={customScrollParent ?? undefined}
       />
     </>
   );

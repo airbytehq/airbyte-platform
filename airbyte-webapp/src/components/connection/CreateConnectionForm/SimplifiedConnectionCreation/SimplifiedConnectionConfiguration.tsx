@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useState } from "react";
+import React from "react";
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Route, Routes } from "react-router-dom";
@@ -15,6 +15,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { ScrollParent } from "components/ui/ScrollParent";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
@@ -67,14 +68,6 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
-
-  const setScrollableContainerRef = (ref: HTMLDivElement | null) => {
-    if (ref === null) {
-      return;
-    }
-    setScrollElement(ref);
-  };
 
   // if the user is navigating back from the second step the form may be dirty
   useMount(() => {
@@ -82,7 +75,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <ScrollableContainer ref={setScrollableContainerRef} className={styles.container}>
+    <ScrollParent props={{ className: styles.container }}>
       <FlexContainer direction="column" gap="lg">
         <Card
           title={formatMessage({ id: "connectionForm.selectSyncMode" })}
@@ -93,14 +86,14 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
         {useSyncCatalogV2 ? (
           <Card noPadding title={formatMessage({ id: "connection.schema" })}>
             <Box mb="xl" data-testid="catalog-tree-table-body">
-              <SyncCatalogTable scrollParentContainer={scrollElement} />
+              <SyncCatalogTable />
             </Box>
           </Card>
         ) : (
-          <SyncCatalogCard scrollParentContainer={scrollElement} />
+          <SyncCatalogCard />
         )}
       </FlexContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };
 
