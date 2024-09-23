@@ -85,6 +85,7 @@ spec:
             {{- include "airbyte.database.envs" . | nindent 12 }}
             {{- include "airbyte.enterprise.instanceAdmin" . | nindent 12 }} 
             {{- include "airbyte.enterprise.identityProvider" . | nindent 12 }} 
+            {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
 
             # Values from secret
             {{- if .Values.secrets }}

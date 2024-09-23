@@ -34,7 +34,7 @@ Keycloak Configuration
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: DATABASE_URL
+      key: KEYCLOAK_DATABASE_URL
 {{- end }}
 
 {{- define "airbyte.keycloak.database.envs" }}

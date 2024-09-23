@@ -54,18 +54,18 @@ var databaseClients = []struct {
 	//		"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
 	//	},
 	//},
-// 	{
-// 		kind: "Deployment",
-// 		name: "airbyte-workload-launcher",
-// 		expectedEnvVars: map[string]expectedEnvVar{
-// 			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-// 			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-// 			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
-// 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
-// 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-// 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
-// 		},
-// 	},
+	// 	{
+	// 		kind: "Deployment",
+	// 		name: "airbyte-workload-launcher",
+	// 		expectedEnvVars: map[string]expectedEnvVar{
+	// 			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+	// 			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+	// 			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+	// 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
+	// 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
+	// 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+	// 		},
+	// 	},
 	{
 		kind: "Deployment",
 		name: "airbyte-cron",
@@ -84,19 +84,19 @@ var databaseClients = []struct {
 		expectedEnvVars: map[string]expectedEnvVar{
 			"KEYCLOAK_DATABASE_USERNAME": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"KEYCLOAK_DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"KEYCLOAK_DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"KEYCLOAK_DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
 		},
 	},
 	{
 		kind: "Job",
 		name: "airbyte-keycloak-setup",
 		expectedEnvVars: map[string]expectedEnvVar{
-			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
-			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
-			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_HOST":         expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":         expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":           expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_USER":         expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
+			"DATABASE_PASSWORD":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
+			"KEYCLOAK_DATABASE_URL": expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
 		},
 	},
 	{
@@ -140,7 +140,7 @@ func TestDefaultDatabaseConfiguration(t *testing.T) {
 		helmOpts := baseHelmOptionsForEnterpriseWithValues() // enable all the things
 		helmOpts.SetValues["metrics.enabled"] = "true"
 		//helmOpts.SetValues["workload-api-server.enabled"] = "true"
-// 		helmOpts.SetValues["workload-launcher.enabled"] = "true"
+		// 		helmOpts.SetValues["workload-launcher.enabled"] = "true"
 		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
 		require.NoError(t, err)
 
@@ -166,7 +166,7 @@ func TestDefaultDatabaseConfiguration(t *testing.T) {
 			helmOpts := baseHelmOptionsForEnterpriseWithValues() // enable all the things
 			helmOpts.SetValues["metrics.enabled"] = "true"
 			//helmOpts.SetValues["workload-api-server.enabled"] = "true"
-// 			helmOpts.SetValues["workload-launcher.enabled"] = "true"
+			// 			helmOpts.SetValues["workload-launcher.enabled"] = "true"
 			helmOpts.SetValues["postgresql.postgresqlUsername"] = "override-user"
 			helmOpts.SetValues["postgresql.postgresqlPassword"] = "override-pass"
 			helmOpts.SetValues["postgresql.postgresqlDatabase"] = "override-db"
@@ -245,7 +245,7 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 				helmOpts := baseHelmOptionsForEnterpriseWithValues() // enable all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
 				//helmOpts.SetValues["workload-api-server.enabled"] = "true"
-// 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
+				// 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 				helmOpts.SetValues["postgresql.enabled"] = "false"
 				helmOpts.SetValues["global.database.secretName"] = ""
 
@@ -271,7 +271,7 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 			helmOpts := baseHelmOptionsForEnterpriseWithValues() // enable all the things
 			helmOpts.SetValues["metrics.enabled"] = "true"
 			//helmOpts.SetValues["workload-api-server.enabled"] = "true"
-// 			helmOpts.SetValues["workload-launcher.enabled"] = "true"
+			// 			helmOpts.SetValues["workload-launcher.enabled"] = "true"
 			helmOpts.SetValues["postgresql.enabled"] = "false"
 			helmOpts.SetValues["global.database.secretName"] = ""
 
