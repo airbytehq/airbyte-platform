@@ -47,6 +47,7 @@ export const links = {
   connectorBuilderParameterizedRequests: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning#parameterized-requests`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
+  connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",

@@ -25,9 +25,11 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import { links } from "core/utils/links";
 import { convertSnakeToCamel } from "core/utils/strings";
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
@@ -223,6 +225,16 @@ const ConnectorBuilderGenerateForm: React.FC<{
             </FlexContainer>
             <Text size="sm" color="grey">
               <FormattedMessage id="connectorBuilder.generatePage.description" />
+            </Text>
+            <Text size="sm" color="grey">
+              <FormattedMessage
+                id="connectorBuilder.generatePage.description.docsLink"
+                values={{
+                  lnk: (children: React.ReactNode) => (
+                    <ExternalLink href={links.connectorBuilderAssist}>{children}</ExternalLink>
+                  ),
+                }}
+              />
             </Text>
             <FlexContainer direction="column" gap="none" className={styles.formFields}>
               <GenerateConnectorFormFields assistApiErrors={assistApiErrors} />

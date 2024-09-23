@@ -7,11 +7,13 @@ import { Button, ButtonProps } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useTrackMount } from "core/services/analytics/useAnalyticsService";
+import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -65,14 +67,13 @@ const AssistSwitch: React.FC = () => {
 };
 
 const AssistTitle = () => {
-  const { formatMessage } = useIntl();
   const { assistEnabled } = useConnectorBuilderFormState();
 
   return (
     <FlexContainer direction="row" alignItems="center" gap="sm">
       <Icon type="aiStars" color={assistEnabled ? "magic" : "disabled"} size="md" />
       <Heading as="h3" size="sm" className={styles.assistTitle}>
-        {formatMessage({ id: "connectorBuilder.assist.config.title" })}
+        <FormattedMessage id="connectorBuilder.assist.config.title" />
       </Heading>
       <Badge variant="blue">
         <FormattedMessage id="ui.badge.beta" />
@@ -82,7 +83,6 @@ const AssistTitle = () => {
 };
 
 const AssistConfigPanel = () => {
-  const { formatMessage } = useIntl();
   const { projectId } = useConnectorBuilderFormState();
 
   useTrackMount({
@@ -101,7 +101,14 @@ const AssistConfigPanel = () => {
         <AssistSwitch />
       </FlexContainer>
       <Text as="span" color="grey400" size="sm">
-        {formatMessage({ id: "connectorBuilder.assist.config.description" })}
+        <FormattedMessage
+          id="connectorBuilder.assist.config.description"
+          values={{
+            lnk: (children: React.ReactNode) => (
+              <ExternalLink href={links.connectorBuilderAssist}>{children}</ExternalLink>
+            ),
+          }}
+        />
       </Text>
       <AssistForm />
     </FlexContainer>
@@ -109,14 +116,13 @@ const AssistConfigPanel = () => {
 };
 
 const AIButton = (props: ButtonProps) => {
-  const { formatMessage } = useIntl();
   const { assistEnabled } = useConnectorBuilderFormState();
 
   const variant = assistEnabled ? "magic" : "secondary";
 
   return (
     <Button variant={variant} icon="aiStars" {...props} type="button">
-      {formatMessage({ id: "connectorBuilder.assist.config.button" })}
+      <FormattedMessage id="connectorBuilder.assist.config.button" />
     </Button>
   );
 };
