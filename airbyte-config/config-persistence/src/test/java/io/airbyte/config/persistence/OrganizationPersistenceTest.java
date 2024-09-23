@@ -10,12 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -178,7 +178,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   void testListOrganizationsByUserId(final Boolean withKeywordSearch, final Boolean withPagination) throws Exception {
     // create a user
     final UUID userId = UUID.randomUUID();
-    userPersistence.writeUser(new User()
+    userPersistence.writeAuthenticatedUser(new AuthenticatedUser()
         .withUserId(userId)
         .withName("user")
         .withAuthUserId("auth_id")

@@ -4,57 +4,60 @@ import {
   ExpandedState,
   flexRender,
   getCoreRowModel,
-  getExpandedRowModel,
-  getFilteredRowModel,
   getGroupedRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import classnames from "classnames";
 import set from "lodash/set";
-import React, { FC, useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
+import React, { FC, useCallback, useMemo, useState, useDeferredValue, useContext } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { ColumnMeta } from "components/ui/Table/types";
 import { Text } from "components/ui/Text";
+import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
+import { FeatureItem, useFeature } from "core/services/features";
+import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
-import { CursorCell } from "./components/CursorCell";
+import { ExpandCollapseAllControl } from "./components/ExpandCollapseAllControl";
 import { FieldCursorCell } from "./components/FieldCursorCell";
+import { FieldHashMapping } from "./components/FieldHashMapping";
 import { FieldPKCell } from "./components/FieldPKCell";
 import { FormControls } from "./components/FormControls";
-import { PKCell } from "./components/PKCell";
+import { HeaderNamespaceCell } from "./components/HeaderNamespaceCell";
+import { NamespaceNameCell } from "./components/NamespaceNameCell";
+import { RefreshSchemaControl } from "./components/RefreshSchemaControl";
 import { SelectedFieldsCell } from "./components/SelectedFieldsCell";
+import { StreamCursorCell } from "./components/StreamCursorCell";
 import { StreamFieldNameCell } from "./components/StreamFieldCell";
 import { StreamNameCell } from "./components/StreamNameCell";
+import { StreamPKCell } from "./components/StreamPKCell";
 import { FilterTabId, StreamsFilterTabs } from "./components/StreamsFilterTabs";
 import { SyncModeCell } from "./components/SyncModeCell";
-import { TableControls } from "./components/TableControls";
+import { getExpandedRowModel } from "./getExpandedRowModel";
+import { getFilteredRowModel } from "./getFilteredRowModel";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
-import { getRowChangeStatus, getSyncCatalogRows, isStreamRow } from "./utils";
+import { getRowChangeStatus, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../formConfig";
 
-export interface SyncCatalogTableProps {
-  /**
-   * Outer scrollable container element for virtualized sync catalog items
-   */
-  scrollParentContainer?: HTMLDivElement;
-}
-
 export interface SyncCatalogUIModel {
+  rowType: "namespace" | "stream" | "field" | "nestedField";
   /**
    * react-form syncCatalog streamNode field
    */
-  streamNode: SyncStreamFieldWithId;
+  streamNode?: SyncStreamFieldWithId;
   /**
    * initial react-form syncCatalog streamNode field
    * used for comparing with the current streamNode field
@@ -91,19 +94,27 @@ export interface SyncCatalogUIModel {
   subRows?: SyncCatalogUIModel[];
 }
 
-export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
+export const SyncCatalogTable: FC = () => {
   const { formatMessage } = useIntl();
   const { mode, connection } = useConnectionFormService();
   const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
-  const { fields: streams, update } = useFieldArray({
+  const {
+    fields: streams,
+    update,
+    replace,
+  } = useFieldArray({
     name: "syncCatalog.streams",
     control,
   });
   const prefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
+  const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
+  const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
 
-  const debugTable = false;
-  const [expanded, setExpanded] = React.useState<ExpandedState>({});
+  const isHashingSupported = useFeature(FeatureItem.FieldHashing);
+  const isHashingEnabled = useExperiment("connection.hashingUI");
+  const showHashing = isHashingSupported && isHashingEnabled;
+
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
   const deferredFilteringValue = useDeferredValue(filtering);
@@ -115,6 +126,11 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         ...streamNode.config,
         ...updatedConfig,
       });
+
+      // if this stream is disabled, remove any hashedFields configured
+      if (updatedStreamNode.config?.selected === false) {
+        updatedStreamNode.config.hashedFields = undefined;
+      }
 
       const streamNodeIndex = streams.findIndex((s) => s.id === streamNode.id);
       update(streamNodeIndex, updatedStreamNode);
@@ -131,40 +147,104 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     columnHelper.accessor("isEnabled", {
       id: "stream.selected",
       header: () => {},
-      filterFn: (row, _, filterValue) => row.original.streamNode.config?.selected === filterValue,
+      filterFn: (row, _, filterValue) => row.original.streamNode?.config?.selected === filterValue,
       enableGlobalFilter: false, // since it's boolean value we don't need to filter it globally
     }),
     columnHelper.accessor("name", {
       id: "stream.name",
-      header: () => {},
-      cell: ({ row, getValue }) =>
-        isStreamRow(row) ? (
-          <StreamNameCell
-            value={getValue()}
-            row={row}
-            updateStreamField={onUpdateStreamConfigWithStreamNode}
-            globalFilterValue={filtering}
-          />
-        ) : (
-          <StreamFieldNameCell
-            row={row}
-            updateStreamField={onUpdateStreamConfigWithStreamNode}
-            globalFilterValue={filtering}
-          />
-        ),
+      header: () => (
+        <HeaderNamespaceCell
+          streams={streams}
+          onStreamsChanged={replace}
+          syncCheckboxDisabled={!!filtering.length}
+          namespaceFormat={watchedNamespaceFormat}
+          namespaceDefinition={watchedNamespaceDefinition}
+        />
+      ),
+      cell: ({ row, getValue }) => (
+        <div
+          style={{
+            // shift row depending on depth: namespace -> stream -> field -> nestedField
+            paddingLeft: `${row.depth === 0 ? 0 : row.depth * 20}px`,
+          }}
+        >
+          {isNamespaceRow(row) ? (
+            <NamespaceNameCell
+              row={row}
+              streams={streams}
+              onStreamsChanged={replace}
+              syncCheckboxDisabled={!!filtering.length}
+              namespaceFormat={watchedNamespaceFormat}
+              namespaceDefinition={watchedNamespaceDefinition}
+              columnFilters={columnFilters}
+            />
+          ) : isStreamRow(row) ? (
+            <StreamNameCell
+              value={getValue()}
+              row={row}
+              updateStreamField={onUpdateStreamConfigWithStreamNode}
+              globalFilterValue={filtering}
+            />
+          ) : (
+            <StreamFieldNameCell
+              row={row}
+              updateStreamField={onUpdateStreamConfigWithStreamNode}
+              globalFilterValue={filtering}
+            />
+          )}
+        </div>
+      ),
       meta: {
         thClassName: styles.streamOrFieldNameCell,
         tdClassName: styles.streamOrFieldNameCell,
       },
     }),
+    columnHelper.display({
+      id: "hashing",
+      cell: ({ row }) =>
+        isNamespaceRow(row) ? (
+          <FlexContainer alignItems="center" gap="none">
+            <Text size="sm" color="grey500">
+              <FormattedMessage id="connectionForm.hashing.title" />
+            </Text>
+            <InfoTooltip>
+              <FormattedMessage id="connectionForm.hashing.info" />
+            </InfoTooltip>
+          </FlexContainer>
+        ) : isStreamRow(row) ? null : (
+          <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+        ),
+      meta: {
+        thClassName: styles.hashCell,
+        tdClassName: styles.hashCell,
+      },
+    }),
     columnHelper.accessor("syncMode", {
       header: () => (
-        <Text size="sm" color="grey500">
-          <FormattedMessage id="form.syncMode" />
-        </Text>
+        <FlexContainer alignItems="center" gap="none">
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="form.syncMode" />
+          </Text>
+          <InfoTooltip>
+            <FormattedMessage id="connectionForm.syncType.info" />
+            <TooltipLearnMoreLink url={links.syncModeLink} />
+          </InfoTooltip>
+        </FlexContainer>
       ),
       cell: ({ row }) =>
-        isStreamRow(row) ? <SyncModeCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} /> : null,
+        isNamespaceRow(row) ? (
+          <FlexContainer alignItems="center" gap="none">
+            <Text size="sm" color="grey500">
+              <FormattedMessage id="form.syncMode" />
+            </Text>
+            <InfoTooltip>
+              <FormattedMessage id="connectionForm.syncType.info" />
+              <TooltipLearnMoreLink url={links.syncModeLink} />
+            </InfoTooltip>
+          </FlexContainer>
+        ) : isStreamRow(row) ? (
+          <SyncModeCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+        ) : null,
       meta: {
         thClassName: styles.syncModeCell,
         tdClassName: styles.syncModeCell,
@@ -174,7 +254,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <PKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <StreamPKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldPKCell row={row} />
         ),
@@ -187,7 +267,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <CursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <StreamCursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldCursorCell row={row} />
         ),
@@ -202,7 +282,14 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
           <FormattedMessage id="form.fields" />
         </Text>
       ),
-      cell: ({ row }) => (isStreamRow(row) ? <SelectedFieldsCell row={row} /> : null),
+      cell: ({ row }) =>
+        isNamespaceRow(row) ? (
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="form.fields" />
+          </Text>
+        ) : isStreamRow(row) ? (
+          <SelectedFieldsCell row={row} />
+        ) : null,
       meta: {
         thClassName: styles.amountOfFieldsCell,
         tdClassName: styles.amountOfFieldsCell,
@@ -215,61 +302,79 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     [initialValues.syncCatalog.streams, prefix, streams]
   );
 
-  const { getHeaderGroups, getRowModel, getState, toggleAllRowsExpanded, getIsAllRowsExpanded } =
-    useReactTable<SyncCatalogUIModel>({
-      columns,
-      data: preparedData,
-      getSubRows: (row) => row.subRows,
-      state: {
-        expanded,
-        globalFilter: deferredFilteringValue,
-        columnFilters,
-        columnVisibility: {
-          "stream.selected": false,
-        },
+  /**
+   * Get initial expanded state for all namespaces rows
+   *  { [rowIndex]: boolean }, where rowIndex is the index of the namespace row
+   */
+  const initialExpandedState = useMemo(
+    () => Object.fromEntries(preparedData.map((_, index) => [index, true])),
+    [preparedData]
+  );
+  const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpandedState);
+
+  const { getHeaderGroups, getRowModel, toggleAllRowsExpanded } = useReactTable<SyncCatalogUIModel>({
+    columns,
+    data: preparedData,
+    getSubRows: (row) => row.subRows,
+    state: {
+      expanded,
+      globalFilter: deferredFilteringValue,
+      columnFilters,
+      columnVisibility: {
+        "stream.selected": false,
+        hashing: showHashing,
       },
-      initialState: {
-        sorting: [{ id: "stream.name", desc: false }],
-      },
-      getExpandedRowModel: getExpandedRowModel(),
-      getGroupedRowModel: getGroupedRowModel(),
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
-      autoResetExpanded: false,
-      filterFromLeafRows: true,
-      enableGlobalFilter: true,
-      onExpandedChange: setExpanded,
-      onColumnFiltersChange: setColumnFilters,
-      onGlobalFilterChange: setFiltering,
-      getRowCanExpand: (row) => !!row.subRows.length,
-      debugTable,
-    });
-
-  useEffect(() => {
-    // collapse all rows if global filter is empty and all rows are expanded
-    if (!filtering && getIsAllRowsExpanded()) {
-      toggleAllRowsExpanded(!getIsAllRowsExpanded());
-      return;
-    }
-
-    // if global filter is empty or all rows already expanded then return
-    if (!filtering || (filtering && getIsAllRowsExpanded())) {
-      return;
-    }
-
-    toggleAllRowsExpanded();
-  }, [filtering, getIsAllRowsExpanded, toggleAllRowsExpanded]);
+    },
+    initialState: {
+      sorting: [{ id: "stream.name", desc: false }],
+    },
+    getExpandedRowModel: getExpandedRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    autoResetExpanded: false,
+    filterFromLeafRows: true,
+    enableGlobalFilter: true,
+    onExpandedChange: setExpanded,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setFiltering,
+    getRowCanExpand: (row) => !!row.subRows.length,
+  });
 
   const rows = getRowModel().rows;
+
   const initialTopMostItemIndex = useInitialRowIndex(rows);
+
+  const [isAllStreamRowsExpanded, setIsAllStreamRowsExpanded] = useState(false);
+  const toggleAllStreamRowsExpanded = useCallback(
+    (expanded: boolean) => {
+      if (!expanded) {
+        setExpanded(initialExpandedState);
+        setIsAllStreamRowsExpanded(expanded);
+        return;
+      }
+
+      toggleAllRowsExpanded(expanded);
+      setIsAllStreamRowsExpanded(expanded);
+    },
+    [initialExpandedState, toggleAllRowsExpanded]
+  );
 
   const Table: TableComponents["Table"] = ({ style, ...props }) => (
     <table className={classnames(styles.table)} {...props} style={style} />
   );
 
   const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
-    <thead ref={ref} className={classnames(styles.thead, styles.stickyTableHeader)} {...restProps} />
+    <thead
+      ref={ref}
+      className={classnames(
+        styles.thead,
+        styles.stickyTableHeader,
+        styles.theadHidden // temporary hide thead until we have a better solution with sticky namespace rows
+      )}
+      {...restProps}
+    />
   ));
   TableHead.displayName = "TableHead";
 
@@ -305,7 +410,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         {row.getVisibleCells().map((cell) => {
           const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
           return (
-            <td className={classnames(styles.td, meta?.tdClassName)} key={cell.id}>
+            <td className={classnames(styles.td, meta?.tdClassName, { [styles.th]: row.depth === 0 })} key={cell.id}>
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </td>
           );
@@ -345,22 +450,11 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
     ]);
   };
 
+  const customScrollParent = useContext(ScrollParentContext);
+
   return (
     <>
-      <Box p="md" pl="xl" className={styles.stickyControlsContainer}>
-        {debugTable && (
-          <Box p="md">
-            {JSON.stringify(
-              {
-                globalFilter: getState().globalFilter,
-                columnFilters: getState().columnFilters,
-                totalRows: rows.length,
-              },
-              null,
-              2
-            )}
-          </Box>
-        )}
+      <Box p="md" pl="xl" pr="xl" className={styles.stickyControlsContainer}>
         <FlexContainer alignItems="center" justifyContent="space-between">
           <SearchInput
             value={filtering}
@@ -369,21 +463,32 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
             })}
             containerClassName={styles.searchInputContainer}
             onChange={(e) => setFiltering(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              // We do not want to submit the connection form when pressing Enter in the search field
+              e.key === "Enter" && e.preventDefault();
+            }}
+            data-testid="sync-catalog-search"
           />
           <FlexContainer>
             <FlexContainer justifyContent="flex-end" alignItems="center" direction="row" gap="lg">
               {mode === "create" ? (
-                <TableControls
-                  isAllRowsExpanded={getIsAllRowsExpanded()}
-                  toggleAllRowsExpanded={toggleAllRowsExpanded}
-                />
-              ) : (
-                <FormControls>
-                  <TableControls
-                    isAllRowsExpanded={getIsAllRowsExpanded()}
-                    toggleAllRowsExpanded={toggleAllRowsExpanded}
+                <>
+                  <RefreshSchemaControl />
+                  <ExpandCollapseAllControl
+                    isAllRowsExpanded={isAllStreamRowsExpanded}
+                    toggleAllRowsExpanded={toggleAllStreamRowsExpanded}
                   />
-                </FormControls>
+                </>
+              ) : (
+                <>
+                  <FormControls>
+                    <RefreshSchemaControl />
+                  </FormControls>
+                  <ExpandCollapseAllControl
+                    isAllRowsExpanded={isAllStreamRowsExpanded}
+                    toggleAllRowsExpanded={toggleAllStreamRowsExpanded}
+                  />
+                </>
               )}
             </FlexContainer>
           </FlexContainer>
@@ -394,6 +499,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
         totalCount={rows.length}
+        style={{ minHeight: 80 }} // namespace row height + stream row height
         initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
           Table,
@@ -405,7 +511,7 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
         fixedItemHeight={40}
         increaseViewportBy={50}
         useWindowScroll
-        customScrollParent={scrollParentContainer}
+        customScrollParent={customScrollParent ?? undefined}
       />
     </>
   );

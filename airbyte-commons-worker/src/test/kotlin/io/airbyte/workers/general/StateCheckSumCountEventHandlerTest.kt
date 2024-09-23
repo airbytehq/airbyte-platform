@@ -45,7 +45,7 @@ class StateCheckSumCountEventHandlerTest {
   private val stateCheckSumErrorReporter = mockk<StateCheckSumErrorReporter>(relaxed = true)
   private val connectionId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
-  private val deployment = Deployment(DeploymentMetadataRead("test-environment", UUID.randomUUID(), "test-mode", "test-version"))
+  private val deployment = Deployment(DeploymentMetadataRead(UUID.randomUUID(), "test-mode", "test-version"))
   private val trackingIdentity = TrackingIdentity(UUID.randomUUID(), "test-email", null, null, null)
   private val jobId = 123L
   private val attemptNumber = 1

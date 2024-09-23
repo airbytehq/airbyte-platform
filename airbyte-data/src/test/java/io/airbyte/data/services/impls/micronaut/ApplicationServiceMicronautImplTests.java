@@ -18,7 +18,7 @@ import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
 import jakarta.ws.rs.BadRequestException;
@@ -57,12 +57,12 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    var expectedRoles = new HashSet<>();
+    final var expectedRoles = new HashSet<>();
     expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
     expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
     expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
-    var token = applicationServer.getToken("test-client-id", "test-client-secret");
-    var claims = getTokenClaims(token);
+    final var token = applicationServer.getToken("test-client-id", "test-client-secret");
+    final var claims = getTokenClaims(token);
 
     assertEquals(expectedRoles, getRolesFromNode((ArrayNode) claims.get("roles")));
     assertEquals("airbyte-server", claims.get("iss").asText());
@@ -84,7 +84,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    var applications = applicationServer.listApplicationsByUser(new User().withName("Test User"));
+    final var applications = applicationServer.listApplicationsByUser(new AuthenticatedUser().withName("Test User"));
     assertEquals(1, applications.size());
   }
 
@@ -94,7 +94,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.createApplication(new User(), "Test Application"));
+    assertThrows(NotImplementedException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   @Test
@@ -103,7 +103,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.deleteApplication(new User(), "Test Application"));
+    assertThrows(NotImplementedException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   private JsonNode getTokenClaims(final String token) {
@@ -113,7 +113,7 @@ class ApplicationServiceMicronautImplTests {
 
   private Set<String> getRolesFromNode(final ArrayNode claimsNode) {
     final Set<String> roles = new HashSet<>();
-    for (JsonNode role : claimsNode) {
+    for (final JsonNode role : claimsNode) {
       roles.add(role.asText());
     }
     return roles;

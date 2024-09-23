@@ -188,7 +188,9 @@ public class DbConverter {
             Enums.toEnum(record.get(WORKSPACE.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()))
-        .withOrganizationId(record.get(WORKSPACE.ORGANIZATION_ID));
+        .withOrganizationId(record.get(WORKSPACE.ORGANIZATION_ID))
+        .withCreatedAt(record.get(WORKSPACE.CREATED_AT, OffsetDateTime.class).toEpochSecond())
+        .withUpdatedAt(record.get(WORKSPACE.UPDATED_AT, OffsetDateTime.class).toEpochSecond());
   }
 
   /**
@@ -424,7 +426,10 @@ public class DbConverter {
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
         .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
         .withTestingValues(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES) == null ? null
-            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()));
+            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()))
+        .withBaseActorDefinitionVersionId(record.get(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID))
+        .withContributionPullRequestUrl(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL))
+        .withContributionActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID));
   }
 
   /**

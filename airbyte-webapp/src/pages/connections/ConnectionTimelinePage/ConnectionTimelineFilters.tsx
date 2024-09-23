@@ -65,9 +65,10 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               buttonClassName={styles.filterButton}
               optionClassName={styles.filterOption}
               optionTextAs="span"
-              options={statusFilterOptions}
+              options={statusFilterOptions(filterValues)}
               selectedValue={filterValues.status}
               onSelect={(value) => setFilterValue("status", value)}
+              isDisabled={!["sync", "clear", "refresh", ""].includes(filterValues.eventCategory)}
             />
           </FlexItem>
           <FlexItem>
@@ -75,7 +76,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               buttonClassName={styles.filterButton}
               optionClassName={styles.filterOption}
               optionTextAs="span"
-              options={eventTypeFilterOptions}
+              options={eventTypeFilterOptions(filterValues)}
               selectedValue={filterValues.eventCategory}
               onSelect={(value) => setFilterValue("eventCategory", value)}
             />

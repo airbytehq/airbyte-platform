@@ -18,6 +18,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
@@ -28,6 +29,8 @@ import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 /**
  * Micronaut bean factory for general application beans.
@@ -150,4 +153,17 @@ class ApplicationBeanFactory {
       listOf(Geography(geography), PlaneName(dataPlaneName))
     }
   }
+
+  @Singleton
+  fun connectorApmSupportHelper(): ConnectorApmSupportHelper {
+    return ConnectorApmSupportHelper()
+  }
+
+  @Singleton
+  @Named("claimedProcessorBackoffDuration")
+  fun claimedProcessorBackoffDuration() = 5.seconds.toJavaDuration()
+
+  @Singleton
+  @Named("claimedProcessorBackoffMaxDelay")
+  fun claimedProcessorBackoffMaxDelay() = 60.seconds.toJavaDuration()
 }

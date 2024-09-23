@@ -3,7 +3,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import java.util.Properties
 import java.util.zip.ZipFile
 
 buildscript {
@@ -74,7 +73,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
-  implementation(project(":oss:airbyte-commons-logging"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
   implementation(project(":oss:airbyte-commons-protocol"))
@@ -133,20 +132,14 @@ dependencies {
   }
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass = "io.airbyte.workers.Application"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
       )
     )

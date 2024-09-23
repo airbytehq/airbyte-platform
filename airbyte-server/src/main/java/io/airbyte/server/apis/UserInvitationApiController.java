@@ -17,7 +17,7 @@ import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.support.CurrentUserService;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.server.handlers.UserInvitationHandler;
 import io.airbyte.server.helpers.UserInvitationAuthorizationHelper;
 import io.micronaut.http.annotation.Body;
@@ -54,7 +54,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   @Override
   public UserInvitationRead getUserInvitation(@PathParam("inviteCode") final String inviteCode) {
     return ApiHelper.execute(() -> {
-      final User currentUser = currentUserService.getCurrentUser();
+      final AuthenticatedUser currentUser = currentUserService.getCurrentUser();
 
       // note: this endpoint is accessible to all authenticated users, but the handler method throws an
       // exception if a user other than the invitee tries to get the invitation.
@@ -74,7 +74,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
   public UserInvitationCreateResponse createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
     return ApiHelper.execute(() -> {
-      final User currentUser = currentUserService.getCurrentUser();
+      final AuthenticatedUser currentUser = currentUserService.getCurrentUser();
 
       return userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody, currentUser);
     });
@@ -83,7 +83,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   @Override
   public UserInvitationRead acceptUserInvitation(@Body final InviteCodeRequestBody inviteCodeRequestBody) {
     return ApiHelper.execute(() -> {
-      final User currentUser = currentUserService.getCurrentUser();
+      final AuthenticatedUser currentUser = currentUserService.getCurrentUser();
 
       // note: this endpoint is accessible to all authenticated users, but the handler method throws an
       // exception if a user other than the invitee tries to accept the invitation.

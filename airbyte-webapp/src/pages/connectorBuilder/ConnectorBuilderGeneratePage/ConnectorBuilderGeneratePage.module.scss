@@ -1,0 +1,20 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.container {
+  max-width: 500px;
+  margin: auto;
+}
+
+.formCard {
+  @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
+}
+
+.form {
+  padding: variables.$spacing-xl;
+}
+
+.formFields {
+  margin-top: variables.$spacing-xl;
+}

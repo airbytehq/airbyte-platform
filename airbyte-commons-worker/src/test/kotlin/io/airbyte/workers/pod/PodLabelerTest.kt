@@ -1,26 +1,33 @@
 package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.Metadata.CHECK_JOB
+import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
+import io.airbyte.workers.pod.Metadata.IMAGE_NAME
+import io.airbyte.workers.pod.Metadata.IMAGE_VERSION
+import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
+import io.airbyte.workers.pod.Metadata.ORCHESTRATOR_REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.READ_STEP
+import io.airbyte.workers.pod.Metadata.REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.SPEC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
+import io.airbyte.workers.pod.Metadata.WRITE_STEP
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_NAME
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_VERSION
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_NAME
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
-import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.DISCOVER_JOB
-import io.airbyte.workers.process.Metadata.IMAGE_NAME
-import io.airbyte.workers.process.Metadata.IMAGE_VERSION
-import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.SPEC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workers.process.ProcessFactory
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.stream.Stream
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
 
 class PodLabelerTest {
   @Test
@@ -53,8 +60,8 @@ class PodLabelerTest {
   fun getReplicationOrchestratorLabels() {
     val labeler = PodLabeler()
     val result = labeler.getReplicationOrchestratorLabels(ORCHESTRATOR_IMAGE_NAME)
-    val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
-    val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
+    val shortImageName = PodUtils.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
+    val imageVersion = PodUtils.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
     assert(
       result ==
@@ -166,6 +173,35 @@ class PodLabelerTest {
         labeler.getMutexLabels(mutexKey) +
         labeler.getAutoIdLabels(autoId) +
         labeler.getPodSweeperLabels(),
+    )
+  }
+
+  @Test
+  internal fun testGetReplicationLabels() {
+    val labeler = PodLabeler()
+    val version = "dev"
+    val orchestrationImageName = "orchestrator-image-name:$version"
+    val sourceImageName = "source-image-name:$version"
+    val destinationImageName = "destination-image-name:$version"
+    val replicationLabels =
+      labeler.getReplicationLabels(
+        orchestratorImageName = orchestrationImageName,
+        sourceImageName = sourceImageName,
+        destImageName = destinationImageName,
+      )
+    assertEquals(8, replicationLabels.size)
+    assert(
+      replicationLabels ==
+        mapOf(
+          REPL_ORCHESTRATOR_IMAGE_NAME to orchestrationImageName.replace(":$version", ""),
+          ORCHESTRATOR_IMAGE_VERSION to version,
+          SOURCE_IMAGE_NAME to sourceImageName.replace(":$version", ""),
+          SOURCE_IMAGE_VERSION to version,
+          DESTINATION_IMAGE_NAME to destinationImageName.replace(":$version", ""),
+          DESTINATION_IMAGE_VERSION to version,
+          JOB_TYPE_KEY to SYNC_JOB,
+          SYNC_STEP_KEY to REPLICATION_STEP,
+        ),
     )
   }
 

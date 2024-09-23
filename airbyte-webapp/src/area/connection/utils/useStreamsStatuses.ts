@@ -31,7 +31,7 @@ export const useStreamsStatuses = (
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
-  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI", false);
+  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI");
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
@@ -90,7 +90,7 @@ export const useStreamsStatuses = (
       streamStatuses.set(streamKey, streamStatus);
     });
 
-    if (hasPerStreamStatuses && !isConnectionDisabled) {
+    if (hasPerStreamStatuses) {
       // push each stream status entry into to the corresponding stream's history
       data.streamStatuses.forEach((streamStatus) => {
         const streamKey = getStreamKey(streamStatus);
@@ -116,7 +116,6 @@ export const useStreamsStatuses = (
             runningJobConfigType: syncProgressItem?.configType,
             isRateLimitedUiEnabled,
           });
-
           // incomplete stream statuses have no knowledge of FailureType (e.g. config vs. system error)
           // so any Incomplete stream status should be forced to Failed if the connection has a config error
           if (
@@ -124,6 +123,8 @@ export const useStreamsStatuses = (
             detectedStatus.status === StreamStatusType.Incomplete
           ) {
             detectedStatus.status = StreamStatusType.Failed;
+          } else if (isConnectionDisabled) {
+            detectedStatus.status = StreamStatusType.Paused;
           }
 
           if (detectedStatus.status != null) {
@@ -136,16 +137,6 @@ export const useStreamsStatuses = (
             detectedStatus.status === StreamStatusType.Queued;
 
           mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
-        }
-      });
-    }
-
-    if (isConnectionDisabled) {
-      data.streamStatuses.forEach((streamStatus) => {
-        const streamKey = getStreamKey(streamStatus);
-        const mappedStreamStatus = streamStatuses.get(streamKey);
-        if (mappedStreamStatus) {
-          mappedStreamStatus.status = StreamStatusType.Paused;
         }
       });
     }

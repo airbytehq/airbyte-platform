@@ -63,6 +63,20 @@ const initialAuthState: InitializingState = {
   loggedOut: true,
 };
 
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super("Invalid credentials");
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+export class MissingCookieError extends Error {
+  constructor() {
+    super("Missing cookie");
+    this.name = "MissingCookieError";
+  }
+}
+
 // This is a static auth service in case the auth mode of the Airbyte instance is set to "none"
 export const SimpleAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const [authState, dispatch] = useReducer(simpleAuthStateReducer, initialAuthState);
@@ -92,16 +106,33 @@ export const SimpleAuthService: React.FC<PropsWithChildren> = ({ children }) => 
 
   const loginCallback = useCallback(
     async (values: SimpleAuthLoginFormValues) => {
-      await login({ username: values.username, password: values.password });
-      const user = await getDefaultUser();
-      dispatch({ type: "login", user });
+      try {
+        await login({ username: values.username, password: values.password });
+      } catch (e) {
+        if (e.status === 401) {
+          throw new InvalidCredentialsError();
+        }
+        throw e;
+      }
+      try {
+        const user = await getDefaultUser();
+        dispatch({ type: "login", user });
+      } catch (e) {
+        // This indicates that the cookie probably could not be set by the server because the user did not deploy with insecure cookies enabled
+        if (e.status === 401 && window.location.protocol === "http:") {
+          throw new MissingCookieError();
+        }
+        // Otherwise some unexpected error occurred
+        throw new Error(formatMessage({ id: "login.getUserFailed" }));
+      }
     },
-    [getDefaultUser, login]
+    [getDefaultUser, login, formatMessage]
   );
 
   const contextValue = useMemo(() => {
     return {
       authType: "simple",
+      applicationSupport: "single",
       provider: null,
       emailVerified: false,
       ...authState,

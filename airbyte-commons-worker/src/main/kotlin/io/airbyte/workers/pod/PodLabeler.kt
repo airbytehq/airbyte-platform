@@ -1,21 +1,26 @@
 package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.Metadata.CHECK_JOB
+import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
+import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
+import io.airbyte.workers.pod.Metadata.ORCHESTRATOR_REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.READ_STEP
+import io.airbyte.workers.pod.Metadata.REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.SPEC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
+import io.airbyte.workers.pod.Metadata.WRITE_STEP
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_NAME
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_NAME
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_VERSION
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_NAME
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
-import io.airbyte.workers.process.Metadata
-import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.DISCOVER_JOB
-import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.SPEC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workers.process.ProcessFactory
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -34,10 +39,22 @@ class PodLabeler {
   }
 
   fun getReplicationOrchestratorLabels(orchestratorImageName: String): Map<String, String> {
-    return getImageLabels(orchestratorImageName) +
+    return getOrchestratorImageLabels(orchestratorImageName) +
       mapOf(
         JOB_TYPE_KEY to SYNC_JOB,
         SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+      )
+  }
+
+  fun getReplicationLabels(
+    orchestratorImageName: String,
+    sourceImageName: String,
+    destImageName: String,
+  ): Map<String, String> {
+    return getReplicationImageLabels(orchestratorImageName, sourceImageName, destImageName) +
+      mapOf(
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to REPLICATION_STEP,
       )
   }
 
@@ -56,16 +73,6 @@ class PodLabeler {
   fun getSpecLabels(): Map<String, String> {
     return mapOf(
       JOB_TYPE_KEY to SPEC_JOB,
-    )
-  }
-
-  private fun getImageLabels(orchestratorImageName: String): Map<String, String> {
-    val shortImageName = ProcessFactory.getShortImageName(orchestratorImageName)
-    val imageVersion = ProcessFactory.getImageVersion(orchestratorImageName)
-
-    return mapOf(
-      Metadata.IMAGE_NAME to shortImageName,
-      Metadata.IMAGE_VERSION to imageVersion,
     )
   }
 
@@ -114,10 +121,50 @@ class PodLabeler {
       getPodSweeperLabels()
   }
 
+  fun getReplicationImageLabels(
+    orchestratorImageName: String,
+    sourceImageName: String,
+    destImageName: String,
+  ): Map<String, String> {
+    val orchPair = getImageMetadataPair(orchestratorImageName)
+    val sourcePair = getImageMetadataPair(sourceImageName)
+    val destPair = getImageMetadataPair(destImageName)
+    return mapOf(
+      ORCHESTRATOR_IMAGE_NAME to orchPair.first,
+      ORCHESTRATOR_IMAGE_VERSION to orchPair.second,
+      SOURCE_IMAGE_NAME to sourcePair.first,
+      SOURCE_IMAGE_VERSION to sourcePair.second,
+      DESTINATION_IMAGE_NAME to destPair.first,
+      DESTINATION_IMAGE_VERSION to destPair.second,
+    )
+  }
+
+  private fun getOrchestratorImageLabels(imageName: String): Map<String, String> {
+    val pair = getImageMetadataPair(imageName)
+
+    return mapOf(
+      Metadata.IMAGE_NAME to pair.first,
+      Metadata.IMAGE_VERSION to pair.second,
+    )
+  }
+
+  private fun getImageMetadataPair(imageName: String): Pair<String, String> {
+    val shortImageName = PodUtils.getShortImageName(imageName)
+    val imageVersion = PodUtils.getImageVersion(imageName)
+
+    return shortImageName to imageVersion
+  }
+
   object LabelKeys {
     const val AUTO_ID = "auto_id"
     const val MUTEX_KEY = "mutex_key"
     const val WORKLOAD_ID = "workload_id"
+    const val ORCHESTRATOR_IMAGE_NAME = "orchestrator_image_name"
+    const val ORCHESTRATOR_IMAGE_VERSION = "orchestrator_image_version"
+    const val SOURCE_IMAGE_NAME = "source_image_name"
+    const val SOURCE_IMAGE_VERSION = "source_image_version"
+    const val DESTINATION_IMAGE_NAME = "destination_image_name"
+    const val DESTINATION_IMAGE_VERSION = "destination_image_version"
     const val SWEEPER_LABEL_KEY = "airbyte"
     const val SWEEPER_LABEL_VALUE = "job-pod"
   }

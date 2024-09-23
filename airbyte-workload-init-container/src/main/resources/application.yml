@@ -36,9 +36,27 @@ airbyte:
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
+      aws:
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+      vault:
+        address: ${VAULT_ADDRESS:}
+        prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
+        token: ${VAULT_AUTH_TOKEN:vaultAuthTokenForTest}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}

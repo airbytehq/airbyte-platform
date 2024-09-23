@@ -14,6 +14,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
@@ -30,6 +31,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
+
+  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
 
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
@@ -81,7 +84,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     // Create connections
     for (final List<String> streamsForConnection : mockActorConnections) {
       final List<ConfiguredAirbyteStream> configuredStreams = streamsForConnection.stream()
-          .map(streamName -> CatalogHelpers.createConfiguredAirbyteStream(streamName, "namespace", Field.of("field_name", JsonSchemaType.STRING)))
+          .map(streamName -> catalogHelpers.createConfiguredAirbyteStream(streamName, "namespace", Field.of("field_name", JsonSchemaType.STRING)))
           .collect(Collectors.toList());
       final StandardSync sync = createStandardSync(source, destination, configuredStreams);
       connectionServiceJooqImpl.writeStandardSync(sync);

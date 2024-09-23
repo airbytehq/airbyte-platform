@@ -14,7 +14,11 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   [ConnectionEventType.CLEAR_CANCELLED]: "connection.timeline.clear_cancelled",
   [ConnectionEventType.CLEAR_FAILED]: "connection.timeline.clear_failed",
   [ConnectionEventType.CLEAR_INCOMPLETE]: "connection.timeline.clear_incomplete",
+  [ConnectionEventType.CLEAR_STARTED]: "connection.timeline.clear_started",
   [ConnectionEventType.CLEAR_SUCCEEDED]: "connection.timeline.clear_succeeded",
+  [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: "connection.timeline.connection_settings_update",
+  [ConnectionEventType.CONNECTION_ENABLED]: "connection.timeline.connection_enabled",
+  [ConnectionEventType.CONNECTION_DISABLED]: "connection.timeline.connection_disabled",
   [ConnectionEventType.REFRESH_CANCELLED]: "connection.timeline.refresh_cancelled",
   [ConnectionEventType.REFRESH_FAILED]: "connection.timeline.refresh_failed",
   [ConnectionEventType.REFRESH_INCOMPLETE]: "connection.timeline.refresh_incomplete",
@@ -25,13 +29,9 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   [ConnectionEventType.SYNC_SUCCEEDED]: "connection.timeline.sync_succeeded",
   [ConnectionEventType.SYNC_STARTED]: "connection.timeline.sync_started",
   [ConnectionEventType.REFRESH_STARTED]: "connection.timeline.refresh_started",
-  [ConnectionEventType.CLEAR_STARTED]: "connection.timeline.clear_started",
+  [ConnectionEventType.SCHEMA_UPDATE]: "connection.timeline.schema_update",
 
   // todo
-  [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: "",
-  [ConnectionEventType.CONNECTION_ENABLED]: "",
-  [ConnectionEventType.CONNECTION_DISABLED]: "",
-  [ConnectionEventType.SCHEMA_UPDATE]: "",
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
   [ConnectionEventType.UNKNOWN]: "",
 };
@@ -57,7 +57,7 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
 
 export interface TimelineFilterValues {
   status: "success" | "failure" | "incomplete" | "cancelled" | "";
-  eventCategory: "sync" | "clear" | "refresh" | "";
+  eventCategory: "sync" | "clear" | "refresh" | "connection_settings" | "";
   startDate: string;
   endDate: string;
   eventId: string;
@@ -112,6 +112,11 @@ export const eventTypeByTypeFilterValue: Record<
     ConnectionEventType.REFRESH_FAILED,
     ConnectionEventType.REFRESH_INCOMPLETE,
     ConnectionEventType.REFRESH_STARTED,
+  ],
+  connection_settings: [
+    ConnectionEventType.CONNECTION_ENABLED,
+    ConnectionEventType.CONNECTION_DISABLED,
+    ConnectionEventType.CONNECTION_SETTINGS_UPDATE,
   ],
 };
 
@@ -175,31 +180,38 @@ const generateEventTypeFilterOption = (value: TimelineFilterValues["eventCategor
   value,
 });
 
-export const statusFilterOptions = [
-  {
-    label: (
-      <Text color="grey" bold>
-        <FormattedMessage id="connection.timeline.filters.allStatuses" />
-      </Text>
-    ),
-    value: "",
-  },
-  generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
-  generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
-  generateStatusFilterOption("incomplete", "connection.timeline.filters.incomplete", "statusWarning"),
-  generateStatusFilterOption("cancelled", "connection.timeline.filters.cancelled", "statusCancelled"),
-];
+export const statusFilterOptions = (filterValues: TimelineFilterValues) => {
+  return [
+    {
+      label: (
+        <Text color={!["sync", "clear", "refresh", ""].includes(filterValues.eventCategory) ? "grey300" : "grey"} bold>
+          <FormattedMessage id="connection.timeline.filters.allStatuses" />
+        </Text>
+      ),
+      value: "",
+    },
+    generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
+    generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
+    generateStatusFilterOption("incomplete", "connection.timeline.filters.incomplete", "statusWarning"),
+    generateStatusFilterOption("cancelled", "connection.timeline.filters.cancelled", "statusCancelled"),
+  ];
+};
 
-export const eventTypeFilterOptions = [
-  {
-    label: (
-      <Text color="grey" bold>
-        <FormattedMessage id="connection.timeline.filters.allEventTypes" />
-      </Text>
-    ),
-    value: "",
-  },
-  generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
-  generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),
-  generateEventTypeFilterOption("clear", "connection.timeline.filters.clear"),
-];
+export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
+  return [
+    {
+      label: (
+        <Text color="grey" bold>
+          <FormattedMessage id="connection.timeline.filters.allEventTypes" />
+        </Text>
+      ),
+      value: "",
+    },
+    generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
+    generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),
+    generateEventTypeFilterOption("clear", "connection.timeline.filters.clear"),
+    ...(filterValues.status === ""
+      ? [generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings")]
+      : []),
+  ];
+};

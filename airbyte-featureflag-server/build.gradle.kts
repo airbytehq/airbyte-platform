@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -21,13 +19,14 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.log4j.impl)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.http)
-  implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.security)
   implementation(libs.v3.swagger.annotations)
   implementation(libs.jackson.databind)
   implementation(libs.jackson.dataformat)
   implementation(libs.jackson.kotlin)
+  implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
 
@@ -35,23 +34,17 @@ dependencies {
   testImplementation(libs.mockk)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass = "io.airbyte.featureflag.server.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,
-        "TRACKING_STRATEGY" to env["TRACKING_STRATEGY"].toString(),
+        "TRACKING_STRATEGY" to "logging",
       )
     )
   }

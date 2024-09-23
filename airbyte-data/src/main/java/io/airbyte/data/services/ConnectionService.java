@@ -61,4 +61,6 @@ public interface ConnectionService {
 
   void disableConnectionsById(final List<UUID> connectionIds) throws IOException;
 
+  List<UUID> listConnectionIdsForWorkspace(UUID workspaceId) throws IOException;
+
 }

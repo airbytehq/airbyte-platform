@@ -121,7 +121,17 @@ const IconConverterInner = () => {
     };
 
     const sizes: Array<IconProps["size"]> = ["md", "lg", "xl"];
-    const colors: Array<IconProps["color"]> = ["primary", "action", "success", "error", "warning", "affordance"];
+    const colors: Array<IconProps["color"]> = [
+      "primary",
+      "disabled",
+      "action",
+      "success",
+      "error",
+      "warning",
+      "affordance",
+      "foreground",
+      "magic",
+    ];
 
     return output ? (
       <>

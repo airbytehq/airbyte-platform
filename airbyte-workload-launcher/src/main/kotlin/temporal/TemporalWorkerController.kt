@@ -17,6 +17,7 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Singleton
 class TemporalWorkerController(
@@ -29,16 +30,29 @@ class TemporalWorkerController(
   @Named("workerFactory") private val workerFactory: WorkerFactory,
   @Named("highPriorityWorkerFactory") private val highPriorityWorkerFactory: WorkerFactory,
 ) {
+  private val started: AtomicBoolean = AtomicBoolean(false)
+
+  fun start() {
+    started.set(true)
+    workerFactory.start()
+    workerFactory.suspendPolling()
+    highPriorityWorkerFactory.start()
+    highPriorityWorkerFactory.suspendPolling()
+    checkWorkerStatus()
+  }
+
   @Scheduled(fixedRate = "PT10S")
   fun checkWorkerStatus() {
-    val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
-    val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
-    if (shouldRun) {
-      workerFactory.resumePolling()
-      highPriorityWorkerFactory.resumePolling()
-    } else {
-      workerFactory.suspendPolling()
-      highPriorityWorkerFactory.suspendPolling()
+    if (started.get()) {
+      val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
+      val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
+      if (shouldRun) {
+        workerFactory.resumePolling()
+        highPriorityWorkerFactory.resumePolling()
+      } else {
+        workerFactory.suspendPolling()
+        highPriorityWorkerFactory.suspendPolling()
+      }
     }
   }
 

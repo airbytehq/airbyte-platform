@@ -1,0 +1,6 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.error {
+  border: variables.$border-thin solid colors.$red-400;
+}

@@ -25,6 +25,10 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
+  if (!row.original.streamNode) {
+    return null;
+  }
+
   const { config } = row.original.streamNode;
 
   // expand stream and field rows
@@ -46,7 +50,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
       <CheckBox
         checkboxSize="sm"
         checked={config?.selected}
-        onChange={({ target: { checked } }) => updateStreamField(row.original.streamNode, { selected: checked })}
+        onChange={({ target: { checked } }) => updateStreamField(row.original.streamNode!, { selected: checked })}
+        data-testid="sync-stream-checkbox"
       />
       <Button
         type="button"

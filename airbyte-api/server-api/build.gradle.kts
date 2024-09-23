@@ -52,6 +52,7 @@ val genApiServer = tasks.register<GenerateTask>("generateApiServer") {
     generatorName = "jaxrs-spec"
     inputSpec = specFile
     outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/jaxrs-spec"
 
     apiPackage = "io.airbyte.api.generated"
     invokerPackage = "io.airbyte.api.invoker.generated"

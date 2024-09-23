@@ -30,7 +30,6 @@ import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
-import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -115,13 +114,12 @@ public class ActivityBeanFactory {
   public List<Object> syncActivities(final ReplicationActivity replicationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
                                      final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
                                      final InvokeOperationsActivity invokeOperationsActivity) {
     return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
-        workloadFeatureFlagActivity, reportRunTimeActivity, syncFeatureFlagFetcherActivity,
+        reportRunTimeActivity, syncFeatureFlagFetcherActivity,
         routeToSyncTaskQueueActivity, invokeOperationsActivity);
   }
 

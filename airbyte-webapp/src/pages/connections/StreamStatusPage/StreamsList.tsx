@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, forwardRef, useMemo } from "react";
+import { useRef, useMemo, useContext } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -11,12 +11,14 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection } from "core/api";
 
 import { DataFreshnessCell } from "./DataFreshnessCell";
 import { LatestSyncCell } from "./LatestSyncCell";
@@ -26,9 +28,9 @@ import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
-export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
+export const StreamsList: React.FC = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
   const trackCountRef = useRef(0);
   useTrackSyncProgress(connection.connectionId, trackCountRef);
@@ -66,10 +68,23 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
-          <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
-            <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
-            <Icon type="clockOutline" size="sm" className={styles.icon} />
-          </button>
+          <Tooltip
+            placement="top"
+            control={
+              <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
+                <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
+                <Icon type="clockOutline" size="sm" className={styles.icon} />
+              </button>
+            }
+          >
+            <FormattedMessage
+              id={
+                showRelativeTime
+                  ? "connection.stream.status.table.dataFreshAsOf.absolute"
+                  : "connection.stream.status.table.dataFreshAsOf.relative"
+              }
+            />
+          </Tooltip>
         ),
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
@@ -100,8 +115,7 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
     recordsLoaded,
   } = useConnectionStatus(connection.connectionId);
 
-  const customScrollParent =
-    typeof outerRef !== "function" && outerRef && outerRef.current ? outerRef.current : undefined;
+  const customScrollParent = useContext(ScrollParentContext);
 
   return (
     <Card noPadding>
@@ -137,10 +151,9 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
           }
           sorting={false}
           virtualized
-          virtualizedProps={{ customScrollParent, useWindowScroll: true }}
+          virtualizedProps={{ customScrollParent: customScrollParent ?? undefined, useWindowScroll: true }}
         />
       </FlexContainer>
     </Card>
   );
-});
-StreamsList.displayName = "StreamsList";
+};

@@ -18,4 +18,10 @@ public interface ReplicationActivity {
   @ActivityMethod
   StandardSyncOutput replicateV2(final ReplicationActivityInput replicationInput);
 
+  @ActivityMethod
+  String startReplication(final ReplicationActivityInput replicationInput);
+
+  @ActivityMethod
+  StandardSyncOutput getReplicationOutput(final ReplicationActivityInput replicationInput, final String workloadId);
+
 }

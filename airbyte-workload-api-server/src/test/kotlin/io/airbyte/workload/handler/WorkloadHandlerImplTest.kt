@@ -65,6 +65,7 @@ class WorkloadHandlerImplTest {
         mutexKey = null,
         type = WorkloadType.SYNC,
         autoId = UUID.randomUUID(),
+        signalInput = "",
       )
 
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.of(domainWorkload))
@@ -99,6 +100,7 @@ class WorkloadHandlerImplTest {
       io.airbyte.config.WorkloadType.SYNC,
       UUID.randomUUID(),
       now.plusHours(2),
+      signalInput = "signal payload",
     )
     verify {
       workloadRepository.save(
@@ -116,7 +118,8 @@ class WorkloadHandlerImplTest {
             it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
-            it.deadline!!.equals(now.plusHours(2))
+            it.deadline!!.equals(now.plusHours(2)) &&
+            it.signalInput == "signal payload"
         },
       )
     }
@@ -126,7 +129,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     }
   }
 
@@ -155,7 +158,7 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -665,6 +668,7 @@ class WorkloadHandlerImplTest {
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
+      signalPayload: String = "",
     ): Workload =
       Workload(
         id = id,
@@ -677,6 +681,7 @@ class WorkloadHandlerImplTest {
         mutexKey = mutexKey,
         type = type,
         createdAt = createdAt,
+        signalInput = signalPayload,
       )
   }
 }

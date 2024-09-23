@@ -9,6 +9,7 @@ export type AuthLogin = ({ username, password }: { username: string; password: s
 
 export interface AuthContextApi {
   authType: "none" | "simple" | "oidc" | "cloud";
+  applicationSupport: "single" | "multiple" | "none";
   user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;

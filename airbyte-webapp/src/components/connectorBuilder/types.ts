@@ -74,7 +74,7 @@ export interface BuilderState {
 
 export interface AssistData {
   docsUrl?: string;
-  openApiSpecUrl?: string;
+  openapiSpecUrl?: string;
 }
 
 export interface BuilderFormInput {
@@ -138,12 +138,12 @@ export interface BuilderFormValues {
 }
 
 export interface StreamTestResults {
-  streamHash: string;
-  hasResponse: boolean;
-  responsesAreSuccessful: boolean;
-  hasRecords: boolean;
-  primaryKeysArePresent: boolean;
-  primaryKeysAreUnique: boolean;
+  streamHash: string | null;
+  hasResponse?: boolean;
+  responsesAreSuccessful?: boolean;
+  hasRecords?: boolean;
+  primaryKeysArePresent?: boolean;
+  primaryKeysAreUnique?: boolean;
 }
 
 type TestedStreams = Record<string, StreamTestResults>;
@@ -347,7 +347,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   assist: {
     docsUrl: "",
-    openApiSpecUrl: "",
+    openapiSpecUrl: "",
   },
   inputs: [],
   streams: [],
@@ -386,6 +386,8 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   autoImportSchema: true,
   unknownFields: undefined,
 };
+
+export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
@@ -1039,6 +1041,28 @@ function schemaRef(streamName: string) {
 }
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
+export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      url_base: "",
+      authenticator: undefined,
+      path: "",
+      http_method: "GET",
+    },
+    paginator: undefined,
+  },
+  primary_key: undefined,
+};
 
 export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
   useWatch<BuilderState, TPath>({ name: path, ...options });

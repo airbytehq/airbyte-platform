@@ -13,9 +13,6 @@ global:
     secretName: ""
     secretValue: ""
 
-  enterprise:
-    workloadsOptIn: false
-
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -73,10 +70,6 @@ global:
         ## busybox image used by the job pod
         ##   jobs.kube.images.busybox [string] busybox image used by the job pod
         busybox: ""
-        ## JOB_KUBE_SOCAT_IMAGE
-        ## socat image used by the job pod
-        ##   jobs.kube.images.socat [string] socat image used by the job pod
-        socat: ""
         ## JOB_KUBE_CURL_IMAGE
         ## curl image used by the job pod
         ##   jobs.kube.images.curl [string] curl image used by the job pod

@@ -51,7 +51,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -97,6 +96,14 @@ public class DestinationDefinitionsHandler {
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
+  }
+
+  public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+    return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
   }
 
   @VisibleForTesting
@@ -183,12 +190,9 @@ public class DestinationDefinitionsHandler {
                 new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = new HashMap<>();
-    for (final var definition : shownDestinationDefs) {
-      destinationDefVersionMap.put(definition.getDestinationDefinitionId(),
-          actorDefinitionVersionHelper.getDestinationVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
-    }
-    return toDestinationDefinitionReadList(shownDestinationDefs, destinationDefVersionMap);
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
+        actorDefinitionVersionHelper.getDestinationVersions(shownDestinationDefs, workspaceIdRequestBody.getWorkspaceId());
+    return toDestinationDefinitionReadList(shownDestinationDefs, sourceDefVersionMap);
   }
 
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -213,10 +217,7 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
-    return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
+    return buildDestinationDefinitionRead(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
@@ -291,6 +292,24 @@ public class DestinationDefinitionsHandler {
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
 
+    final StandardDestinationDefinition newDestination = buildDestinationDefinitionUpdate(currentDestination, destinationDefinitionUpdate);
+
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
+    configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
+
+    final StandardDestinationDefinition updatedDestinationDefinition = configRepository
+        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
+    return buildDestinationDefinitionRead(newDestination, newVersion);
+  }
+
+  @VisibleForTesting
+  StandardDestinationDefinition buildDestinationDefinitionUpdate(final StandardDestinationDefinition currentDestination,
+                                                                 final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
@@ -306,17 +325,11 @@ public class DestinationDefinitionsHandler {
         .withMetrics(currentDestination.getMetrics())
         .withResourceRequirements(updatedResourceReqs);
 
-    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+    if (destinationDefinitionUpdate.getName() != null && currentDestination.getCustom()) {
+      newDestination.withName(destinationDefinitionUpdate.getName());
+    }
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
-        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
-    configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
-
-    final StandardDestinationDefinition updatedDestinationDefinition = configRepository
-        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
-    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
-    return buildDestinationDefinitionRead(newDestination, newVersion);
+    return newDestination;
   }
 
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)

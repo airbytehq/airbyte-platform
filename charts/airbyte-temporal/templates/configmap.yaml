@@ -23,6 +23,10 @@ data:
     frontend.throttledLogRPS:
       - value: 20
         constraints: {}
+    frontend.enableUpdateWorkflowExecution:
+      - value: true
+    frontend.enableUpdateWorkflowExecutionAsyncAccepted:
+      - value: true
     history.historyMgrNumConns:
       - value: 50
         constraints: {}

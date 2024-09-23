@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -96,6 +97,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -111,6 +113,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -164,6 +167,7 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+  private final FieldGenerator fieldGenerator = new FieldGenerator();
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -240,6 +244,7 @@ class WebBackendConnectionsHandlerTest {
         configRepository,
         connectionService,
         actorDefinitionVersionHelper,
+        fieldGenerator,
         featureFlagClient));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -387,6 +392,7 @@ class WebBackendConnectionsHandlerTest {
         SchemaChange.BREAKING, now, connectionRead.getSyncCatalog(), brokenConnectionRead.getSourceCatalogId());
     when(schedulerHandler.resetConnection(any(ConnectionIdRequestBody.class)))
         .thenReturn(new JobInfoRead().job(new JobRead().status(JobStatus.SUCCEEDED)));
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(true);
   }
 
   WebBackendConnectionRead expectedWebBackendConnectionReadObject(
@@ -860,13 +866,13 @@ class WebBackendConnectionsHandlerTest {
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(expected.getConnectionId());
     when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.LEGACY));
 
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
         new ConnectionRead().connectionId(expected.getConnectionId()).sourceId(expected.getSourceId()));
-    when(connectionsHandler.updateConnection(any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -888,7 +894,7 @@ class WebBackendConnectionsHandlerTest {
     when(connectionsHandler.getConnectionAirbyteCatalog(connectionRead.getConnectionId())).thenReturn(Optional.ofNullable(fullAirbyteCatalog));
 
     final AirbyteCatalog expectedCatalogReturned =
-        WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(expected.getSyncCatalog(), expected.getSyncCatalog(),
+        wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(expected.getSyncCatalog(), expected.getSyncCatalog(),
             fullAirbyteCatalog);
     final WebBackendConnectionRead connectionRead = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -919,7 +925,7 @@ class WebBackendConnectionsHandlerTest {
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(expected.getConnectionId());
     when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.LEGACY));
 
@@ -929,7 +935,7 @@ class WebBackendConnectionsHandlerTest {
             .sourceId(expected.getSourceId())
             .operationIds(connectionRead.getOperationIds())
             .breakingChange(false));
-    when(connectionsHandler.updateConnection(any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -986,7 +992,7 @@ class WebBackendConnectionsHandlerTest {
             .updateStream(new StreamTransformUpdateStream());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(streamTransformAdd, streamTransformRemove, streamTransformUpdate));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     when(connectionsHandler.getConfigurationDiff(any(), any())).thenReturn(Set.of(new StreamDescriptor().name("configUpdateStream")));
 
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
@@ -1004,7 +1010,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
@@ -1020,7 +1026,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     final InOrder orderVerifier = inOrder(eventRunner);
     if (useRefresh) {
       orderVerifier.verify(eventRunner, times(1)).refreshConnectionAsync(connectionId.getConnectionId(),
@@ -1058,7 +1064,7 @@ class WebBackendConnectionsHandlerTest {
         .thenReturn(configuredAirbyteCatalog);
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
 
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
@@ -1074,7 +1080,7 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(expectedWithNewSchema.getSyncCatalog())
         .status(expected.getStatus())
         .schedule(expected.getSchedule()).breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
@@ -1084,11 +1090,11 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
 
     verify(connectionsHandler).getDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog(),
-        CatalogConverter.toConfiguredInternal(result.getSyncCatalog()));
+        CatalogConverter.toConfiguredInternal(result.getSyncCatalog(), true), expected.getConnectionId());
     verify(connectionsHandler).getConfigurationDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     final InOrder orderVerifier = inOrder(eventRunner);
     orderVerifier.verify(eventRunner, times(0)).resetConnection(eq(connectionId.getConnectionId()), any());
     orderVerifier.verify(eventRunner, times(0)).startNewManualSync(connectionId.getConnectionId());
@@ -1124,7 +1130,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1133,8 +1139,8 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(0)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(0)).getDiff(any(), any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
     verify(eventRunner, times(0)).resetConnection(any(), any());
   }
 
@@ -1164,7 +1170,7 @@ class WebBackendConnectionsHandlerTest {
         "{\"streams\": [{\"name\": \"cat_names\", "
             + "\"namespace\": \"public\", "
             + "\"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff, catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff, catalogDiff);
 
     when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
@@ -1183,7 +1189,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .breakingChange(false);
 
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1191,15 +1197,15 @@ class WebBackendConnectionsHandlerTest {
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
-    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture());
+    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture(), any(), any());
     final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
     // Expect the ConnectionUpdate object to have breakingChange: false
     assertEquals(false, connectionUpdateValues.get(0).getBreakingChange());
 
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(2)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any());
+    verify(connectionsHandler, times(2)).getDiff(any(), any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
   }
 
   @Test
@@ -1232,7 +1238,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1284,7 +1290,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1365,7 +1371,7 @@ class WebBackendConnectionsHandlerTest {
         .selectedFields(List.of());
     expected.getStreams().add(expectedNewStream);
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }
@@ -1384,7 +1390,7 @@ class WebBackendConnectionsHandlerTest {
     discovered.getStreams().getFirst().getConfig()
         .primaryKey(List.of(List.of(FIELD2)));
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     // Use new value for source-defined PK
     assertEquals(List.of(List.of(FIELD2)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
@@ -1399,10 +1405,38 @@ class WebBackendConnectionsHandlerTest {
     final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
     assertNotEquals(original.getStreams().getFirst().getConfig().getPrimaryKey(), discovered.getStreams().getFirst().getConfig().getPrimaryKey());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     // Keep previously-configured PK
     assertEquals(List.of(List.of(FIELD1)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithHashedField() {
+    final List<SelectedFieldInfo> hashedFields = List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME)));
+
+    final AirbyteCatalog original = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    original.getStreams().getFirst().getConfig().setHashedFields(hashedFields);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateApiCatalogWithTwoFields();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Configure hashed fields
+    assertEquals(hashedFields, actual.getStreams().getFirst().getConfig().getHashedFields());
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithRemovedHashedField() {
+    final AirbyteCatalog original = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    original.getStreams().getFirst().getConfig().setHashedFields(List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME))));
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Remove hashed field
+    assertTrue(actual.getStreams().getFirst().getConfig().getHashedFields().isEmpty());
   }
 
   @Test
@@ -1450,7 +1484,7 @@ class WebBackendConnectionsHandlerTest {
         .suggested(false)
         .selectedFields(List.of());
 
-    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
   }

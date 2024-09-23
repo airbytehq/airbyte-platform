@@ -12,6 +12,7 @@ export const NoAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }
     <AuthContext.Provider
       value={{
         authType: "none",
+        applicationSupport: "none",
         user: defaultUser,
         inited: true,
         emailVerified: false,

@@ -598,4 +598,61 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
     val persistedIds = findConfigsResult.map { it.id }
     assert(persistedIds.containsAll(listOf(bcConfig1.id, bcConfig2.id, bcConfig3.id)))
   }
+
+  @Test
+  fun `test db find by key and scope`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val valueA = "version-1"
+    val valueB = "version-2"
+    val bcConfig1 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueA,
+        scopeType = ConfigScopeType.organization,
+        scopeId = organizationId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "origin",
+      )
+
+    scopedConfigurationRepository.save(bcConfig1)
+
+    val bcConfig2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueB,
+        scopeType = ConfigScopeType.workspace,
+        scopeId = workspaceId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "origin",
+      )
+
+    scopedConfigurationRepository.save(bcConfig2)
+
+    val organizationScopedConfigs =
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        ConfigScopeType.organization,
+        organizationId,
+      )
+    assert(organizationScopedConfigs.size == 1)
+    assert(organizationScopedConfigs.stream().findFirst().get().value == valueA)
+
+    val workspaceScopedConfigs =
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        ConfigScopeType.workspace,
+        workspaceId,
+      )
+    assert(workspaceScopedConfigs.size == 1)
+    assert(workspaceScopedConfigs.stream().findFirst().get().value == valueB)
+  }
 }

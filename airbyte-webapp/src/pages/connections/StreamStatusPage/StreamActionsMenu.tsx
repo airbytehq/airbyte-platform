@@ -11,6 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { useDestinationDefinitionVersion } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -26,7 +27,9 @@ interface StreamActionsMenuProps {
 }
 
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
   const { mode, connection } = useConnectionFormService();
@@ -77,7 +80,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   }
 
   const options: DropdownMenuOptionType[] = [
-    ...(isSyncCatalogV2Enabled
+    ...(useSyncCatalogV2
       ? [
           {
             displayName: formatMessage({ id: "connection.stream.actions.edit" }),

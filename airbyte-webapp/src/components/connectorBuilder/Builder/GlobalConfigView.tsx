@@ -1,11 +1,10 @@
 import { useIntl } from "react-intl";
 
-import { AssistButton } from "components/connectorBuilder/Builder/AssistButton";
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { AssistSection } from "./AssistSection";
 import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
@@ -20,7 +19,6 @@ export const GlobalConfigView: React.FC = () => {
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>
       <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })}>
-        <AssistSection />
         <BuilderCard>
           <BuilderFieldWithInputs
             type="string"

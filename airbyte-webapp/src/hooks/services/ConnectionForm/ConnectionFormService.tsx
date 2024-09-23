@@ -59,9 +59,32 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
-        const validationErrorMessage = "connectionForm.validation.creationError";
+        const hasHashCollisionError =
+          errors?.syncCatalog?.streams?.message === "connectionForm.streams.hashFieldCollision";
+
+        const hasPrimaryKeyOrCursorError = (field: "primaryKey" | "cursorField") =>
+          errors?.syncCatalog?.streams &&
+          Object.entries(
+            errors?.syncCatalog?.streams as FieldErrors<FormConnectionFormValues["syncCatalog"]["streams"]>
+          ).some(([_, streamNode]) => streamNode?.config?.[field]?.message === `connectionForm.${field}.required`);
+
+        const pkError = hasPrimaryKeyOrCursorError("primaryKey");
+        const cursorError = hasPrimaryKeyOrCursorError("cursorField");
+
+        const validationErrorMessage =
+          pkError && cursorError
+            ? "form.error.pkAndCursor.required"
+            : pkError
+            ? "form.error.pk.missing"
+            : cursorError
+            ? "form.error.cursor.missing"
+            : "connectionForm.validation.creationError";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
+          id: hasNoStreamsSelectedError
+            ? "connectionForm.streams.required"
+            : hasHashCollisionError
+            ? "connectionForm.streams.hashFieldCollision"
+            : validationErrorMessage,
         });
       }
 

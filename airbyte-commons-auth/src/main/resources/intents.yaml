@@ -1,10 +1,22 @@
 intents:
   UploadCustomConnector:
-    name: Create Custom Docker Connector
+    name: Create custom docker connector
     description: Upload a custom docker connector to be used in the workspace
     roles:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
+      - ADMIN
+  UpdateOrDeleteCustomConnector:
+    name: Update or delete custom docker connector
+    description: Update or delete a custom docker connector in the workspace
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ManageOrganizationBilling:
+    name: Manage organization billing
+    description: View and edit billing information for the organization
+    roles:
+      - ORGANIZATION_ADMIN
       - ADMIN

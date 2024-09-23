@@ -39,7 +39,7 @@ import {
 } from "@src/core/api/types/AirbyteClient";
 import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
 
-describe("Connection Configuration", () => {
+describe("Connection Configuration", { tags: "@connection-configuration" }, () => {
   let pokeApiSource: SourceRead;
   let postgresSource: SourceRead;
   let jsonDestination: DestinationRead;

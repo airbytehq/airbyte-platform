@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -63,21 +61,14 @@ dependencies {
   integrationTestAnnotationProcessor(libs.lombok)
 }
 
-val env =
-  Properties().apply {
-    load(rootProject.file(".env.dev").inputStream())
-  }
-
 airbyte {
   application {
     mainClass = "io.airbyte.bootloader.Application"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
         "DATABASE_URL" to "jdbc:postgresql://localhost:5432/airbyte",
       ),
     )

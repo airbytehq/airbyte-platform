@@ -58,11 +58,11 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         ),
       )
     } returns PostprocessCatalogOutput.success(catalogDiff)
-    every { activityReport.reportSuccess(true) } returns Unit
+    every { activityReport.reportSuccess() } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activityReport.reportSuccess(true) }
+    verify { activityReport.reportSuccess() }
     assertEquals(catalogDiff, result.appliedDiff)
   }
 
@@ -79,11 +79,11 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         ),
       )
     } returns ConnectorJobOutput().withDiscoverCatalogId(null)
-    every { activityReport.reportFailure(true) } returns Unit
+    every { activityReport.reportFailure() } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activityReport.reportFailure(true) }
+    verify { activityReport.reportFailure() }
     assertEquals(null, result.appliedDiff)
   }
 
@@ -108,11 +108,11 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         ),
       )
     } returns PostprocessCatalogOutput.failure(RuntimeException())
-    every { activityReport.reportFailure(true) } returns Unit
+    every { activityReport.reportFailure() } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activityReport.reportFailure(true) }
+    verify { activityReport.reportFailure() }
     assertEquals(null, result.appliedDiff)
   }
 }

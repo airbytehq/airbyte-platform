@@ -6,15 +6,12 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import com.fasterxml.jackson.databind.node.POJONode
 import fixtures.RecordFixtures
-import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.config.ActorType
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
-import io.airbyte.featureflag.RefreshConfigBeforeSecretHydration
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -42,9 +39,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class BuildInputStageTest {
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `parses sync input and hydrates`(fetchFromInit: Boolean) {
+  @Test
+  fun `parses sync input and hydrates`() {
     val inputStr = "foo"
     val sourceConfig = POJONode("bar")
     val destConfig = POJONode("baz")
@@ -63,22 +59,18 @@ class BuildInputStageTest {
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val airbyteApiClient: AirbyteApiClient = mockk()
     val ffClient: TestClient = mockk()
-    every { airbyteApiClient.jobsApi.getJobInput(any()) } returns
-      JobInput(
-        null,
-        null,
-        null,
-        StandardSyncInput()
-          .withSourceConfiguration(sourceConfig1)
-          .withDestinationConfiguration(destConfig1),
-      )
+    JobInput(
+      null,
+      null,
+      null,
+      StandardSyncInput()
+        .withSourceConfiguration(sourceConfig1)
+        .withDestinationConfiguration(destConfig1),
+    )
     every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
     every { replicationInputHydrator.getHydratedReplicationInput(unhydrated) } returns hydrated
     every { replicationInputHydrator.mapActivityInputToReplInput(unhydrated) } returns hydrated
-    every { ffClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns fetchFromInit
-    every { ffClient.boolVariation(RefreshConfigBeforeSecretHydration, any()) } returns true
 
     val stage =
       BuildInputStage(
@@ -86,7 +78,6 @@ class BuildInputStageTest {
         discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
-        airbyteApiClient,
         mockk(),
         "dataplane-id",
         ffClient,
@@ -99,14 +90,9 @@ class BuildInputStageTest {
     verify {
       deserializer.toReplicationActivityInput(inputStr)
     }
-    if (fetchFromInit) {
-      verify {
-        replicationInputHydrator.mapActivityInputToReplInput(unhydrated)
-      }
-    } else {
-      verify {
-        replicationInputHydrator.getHydratedReplicationInput(unhydrated)
-      }
+
+    verify {
+      replicationInputHydrator.mapActivityInputToReplInput(unhydrated)
     }
 
     when (val payload = result.payload) {
@@ -142,9 +128,7 @@ class BuildInputStageTest {
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val airbyteApiClient: AirbyteApiClient = mockk()
     val ffClient: TestClient = mockk()
-    every { airbyteApiClient.jobsApi.getJobInput(any()) } returns JobInput()
     every { deserializer.toCheckConnectionInput(inputStr) } returns unhydrated
     every { checkInputHydrator.getHydratedStandardCheckInput(unhydratedConfig) } returns hydratedConfig
     every { ffClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns fetchFromInit
@@ -155,7 +139,6 @@ class BuildInputStageTest {
         discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
-        airbyteApiClient,
         mockk(),
         "dataplane-id",
         ffClient,
@@ -206,10 +189,8 @@ class BuildInputStageTest {
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val airbyteApiClient: AirbyteApiClient = mockk()
     val ffClient: TestClient = mockk()
 
-    every { airbyteApiClient.jobsApi.getJobInput(any()) } returns JobInput()
     every { deserializer.toDiscoverCatalogInput(inputStr) } returns unhydrated
     every { discoverInputHydrator.getHydratedStandardDiscoverInput(unhydratedConfig) } returns hydratedConfig
     every { ffClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns fetchFromInit
@@ -220,7 +201,6 @@ class BuildInputStageTest {
         discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
-        airbyteApiClient,
         mockk(),
         "dataplane-id",
         ffClient,
@@ -253,16 +233,13 @@ class BuildInputStageTest {
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val airbyteApiClient: AirbyteApiClient = mockk()
     every { deserializer.toSpecInput(inputStr) } returns specInput
-    every { airbyteApiClient.jobsApi.getJobInput(any()) } returns JobInput()
     val stage =
       BuildInputStage(
         checkInputHydrator,
         discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
-        airbyteApiClient,
         mockk(),
         "dataplane-id",
         TestClient(),

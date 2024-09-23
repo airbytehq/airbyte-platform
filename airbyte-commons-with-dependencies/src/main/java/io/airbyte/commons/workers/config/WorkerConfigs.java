@@ -5,9 +5,7 @@
 package io.airbyte.commons.workers.config;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.Configs;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import java.util.List;
@@ -19,10 +17,6 @@ import java.util.Optional;
  */
 public class WorkerConfigs {
 
-  public static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
-  private static final String DEFAULT_JOB_KUBE_CURL_IMAGE = "curlimages/curl:7.87.0";
-  private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
-  private final Configs.WorkerEnvironment workerEnvironment;
   private final ResourceRequirements resourceRequirements;
   private final List<TolerationPOJO> workerKubeTolerations;
   private final Map<String, String> workerKubeNodeSelectors;
@@ -31,13 +25,8 @@ public class WorkerConfigs {
   private final Map<String, String> workerKubeLabels;
   private final List<String> jobImagePullSecrets;
   private final String jobImagePullPolicy;
-  private final String sidecarImagePullPolicy;
-  private final String jobSocatImage;
-  private final String jobBusyboxImage;
-  private final String jobCurlImage;
-  private final Map<String, String> envMap;
 
-  public WorkerConfigs(final WorkerEnvironment workerEnvironment,
+  public WorkerConfigs(
                        final ResourceRequirements resourceRequirements,
                        final List<TolerationPOJO> workerKubeTolerations,
                        final Map<String, String> workerKubeNodeSelectors,
@@ -45,13 +34,7 @@ public class WorkerConfigs {
                        final Map<String, String> workerKubeAnnotations,
                        final Map<String, String> workerKubeLabels,
                        final List<String> jobImagePullSecrets,
-                       final String jobImagePullPolicy,
-                       final String sidecarImagePullPolicy,
-                       final String jobSocatImage,
-                       final String jobBusyboxImage,
-                       final String jobCurlImage,
-                       final Map<String, String> envMap) {
-    this.workerEnvironment = workerEnvironment;
+                       final String jobImagePullPolicy) {
     this.resourceRequirements = resourceRequirements;
     this.workerKubeTolerations = workerKubeTolerations;
     this.workerKubeNodeSelectors = workerKubeNodeSelectors;
@@ -60,11 +43,6 @@ public class WorkerConfigs {
     this.workerKubeLabels = workerKubeLabels;
     this.jobImagePullSecrets = jobImagePullSecrets;
     this.jobImagePullPolicy = jobImagePullPolicy;
-    this.sidecarImagePullPolicy = sidecarImagePullPolicy;
-    this.jobSocatImage = jobSocatImage;
-    this.jobBusyboxImage = jobBusyboxImage;
-    this.jobCurlImage = jobCurlImage;
-    this.envMap = envMap;
   }
 
   /**
@@ -74,7 +52,6 @@ public class WorkerConfigs {
   @VisibleForTesting
   public WorkerConfigs(final Configs configs) {
     this(
-        configs.getWorkerEnvironment(),
         new ResourceRequirements(),
         configs.getJobKubeTolerations(),
         configs.getJobKubeNodeSelectors(),
@@ -82,16 +59,7 @@ public class WorkerConfigs {
         configs.getJobKubeAnnotations(),
         configs.getJobKubeLabels(),
         configs.getJobKubeMainContainerImagePullSecrets(),
-        configs.getJobKubeMainContainerImagePullPolicy(),
-        configs.getJobKubeSidecarContainerImagePullPolicy(),
-        EnvVar.JOB_KUBE_SOCAT_IMAGE.fetch(DEFAULT_JOB_KUBE_SOCAT_IMAGE),
-        EnvVar.JOB_KUBE_BUSYBOX_IMAGE.fetch(DEFAULT_JOB_KUBE_BUSYBOX_IMAGE),
-        EnvVar.JOB_KUBE_CURL_IMAGE.fetch(DEFAULT_JOB_KUBE_CURL_IMAGE),
-        configs.getJobDefaultEnvMap());
-  }
-
-  public Configs.WorkerEnvironment getWorkerEnvironment() {
-    return workerEnvironment;
+        configs.getJobKubeMainContainerImagePullPolicy());
   }
 
   public ResourceRequirements getResourceRequirements() {
@@ -124,26 +92,6 @@ public class WorkerConfigs {
 
   public String getJobImagePullPolicy() {
     return jobImagePullPolicy;
-  }
-
-  public String getSidecarImagePullPolicy() {
-    return sidecarImagePullPolicy;
-  }
-
-  public String getJobSocatImage() {
-    return jobSocatImage;
-  }
-
-  public String getJobBusyboxImage() {
-    return jobBusyboxImage;
-  }
-
-  public String getJobCurlImage() {
-    return jobCurlImage;
-  }
-
-  public Map<String, String> getEnvMap() {
-    return envMap;
   }
 
 }

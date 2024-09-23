@@ -1,17 +1,19 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.pod
 
-import io.airbyte.workers.process.KubeProcessFactory.KUBE_NAME_LEN_LIMIT
-import io.airbyte.workers.process.ProcessFactory
-import io.airbyte.workers.sync.ReplicationLauncherWorker.POD_NAME_PREFIX
+import io.airbyte.workers.pod.PodConstants.KUBE_NAME_LEN_LIMIT
+import io.airbyte.workers.pod.PodConstants.REPL_POD_PREFIX
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
-// TODO: add discrete unit tests — this is indirectly tested from the PayloadKubeInputMapper unit tests.
 @Singleton
 class PodNameGenerator(
   @Value("\${airbyte.worker.job.kube.namespace}") val namespace: String,
 ) {
-  fun getReplicationOrchestratorPodName(
+  fun getReplicationPodName(
     jobId: String,
     attemptId: Long,
   ): String {
@@ -23,7 +25,7 @@ class PodNameGenerator(
     jobId: String,
     attemptId: Long,
   ): String {
-    return ProcessFactory.createProcessName(
+    return PodUtils.createProcessName(
       image,
       "check",
       jobId,
@@ -37,7 +39,7 @@ class PodNameGenerator(
     jobId: String,
     attemptId: Long,
   ): String {
-    return ProcessFactory.createProcessName(
+    return PodUtils.createProcessName(
       image,
       "discover",
       jobId,
@@ -51,16 +53,12 @@ class PodNameGenerator(
     jobId: String,
     attemptId: Long,
   ): String {
-    return ProcessFactory.createProcessName(
+    return PodUtils.createProcessName(
       image,
       "spec",
       jobId,
       attemptId.toInt(),
       KUBE_NAME_LEN_LIMIT,
     )
-  }
-
-  companion object {
-    const val REPL_POD_PREFIX = POD_NAME_PREFIX
   }
 }

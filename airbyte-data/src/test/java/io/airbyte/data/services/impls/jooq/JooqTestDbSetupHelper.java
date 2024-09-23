@@ -51,6 +51,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final UUID WORKSPACE_ID = UUID.randomUUID();
   private final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+  private final String DOCKER_IMAGE_TAG = "0.0.1";
   @Getter
   private Organization organization;
   @Getter
@@ -117,7 +118,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(SOURCE_DEFINITION_ID)
         .withName("Test source def")
         .withTombstone(false);
-    sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+    sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId(), DOCKER_IMAGE_TAG);
     createActorDefinition(sourceDefinition, sourceDefinitionVersion);
 
     // Create destination definition
@@ -125,7 +126,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withName("Test destination def")
         .withTombstone(false);
-    destinationDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
+    destinationDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId(), DOCKER_IMAGE_TAG);
     createActorDefinition(destinationDefinition, destinationDefinitionVersion);
 
     // Create actors
@@ -141,6 +142,58 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final UUID initialDestinationDefinitionDefaultVersionId =
         destinationServiceJooqImpl.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID).getDefaultVersionId();
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
+  }
+
+  public void setUpDependencies() throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Create org
+    organization = createBaseOrganization();
+    organizationServiceJooqImpl.writeOrganization(organization);
+
+    // Create workspace
+    workspace = createBaseWorkspace();
+    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(createBaseWorkspace());
+
+    // Create source definition
+    sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName("Test source def")
+        .withTombstone(false);
+    sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId(), DOCKER_IMAGE_TAG);
+    createActorDefinition(sourceDefinition, sourceDefinitionVersion);
+
+    // Create destination definition
+    destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+        .withName("Test destination def")
+        .withTombstone(false);
+    destinationDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId(), DOCKER_IMAGE_TAG);
+    createActorDefinition(destinationDefinition, destinationDefinitionVersion);
+
+    // Create actors
+    source = createActorForActorDefinition(sourceDefinition);
+    destination = createActorForActorDefinition(destinationDefinition);
+
+    // Verify initial source version
+    final UUID initialSourceDefinitionDefaultVersionId =
+        sourceServiceJooqImpl.getStandardSourceDefinition(SOURCE_DEFINITION_ID).getDefaultVersionId();
+    assertNotNull(initialSourceDefinitionDefaultVersionId);
+
+    // Verify initial destination version
+    final UUID initialDestinationDefinitionDefaultVersionId =
+        destinationServiceJooqImpl.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID).getDefaultVersionId();
+    assertNotNull(initialDestinationDefinitionDefaultVersionId);
+  }
+
+  public void setupForGetActorDefinitionVersionByDockerRepositoryAndDockerImageTagTests(UUID sourceDefinitionId, String name, String version)
+      throws IOException {
+    // Add another version of the source definition
+    sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(sourceDefinitionId)
+        .withName(name)
+        .withTombstone(false);
+    sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId(), version);
+    sourceDefinitionVersion.withDockerRepository(name).withDockerImageTag(version);
+    createActorDefinition(sourceDefinition, sourceDefinitionVersion);
   }
 
   public void createActorDefinition(final StandardSourceDefinition sourceDefinition, final ActorDefinitionVersion actorDefinitionVersion)
@@ -200,11 +253,11 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withDefaultGeography(Geography.US);
   }
 
-  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
+  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("destination-image-" + actorDefId)
-        .withDockerImageTag("0.0.1")
+        .withDockerImageTag(dockerImageTag)
         .withProtocolVersion("1.0.0")
         .withSupportLevel(SupportLevel.CERTIFIED)
         .withInternalSupportLevel(200L)

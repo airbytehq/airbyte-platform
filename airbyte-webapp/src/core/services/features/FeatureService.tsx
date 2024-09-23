@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
-import { AuthConfigurationMode, InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
+import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -13,12 +13,6 @@ const featureServiceContext = React.createContext<FeatureServiceContext | null>(
 
 const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
   return featureList.reduce((set, val) => ({ ...set, [val]: true }), {} as FeatureSet);
-};
-
-const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
-  return {
-    [FeatureItem.APITokenManagement]: instanceConfig.auth.mode !== AuthConfigurationMode.none,
-  };
 };
 
 interface FeatureServiceProps {
@@ -38,12 +32,17 @@ interface FeatureServiceProps {
  * features is: overwrite > user > workspace > globally, i.e. if a feature is disabled for a user
  * it will take precedence over the feature being enabled globally or for that workspace.
  */
+const isCypress = window.hasOwnProperty("Cypress");
 export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProps>> = ({
   features: defaultFeatures,
   instanceConfig,
   children,
 }) => {
-  const [overwrittenFeatures, setOverwrittenFeaturesState] = useState<FeatureSet>();
+  const hasWindowOverwrites = isCypress && window.hasOwnProperty("_e2eFeatureOverwrites");
+  const [overwrittenFeatures, setOverwrittenFeaturesState] = useState<FeatureSet>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    hasWindowOverwrites ? (window as any)._e2eFeatureOverwrites : {}
+  );
 
   const envOverwrites = useMemo(() => {
     // Allow env feature overwrites only during development
@@ -68,7 +67,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
-      ...(instanceConfig ? featureSetFromInstanceConfig(instanceConfig) : {}),
       ...overwrittenFeatures,
       ...envOverwrites,
     };
@@ -79,7 +77,7 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overwrittenFeatures, instanceConfig, ...defaultFeatures]);
 
-  const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined) => {
+  const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
     setOverwrittenFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
   }, []);
 

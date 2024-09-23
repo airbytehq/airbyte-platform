@@ -41,9 +41,13 @@ export const SchemaRefreshing: React.FC<React.PropsWithChildren> = ({ children }
   }, [formatError, refreshSchema, registerNotification, schemaError, unregisterNotificationById]);
 
   return (
-    <div className={styles.container}>
-      <div className={classnames(styles.backdrop, { [styles.schemaRefreshing]: schemaRefreshing })}>
-        <FlexContainer alignItems="center">
+    <div className={styles.schemaRefreshing}>
+      <div
+        className={classnames(styles.schemaRefreshing__backdrop, {
+          [styles["schemaRefreshing__backdrop--visible"]]: schemaRefreshing,
+        })}
+      >
+        <FlexContainer justifyContent="center" className={styles.schemaRefreshing__message}>
           <Icon type="loading" color="action" size="sm" />
           <Text color="grey400">
             <FormattedMessage id="connection.updateSchema.loading" />

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.protocol;
 
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 
@@ -16,7 +15,10 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
  */
 public class VersionedProtocolSerializer implements ProtocolSerializer {
 
+  @SuppressWarnings("PMD.UnusedPrivateField")
   private final ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator;
+
+  @SuppressWarnings("PMD.UnusedPrivateField")
   private final Version protocolVersion;
 
   public VersionedProtocolSerializer(final ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator, final Version protocolVersion) {
@@ -26,9 +28,9 @@ public class VersionedProtocolSerializer implements ProtocolSerializer {
 
   @Override
   public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes) {
-    return Jsons.serialize(
-        configuredAirbyteCatalogMigrator.downgrade(DefaultProtocolSerializer.replaceDestinationSyncModes(configuredAirbyteCatalog, supportsRefreshes),
-            protocolVersion));
+    // TODO: rework the migration part to support different protocol version. This currently works
+    // because we only have one major.
+    return new DefaultProtocolSerializer().serialize(configuredAirbyteCatalog, supportsRefreshes);
   }
 
 }

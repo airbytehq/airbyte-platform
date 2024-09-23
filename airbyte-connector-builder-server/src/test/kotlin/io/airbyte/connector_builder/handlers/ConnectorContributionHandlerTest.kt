@@ -33,7 +33,7 @@ class ConnectorContributionHandlerTest {
   @Test
   fun `returns details of an existing connector if found in target repository`() {
     every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns true
-    every { anyConstructed<GithubContributionService>().readConnectorMetadataName() } returns "Test Connector"
+    every { anyConstructed<GithubContributionService>().readConnectorMetadataValue("name") } returns "Test Connector"
 
     val response = connectorContributionHandler.checkContribution(requestBodyMock)
 

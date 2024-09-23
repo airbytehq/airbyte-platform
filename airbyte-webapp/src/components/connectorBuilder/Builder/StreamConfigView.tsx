@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
@@ -19,7 +20,6 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
-import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";

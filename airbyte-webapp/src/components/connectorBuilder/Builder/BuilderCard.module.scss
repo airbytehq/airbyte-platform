@@ -56,8 +56,11 @@
 .toggleLabel {
   & label {
     cursor: pointer;
-    padding-bottom: 0;
   }
+}
+
+.toggleLabelHeader {
+  margin-bottom: 0;
 }
 
 .yamlEditor {

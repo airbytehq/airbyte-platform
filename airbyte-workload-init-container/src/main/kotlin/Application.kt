@@ -10,15 +10,15 @@ import io.micronaut.context.ApplicationContext
 private val logger = KotlinLogging.logger {}
 
 fun main() {
-  logger.info { "Init start" }
+  ApplicationContext.run().use {
+    logger.info { "Init start" }
 
-  val workloadId = EnvVar.WORKLOAD_ID.fetch()!!
+    val workloadId = EnvVar.WORKLOAD_ID.fetch()!!
 
-  val applicationContext = ApplicationContext.run()
+    val fetcher = it?.getBean(InputFetcher::class.java)
 
-  val fetcher = applicationContext?.getBean(InputFetcher::class.java)
+    fetcher?.fetch(workloadId)
 
-  fetcher?.fetch(workloadId)
-
-  logger.info { "Init end" }
+    logger.info { "Init end" }
+  }
 }

@@ -39,7 +39,6 @@ import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Multi;
@@ -229,7 +228,6 @@ class RefreshSchemaActivityTest {
 
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
         .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
@@ -246,7 +244,6 @@ class RefreshSchemaActivityTest {
   void refreshSchemaHandlesNullDiff() throws IOException {
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
     final CatalogDiff catalogDiff = null;
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
@@ -264,7 +261,6 @@ class RefreshSchemaActivityTest {
   void refreshV2ValidatesPayloadSize() throws IOException {
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
         .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
 

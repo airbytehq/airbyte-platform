@@ -14,9 +14,6 @@ global:
     secretName: ""
     secretValue: ""
 
-  enterprise:
-    workloadsOptIn: false
-
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret

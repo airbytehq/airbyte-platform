@@ -81,8 +81,8 @@ in `cypress/e2e/`), and one for Airbyte Cloud (located in `cypress/cloud-e2e/`).
 Airbyte Cloud e2e tests are open-source, but due to their proprietary nature can only be
 run successfully from within the private Airbyte VPN.
 
-#### Running an interactive Cypress session with `pnpm run cypress:open`
-
+#### Using local k8s and `make` (recommended)
+##### Running an interactive Cypress session
 The most useful way to run tests locally is with the `cypress open` command. It opens a
 dispatcher window that lets you select which tests and browser to run; the Electron
 browser (whose devtools will be very familiar to chrome users) opens a child window, and
@@ -94,40 +94,20 @@ state present at the end of the last test; you can click around, "inspect elemen
 interact with the page however you wish, which makes it easy to incrementally develop
 tests.
 
-By default, this command is configured to visit page urls from port 3000 (as used by a
-locally-run dev server), not port 8000 (as used by docker-compose's `webapp` service). If
-you want to run tests against the dockerized UI instead, leave the `webapp` docker-compose
-service running in step 4) and start the test runner with
-`CYPRESS_BASE_URL=http://localhost:8000 pnpm run cypress:open` in step 8).
+1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2) Run `make test.e2e.oss.open`.  This will take care off all dependencies, start Cypress, and launch the interactive GUI.
+3) Launch the tests in Electron browser (Chrome is not able to properly connect to the Cypress server in this case, and Electron is what we use on CI anyways!)
 
-Steps:
-1) Build the OSS backend for the current commit with `./gradlew clean build`.
-2) Create the test database: `pnpm run createdbsource` and `pnpm run createdbdestination`.
-3) Before running the connector builder tests, also start the dummy API server: `pnpm run createdummyapi`
-4) The following commands will start long-running servers, so prepare to open a few terminal windows.
-5) Start the OSS backend: `BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" VERSION=dev docker compose --file ../docker-compose.yaml up`. If you want, follow this with `docker compose stop webapp` to turn off the dockerized frontend build; interactive cypress sessions don't use it.
-6) Start the frontend development server with `pnpm start`.
-7) Start the cypress test runner with `pnpm run cypress:open`.
+##### Reproducing CI test results
+This triggers headless runs: you won't have a live browser to interact with, just terminal output.  This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode.  This will print the same output you would see on CI.
 
-#### Reproducing CI test results with `pnpm run cypress:run`
+1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2) Run `make test.e2e.oss`.  This will take care of running dependency scripts to spin up a source and destination db and dummy API, and finally run `npm run cypress:ci` to begin the tests.
 
-Unlike `pnpm run cypress:open`, `pnpm run cypress:run` use
-the dockerized UI (i.e. they expect the UI at port 8000, rather than port 3000). If the
-OSS backend is running but you have run `docker-compose stop webapp`, you'll have to
-re-enable it with `docker-compose start webapp`. These trigger headless runs: you won't
-have a live browser to interact with, just terminal output.
-
-Steps:
-1) Build the OSS backend for the current commit with `./gradlew clean build`.
-2) Create the test database: `pnpm run createdbsource` and `pnpm run createdbdestination`.
-3) When running the connector builder tests, start the dummy API server: `pnpm run createdummyapi`
-4) Start the OSS backend: `BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" VERSION=dev docker compose --file ../docker-compose.yaml up`.
-5) Start the cypress test run with `pnpm run cypress:run`.
 
 #### Test setup
 
-When the tests are run as described above, the platform under test is started via docker
-compose on the local docker host. To test connections from real sources and destinations,
+When the tests are run as described above, the platform under test is started via kubernetes in the ab namespace. To test connections from real sources and destinations,
 additional docker containers are started for hosting these. For basic connections,
 additional postgres instances are started (`createdbsource` and `createdbdestination`).
 
@@ -136,7 +116,7 @@ For testing the connector builder UI, a dummy api server based on a node script 
 a few records of hardcoded data. By running it in the internal airbyte network, the
 connector builder server can access it under its container name.
 
-The tests in here are instrumenting a Chrome instance to test the full functionality of
+The tests in here are instrumenting an Electron instance to test the full functionality of
 Airbyte from the frontend, so other components of the platform (scheduler, worker,
 connector builder server) are also tested in a rudimentary way.
 

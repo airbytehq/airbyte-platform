@@ -1,0 +1,48 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$min-width-horizontal: 900px;
+
+.borderedTiles {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-template-rows: 1fr;
+  gap: variables.$border-thin;
+  background: colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  container-type: inline-size;
+
+  &__tile {
+    grid-row: 1 / 1;
+    background: colors.$foreground;
+    overflow: hidden;
+    padding: variables.$spacing-xl;
+
+    @container (max-width: #{$min-width-horizontal}) {
+      grid-row: auto;
+    }
+
+    &:first-child {
+      border-top-left-radius: variables.$border-radius-md;
+      border-bottom-left-radius: variables.$border-radius-md;
+
+      @container (max-width: #{$min-width-horizontal}) {
+        border-top-left-radius: variables.$border-radius-md;
+        border-top-right-radius: variables.$border-radius-md;
+        border-bottom-left-radius: 0;
+      }
+    }
+
+    &:last-child {
+      border-top-right-radius: variables.$border-radius-md;
+      border-bottom-right-radius: variables.$border-radius-md;
+
+      @container (max-width: #{$min-width-horizontal}) {
+        border-top-right-radius: 0;
+        border-bottom-left-radius: variables.$border-radius-md;
+        border-bottom-right-radius: variables.$border-radius-md;
+      }
+    }
+  }
+}

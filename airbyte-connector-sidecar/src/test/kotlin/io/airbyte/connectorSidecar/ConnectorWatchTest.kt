@@ -14,18 +14,25 @@ import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
-import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
+import io.mockk.MockKException
+import io.mockk.Runs
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.just
 import io.mockk.spyk
+import io.mockk.verify
 import io.mockk.verifyOrder
+import io.mockk.verifySequence
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -63,6 +70,9 @@ class ConnectorWatchTest {
   @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
+  @MockK
+  private lateinit var heartbeatMonitor: HeartbeatMonitor
+
   private lateinit var connectorWatcher: ConnectorWatcher
 
   val workloadId = "workloadId"
@@ -89,10 +99,11 @@ class ConnectorWatchTest {
           workloadApiClient,
           jobOutputDocStore,
           logContextFactory,
+          heartbeatMonitor,
         ),
       )
 
-    every { connectorWatcher.readFile(OrchestratorConstants.EXIT_CODE_FILE) } returns "0"
+    every { connectorWatcher.readFile(FileConstants.EXIT_CODE_FILE) } returns "0"
 
     every { connectorWatcher.areNeededFilesPresent() } returns true
 
@@ -105,6 +116,14 @@ class ConnectorWatchTest {
     every { jobOutputDocStore.write(any(), any()) } returns Unit
 
     every { logContextFactory.create(any()) } returns mapOf()
+
+    every { workloadApi.workloadHeartbeat(any()) } just Runs
+
+    every { heartbeatMonitor.startHeartbeatThread(any()) } just Runs
+
+    every { heartbeatMonitor.stopHeartbeatThread() } just Runs
+
+    every { heartbeatMonitor.shouldAbort() } returns false
   }
 
   @ParameterizedTest
@@ -114,7 +133,7 @@ class ConnectorWatchTest {
       ConnectorJobOutput()
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
 
-    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
@@ -138,7 +157,7 @@ class ConnectorWatchTest {
       ConnectorJobOutput()
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED))
 
-    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
@@ -166,7 +185,7 @@ class ConnectorWatchTest {
         OperationType.SPEC -> connectorWatcher.getFailedOutput("", exception)
       }
 
-    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
@@ -196,22 +215,80 @@ class ConnectorWatchTest {
   @ParameterizedTest
   @EnumSource(OperationType::class)
   fun `run for failed with file timeout`(operationType: OperationType) {
-    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
-
+    var exitCauseFileWasNotFound = false
     every { connectorWatcher.areNeededFilesPresent() } returns false
 
-    every { connectorWatcher.fileTimeoutReach(any(), any()) } returns true
+    every { connectorWatcher.hasFileTimeoutReached(any(), any()) } returns true
+    every { connectorWatcher.handleException(any(), any()) } just Runs
 
-    every { connectorWatcher.exitFileNotFound() } returns Unit
+    every { connectorWatcher.exitFileNotFound() } answers {
+      exitCauseFileWasNotFound = true
+      throw RuntimeException("")
+    }
 
     every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()
 
-    verifyOrder {
-      workloadApi.workloadFailure(any())
-      connectorWatcher.exitFileNotFound()
+    assertTrue(exitCauseFileWasNotFound)
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `should start and stop heartbeat monitor correctly`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+
+    connectorWatcher.run()
+
+    verifySequence {
+      heartbeatMonitor.startHeartbeatThread(any())
+      heartbeatMonitor.shouldAbort()
+      heartbeatMonitor.stopHeartbeatThread()
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `should handle heartbeat abort during waitForConnectorOutput`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+
+    val integrationLauncherConfig = spyk(IntegrationLauncherConfig())
+
+    every { integrationLauncherConfig.dockerImage } returns ""
+
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, integrationLauncherConfig, operationType, ""))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+
+    every { heartbeatMonitor.shouldAbort() } returns true
+
+    every { connectorWatcher.exitInternalError() } throws MockKException("")
+
+    val exception =
+      assertThrows<MockKException> {
+        connectorWatcher.run()
+      }
+
+    verify {
+      heartbeatMonitor.startHeartbeatThread(any())
+      heartbeatMonitor.shouldAbort()
+      heartbeatMonitor.stopHeartbeatThread()
     }
   }
 }

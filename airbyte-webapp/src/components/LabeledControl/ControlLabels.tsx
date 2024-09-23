@@ -11,6 +11,7 @@ import styles from "./ControlLabels.module.scss";
 
 export interface ControlLabelsProps {
   className?: string;
+  headerClassName?: string;
   error?: boolean;
   success?: boolean;
   nextLine?: boolean;
@@ -25,7 +26,7 @@ export interface ControlLabelsProps {
 
 const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlLabelsProps>>((props, ref) => (
   <div ref={ref} className={className(styles.controlContainer, props.className)}>
-    <FlexContainer gap="sm" alignItems="center">
+    <FlexContainer gap="sm" alignItems="center" className={className(styles.headerContainer, props.headerClassName)}>
       <Label
         error={props.error}
         success={props.success}

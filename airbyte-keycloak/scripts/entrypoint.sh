@@ -10,27 +10,36 @@ export KC_HTTP_PORT=$KEYCLOAK_PORT
 
 LOG_LEVEL=${LOG_LEVEL:-INFO}
 
-if [ -n "$KEYCLOAK_HOSTNAME_URL" ]; then
-  # leave this unset if planning to configure frontendUrl at the realm level.
-  export KC_HOSTNAME_URL=$KEYCLOAK_HOSTNAME_URL
-fi
-
-if [ -n "$KEYCLOAK_HOSTNAME_ADMIN_URL" ]; then
-  # leave this unset to let the admin console url be based on the incoming request.
-  export KC_HOSTNAME_ADMIN_URL=$KEYCLOAK_HOSTNAME_ADMIN_URL
-fi
-
-bin/kc.sh start \
+# Build the command dynamically
+CMD="bin/kc.sh start \
   --proxy edge \
-  --hostname-strict false \
   --log-level=$LOG_LEVEL \
   --cache=ispn \
   --cache-stack=kubernetes \
   --health-enabled=true \
   --http-relative-path /auth \
   --cache-config-file=cache-ispn-override.xml \
-  --legacy-observability-interface=true \
+  --legacy-observability-interface=true"
   # --spi-theme-static-max-age=-1 \
   # --spi-theme-cache-themes=false \
   # --spi-theme-cache-templates=false
   # Uncomment the --spi-theme options above to disable caching, which is useful for theme development
+
+# If the KEYCLOAK_HOSTNAME_URL is set, use it as the hostname, and set backchannel to dynamic
+# for requests from internal services to Keycloak.
+# Otherwise, disable strict hostname checking.
+if [ -n "$KEYCLOAK_HOSTNAME_URL" ]; then
+  CMD+=" --hostname $KEYCLOAK_HOSTNAME_URL"
+  CMD+=" --hostname-backchannel-dynamic true"
+else
+  CMD+=" --hostname-strict false"
+fi
+
+# If the KEYCLOAK_ADMIN_HOSTNAME_URL is set, use it as the admin hostname
+if [ -n "$KEYCLOAK_ADMIN_HOSTNAME_URL" ]; then
+  CMD+=" --hostname-admin $KEYCLOAK_ADMIN_HOSTNAME_URL"
+fi
+
+./configure_keycloak.sh > /dev/null 2>&1 & disown
+# Execute the command
+eval $CMD

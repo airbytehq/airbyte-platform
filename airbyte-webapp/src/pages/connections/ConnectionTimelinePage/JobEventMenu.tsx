@@ -7,16 +7,17 @@ import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
-import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { useCurrentConnection, useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ModalOptions, ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobEventMenu.module.scss";
 import { JobLogsModalContent } from "./JobLogsModalContent";
+import { TimelineFilterValues } from "./utils";
 
 enum JobMenuOptions {
   OpenLogsModal = "OpenLogsModal",
@@ -24,13 +25,14 @@ enum JobMenuOptions {
   DownloadLogs = "DownloadLogs",
 }
 
-export const openJobLogsModalFromTimeline = ({
+export const nextOpenJobLogsModal = ({
   openModal,
   jobId,
   eventId,
   connectionName,
   attemptNumber,
   connectionId,
+  setFilterValue,
 }: {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
   jobId?: number;
@@ -38,6 +40,7 @@ export const openJobLogsModalFromTimeline = ({
   connectionName: string;
   attemptNumber?: number;
   connectionId: string;
+  setFilterValue?: (filterName: keyof TimelineFilterValues, value: string) => void;
 }) => {
   if (!jobId && !eventId) {
     return;
@@ -47,21 +50,27 @@ export const openJobLogsModalFromTimeline = ({
     size: "full",
     title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName }} />,
     content: () => (
-      <Suspense
-        fallback={
-          <div className={styles.modalLoading}>
-            <Spinner />
-          </div>
-        }
-      >
-        <JobLogsModalContent
-          jobId={jobId}
-          attemptNumber={attemptNumber}
-          eventId={eventId}
-          connectionId={connectionId}
-        />
-      </Suspense>
+      <DefaultErrorBoundary>
+        <Suspense
+          fallback={
+            <div className={styles.modalLoading}>
+              <Spinner />
+            </div>
+          }
+        >
+          <JobLogsModalContent
+            jobId={jobId}
+            attemptNumber={attemptNumber}
+            eventId={eventId}
+            connectionId={connectionId}
+          />
+        </Suspense>
+      </DefaultErrorBoundary>
     ),
+  }).then((result) => {
+    if (result && setFilterValue) {
+      setFilterValue("openLogs", "");
+    }
   });
 };
 
@@ -71,7 +80,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   attemptCount,
 }) => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { openModal } = useModalService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
 
@@ -81,7 +90,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   const onChangeHandler = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
       case JobMenuOptions.OpenLogsModal:
-        openJobLogsModalFromTimeline({
+        nextOpenJobLogsModal({
           openModal,
           jobId,
           eventId,
@@ -170,22 +179,26 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   return (
     <DropdownMenu
       placement="bottom-end"
+      data-testid="job-event-menu"
       options={[
         {
           displayName: formatMessage({
             id: "jobHistory.copyLinkToEvent",
           }),
           value: JobMenuOptions.CopyLinkToEvent,
+          "data-testid": "copy-link-to-event",
         },
         {
           displayName: formatMessage({ id: "jobHistory.viewLogs" }),
           value: JobMenuOptions.OpenLogsModal,
           disabled: attemptCount === 0,
+          "data-testid": "view-logs",
         },
         {
           displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
           value: JobMenuOptions.DownloadLogs,
           disabled: attemptCount === 0,
+          "data-testid": "download-logs",
         },
       ]}
       onChange={onChangeHandler}

@@ -21,16 +21,19 @@ set +o xtrace  # +x easier human reading here
 
 . tools/lib/lib.sh
 
-function check_compose_image_exist() {
-  local compose_file=$1
-  local tag=$2
-  for img in `grep "image:" ${compose_file} | tr -d ' ' | cut -d ':' -f2`; do
-    printf "\t${img}: ${tag}\n"
-    if docker_tag_exists $img $tag; then
-      printf "\tSTATUS: found\n\n"
-    else
-      printf "\tERROR: not found!\n\n" && exit 1
-    fi
+function check_chart_image_exist() {
+  printf "\nCalling check_chart_image_exists with tag $1...\n"
+  local tag=$1
+
+  images=($(grep "repository: airbyte/" "$this_file_directory/../../charts/airbyte/values.yaml" | tr -d ' ' | cut -d ':' -f2))
+  for img in "${images[@]}";
+  do
+      printf "\t${img}:${tag}\n"
+      if docker_tag_exists $img $tag; then
+        printf "\tSTATUS: found\n\n"
+      else
+        printf "\tERROR: not found!\n\n" && exit 1
+      fi
   done
 }
 
@@ -77,7 +80,7 @@ function docker_tag_exists() {
 checkPlatformImages() {
   echo -e "$blue_text""Checking platform images exist...""$default_text"
   # Check dockerhub to see if the images exist
-  check_compose_image_exist docker-compose.yaml $VERSION
+  check_chart_image_exist "$VERSION"
 }
 
 

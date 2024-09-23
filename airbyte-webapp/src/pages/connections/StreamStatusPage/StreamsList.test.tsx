@@ -33,6 +33,7 @@ jest.mock("core/api", () => ({
   useListStreamsStatuses: () => [],
   useGetConnectionSyncProgress: () => ({ data: {} }),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
 }));
 jest.mock("area/connection/utils/useUiStreamsStates");
 jest.mock("area/connection/utils/useStreamsTableAnalytics");
@@ -101,7 +102,7 @@ describe("StreamsList", () => {
       ],
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
-      expectedLatestSyncStats: ["500 extracted", "Starting..."],
+      expectedLatestSyncStats: ["500 extracted", "Starting…"],
       expectedFreshness: ["-", "-"],
       expectedLoadingAttributes: ["false", "false"],
     },
@@ -127,7 +128,7 @@ describe("StreamsList", () => {
       ],
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
-      expectedLatestSyncStats: ["500 extracted", "Starting..."],
+      expectedLatestSyncStats: ["500 extracted", "Starting…"],
       expectedFreshness: ["-", "-"],
       expectedLoadingAttributes: ["false", "false"],
     },

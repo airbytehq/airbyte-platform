@@ -114,6 +114,7 @@ import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -150,7 +151,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 @SuppressWarnings({"unchecked", "PMD.AvoidDuplicateLiterals"})
@@ -981,7 +981,7 @@ class SchedulerHandlerTest {
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead1);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead1, connectionRead2));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
 
@@ -990,14 +990,16 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
     // if the FF is disabled, the diff and update should be called for _each_ connection using the
     // source
     final var expectedOldPathCalls = enabled ? 0 : 2;
-    verify(connectionsHandler, times(expectedOldPathCalls)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(expectedOldPathCalls)).updateConnection(any());
+    verify(connectionsHandler, times(expectedOldPathCalls)).getDiff(any(), any(), any(), any());
+    verify(connectionsHandler, times(expectedOldPathCalls)).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
 
     // if the ff is on, we use the ala cart diff and disabling logic for just the connection specified
     final var expectedNewPathCalls = enabled ? 1 : 0;
@@ -1044,10 +1046,11 @@ class SchedulerHandlerTest {
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
@@ -1103,10 +1106,12 @@ class SchedulerHandlerTest {
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.DISABLE).connectionId(connectionId).sourceId(source.getSourceId()).notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-    when(connectionsHandler.updateConnection(new ConnectionUpdate().connectionId(connectionId).breakingChange(true))).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final ActorCatalog actorCatalog = new ActorCatalog()
@@ -1168,7 +1173,7 @@ class SchedulerHandlerTest {
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
 
@@ -1181,14 +1186,14 @@ class SchedulerHandlerTest {
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
     final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
-    final ConnectionUpdate expectedConnectionUpdate =
-        new ConnectionUpdate().connectionId(connectionId).breakingChange(true).status(ConnectionStatus.INACTIVE);
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
-    assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
-    verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
+    assertEquals(ConnectionStatus.INACTIVE, actual.getConnectionStatus());
+    verify(connectionsHandler).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
   }
 
   // TODO: to be removed once we swap to new discover flow
@@ -1228,7 +1233,7 @@ class SchedulerHandlerTest {
             NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
             .notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
 
@@ -1237,6 +1242,8 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
@@ -1317,7 +1324,7 @@ class SchedulerHandlerTest {
             .notifySchemaChanges(false);
 
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead, connectionRead2, connectionRead3);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff1, catalogDiff2, catalogDiff3);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff1, catalogDiff2, catalogDiff3);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead, connectionRead2, connectionRead3));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
 
@@ -1326,6 +1333,8 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.ACTIVE));
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
@@ -1336,12 +1345,7 @@ class SchedulerHandlerTest {
     assertEquals(expectedActorCatalog, actual.getCatalog());
     assertEquals(ConnectionStatus.ACTIVE, actual.getConnectionStatus());
 
-    final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
-    verify(connectionsHandler, times(3)).updateConnection(expectedArgumentCaptor.capture());
-    final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
-    assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
-    assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
-    assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
+    verify(connectionsHandler, times(3)).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
   }
 
   @Test
@@ -1684,7 +1688,8 @@ class SchedulerHandlerTest {
     verify(connectionsHandler).updateConnection(
         new ConnectionUpdate().connectionId(connection.getConnectionId())
             .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId));
+            .sourceCatalogId(discoveredSourceId),
+        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
   }
 
   @Test
@@ -1722,7 +1727,8 @@ class SchedulerHandlerTest {
     verify(connectionsHandler).updateConnection(
         new ConnectionUpdate().connectionId(connection.getConnectionId())
             .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId));
+            .sourceCatalogId(discoveredSourceId),
+        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
   }
 
   @Test
@@ -1760,7 +1766,8 @@ class SchedulerHandlerTest {
     verify(connectionsHandler).updateConnection(
         new ConnectionUpdate().connectionId(connection.getConnectionId())
             .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId));
+            .sourceCatalogId(discoveredSourceId),
+        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
   }
 
   @Test
@@ -1800,7 +1807,8 @@ class SchedulerHandlerTest {
     verify(connectionsHandler).updateConnection(
         new ConnectionUpdate().connectionId(connection.getConnectionId())
             .syncCatalog(catalogWithNewColumn)
-            .sourceCatalogId(discoveredSourceId));
+            .sourceCatalogId(discoveredSourceId),
+        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
   }
 
   @Test
@@ -1835,7 +1843,7 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler, times(0)).updateConnection(any());
+    verify(connectionsHandler, times(0)).updateConnection(any(), any(), any());
   }
 
   @Test
@@ -1896,7 +1904,7 @@ class SchedulerHandlerTest {
     final var diff = new CatalogDiff().addTransformsItem(new StreamTransform()
         .transformType(TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name("new_stream")));
-    when(connectionsHandler.getDiff(any(), any(), any()))
+    when(connectionsHandler.getDiff(any(), any(), any(), any()))
         .thenReturn(diff);
 
     final var spySchedulerHandler = spy(schedulerHandler);
@@ -1906,7 +1914,7 @@ class SchedulerHandlerTest {
         .catalogId(catalogId)
         .catalog(newCatalog);
     spySchedulerHandler.applySchemaChangeForSource(request);
-    verify(connectionsHandler).updateConnection(any());
+    verify(connectionsHandler).updateConnection(any(), any(), any());
     verify(notificationHelper, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
   }
 
@@ -1945,7 +1953,8 @@ class SchedulerHandlerTest {
     verify(connectionsHandler).updateConnection(
         new ConnectionUpdate().connectionId(connection.getConnectionId())
             .syncCatalog(discoveredCatalog)
-            .sourceCatalogId(discoveredSourceId));
+            .sourceCatalogId(discoveredSourceId),
+        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
   }
 
   private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {
@@ -2001,7 +2010,7 @@ class SchedulerHandlerTest {
     final List<StreamTransform> transforms = List.of(
         new StreamTransform());
     when(catalogDiff.getTransforms()).thenReturn(transforms);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     return connectionRead;
   }
 
@@ -2009,14 +2018,14 @@ class SchedulerHandlerTest {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
             new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
   }
 
   private void mockRemoveStreamDiff() throws JsonValidationException {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(TransformTypeEnum.REMOVE_STREAM).streamDescriptor(
             new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
   }
 
   private void mockUpdateStreamDiff() throws JsonValidationException {
@@ -2028,7 +2037,7 @@ class SchedulerHandlerTest {
                     .fieldName(List.of("aDifferentField"))
                     .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
                     .breaking(false)))));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
   }
 
   private void mockUpdateAndAddStreamDiff() throws JsonValidationException {
@@ -2042,12 +2051,12 @@ class SchedulerHandlerTest {
                     .breaking(false))),
         new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
             new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
   }
 
   private void mockEmptyDiff() throws JsonValidationException {
     final CatalogDiff emptyDiff = new CatalogDiff().transforms(List.of());
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(emptyDiff);
+    when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(emptyDiff);
   }
 
 }

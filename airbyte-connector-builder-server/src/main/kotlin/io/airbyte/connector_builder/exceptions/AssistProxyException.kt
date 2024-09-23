@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.server.errors.KnownException
 
 class AssistProxyException(private var responseCode: Int, jsonBody: JsonNode) :
-  KnownException(getStringFromResponse(jsonBody), getThrowableFromResponse(jsonBody)) {
+  KnownException(getStringFromResponse(jsonBody), getThrowableFromResponse(jsonBody), getDetailsFromResponse(jsonBody)) {
   override fun getHttpCode(): Int {
     return responseCode
   }
@@ -19,6 +19,13 @@ fun getStringFromResponse(jsonBody: JsonNode): String {
   return "Unknown AI Assist error"
 }
 
+fun getDetailsFromResponse(jsonBody: JsonNode): Map<String, Any> {
+  if (jsonBody.has("details")) {
+    return jsonBody.get("details").fields().asSequence().associate { it.key to it.value }
+  }
+  return emptyMap()
+}
+
 fun getThrowableFromResponse(jsonBody: JsonNode): Throwable? {
   if (jsonBody.has("exceptionStack")) {
     val message = getStringFromResponse(jsonBody)
@@ -28,6 +35,7 @@ fun getThrowableFromResponse(jsonBody: JsonNode): Throwable? {
 
     val throwable = Throwable(message)
     throwable.stackTrace = stackTrace
+
     return throwable
   }
   return null

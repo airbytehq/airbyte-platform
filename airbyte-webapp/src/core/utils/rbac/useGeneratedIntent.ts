@@ -1,5 +1,7 @@
 import { useCurrentWorkspace, useListPermissions } from "core/api";
+import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
+import { assertNever } from "core/utils/asserts";
 
 import { INTENTS } from "./generated-intents";
 
@@ -19,21 +21,24 @@ export const useGeneratedIntent = (intentName: keyof typeof INTENTS, metaOverrid
 
   const hasPermission = intent.roles.some((role) => {
     return permissions.some((permission) => {
-      if (
-        permission.permissionType.indexOf("organization") !== -1 &&
-        permission.organizationId === organizationId &&
-        permission.permissionType === role
-      ) {
-        return true;
+      switch (permission.permissionType) {
+        case "organization_admin":
+        case "organization_editor":
+        case "organization_reader":
+        case "organization_member":
+          return permission.permissionType === role && permission.organizationId === organizationId;
+        case "workspace_owner":
+        case "workspace_admin":
+        case "workspace_editor":
+        case "workspace_reader":
+          return permission.permissionType === role && permission.workspaceId === workspaceId;
+        // instance_reader is a frontend-only role that is used to support the admin "viewing/editing" feature. We will need to re-engineer that feature now that we are moving away from hierarchical permissions. But for now, this is here to avoid a runtime error when a useGeneratedIntent() encounters an instance_reader permission.
+        case "instance_reader" as PermissionType:
+        case "instance_admin":
+          return permission.permissionType === role;
+        default:
+          return assertNever(permission.permissionType);
       }
-      if (
-        permission.permissionType.indexOf("workspace") !== -1 &&
-        permission.workspaceId === workspaceId &&
-        permission.permissionType === role
-      ) {
-        return true;
-      }
-      return false;
     });
   });
 

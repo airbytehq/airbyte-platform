@@ -4,9 +4,9 @@ import io.airbyte.initContainer.system.FileClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
@@ -62,13 +62,13 @@ class SpecHydrationProcessorTest {
 
     every { deserializer.toSpecInput(input.inputPayload) } returns parsed
     every { serializer.serialize(sidecarInput) } returns serializedInput
-    every { fileClient.writeInputFile(OrchestratorConstants.SIDECAR_INPUT, serializedInput) } returns Unit
+    every { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) } returns Unit
 
     processor.process(input)
 
     verify { deserializer.toSpecInput(input.inputPayload) }
     verify { serializer.serialize(sidecarInput) }
-    verify { fileClient.writeInputFile(OrchestratorConstants.SIDECAR_INPUT, serializedInput) }
+    verify { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) }
   }
 
   object Fixtures {

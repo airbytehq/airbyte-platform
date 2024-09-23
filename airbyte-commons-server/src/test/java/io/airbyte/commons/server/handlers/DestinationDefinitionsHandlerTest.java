@@ -262,7 +262,8 @@ class DestinationDefinitionsHandlerTest {
   void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
+        .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -300,7 +301,8 @@ class DestinationDefinitionsHandlerTest {
             .thenReturn(true);
 
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, hiddenDestinationDefinition));
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
+        .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -749,6 +751,37 @@ class DestinationDefinitionsHandlerTest {
     verify(configRepository).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
     verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
+  }
+
+  @Test
+  @DisplayName("does not update the name of a non-custom connector definition")
+  void testBuildDestinationDefinitionUpdateNameNonCustom() {
+    final StandardDestinationDefinition existingDestinationDefinition = destinationDefinition;
+
+    final DestinationDefinitionUpdate destinationDefinitionUpdate = new DestinationDefinitionUpdate()
+        .destinationDefinitionId(existingDestinationDefinition.getDestinationDefinitionId())
+        .name("Some name that gets ignored");
+
+    final StandardDestinationDefinition newDestinationDefinition =
+        destinationDefinitionsHandler.buildDestinationDefinitionUpdate(existingDestinationDefinition, destinationDefinitionUpdate);
+
+    assertEquals(newDestinationDefinition.getName(), existingDestinationDefinition.getName());
+  }
+
+  @Test
+  @DisplayName("updates the name of a custom connector definition")
+  void testBuildDestinationDefinitionUpdateNameCustom() {
+    final String NEW_NAME = "My new connector name";
+    final StandardDestinationDefinition existingCustomDestinationDefinition = generateDestinationDefinition().withCustom(true);
+
+    final DestinationDefinitionUpdate destinationDefinitionUpdate = new DestinationDefinitionUpdate()
+        .destinationDefinitionId(existingCustomDestinationDefinition.getDestinationDefinitionId())
+        .name(NEW_NAME);
+
+    final StandardDestinationDefinition newDestinationDefinition = destinationDefinitionsHandler.buildDestinationDefinitionUpdate(
+        existingCustomDestinationDefinition, destinationDefinitionUpdate);
+
+    assertEquals(newDestinationDefinition.getName(), NEW_NAME);
   }
 
   @Test

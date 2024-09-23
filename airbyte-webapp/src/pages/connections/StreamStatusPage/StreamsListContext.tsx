@@ -4,7 +4,7 @@ import { sortStreamsAlphabetically, sortStreamsByStatus } from "components/conne
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useStreamsStatuses } from "area/connection/utils";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection } from "core/api";
 
 const useStreamsContextInit = (connectionId: string) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,7 +48,7 @@ export const useStreamsListContext = () => {
 };
 
 export const StreamsListContextProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const streamsContext = useStreamsContextInit(connection.connectionId);
 
   return <StreamsContext.Provider value={streamsContext}>{children}</StreamsContext.Provider>;

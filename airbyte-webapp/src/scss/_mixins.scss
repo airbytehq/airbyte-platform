@@ -109,3 +109,17 @@ $stripes-width: 83px;
   // custom background (secondary button has no background)
   background-color: colors.$foreground;
 }
+
+@mixin gradient-border(
+  $border-width,
+  $border-color,
+  $background-color: linear-gradient(to right, colors.$foreground, colors.$foreground)
+) {
+  // Note: Gradient borders do not work with border-radius
+  // as a workaround we must use a transparent border combined with a gradient background
+  // Note: The default background color of linear-gradient is necessary for padding-box to work
+  background:
+    $background-color padding-box,
+    $border-color border-box;
+  border: $border-width solid transparent;
+}

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
@@ -12,7 +13,6 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
-import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";

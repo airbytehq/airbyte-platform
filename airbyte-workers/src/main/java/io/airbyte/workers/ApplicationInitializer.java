@@ -10,10 +10,8 @@ import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.TemporalInitializationUtils;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.MaxWorkersConfig;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
-import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
@@ -109,10 +107,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private WorkflowServiceStubs temporalService;
   @Inject
   private TemporalUtils temporalUtils;
-  @Value("${airbyte.temporal.worker.ports}")
-  private Set<Integer> temporalWorkerPorts;
-  @Inject
-  private WorkerEnvironment workerEnvironment;
   @Inject
   private WorkerFactory workerFactory;
   @Value("${airbyte.workspace.root}")
@@ -125,8 +119,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
   @Value("${airbyte.data.discover.task-queue}")
   private String discoverTaskQueue;
-  @Inject
-  private Environment environment;
   @Inject
   private LogClientManager logClientManager;
 
@@ -162,10 +154,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
     // Configure logging client
     logClientManager.setWorkspaceMdc(Path.of(workspaceRoot, SCHEDULER_LOGS));
-
-    if (environment.getActiveNames().contains(Environment.KUBERNETES)) {
-      KubePortManagerSingleton.init(temporalWorkerPorts);
-    }
 
     configureTemporal(temporalUtils, temporalService);
   }

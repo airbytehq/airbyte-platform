@@ -10,7 +10,7 @@ import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.config.Application;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
 import io.airbyte.data.services.ApplicationService;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
@@ -41,7 +41,7 @@ public class ApplicationServiceMicronautImpl implements ApplicationService {
   }
 
   @Override
-  public List<Application> listApplicationsByUser(final User user) {
+  public List<Application> listApplicationsByUser(final AuthenticatedUser user) {
     return List.of(
         new Application()
             .withName(user.getName() + " Application")
@@ -72,12 +72,12 @@ public class ApplicationServiceMicronautImpl implements ApplicationService {
   }
 
   @Override
-  public Application createApplication(final User user, final String name) {
+  public Application createApplication(final AuthenticatedUser user, final String name) {
     throw new NotImplementedException();
   }
 
   @Override
-  public Optional<Application> deleteApplication(final User user, final String applicationId) {
+  public Optional<Application> deleteApplication(final AuthenticatedUser user, final String applicationId) {
     throw new NotImplementedException();
   }
 

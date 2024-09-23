@@ -65,6 +65,7 @@ class WorkloadHandlerImpl(
     type: WorkloadType,
     autoId: UUID,
     deadline: OffsetDateTime,
+    signalInput: String?,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -86,6 +87,7 @@ class WorkloadHandlerImpl(
         type = type.toDomain(),
         autoId = autoId,
         deadline = deadline,
+        signalInput = signalInput,
       )
     workloadRepository.save(domainWorkload).toApi()
 

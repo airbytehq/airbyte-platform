@@ -413,7 +413,7 @@ public class SourceHandler {
     return sourceRead;
   }
 
-  private SourceRead buildSourceRead(final UUID sourceId)
+  public SourceRead buildSourceRead(final UUID sourceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
     final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceId);

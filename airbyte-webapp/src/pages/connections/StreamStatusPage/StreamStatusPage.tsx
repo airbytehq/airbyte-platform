@@ -1,8 +1,7 @@
-import { useRef } from "react";
 import { useEffectOnce } from "react-use";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { ScrollableContainer } from "components/ScrollableContainer";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { trackTiming } from "core/utils/datadog";
 
@@ -13,8 +12,6 @@ import { StreamsListContextProvider } from "./StreamsListContext";
 import styles from "./StreamStatusPage.module.scss";
 
 export const StreamStatusPage = () => {
-  const ref = useRef<HTMLDivElement>(null);
-
   useEffectOnce(() => {
     trackTiming("StreamStatusPage");
   });
@@ -22,11 +19,11 @@ export const StreamStatusPage = () => {
   return (
     <ConnectionSyncContextProvider>
       <StreamsListContextProvider>
-        <ScrollableContainer ref={ref} className={styles.container}>
+        <ScrollParent props={{ className: styles.container }}>
           <ConnectionStatusMessages />
           <ConnectionSyncStatusCard />
-          <StreamsList ref={ref} />
-        </ScrollableContainer>
+          <StreamsList />
+        </ScrollParent>
       </StreamsListContextProvider>
     </ConnectionSyncContextProvider>
   );

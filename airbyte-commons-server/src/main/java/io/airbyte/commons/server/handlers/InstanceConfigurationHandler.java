@@ -4,34 +4,43 @@
 
 package io.airbyte.commons.server.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthConfiguration;
 import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
-import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
+import io.airbyte.api.model.generated.LicenseInfoResponse;
+import io.airbyte.api.model.generated.LicenseStatus;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AuthConfigs;
 import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
+import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -42,6 +51,9 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class InstanceConfigurationHandler {
 
+  public static final Set<Permission.PermissionType> EDITOR_ROLES =
+      Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
+          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN);
   private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
@@ -52,6 +64,9 @@ public class InstanceConfigurationHandler {
   private final OrganizationPersistence organizationPersistence;
   private final String trackingStrategy;
   private final AuthConfigs authConfigs;
+  private final PermissionService permissionService;
+  private final Clock clock;
+  private final Optional<KubernetesClient> kubernetesClient;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -62,7 +77,10 @@ public class InstanceConfigurationHandler {
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence,
-                                      final AuthConfigs authConfigs) {
+                                      final AuthConfigs authConfigs,
+                                      final PermissionService permissionService,
+                                      final Optional<Clock> clock,
+                                      final Optional<KubernetesClient> kubernetesClient) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -73,6 +91,9 @@ public class InstanceConfigurationHandler {
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
     this.authConfigs = authConfigs;
+    this.permissionService = permissionService;
+    this.clock = clock.orElse(Clock.systemUTC());
+    this.kubernetesClient = kubernetesClient;
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
@@ -83,7 +104,8 @@ public class InstanceConfigurationHandler {
         .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
         .version(airbyteVersion.serialize())
-        .licenseType(getLicenseType())
+        .licenseStatus(getLicenseStatus())
+        .licenseExpirationDate(licenseExpirationDate())
         .auth(getAuthConfiguration())
         .initialSetupComplete(initialSetupComplete)
         .defaultUserId(getDefaultUserId())
@@ -118,9 +140,9 @@ public class InstanceConfigurationHandler {
     return getInstanceConfiguration();
   }
 
-  private LicenseTypeEnum getLicenseType() {
+  private LicenseStatus getLicenseStatus() {
     if (airbyteEdition.equals(AirbyteEdition.PRO) && activeAirbyteLicense.isPresent()) {
-      return Enums.convertTo(activeAirbyteLicense.get().getLicenseType(), LicenseTypeEnum.class);
+      return Enums.convertTo(activeAirbyteLicense.get().getLicenseType(), LicenseStatus.class);
     } else {
       return null;
     }
@@ -147,7 +169,8 @@ public class InstanceConfigurationHandler {
   }
 
   private void updateDefaultUser(final InstanceConfigurationSetupRequestBody requestBody) throws IOException {
-    final User defaultUser = userPersistence.getDefaultUser().orElseThrow(() -> new IllegalStateException("Default user does not exist."));
+    final AuthenticatedUser defaultUser =
+        userPersistence.getDefaultUser().orElseThrow(() -> new IllegalStateException("Default user does not exist."));
     // email is a required request property, so always set it.
     defaultUser.setEmail(requestBody.getEmail());
 
@@ -156,7 +179,7 @@ public class InstanceConfigurationHandler {
       defaultUser.setName(requestBody.getUserName());
     }
 
-    userPersistence.writeUser(defaultUser);
+    userPersistence.writeAuthenticatedUser(defaultUser);
   }
 
   private Organization getDefaultOrganization() throws IOException {
@@ -185,6 +208,62 @@ public class InstanceConfigurationHandler {
   // TODO persist instance configuration to a separate resource, rather than using a workspace.
   private StandardWorkspace getDefaultWorkspace(final UUID organizationId) throws IOException {
     return workspacePersistence.getDefaultWorkspaceForOrganization(organizationId);
+  }
+
+  public LicenseInfoResponse licenseInfo() {
+    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
+    if (licenseMaybe.isPresent()) {
+      final AirbyteLicense license = licenseMaybe.get();
+      return new LicenseInfoResponse()
+          .edition(license.type().toString())
+          .expirationDate(licenseExpirationDate())
+          .usedEditors(editorsUsage())
+          .usedNodes(0)
+          .maxEditors(license.maxEditors().orElse(null))
+          .maxNodes(license.maxNodes().orElse(null))
+          .usedNodes(nodesUsage())
+          .licenseStatus(getLicenseStatus());
+    }
+    return null;
+  }
+
+  private Long licenseExpirationDate() {
+    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
+
+    if (licenseMaybe.isPresent()) {
+      final AirbyteLicense license = licenseMaybe.get();
+      return license.expirationDate().map(d -> d.toInstant().toEpochMilli() / 1000).orElse(null);
+    }
+    return null;
+  }
+
+  private Integer editorsUsage() {
+
+    final var editors = permissionService.listPermissions().stream()
+        .filter(p -> EDITOR_ROLES.contains(p.getPermissionType()))
+        .map(Permission::getUserId).collect(Collectors.toSet());
+    return editors.size();
+  }
+
+  @VisibleForTesting
+  LicenseStatus currentLicenseStatus() {
+    if (activeAirbyteLicense.isEmpty()
+        || activeAirbyteLicense.get().getLicense().isEmpty()
+        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID) {
+      return LicenseStatus.INVALID;
+    }
+    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense().get();
+    if (actualLicense.expirationDate().map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
+      return LicenseStatus.EXPIRED;
+    }
+    if (actualLicense.maxEditors().map(m -> editorsUsage() > m).orElse(false)) {
+      return LicenseStatus.EXCEEDED;
+    }
+    return LicenseStatus.PRO;
+  }
+
+  private Integer nodesUsage() {
+    return kubernetesClient.map(client -> client.nodes().list().getItems().size()).orElse(null);
   }
 
 }

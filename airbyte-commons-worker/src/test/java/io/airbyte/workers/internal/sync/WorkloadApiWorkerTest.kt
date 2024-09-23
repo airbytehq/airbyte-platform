@@ -8,6 +8,7 @@ import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.LogClientManager
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
@@ -19,7 +20,6 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -356,6 +356,7 @@ internal class WorkloadApiWorkerTest {
       this.workspaceId = workspaceId
       this.connectionId = connectionId
       this.jobRunConfig = jobRunConfig
+      this.signalInput = "signalInputValue"
     }
 
     replicationActivityInput.apply {

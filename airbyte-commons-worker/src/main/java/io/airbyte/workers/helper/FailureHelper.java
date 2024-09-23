@@ -14,6 +14,7 @@ import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.workers.exception.ResourceConstraintException;
 import io.airbyte.workers.exception.WorkloadLauncherException;
 import io.airbyte.workers.exception.WorkloadMonitorException;
 import java.util.Comparator;
@@ -294,6 +295,11 @@ public class FailureHelper {
   public static FailureReason replicationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     final FailureReason failure = genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.REPLICATION);
+    if (isInstanceOf(t, ResourceConstraintException.class)) {
+      return failure.withFailureType(FailureType.TRANSIENT_ERROR)
+          .withExternalMessage("Airbyte could not start the sync process."
+              + " This may be due to insufficient system resources. Please check available resources and try again.");
+    }
     if (isInstanceOf(t, WorkloadLauncherException.class)) {
       return failure.withFailureType(FailureType.TRANSIENT_ERROR)
           .withExternalMessage("Airbyte could not start the sync process.");

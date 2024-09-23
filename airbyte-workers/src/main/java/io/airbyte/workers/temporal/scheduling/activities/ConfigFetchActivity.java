@@ -30,9 +30,6 @@ public interface ConfigFetchActivity {
   @ActivityMethod
   Optional<ConnectionStatus> getStatus(UUID connectionId);
 
-  @ActivityMethod
-  public Optional<Boolean> getBreakingChange(final UUID connectionId);
-
   /**
    * ScheduleRetrieverInput.
    */

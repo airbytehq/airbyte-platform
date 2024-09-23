@@ -51,6 +51,10 @@ dependencies:
     name: temporal
     repository: "file://../airbyte-temporal"
     version: "*"
+  - condition: temporal-ui.enabled
+    name: temporal-ui
+    repository: "file://../airbyte-temporal-ui"
+    version: "*"
   - condition: webapp.enabled
     name: webapp
     repository: "file://../airbyte-webapp"

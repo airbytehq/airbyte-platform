@@ -7,9 +7,9 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
@@ -77,8 +77,8 @@ class CheckHydrationProcessorTest {
     every { inputHydrator.getHydratedStandardCheckInput(unhydrated) } returns hydrated
     every { serializer.serialize(connectionConfiguration) } returns serializedConfig
     every { serializer.serialize(sidecarInput) } returns serializedInput
-    every { fileClient.writeInputFile(OrchestratorConstants.CONNECTION_CONFIGURATION, serializedConfig) } returns Unit
-    every { fileClient.writeInputFile(OrchestratorConstants.SIDECAR_INPUT, serializedInput) } returns Unit
+    every { fileClient.writeInputFile(FileConstants.CONNECTION_CONFIGURATION_FILE, serializedConfig) } returns Unit
+    every { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) } returns Unit
 
     processor.process(input)
 
@@ -86,8 +86,8 @@ class CheckHydrationProcessorTest {
     verify { inputHydrator.getHydratedStandardCheckInput(unhydrated) }
     verify { serializer.serialize(connectionConfiguration) }
     verify { serializer.serialize(sidecarInput) }
-    verify { fileClient.writeInputFile(OrchestratorConstants.CONNECTION_CONFIGURATION, serializedConfig) }
-    verify { fileClient.writeInputFile(OrchestratorConstants.SIDECAR_INPUT, serializedInput) }
+    verify { fileClient.writeInputFile(FileConstants.CONNECTION_CONFIGURATION_FILE, serializedConfig) }
+    verify { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) }
   }
 
   object Fixtures {

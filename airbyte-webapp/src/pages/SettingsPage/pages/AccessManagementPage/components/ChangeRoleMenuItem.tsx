@@ -62,12 +62,20 @@ export const disallowedRoles = (
   }
 
   const organizationRole = user?.organizationPermission?.permissionType;
+  const workspaceRole = user?.workspacePermission?.permissionType;
 
   if (organizationRole === "organization_reader") {
-    return ["workspace_reader"];
+    if (!workspaceRole) {
+      return ["workspace_reader"];
+    }
+    return [];
   }
+
   if (organizationRole === "organization_editor") {
-    return ["workspace_editor", "workspace_reader"];
+    if (!workspaceRole) {
+      return ["workspace_editor", "workspace_reader"];
+    }
+    return ["workspace_reader"];
   }
   if (organizationRole === "organization_admin") {
     return ["workspace_admin", "workspace_editor", "workspace_reader"];

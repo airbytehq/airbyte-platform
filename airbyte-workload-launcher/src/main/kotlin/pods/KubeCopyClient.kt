@@ -3,7 +3,8 @@ package io.airbyte.workload.launcher.pods
 import io.airbyte.commons.io.IOs
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.ContainerConstants
+import io.airbyte.workers.pod.FileConstants
 import io.fabric8.kubernetes.api.model.Pod
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -26,7 +27,7 @@ class KubeCopyClient(private val metricClient: MetricClient) {
     }
 
     // copy this file last to indicate that the copy has completed
-    val successFileExitCode = copyFileToPod(pod, KubePodProcess.SUCCESS_FILE_NAME, "success")
+    val successFileExitCode = copyFileToPod(pod, FileConstants.KUBE_CP_SUCCESS_MARKER_FILE, "success")
 
     // NOTE (copied from KubePodProcess): Copying the success indicator file to the init
     // container causes the container to immediately exit, causing the `kubectl cp` command
@@ -52,7 +53,7 @@ class KubeCopyClient(private val metricClient: MetricClient) {
     fileName: String,
     localPath: Path,
   ): Process {
-    val containerPath = Path.of(KubePodProcess.CONFIG_DIR + "/" + fileName)
+    val containerPath = Path.of(FileConstants.CONFIG_DIR + "/" + fileName)
 
     // using kubectl cp directly here, because both fabric and the official kube client APIs have
     // several issues with copying files. See https://github.com/airbytehq/airbyte/issues/8643 for
@@ -64,7 +65,7 @@ class KubeCopyClient(private val metricClient: MetricClient) {
         localPath.toString(),
         "${pod.metadata.namespace}/${pod.metadata.name}:$containerPath",
         "-c",
-        KubePodProcess.INIT_CONTAINER_NAME,
+        ContainerConstants.INIT_CONTAINER_NAME,
         "--retries=3",
       )
 

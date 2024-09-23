@@ -43,6 +43,28 @@ class LaunchPodStageTest {
   }
 
   @Test
+  fun `launches reset`() {
+    val replInput = ReplicationInput().withIsReset(true)
+    val payload = SyncPayload(replInput)
+
+    val launcher: KubePodClient = mockk()
+    every { launcher.launchReset(any(), any()) } returns Unit
+
+    val stage = LaunchPodStage(launcher, mockk(), "dataplane-id")
+    val workloadId = UUID.randomUUID().toString()
+    val msg = RecordFixtures.launcherInput(workloadId)
+    val io = LaunchStageIO(msg = msg, payload = payload)
+
+    val result = stage.applyStage(io)
+
+    verify {
+      launcher.launchReset(replInput, msg)
+    }
+
+    assert(result.payload == payload)
+  }
+
+  @Test
   fun `launches check`() {
     val checkInput = CheckConnectionInput()
     val payload = CheckPayload(checkInput)

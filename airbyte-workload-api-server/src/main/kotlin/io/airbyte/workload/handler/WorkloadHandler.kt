@@ -39,6 +39,7 @@ interface WorkloadHandler {
     type: WorkloadType,
     autoId: UUID,
     deadline: OffsetDateTime,
+    signalInput: String?,
   )
 
   fun claimWorkload(

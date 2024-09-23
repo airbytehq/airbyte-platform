@@ -307,6 +307,7 @@ class SchemaManagementTests {
             existingStreamAndConfig.getConfig().getSuggested(),
             existingStreamAndConfig.getConfig().getFieldSelectionEnabled(),
             existingStreamAndConfig.getConfig().getSelectedFields(),
+            existingStreamAndConfig.getConfig().getHashedFields(),
             existingStreamAndConfig.getConfig().getMinimumGenerationId(),
             existingStreamAndConfig.getConfig().getGenerationId(),
             existingStreamAndConfig.getConfig().getSyncId())));
@@ -334,6 +335,7 @@ class SchemaManagementTests {
             true,
             false,
             false,
+            List.of(),
             List.of(),
             null,
             null,
