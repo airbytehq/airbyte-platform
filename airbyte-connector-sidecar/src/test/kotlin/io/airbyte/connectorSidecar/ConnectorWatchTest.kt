@@ -20,11 +20,14 @@ import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
+import io.mockk.Runs
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.just
 import io.mockk.spyk
 import io.mockk.verifyOrder
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
@@ -198,20 +201,21 @@ class ConnectorWatchTest {
   fun `run for failed with file timeout`(operationType: OperationType) {
     every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
-
+    var exitCauseFileWasNotFound = false
     every { connectorWatcher.areNeededFilesPresent() } returns false
 
-    every { connectorWatcher.fileTimeoutReach(any(), any()) } returns true
+    every { connectorWatcher.hasFileTimeoutReached(any(), any()) } returns true
+    every { connectorWatcher.handleException(any(), any()) } just Runs
 
-    every { connectorWatcher.exitFileNotFound() } returns Unit
+    every { connectorWatcher.exitFileNotFound() } answers {
+      exitCauseFileWasNotFound = true
+      throw RuntimeException("")
+    }
 
     every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()
 
-    verifyOrder {
-      workloadApi.workloadFailure(any())
-      connectorWatcher.exitFileNotFound()
-    }
+    assertTrue(exitCauseFileWasNotFound)
   }
 }
