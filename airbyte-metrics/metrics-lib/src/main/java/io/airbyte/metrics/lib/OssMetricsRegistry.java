@@ -409,12 +409,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
       "job_output_read",
       "Read a job output from the output folder"),
-  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
-      "sync_record_checksum",
-      "Report the status of a record checksum"),
-  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
-      "sync_state_record_count",
-      "The record count emitted between state messages."),
 
   DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "destination_deserialization_error",

@@ -36,15 +36,12 @@ import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
@@ -420,7 +417,6 @@ class ReplicationWorkerHelper(
 
     if (sourceRawMessage.type == Type.STATE) {
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
-      recordStateStatsMetrics(metricClient, sourceRawMessage.state, AirbyteMessageOrigin.SOURCE, ctx!!)
     }
 
     if (sourceRawMessage.type == Type.RECORD) {
@@ -456,7 +452,6 @@ class ReplicationWorkerHelper(
 
     if (destinationRawMessage.type == Type.STATE) {
       val airbyteStateMessage = destinationRawMessage.state
-      recordStateStatsMetrics(metricClient, airbyteStateMessage, AirbyteMessageOrigin.DESTINATION, ctx!!)
       syncPersistence.accept(context.connectionId, destinationRawMessage.state)
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
@@ -570,53 +565,4 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt.toString()))
     add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
-}
-
-private fun extractStateRecordCount(stats: AirbyteStateStats?): Double {
-  return stats?.recordCount ?: 0.0
-}
-
-private fun recordStateStatsMetrics(
-  metricClient: MetricClient,
-  stateMessage: AirbyteStateMessage,
-  messageOrigin: AirbyteMessageOrigin,
-  ctx: ReplicationContext,
-) {
-  // Only record the destination stats for state messages coming from the destination.
-  // The destination stats will always be blank for state messages coming from the source
-  if (messageOrigin == AirbyteMessageOrigin.DESTINATION && stateMessage.destinationStats != null) {
-    recordStateStatsMetric(
-      metricClient,
-      stateMessage.destinationStats,
-      messageOrigin,
-      AirbyteMessageOrigin.DESTINATION,
-      ctx,
-    )
-  }
-
-  if (stateMessage.sourceStats != null) {
-    recordStateStatsMetric(metricClient, stateMessage.sourceStats, messageOrigin, AirbyteMessageOrigin.SOURCE, ctx)
-  }
-}
-
-private fun recordStateStatsMetric(
-  metricClient: MetricClient,
-  stats: AirbyteStateStats,
-  messageOrigin: AirbyteMessageOrigin,
-  statsType: AirbyteMessageOrigin,
-  ctx: ReplicationContext,
-) {
-  metricClient.gauge(
-    OssMetricsRegistry.SYNC_STATE_RECORD_COUNT,
-    extractStateRecordCount(stats),
-    *toConnectionAttrs(ctx).toTypedArray(),
-    *buildList {
-      add(MetricAttribute(MetricTags.SOURCE_IMAGE, ctx.sourceImage))
-      ctx.destinationImage.let {
-        add(MetricAttribute(MetricTags.DESTINATION_IMAGE, it))
-        add(MetricAttribute(MetricTags.AIRBYTE_MESSAGE_ORIGIN, messageOrigin.name))
-      }
-      add(MetricAttribute(MetricTags.RECORD_COUNT_TYPE, statsType.name))
-    }.toTypedArray(),
-  )
 }
