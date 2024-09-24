@@ -1,0 +1,69 @@
+micronaut:
+  application:
+    name: airbyte-workload-init-container
+  server:
+    enable: false
+  metrics:
+    enabled: false
+    export:
+      statsd:
+        enabled: false
+  security:
+    enabled: false
+
+airbyte:
+  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
+  data.plane.service-account:
+    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
+  init:
+    operation: ${OPERATION_TYPE:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
+  secret:
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
+    store:
+      aws:
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+      gcp:
+        credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
+        project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+      vault:
+        address: ${VAULT_ADDRESS:}
+        prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
+        token: ${VAULT_AUTH_TOKEN:vaultAuthTokenForTest}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    bearer-token-secret-key: ${WORKLOAD_API_BEARER_TOKEN_SECRET_KEY:}
+    bearer-token-secret-name: ${WORKLOAD_API_BEARER_TOKEN_SECRET_NAME:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}

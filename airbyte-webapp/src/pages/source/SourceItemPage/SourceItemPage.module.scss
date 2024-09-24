@@ -1,3 +1,18 @@
-.content {
+.container {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
   height: 100%;
+  grid-template-areas:
+    "page-header"
+    "page-content";
+}
+
+.pageHeader {
+  grid-area: page-header;
+}
+
+.pageBody {
+  grid-area: page-content;
+  overflow-y: auto;
 }

@@ -84,7 +84,7 @@ class KubePodLauncherTest {
     val pod: Pod = mockk()
 
     assertThrows<IllegalStateException> {
-      kubePodLauncher.waitForPodInit(
+      kubePodLauncher.waitForPodInitStartup(
         pod,
         Duration.ZERO,
       )

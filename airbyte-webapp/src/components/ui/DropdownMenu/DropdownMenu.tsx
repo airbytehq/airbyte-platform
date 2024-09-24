@@ -1,5 +1,5 @@
 import { autoUpdate, useFloating, offset, flip } from "@floating-ui/react-dom";
-import { Menu } from "@headlessui/react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import classNames from "classnames";
 import React, { AnchorHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { Link, LinkProps } from "react-router-dom";
 
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./DropdownMenu.module.scss";
 import { DropdownMenuProps, MenuItemContentProps, DropdownMenuOptionType, DropdownMenuOptionAnchorType } from "./types";
@@ -46,14 +47,13 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
     };
   };
 
-  const elementProps = (item: DropdownMenuOptionType, active: boolean) => {
+  const elementProps = (item: DropdownMenuOptionType, focus: boolean) => {
     return {
-      title: item.displayName,
       onClick: () => onChange && onChange(item),
       className: classNames(styles.item, item?.className, {
         [styles.iconPositionLeft]: (item?.iconPosition === "left" && item.icon) || !item?.iconPosition,
         [styles.iconPositionRight]: item?.iconPosition === "right",
-        [styles.active]: active,
+        [styles.focus]: focus,
         [styles.disabled]: item.disabled,
       }),
       disabled: item.disabled,
@@ -61,13 +61,31 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
     } as LinkProps | AnchorHTMLAttributes<Element>;
   };
 
+  const menuItem = (item: DropdownMenuOptionType, index: number) => (
+    <MenuItem key={index} disabled={item.disabled}>
+      {({ focus }) =>
+        item.as === "a"
+          ? React.createElement(
+              item.internal ? Link : "a",
+              { ...elementProps(item, focus), ...anchorProps(item) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+          : React.createElement(
+              item.as ?? "button",
+              { ...elementProps(item, focus) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+      }
+    </MenuItem>
+  );
+
   return (
     <Menu ref={reference} as="div" {...(restProps["data-testid"] && { "data-testid": restProps["data-testid"] })}>
       {({ open }) => (
         <>
-          <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>
+          <MenuButton as={React.Fragment}>{children({ open })}</MenuButton>
           {createPortal(
-            <Menu.Items
+            <MenuItems
               ref={floating}
               className={styles.items}
               style={{
@@ -87,25 +105,17 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                     </div>
                   );
                 }
-                return (
-                  <Menu.Item key={index} disabled={item.disabled}>
-                    {({ active }) =>
-                      item.as === "a"
-                        ? React.createElement(
-                            item.internal ? Link : "a",
-                            { ...elementProps(item, active), ...anchorProps(item) },
-                            <MenuItemContent data={item} textSize={textSize} />
-                          )
-                        : React.createElement(
-                            item.as ?? "button",
-                            { ...elementProps(item, active) },
-                            <MenuItemContent data={item} textSize={textSize} />
-                          )
-                    }
-                  </Menu.Item>
+                return item.tooltipContent != null ? (
+                  <div>
+                    <Tooltip control={menuItem(item, index)} placement="left">
+                      {item.tooltipContent}
+                    </Tooltip>
+                  </div>
+                ) : (
+                  menuItem(item, index)
                 );
               })}
-            </Menu.Items>,
+            </MenuItems>,
             document.body
           )}
         </>

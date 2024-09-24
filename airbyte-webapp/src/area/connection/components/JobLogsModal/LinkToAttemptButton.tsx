@@ -6,25 +6,35 @@ import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { buildAttemptLink } from "area/connection/utils/attemptLink";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { copyToClipboard } from "core/utils/clipboard";
-import { useExperiment } from "hooks/services/Experiment";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 interface Props {
+  connectionId: string;
   jobId: string | number;
   attemptId?: number;
   eventId?: string;
+  connectionTimelineEnabled?: boolean;
 }
 
-export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId }) => {
+export const LinkToAttemptButton: React.FC<Props> = ({
+  connectionId,
+  jobId,
+  attemptId,
+  eventId,
+  connectionTimelineEnabled,
+}) => {
   const { formatMessage } = useIntl();
-  const connectionTimeline = useExperiment("connection.timeline", false);
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false);
   const [hideTooltip] = useDebounce(() => setShowCopiedTooltip(false), 3000, [showCopiedTooltip]);
+  const workspaceId = useCurrentWorkspaceId();
 
   const onCopyLink = async () => {
     const url = new URL(window.location.href);
 
-    if (connectionTimeline) {
+    if (connectionTimelineEnabled) {
+      url.pathname = `${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${connectionId}/${ConnectionRoutePaths.Timeline}`;
       url.searchParams.set("openLogs", "true");
       if (eventId) {
         url.searchParams.set("eventId", eventId);
@@ -32,7 +42,7 @@ export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId
         url.searchParams.set("jobId", jobId.toString());
       }
       if (attemptId) {
-        url.searchParams.set("attemptId", attemptId.toString());
+        url.searchParams.set("attemptNumber", attemptId.toString());
       }
     } else {
       url.hash = buildAttemptLink(jobId, attemptId);
@@ -51,6 +61,7 @@ export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId
           onClick={onCopyLink}
           aria-label={formatMessage({ id: "connection.copyLogLink" })}
           icon="link"
+          data-testid="copy-link-to-attempt-button"
         />
       }
     >

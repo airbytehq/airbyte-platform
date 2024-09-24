@@ -7,6 +7,7 @@ package io.airbyte.api.client.auth
 import io.airbyte.api.client.config.InternalApiAuthenticationFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.BeanProvider
+import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -18,6 +19,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 @Named("internalApiAuthenticationInterceptor")
+@Requires(InternalApiAuthenticationFactory.INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
 class InternalApiAuthenticationInterceptor(
   @Value("\${airbyte.internal-api.auth-header.name}") private val authHeaderName: String,
   @Named(InternalApiAuthenticationFactory.INTERNAL_API_AUTH_TOKEN_BEAN_NAME) private val authHeaderValue: BeanProvider<String>,

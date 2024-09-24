@@ -8,10 +8,10 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useCurrentConnection } from "core/api";
 import { DbtCloudJob, isSameJob, useDbtIntegration } from "core/api/cloud";
 import { DbtCloudJobInfo } from "core/api/types/CloudApi";
 import { trackError } from "core/utils/datadog";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { DbtCloudTransformationsFormControls } from "./DbtCloudTransformationsFormControls";
@@ -40,7 +40,7 @@ export const DbtCloudTransformationsForm: React.FC<DbtCloudTransformationsFormPr
 }) => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { hasDbtIntegration, saveJobs, dbtCloudJobs } = useDbtIntegration(connection);
 
   /**

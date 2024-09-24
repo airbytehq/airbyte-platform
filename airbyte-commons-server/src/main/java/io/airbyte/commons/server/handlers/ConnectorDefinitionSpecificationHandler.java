@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.OauthModelConverter;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
@@ -28,6 +27,8 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -109,7 +110,7 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
             destinationIdRequestBody.getDestinationId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
-    return getDestinationSpecificationRead(destinationDefinition, spec);
+    return getDestinationSpecificationRead(destinationDefinition, spec, destinationVersion.getSupportsRefreshes());
   }
 
   /**
@@ -131,7 +132,7 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
 
-    return getDestinationSpecificationRead(destination, spec);
+    return getDestinationSpecificationRead(destination, spec, destinationVersion.getSupportsRefreshes());
   }
 
   private SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
@@ -152,10 +153,11 @@ public class ConnectorDefinitionSpecificationHandler {
   }
 
   private DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
-                                                                                 final io.airbyte.protocol.models.ConnectorSpecification spec) {
+                                                                                 final io.airbyte.protocol.models.ConnectorSpecification spec,
+                                                                                 final boolean supportsRefreshes) {
     final DestinationDefinitionSpecificationRead specRead = new DestinationDefinitionSpecificationRead()
         .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(JobConfig.ConfigType.GET_SPEC)))
-        .supportedDestinationSyncModes(Enums.convertListTo(spec.getSupportedDestinationSyncModes(), DestinationSyncMode.class))
+        .supportedDestinationSyncModes(getFinalDestinationSyncModes(spec.getSupportedDestinationSyncModes(), supportsRefreshes))
         .connectionSpecification(spec.getConnectionSpecification())
         .documentationUrl(spec.getDocumentationUrl().toString())
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
@@ -164,6 +166,31 @@ public class ConnectorDefinitionSpecificationHandler {
     advancedAuth.ifPresent(specRead::setAdvancedAuth);
 
     return specRead;
+  }
+
+  private List<DestinationSyncMode> getFinalDestinationSyncModes(final List<io.airbyte.protocol.models.DestinationSyncMode> syncModes,
+                                                                 boolean supportsRefreshes) {
+    final List<DestinationSyncMode> finalSyncModes = new ArrayList<>();
+    boolean hasDedup = false;
+    boolean hasOverwrite = false;
+    for (final var syncMode : syncModes) {
+      switch (syncMode) {
+        case APPEND -> finalSyncModes.add(DestinationSyncMode.APPEND);
+        case APPEND_DEDUP -> {
+          finalSyncModes.add(DestinationSyncMode.APPEND_DEDUP);
+          hasDedup = true;
+        }
+        case OVERWRITE -> {
+          finalSyncModes.add(DestinationSyncMode.OVERWRITE);
+          hasOverwrite = true;
+        }
+        default -> throw new IllegalStateException("Unexpected value: " + syncMode);
+      }
+    }
+    if (supportsRefreshes && hasDedup && hasOverwrite) {
+      finalSyncModes.add(DestinationSyncMode.OVERWRITE_DEDUP);
+    }
+    return finalSyncModes;
   }
 
 }

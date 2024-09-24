@@ -53,11 +53,8 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.CatalogDiffConverter;
@@ -93,7 +90,7 @@ class ReplicationInputHydratorTest {
       new AirbyteStreamAndConfiguration(
           new AirbyteStream(
               TEST_STREAM_NAME,
-              null,
+              Jsons.emptyObject(),
               List.of(SyncMode.INCREMENTAL),
               null,
               null,
@@ -103,6 +100,7 @@ class ReplicationInputHydratorTest {
           new AirbyteStreamConfiguration(
               SyncMode.INCREMENTAL,
               DestinationSyncMode.APPEND,
+              null,
               null,
               null,
               null,
@@ -238,9 +236,7 @@ class ReplicationInputHydratorTest {
         "unused",
         "unused",
         null, // unused
-        new ConnectionContext().withOrganizationId(UUID.randomUUID()),
-        false,
-        false);
+        new ConnectionContext().withOrganizationId(UUID.randomUUID()));
   }
 
   @ParameterizedTest
@@ -259,6 +255,7 @@ class ReplicationInputHydratorTest {
     assertEquals(EXPECTED_STATE, replicationInput.getState());
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(TEST_STREAM_NAME, replicationInput.getCatalog().getStreams().get(0).getStream().getName());
+    assertEquals(withRefresh, replicationInput.getDestinationSupportsRefreshes());
   }
 
   @ParameterizedTest
@@ -302,7 +299,6 @@ class ReplicationInputHydratorTest {
     }
     // Verify that if backfill is enabled, and we have an appropriate diff, then we clear the state for
     // the affected streams.
-    mockEnableFeatureFlagForWorkspace(AutoBackfillOnNewColumns.INSTANCE, WORKSPACE_ID);
     mockEnableBackfillForConnection(withRefresh);
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
@@ -334,7 +330,7 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", true, false, "ns2"),
             new StreamAttemptMetadata("s2", true, true, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
@@ -362,7 +358,7 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", false, true, null),
             new StreamAttemptMetadata("s2", false, true, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
@@ -390,16 +386,12 @@ class ReplicationInputHydratorTest {
             new StreamAttemptMetadata("s1", true, false, "ns2"),
             new StreamAttemptMetadata("s2", true, false, null)));
 
-    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    final ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
     verify(attemptApi).saveStreamMetadata(captor.capture());
     assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
     CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
         .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
-  }
-
-  private void mockEnableFeatureFlagForWorkspace(final Flag<Boolean> flag, final UUID workspaceId) {
-    when(featureFlagClient.boolVariation(flag, new Workspace(workspaceId))).thenReturn(true);
   }
 
   private void mockEnableBackfillForConnection(final boolean withRefresh) throws IOException {

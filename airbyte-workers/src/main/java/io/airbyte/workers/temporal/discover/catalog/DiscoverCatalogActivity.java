@@ -5,9 +5,6 @@
 package io.airbyte.workers.temporal.discover.catalog;
 
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.StandardDiscoverCatalogInput;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.models.DiscoverCatalogInput;
 import io.temporal.activity.ActivityInterface;
@@ -18,11 +15,6 @@ import io.temporal.activity.ActivityMethod;
  */
 @ActivityInterface
 public interface DiscoverCatalogActivity {
-
-  @ActivityMethod
-  ConnectorJobOutput run(JobRunConfig jobRunConfig,
-                         IntegrationLauncherConfig launcherConfig,
-                         StandardDiscoverCatalogInput config);
 
   @ActivityMethod
   ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException;

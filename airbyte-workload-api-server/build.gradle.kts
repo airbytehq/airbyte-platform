@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
@@ -29,6 +27,7 @@ dependencies {
   implementation(libs.bundles.temporal.telemetry)
   implementation(libs.log4j.impl)
   implementation(libs.micronaut.jaxrs.server)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.okhttp)
   implementation(libs.v3.swagger.annotations)
@@ -39,6 +38,7 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.jsoup)
 
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -66,23 +66,17 @@ dependencies {
   testImplementation(libs.mockk)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass = "io.airbyte.workload.server.Application"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,
-        "TRACKING_STRATEGY" to env["TRACKING_STRATEGY"].toString(),
+        "TRACKING_STRATEGY" to "logging",
         "WORKLOAD_API_BEARER_TOKEN" to "ItsASecret",
       )
     )
@@ -95,7 +89,7 @@ airbyte {
 tasks.named<Test>("test") {
   environment(
     mapOf(
-      "AIRBYTE_VERSION" to env["VERSION"],
+      "AIRBYTE_VERSION" to "dev",
       "MICRONAUT_ENVIRONMENTS" to "test",
       "SERVICE_NAME" to project.name,
     )

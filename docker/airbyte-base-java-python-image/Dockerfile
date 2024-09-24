@@ -9,7 +9,7 @@ RUN yum update -y && \
 
 USER airbyte:airbyte
 
-ENV PYTHON_VERSION=3.9.19
+ENV PYTHON_VERSION=3.10.14
 
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv

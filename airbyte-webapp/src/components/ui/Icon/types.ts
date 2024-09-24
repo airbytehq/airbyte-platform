@@ -1,5 +1,6 @@
 export type IconType =
   | "addCircle"
+  | "aiStars"
   | "arrowLeft"
   | "arrowRight"
   | "article"
@@ -53,6 +54,7 @@ export type IconType =
   | "files"
   | "flash"
   | "folder"
+  | "folderOpen"
   | "gear"
   | "github"
   | "globe"
@@ -68,6 +70,7 @@ export type IconType =
   | "keyCircle"
   | "layers"
   | "lens"
+  | "license"
   | "lightbulb"
   | "link"
   | "loading"
@@ -149,6 +152,7 @@ export type IconColor =
   | "error"
   | "warning"
   | "affordance"
+  | "magic"
   | "foreground";
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 

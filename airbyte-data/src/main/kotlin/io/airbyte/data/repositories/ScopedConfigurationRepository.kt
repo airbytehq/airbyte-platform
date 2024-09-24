@@ -44,6 +44,13 @@ interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration
     values: List<String>,
   ): List<ScopedConfiguration>
 
+  fun findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+    key: String,
+    configResourceType: ConfigResourceType,
+    configScopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
+
   fun findByKey(key: String): List<ScopedConfiguration>
 
   fun deleteByIdInList(ids: List<UUID>)

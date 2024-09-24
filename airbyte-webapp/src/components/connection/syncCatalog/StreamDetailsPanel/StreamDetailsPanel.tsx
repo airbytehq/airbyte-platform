@@ -1,4 +1,4 @@
-import { Dialog } from "@headlessui/react";
+import { Dialog, DialogPanel } from "@headlessui/react";
 import cloneDeep from "lodash/cloneDeep";
 import React, { useCallback, useMemo, useState } from "react";
 import { useToggle } from "react-use";
@@ -141,7 +141,7 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
   return (
     <Dialog open onClose={onCloseStreamDetailsPanel}>
       <Overlay />
-      <Dialog.Panel className={styles.container} data-testid="stream-details">
+      <DialogPanel className={styles.container} data-testid="stream-details">
         <StreamPanelHeader
           stream={stream}
           config={clonedConfig}
@@ -165,7 +165,7 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
             toggleAllFieldsSelected={onToggleAllFieldsSelected}
           />
         </div>
-      </Dialog.Panel>
+      </DialogPanel>
     </Dialog>
   );
 };

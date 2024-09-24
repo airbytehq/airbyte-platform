@@ -23,7 +23,6 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.inject)
-  implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.micronaut.data.jdbc)
@@ -40,6 +39,10 @@ dependencies {
   implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
   implementation(libs.kotlin.logging)
+  implementation(libs.reactor.core)
+  implementation(libs.jakarta.ws.rs.api)
+  implementation(libs.kubernetes.client)
+
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
   implementation(project(":oss:airbyte-api:problems-api"))
@@ -48,6 +51,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
@@ -59,6 +63,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-json-validation"))
@@ -71,6 +76,7 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(project(":oss:airbyte-test-utils"))
+  testImplementation("org.jetbrains.kotlin:kotlin-reflect")
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
@@ -81,6 +87,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.micronaut.http)
   testImplementation(libs.mockk)
+  testImplementation(libs.reactor.test)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

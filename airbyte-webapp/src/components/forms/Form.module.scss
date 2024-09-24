@@ -1,3 +1,11 @@
+// add element tags to increase specificity of display style
+.flex,
+fieldset.flex {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .fieldset {
   all: unset;
   width: 100%;

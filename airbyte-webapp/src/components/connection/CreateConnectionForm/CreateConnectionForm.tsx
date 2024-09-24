@@ -21,7 +21,11 @@ import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ScrollableContainer } from "../../ScrollableContainer";
-import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
+import {
+  FormConnectionFormValues,
+  useConnectionValidationSchema,
+  useInitialFormValues,
+} from "../ConnectionForm/formConfig";
 
 export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
 
@@ -29,7 +33,8 @@ const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
-  const { connection, initialValues, setSubmitError } = useConnectionFormService();
+  const { connection, mode, setSubmitError } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);

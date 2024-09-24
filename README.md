@@ -40,40 +40,9 @@ Airbyte has a built-in scheduler and uses [Temporal](https://airbyte.com/blog/sc
 
 Explore our [demo app](https://demo.airbyte.io/).
 
-## Quick start
+## Quickstart
 
-You can run Airbyte locally with `abctl`. Mac users can install `abctl` with Brew:
-
-```bash
-brew tap airbytehq/tap
-brew install abctl
-```
-
-
-## Setup & launch Airbyte
-
-- Install `Docker Desktop`  \(see [instructions](https://docs.docker.com/desktop/install/mac-install/)\).
-- For users that cannot install `abctl` with `brew` you download the latest version of `abctl` from the [releases page](https://github.com/airbytehq/abctl/releases)
-- Run the following command:
-
-```bash
-./abctl local install
-```
-
-- Your browser should open to the Airbyte Application, if it does not visit [http://localhost](http://localhost)
-- You will be asked for a username and password. By default, that's username `airbyte` and password `password`. You can set these values through command line flags or environment variables. For example, to set the username and password to `foo` and `bar` respectively, you can run the following command:
-
-```bash
-./abctl local install --username foo --password bar
-
-# Or as Environment Variables
-ABCTL_LOCAL_INSTALL_PASSWORD=foo
-ABCTL_LOCAL_INSTALL_USERNAME=bar
-```
-
-Follow web app UI instructions to set up a source, destination and connection to replicate data. Connections support the most popular sync modes: full refresh, incremental and change data capture for databases.
-
-Read the [Airbyte docs](https://docs.airbyte.com).
+Read the [Quickstart documentation](https://docs.airbyte.com/using-airbyte/getting-started/oss-quickstart).
 
 ### Manage Airbyte configurations with code
 

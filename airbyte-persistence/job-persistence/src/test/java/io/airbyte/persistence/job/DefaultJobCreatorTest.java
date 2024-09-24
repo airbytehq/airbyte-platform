@@ -158,18 +158,18 @@ class DefaultJobCreatorTest {
     final UUID connectionId = UUID.randomUUID();
     final UUID operationId = UUID.randomUUID();
 
-    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.INCREMENTAL)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)).withIsResumable(true))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
+    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.INCREMENTAL,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)).withIsResumable(true),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.OVERWRITE);
     CONFIGURED_AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog().withStreams(List.of(stream1, stream2, stream3));
 
     STANDARD_SYNC = new StandardSync()
@@ -226,7 +226,7 @@ class DefaultJobCreatorTest {
         .thenReturn(workerResourceRequirements);
     streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
   }
 
   @ParameterizedTest
@@ -243,30 +243,13 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     final Optional<String> expectedSourceType = Optional.of("database");
-    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
 
-    mockResourcesRequirement(expectedSourceType,
-        destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
+    mockResourcesRequirement(expectedSourceType);
 
-    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
+    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement();
 
     final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
         new RefreshStream()
@@ -328,7 +311,7 @@ class DefaultJobCreatorTest {
   void testFailToCreateRefreshIfNotAllowed() {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
         STANDARD_SYNC,
@@ -349,27 +332,10 @@ class DefaultJobCreatorTest {
   @Test
   void testCreateSyncJob() throws IOException {
     final Optional<String> expectedSourceType = Optional.of("database");
-    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
 
-    mockResourcesRequirement(expectedSourceType,
-        destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
+    mockResourcesRequirement(expectedSourceType);
 
-    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
-        destStdinResourceRequirements,
-        destStdoutResourceRequirements,
-        heartbeatResourceRequirements,
-        srcStderrResourceRequirements,
-        srcStdoutResourceRequirements);
+    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement();
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -419,51 +385,21 @@ class DefaultJobCreatorTest {
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
   }
 
-  private void mockResourcesRequirement(final Optional<String> expectedSourceType,
-                                        final ResourceRequirements destStderrResourceRequirements,
-                                        final ResourceRequirements destStdinResourceRequirements,
-                                        final ResourceRequirements destStdoutResourceRequirements,
-                                        final ResourceRequirements heartbeatResourceRequirements,
-                                        final ResourceRequirements srcStderrResourceRequirements,
-                                        final ResourceRequirements srcStdoutResourceRequirements) {
+  private void mockResourcesRequirement(final Optional<String> expectedSourceType) {
     when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(workerResourceRequirements);
     when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(sourceResourceRequirements);
     when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
-    // More explicit resource requirements to verify data mapping
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStderrResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdinResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdoutResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(heartbeatResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStderrResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStdoutResourceRequirements);
   }
 
-  private SyncResourceRequirements getExpectedResourcesRequirement(final ResourceRequirements destStderrResourceRequirements,
-                                                                   final ResourceRequirements destStdinResourceRequirements,
-                                                                   final ResourceRequirements destStdoutResourceRequirements,
-                                                                   final ResourceRequirements heartbeatResourceRequirements,
-                                                                   final ResourceRequirements srcStderrResourceRequirements,
-                                                                   final ResourceRequirements srcStdoutResourceRequirements) {
+  private SyncResourceRequirements getExpectedResourcesRequirement() {
     return new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT).withSubType("database"))
         .withDestination(destResourceRequirements)
-        .withDestinationStdErr(destStderrResourceRequirements)
-        .withDestinationStdIn(destStdinResourceRequirements)
-        .withDestinationStdOut(destStdoutResourceRequirements)
         .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(heartbeatResourceRequirements)
-        .withSource(sourceResourceRequirements)
-        .withSourceStdErr(srcStderrResourceRequirements)
-        .withSourceStdOut(srcStdoutResourceRequirements);
+        .withSource(sourceResourceRequirements);
   }
 
   @Test
@@ -532,14 +468,8 @@ class DefaultJobCreatorTest {
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(workerResourceRequirements)
-        .withDestinationStdErr(workerResourceRequirements)
-        .withDestinationStdIn(workerResourceRequirements)
-        .withDestinationStdOut(workerResourceRequirements)
         .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(workerResourceRequirements)
-        .withSource(workerResourceRequirements)
-        .withSourceStdErr(workerResourceRequirements)
-        .withSourceStdOut(workerResourceRequirements);
+        .withSource(workerResourceRequirements);
 
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -599,14 +529,8 @@ class DefaultJobCreatorTest {
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(standardSyncResourceRequirements)
-        .withDestinationStdErr(workerResourceRequirements)
-        .withDestinationStdIn(workerResourceRequirements)
-        .withDestinationStdOut(workerResourceRequirements)
         .withOrchestrator(standardSyncResourceRequirements)
-        .withHeartbeat(workerResourceRequirements)
-        .withSource(standardSyncResourceRequirements)
-        .withSourceStdErr(workerResourceRequirements)
-        .withSourceStdOut(workerResourceRequirements);
+        .withSource(standardSyncResourceRequirements);
 
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -673,14 +597,8 @@ class DefaultJobCreatorTest {
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(destResourceRequirements)
-        .withDestinationStdErr(workerResourceRequirements)
-        .withDestinationStdIn(workerResourceRequirements)
-        .withDestinationStdOut(workerResourceRequirements)
         .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(workerResourceRequirements)
-        .withSource(sourceResourceRequirements)
-        .withSourceStdErr(workerResourceRequirements)
-        .withSourceStdOut(workerResourceRequirements);
+        .withSource(sourceResourceRequirements);
 
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -738,7 +656,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -806,7 +724,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     final var standardSync = new StandardSync()
         .withConnectionId(UUID.randomUUID())
@@ -886,7 +804,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -946,7 +864,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -1000,45 +918,22 @@ class DefaultJobCreatorTest {
         .thenReturn(sourceResourceRequirements);
     when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
-    // More explicit resource requirements to verify data mapping
-    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStderrResourceRequirements);
-    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdinResourceRequirements);
-    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdoutResourceRequirements);
-    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(heartbeatResourceRequirements);
-    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStderrResourceRequirements);
-    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStdoutResourceRequirements);
 
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(destResourceRequirements)
-        .withDestinationStdErr(destStderrResourceRequirements)
-        .withDestinationStdIn(destStdinResourceRequirements)
-        .withDestinationStdOut(destStdoutResourceRequirements)
-        .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(heartbeatResourceRequirements);
+        .withOrchestrator(workerResourceRequirements);
 
     final JobResetConnectionConfig jobResetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -1084,23 +979,19 @@ class DefaultJobCreatorTest {
   void testCreateResetConnectionJobEnsureNoQueuing() throws IOException {
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(workerResourceRequirements)
-        .withDestinationStdErr(workerResourceRequirements)
-        .withDestinationStdIn(workerResourceRequirements)
-        .withDestinationStdOut(workerResourceRequirements)
-        .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(workerResourceRequirements);
+        .withOrchestrator(workerResourceRequirements);
 
     final JobResetConnectionConfig jobResetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -1145,12 +1036,14 @@ class DefaultJobCreatorTest {
   void testGetResumableFullRefresh() {
     StandardSync standardSync = new StandardSync()
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(
-                new AirbyteStream().withName("no1").withIsResumable(true)),
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(
-                new AirbyteStream().withName("no2").withIsResumable(false)),
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(
-                new AirbyteStream().withName("yes").withIsResumable(true)))));
+            new ConfiguredAirbyteStream(new AirbyteStream("no1", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withIsResumable(true),
+                SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("no2", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(false),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("yes", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(true),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND))));
 
     Set<StreamDescriptor> streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, true);
     assertEquals(1, streamDescriptors.size());

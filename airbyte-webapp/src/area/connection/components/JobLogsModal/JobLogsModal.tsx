@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
+import { Message } from "components/ui/Message";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -14,6 +15,7 @@ import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import { useAttemptCombinedStatsForJob, useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
+import { trackError } from "core/utils/datadog";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -21,21 +23,62 @@ import styles from "./JobLogsModal.module.scss";
 import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
 
 interface JobLogsModalProps {
+  connectionId: string;
   jobId: number;
   initialAttemptId?: number;
   eventId?: string;
+  connectionTimelineEnabled?: boolean;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId }) => {
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [inputValue, setInputValue] = useState("");
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({
+  jobId,
+  initialAttemptId,
+  eventId,
+  connectionId,
+  connectionTimelineEnabled,
+}) => {
   const job = useJobInfoWithoutLogs(jobId);
+
+  if (job.attempts.length === 0) {
+    trackError(new Error(`No attempts for job`), { jobId, eventId });
+
+    return (
+      <Box p="lg">
+        <Message type="warning" text={<FormattedMessage id="jobHistory.logs.noAttempts" />} />
+      </Box>
+    );
+  }
+
+  return (
+    <JobLogsModalInner
+      jobId={jobId}
+      initialAttemptId={initialAttemptId}
+      eventId={eventId}
+      connectionId={connectionId}
+      connectionTimelineEnabled={connectionTimelineEnabled}
+    />
+  );
+};
+
+const JobLogsModalInner: React.FC<JobLogsModalProps> = ({
+  jobId,
+  initialAttemptId,
+  eventId,
+  connectionId,
+  connectionTimelineEnabled,
+}) => {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const job = useJobInfoWithoutLogs(jobId);
+
+  const [inputValue, setInputValue] = useState("");
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
+
   const [selectedAttemptId, setSelectedAttemptId] = useState(
     initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
   );
+
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
   const aggregatedAttemptStats = useAttemptCombinedStatsForJob(jobId, selectedAttemptId, {
     refetchInterval() {
@@ -150,6 +193,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === firstMatchIndex ? lastMatchIndex : highlightedMatchIndex - 1);
     }
+    searchInputRef.current?.focus();
   };
 
   const scrollToNextMatch = () => {
@@ -161,22 +205,29 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     } else {
       setHighlightedMatchIndex(highlightedMatchIndex === lastMatchIndex ? firstMatchIndex : highlightedMatchIndex + 1);
     }
+    searchInputRef.current?.focus();
   };
 
   // Focus the search input with cmd + f / ctrl + f
+  // Clear search input on `esc`, if search input is focused
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "f" && (navigator.platform.toLowerCase().includes("mac") ? e.metaKey : e.ctrlKey)) {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        if (inputValue.length > 0) {
+          e.preventDefault();
+          setInputValue("");
+        }
       }
     };
     document.body.addEventListener("keydown", handleKeyDown);
     return () => document.body.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [inputValue]);
 
   return (
-    <FlexContainer direction="column" style={{ height: "100%" }}>
+    <FlexContainer direction="column" style={{ height: "100%" }} data-testid="job-logs-modal">
       <Box p="md" pb="none">
         <FlexContainer alignItems="center">
           <div className={styles.attemptDropdown}>
@@ -196,7 +247,13 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
             showFailureMessage={false}
           />
           <FlexContainer className={styles.downloadLogs}>
-            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} eventId={eventId} />
+            <LinkToAttemptButton
+              connectionId={connectionId}
+              jobId={jobId}
+              attemptId={selectedAttemptId}
+              eventId={eventId}
+              connectionTimelineEnabled={connectionTimelineEnabled}
+            />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
         </FlexContainer>

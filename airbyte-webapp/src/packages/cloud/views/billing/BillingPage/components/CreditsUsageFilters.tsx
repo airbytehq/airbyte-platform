@@ -1,7 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -45,7 +44,7 @@ export const CreditsUsageFilters: React.FC = () => {
     selectedSource,
     selectedTimeWindow,
   } = useCreditsContext();
-
+  const { formatMessage } = useIntl();
   const hasAnyFilterSelected = [selectedSource, selectedDestination].some((selection) => !!selection);
 
   const onSourceSelect = (currentSourceOption: SourceId | null) => {
@@ -57,47 +56,60 @@ export const CreditsUsageFilters: React.FC = () => {
   };
 
   return (
-    <Box px="lg">
-      <FlexContainer>
-        <ListBox
-          controlButton={CustomControlButton}
-          buttonClassName={styles.controlButton}
-          optionsMenuClassName={styles.periodOptionsMenu}
-          options={[
-            { label: "Last 30 Days", value: ConsumptionTimeWindow.lastMonth },
-            { label: "Last 6 months", value: ConsumptionTimeWindow.lastSixMonths },
-            { label: "Last 12 months", value: ConsumptionTimeWindow.lastYear },
-          ]}
-          selectedValue={selectedTimeWindow}
-          onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
+    <FlexContainer>
+      <ListBox
+        controlButton={CustomControlButton}
+        buttonClassName={styles.controlButton}
+        optionsMenuClassName={styles.periodOptionsMenu}
+        options={[
+          {
+            label: formatMessage({ id: "settings.organization.billing.filter.lastThirtyDays" }),
+            value: ConsumptionTimeWindow.lastMonth,
+          },
+          {
+            label: formatMessage({ id: "settings.organization.billing.filter.lastSixMonths" }),
+            value: ConsumptionTimeWindow.lastSixMonths,
+          },
+          {
+            label: formatMessage({ id: "settings.organization.billing.filter.lastTwelveMonths" }),
+            value: ConsumptionTimeWindow.lastYear,
+          },
+        ]}
+        selectedValue={selectedTimeWindow}
+        onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
+      />
+      <ListBox
+        className={styles.listboxContainer}
+        controlButton={CustomControlButton}
+        buttonClassName={styles.controlButton}
+        optionsMenuClassName={styles.connectorOptionsMenu}
+        options={[
+          { label: formatMessage({ id: "settings.organization.billing.filter.allSources" }), value: null },
+          ...sourceOptions,
+        ]}
+        selectedValue={selectedSource}
+        onSelect={(selectedValue) => onSourceSelect(selectedValue)}
+      />
+      <ListBox
+        className={styles.listboxContainer}
+        controlButton={CustomControlButton}
+        buttonClassName={styles.controlButton}
+        optionsMenuClassName={styles.connectorOptionsMenu}
+        options={[
+          { label: formatMessage({ id: "settings.organization.billing.filter.allDestinations" }), value: null },
+          ...destinationOptions,
+        ]}
+        selectedValue={selectedDestination}
+        onSelect={(selectedValue) => onDestinationSelect(selectedValue)}
+      />
+      {hasAnyFilterSelected && (
+        <ClearFiltersButton
+          onClick={() => {
+            onSourceSelect(null);
+            onDestinationSelect(null);
+          }}
         />
-        <ListBox
-          className={styles.listboxContainer}
-          controlButton={CustomControlButton}
-          buttonClassName={styles.controlButton}
-          optionsMenuClassName={styles.connectorOptionsMenu}
-          options={[{ label: "All Sources", value: null }, ...sourceOptions]}
-          selectedValue={selectedSource}
-          onSelect={(selectedValue) => onSourceSelect(selectedValue)}
-        />
-        <ListBox
-          className={styles.listboxContainer}
-          controlButton={CustomControlButton}
-          buttonClassName={styles.controlButton}
-          optionsMenuClassName={styles.connectorOptionsMenu}
-          options={[{ label: "All Destinations", value: null }, ...destinationOptions]}
-          selectedValue={selectedDestination}
-          onSelect={(selectedValue) => onDestinationSelect(selectedValue)}
-        />
-        {hasAnyFilterSelected && (
-          <ClearFiltersButton
-            onClick={() => {
-              onSourceSelect(null);
-              onDestinationSelect(null);
-            }}
-          />
-        )}
-      </FlexContainer>
-    </Box>
+      )}
+    </FlexContainer>
   );
 };

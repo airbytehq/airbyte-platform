@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.runtime.http.scope.RequestScope;
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 public class CommunityCurrentUserService implements CurrentUserService {
 
   private final UserPersistence userPersistence;
-  private User retrievedDefaultUser;
+  private AuthenticatedUser retrievedDefaultUser;
 
   public CommunityCurrentUserService(final UserPersistence userPersistence) {
     this.userPersistence = userPersistence;
   }
 
   @Override
-  public User getCurrentUser() {
+  public AuthenticatedUser getCurrentUser() {
     if (this.retrievedDefaultUser == null) {
       try {
         this.retrievedDefaultUser = userPersistence.getDefaultUser().orElseThrow();

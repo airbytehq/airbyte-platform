@@ -4,7 +4,7 @@ import { Text } from "components/ui/Text";
 
 interface FormattedCreditsProps {
   credits: number;
-  color?: "green" | "grey300";
+  color?: "green" | "grey300" | "blue";
   size?: "sm" | "md";
 }
 export const FormattedCredits: React.FC<FormattedCreditsProps> = ({ credits, color, size }) => {

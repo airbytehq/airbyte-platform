@@ -7,10 +7,13 @@ import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { HttpError, useGetInstanceConfiguration } from "core/api";
+import { useGetInstanceConfiguration } from "core/api";
 import { useAuthService } from "core/services/auth";
+import { InvalidCredentialsError, MissingCookieError } from "core/services/auth/SimpleAuthService";
+import { links } from "core/utils/links";
 
 import styles from "./SimpleAuthLoginForm.module.scss";
 
@@ -25,7 +28,7 @@ const simpleAuthLoginFormSchema = yup.object().shape({
 });
 
 export const SimpleAuthLoginForm: React.FC = () => {
-  const [loginError, setLoginError] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<null | "missing-cookie" | "invalid-credentials">(null);
   const { login } = useAuthService();
   const { defaultOrganizationEmail } = useGetInstanceConfiguration();
 
@@ -39,9 +42,10 @@ export const SimpleAuthLoginForm: React.FC = () => {
       schema={simpleAuthLoginFormSchema}
       onSubmit={login}
       onError={(error) => {
-        // Indicates incorrect credentials
-        if (error instanceof HttpError && error.status === 401) {
-          setLoginError(true);
+        if (error instanceof InvalidCredentialsError) {
+          setLoginError("invalid-credentials");
+        } else if (error instanceof MissingCookieError) {
+          setLoginError("missing-cookie");
         } else {
           // Otherwise throw in a setState here so that the error is thrown in a render cycle and handled by our error boundary
           setLoginError(() => {
@@ -57,8 +61,23 @@ export const SimpleAuthLoginForm: React.FC = () => {
       {loginError && (
         <Box mt="2xl">
           <FlexContainer justifyContent="center">
-            <Text color="red">
-              <FormattedMessage id="login.failed" />
+            <Text color="red" align="center">
+              {loginError === "invalid-credentials" && (
+                <FormattedMessage
+                  id="login.failed"
+                  values={{
+                    link: (children) => <ExternalLink href={links.ossAuthentication}>{children}</ExternalLink>,
+                  }}
+                />
+              )}
+              {loginError === "missing-cookie" && (
+                <FormattedMessage
+                  id="login.likelyMissingCookie"
+                  values={{
+                    link: (children) => <ExternalLink href={links.deployingViaHttp}>{children}</ExternalLink>,
+                  }}
+                />
+              )}
             </Text>
           </FlexContainer>
         </Box>

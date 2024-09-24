@@ -1,9 +1,8 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ConnectionActionsBlock } from "components/common/ConnectionActionsBlock";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -17,6 +16,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
+import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
 import { useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -106,7 +106,7 @@ export const ConnectionSettingsPage: React.FC = () => {
         <Disclosure>
           {({ open }) => (
             <>
-              <Disclosure.Button
+              <DisclosureButton
                 as={Button}
                 variant="clear"
                 icon={open ? "chevronDown" : "chevronRight"}
@@ -114,12 +114,12 @@ export const ConnectionSettingsPage: React.FC = () => {
                 className={classnames(styles.advancedButton, styles.alignStart)}
               >
                 <FormattedMessage id="connection.state.title" />
-              </Disclosure.Button>
-              <Disclosure.Panel className={styles.advancedPanel}>
+              </DisclosureButton>
+              <DisclosurePanel className={styles.advancedPanel}>
                 <React.Suspense fallback={<Spinner />}>
                   <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
                 </React.Suspense>
-              </Disclosure.Panel>
+              </DisclosurePanel>
             </>
           )}
         </Disclosure>

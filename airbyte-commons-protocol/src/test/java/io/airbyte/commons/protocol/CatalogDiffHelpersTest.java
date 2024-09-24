@@ -89,9 +89,10 @@ class CatalogDiffHelpersTest {
         new io.airbyte.protocol.models.AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject())));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS).withJsonSchema(schema2)).withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject()))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream(SALES, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final Set<StreamTransform> actualDiff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
     final List<StreamTransform> expectedDiff = Stream.of(
@@ -156,9 +157,10 @@ class CatalogDiffHelpersTest {
         new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS).withJsonSchema(schema2)).withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject()))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream(SALES, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final Set<StreamTransform> actualDiff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
 
@@ -178,9 +180,10 @@ class CatalogDiffHelpersTest {
         new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS).withJsonSchema(schema2)).withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject()))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream(SALES, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final Set<StreamTransform> actualDiff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
 
@@ -197,8 +200,9 @@ class CatalogDiffHelpersTest {
         new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS).withJsonSchema(schema1)).withSyncMode(SyncMode.INCREMENTAL)
-            .withCursorField(List.of(DATE)).withDestinationSyncMode(DestinationSyncMode.APPEND_DEDUP).withPrimaryKey(List.of(List.of("id")))));
+        new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema1, List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND_DEDUP)
+                .withCursorField(List.of(DATE)).withPrimaryKey(List.of(List.of("id")))));
 
     final Set<StreamTransform> diff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
 
@@ -221,8 +225,9 @@ class CatalogDiffHelpersTest {
         new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(SALES).withJsonSchema(schema1)).withSyncMode(SyncMode.INCREMENTAL)
-            .withCursorField(List.of(DATE)).withDestinationSyncMode(DestinationSyncMode.APPEND_DEDUP).withPrimaryKey(List.of(List.of("id")))));
+        new ConfiguredAirbyteStream(new AirbyteStream(SALES, schema1, List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND_DEDUP)
+                .withCursorField(List.of(DATE)).withPrimaryKey(List.of(List.of("id")))));
 
     final Set<StreamTransform> diff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
 
@@ -236,16 +241,17 @@ class CatalogDiffHelpersTest {
 
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
         ProtocolConverters
-            .toProtocol(new AirbyteStream().withName(USERS).withJsonSchema(schema1).withSourceDefinedPrimaryKey(List.of(List.of("id")))),
-        ProtocolConverters.toProtocol(new AirbyteStream().withName(SALES).withJsonSchema(schema1))));
+            .toProtocol(new AirbyteStream(USERS, schema1, List.of(SyncMode.FULL_REFRESH)).withSourceDefinedPrimaryKey(List.of(List.of("id")))),
+        ProtocolConverters.toProtocol(new AirbyteStream(SALES, schema1, List.of(SyncMode.FULL_REFRESH)))));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
         ProtocolConverters
-            .toProtocol(new AirbyteStream().withName(USERS).withJsonSchema(schema1).withSourceDefinedPrimaryKey(List.of(List.of("id"))))));
+            .toProtocol(new AirbyteStream(USERS, schema1, List.of(SyncMode.FULL_REFRESH)).withSourceDefinedPrimaryKey(List.of(List.of("id"))))));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS).withJsonSchema(schema1)).withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(SALES).withJsonSchema(schema1))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema1, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream(SALES, schema1, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final Set<StreamTransform> actualDiff = CatalogDiffHelpers.getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog);
 
@@ -302,16 +308,13 @@ class CatalogDiffHelpersTest {
       throws IOException {
     final JsonNode schema = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
 
-    final AirbyteStream stream = new AirbyteStream().withName(USERS).withJsonSchema(schema).withSourceDefinedPrimaryKey(prevSourcePK);
-    final AirbyteStream refreshedStream = new AirbyteStream().withName(USERS).withJsonSchema(schema).withSourceDefinedPrimaryKey(newSourcePK);
+    final AirbyteStream stream = new AirbyteStream(USERS, schema, List.of(SyncMode.FULL_REFRESH)).withSourceDefinedPrimaryKey(prevSourcePK);
+    final AirbyteStream refreshedStream = new AirbyteStream(USERS, schema, List.of(SyncMode.FULL_REFRESH)).withSourceDefinedPrimaryKey(newSourcePK);
 
     final AirbyteCatalog initialCatalog = new AirbyteCatalog().withStreams(List.of(ProtocolConverters.toProtocol(stream)));
     final AirbyteCatalog refreshedCatalog = new AirbyteCatalog().withStreams(List.of(ProtocolConverters.toProtocol(refreshedStream)));
 
-    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream()
-        .withStream(stream)
-        .withSyncMode(SyncMode.INCREMENTAL)
-        .withDestinationSyncMode(destSyncMode)
+    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream(stream, SyncMode.INCREMENTAL, destSyncMode)
         .withPrimaryKey(configuredPK);
 
     final ConfiguredAirbyteCatalog configuredCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(configuredStream));

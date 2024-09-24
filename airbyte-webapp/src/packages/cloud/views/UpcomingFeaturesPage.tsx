@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 
 import { useCurrentUser } from "core/services/auth";
 import { links } from "core/utils/links";
@@ -10,7 +10,7 @@ import styles from "./UpcomingFeaturesPage.module.scss";
 const UpcomingFeaturesPage = () => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
-  const url = useExperiment("upcomingFeaturesPage.url", "");
+  const url = useExperiment("upcomingFeaturesPage.url");
   return (
     <>
       <HeadTitle titles={[{ id: "upcomingFeatures.title" }]} />

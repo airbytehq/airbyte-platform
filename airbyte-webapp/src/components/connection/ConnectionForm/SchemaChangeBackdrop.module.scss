@@ -7,35 +7,26 @@
   height: 100%;
 }
 
-.schemaChangeBackdropContainer {
+.schemaBreakingChanges {
   @extend %cover;
 
   position: relative;
 
-  .backdrop {
+  &__backdrop {
     @extend %cover;
 
+    display: block;
     position: absolute;
-    background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, colors.$foreground 92.54%);
     z-index: z-indices.$schemaChangesBackdrop;
     border-radius: variables.$border-radius-lg;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: colors.$gradient-light-background;
     backdrop-filter: blur(2px);
   }
 
-  .contentContainer {
-    @extend %cover;
-
-    position: fixed;
-    margin-top: 200px;
-    display: flex;
-    z-index: z-indices.$schemaChangesBackdropContent;
-    width: variables.$width-modal-sm;
-    max-width: 40%;
-    flex-direction: column;
-    align-items: center;
-    gap: variables.$spacing-lg;
+  &__message {
+    position: sticky;
+    top: 50%;
+    bottom: 50%;
+    padding-bottom: variables.$spacing-2xl;
   }
 }

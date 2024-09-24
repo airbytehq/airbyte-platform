@@ -95,8 +95,7 @@ spec:
                   name: {{ .Release.Name }}-airbyte-env
                   key: KEYCLOAK_JAVA_OPTS_APPEND
             {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
-            {{- end }}
-
+            {{- end }} # end if oss
 
             {{- if .Values.extraEnv }}
             {{ .Values.extraEnv | toYaml | nindent 12 }}

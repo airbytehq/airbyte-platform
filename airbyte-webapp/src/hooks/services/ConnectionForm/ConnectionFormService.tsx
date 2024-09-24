@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { ExternalLink } from "components/ui/Link";
 
 import { HttpProblem } from "core/api";
@@ -27,7 +27,6 @@ interface ConnectionServiceProps {
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  initialValues: FormConnectionFormValues;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
@@ -41,7 +40,6 @@ const useConnectionForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
   const formatError = useFormatError();
-  const initialValues = useInitialFormValues(connection, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
 
@@ -61,9 +59,32 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
-        const validationErrorMessage = "connectionForm.validation.creationError";
+        const hasHashCollisionError =
+          errors?.syncCatalog?.streams?.message === "connectionForm.streams.hashFieldCollision";
+
+        const hasPrimaryKeyOrCursorError = (field: "primaryKey" | "cursorField") =>
+          errors?.syncCatalog?.streams &&
+          Object.entries(
+            errors?.syncCatalog?.streams as FieldErrors<FormConnectionFormValues["syncCatalog"]["streams"]>
+          ).some(([_, streamNode]) => streamNode?.config?.[field]?.message === `connectionForm.${field}.required`);
+
+        const pkError = hasPrimaryKeyOrCursorError("primaryKey");
+        const cursorError = hasPrimaryKeyOrCursorError("cursorField");
+
+        const validationErrorMessage =
+          pkError && cursorError
+            ? "form.error.pkAndCursor.required"
+            : pkError
+            ? "form.error.pk.missing"
+            : cursorError
+            ? "form.error.cursor.missing"
+            : "connectionForm.validation.creationError";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
+          id: hasNoStreamsSelectedError
+            ? "connectionForm.streams.required"
+            : hasHashCollisionError
+            ? "connectionForm.streams.hashFieldCollision"
+            : validationErrorMessage,
         });
       }
 
@@ -75,7 +96,6 @@ const useConnectionForm = ({
   return {
     connection,
     mode,
-    initialValues,
     schemaError,
     refreshSchema,
     setSubmitError,

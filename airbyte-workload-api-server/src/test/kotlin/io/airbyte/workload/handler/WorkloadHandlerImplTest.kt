@@ -1,17 +1,33 @@
 package io.airbyte.workload.handler
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.SignalApi
+import io.airbyte.api.client.model.generated.SignalInput
+import io.airbyte.commons.json.Jsons
+import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.signalApi
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyApi
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailedSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
+import io.mockk.Called
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -30,6 +46,7 @@ import org.junit.jupiter.params.provider.EnumSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.config.SignalInput as ConfigSignalInput
 
 class WorkloadHandlerImplTest {
   val now = OffsetDateTime.now()
@@ -65,6 +82,7 @@ class WorkloadHandlerImplTest {
         mutexKey = null,
         type = WorkloadType.SYNC,
         autoId = UUID.randomUUID(),
+        signalInput = "",
       )
 
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.of(domainWorkload))
@@ -99,6 +117,7 @@ class WorkloadHandlerImplTest {
       io.airbyte.config.WorkloadType.SYNC,
       UUID.randomUUID(),
       now.plusHours(2),
+      signalInput = "signal payload",
     )
     verify {
       workloadRepository.save(
@@ -116,7 +135,8 @@ class WorkloadHandlerImplTest {
             it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
-            it.deadline!!.equals(now.plusHours(2))
+            it.deadline!!.equals(now.plusHours(2)) &&
+            it.signalInput == "signal payload"
         },
       )
     }
@@ -126,7 +146,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     }
   }
 
@@ -155,7 +175,7 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -346,14 +366,79 @@ class WorkloadHandlerImplTest {
         Fixtures.workload(
           id = WORKLOAD_ID,
           status = workloadStatus,
+          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
         ),
       ),
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    mockApi()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
+    verifyApi()
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
+  fun `test successful cancel no signal`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+          signalPayload = null,
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    mockApi()
+
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
+    verify { signalApi wasNot Called }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
+  fun `test failed signal cancel`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    mockApiFailingSignal()
+
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
+    verifyFailedSignal()
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
+  fun `test failed bad signal input cancel`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+          signalPayload = "Not a valid Json",
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL_DESERIALIZATION_FAILED, 1) } returns Unit
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
+    verify { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL_DESERIALIZATION_FAILED, 1) }
   }
 
   @Test
@@ -400,14 +485,17 @@ class WorkloadHandlerImplTest {
         Fixtures.workload(
           id = WORKLOAD_ID,
           status = workloadStatus,
+          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
         ),
       ),
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
+    mockApi()
 
     workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload"), null) }
+    verifyApi()
   }
 
   @Test
@@ -454,14 +542,17 @@ class WorkloadHandlerImplTest {
         Fixtures.workload(
           id = WORKLOAD_ID,
           status = workloadStatus,
+          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
         ),
       ),
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), null) } just Runs
+    mockApi()
 
     workloadHandler.succeedWorkload(WORKLOAD_ID)
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
+    verifyApi()
   }
 
   @Test
@@ -641,7 +732,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>())
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), mockk<AirbyteApiClient>(), mockk<MetricClient>())
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
@@ -650,9 +741,59 @@ class WorkloadHandlerImplTest {
 
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
+    val metricClient: MetricClient = mockk()
+    private val airbyteApi: AirbyteApiClient = mockk()
+    val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository))
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, airbyteApi, metricClient))
+
+    val configSignalInput =
+      ConfigSignalInput(
+        workflowType = SYNC_WORKFLOW,
+        workflowId = "workflowId",
+        taskQueue = "taskQueue",
+      )
+
+    val signalInput =
+      SignalInput(
+        workflowType = configSignalInput.workflowType,
+        workflowId = configSignalInput.workflowId,
+        taskQueue = configSignalInput.taskQueue,
+      )
+
+    fun mockApi() {
+      every { airbyteApi.signalApi } returns signalApi
+      every { signalApi.signal(signalInput) } returns Unit
+    }
+
+    fun verifyApi() {
+      verify { signalApi.signal(signalInput) }
+    }
+
+    fun mockApiFailingSignal() {
+      every { airbyteApi.signalApi } returns signalApi
+      every { signalApi.signal(signalInput) } throws Exception("Failed to signal")
+      every {
+        metricClient.count(
+          OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
+          1,
+          MetricAttribute(MetricTags.TASK_QUEUE, signalInput.taskQueue),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+        )
+      } returns Unit
+    }
+
+    fun verifyFailedSignal() {
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
+          1,
+          MetricAttribute(MetricTags.TASK_QUEUE, signalInput.taskQueue),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+        )
+      }
+    }
 
     fun workload(
       id: String = WORKLOAD_ID,
@@ -665,6 +806,7 @@ class WorkloadHandlerImplTest {
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
+      signalPayload: String? = "",
     ): Workload =
       Workload(
         id = id,
@@ -677,6 +819,7 @@ class WorkloadHandlerImplTest {
         mutexKey = mutexKey,
         type = type,
         createdAt = createdAt,
+        signalInput = signalPayload,
       )
   }
 }

@@ -62,48 +62,6 @@ paths:
       # This route is unsecured for external monitoring.
       security: []
   # USERS
-  /v1/users/create:
-    post:
-      tags:
-        - user
-      summary: Creates a user (this is the low-level route that does not handle workspace and permissions, see the web_backend route instead)
-      operationId: createUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserCreate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserRead"
-        "409":
-          $ref: "#/components/responses/ExceptionResponse"
-  /v1/users/create_with_id:
-    post:
-      tags:
-        - user
-      summary: Creates a user with userId. This is used for dual write purposes.
-      operationId: createUserWithId
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserCreateWithId"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserRead"
-        "409":
-          $ref: "#/components/responses/ExceptionResponse"
   /v1/users/get:
     post:
       tags:
@@ -567,27 +525,6 @@ paths:
                 $ref: "#/components/schemas/CloudWorkspaceRead"
         "422":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/web_backend/cloud_workspaces/invite_with_signin_link:
-    post:
-      tags:
-        - web_backend
-      summary: Invites a user to join a workspace with a passwordless sign-in link.
-      operationId: webBackendInviteUserToWorkspaceWithSignInLink
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceUserInviteWithSignInLink"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
-        "409":
-          $ref: "#/components/responses/ExceptionResponse"
 
   /v1/web_backend/cloud_workspaces/resend_with_signin_link:
     post:
@@ -783,44 +720,6 @@ components:
       properties:
         authUserId:
           type: string
-    UserCreate:
-      type: object
-      required:
-        - name
-        - authUserId
-        - authProvider
-        - email
-      properties:
-        name:
-          description: Caption name for the user
-          type: string
-        authUserId:
-          description: The userId from the Auth provider
-          type: string
-        authProvider:
-          $ref: "#/components/schemas/AuthProvider"
-        status:
-          $ref: "#/components/schemas/UserStatus"
-        companyName:
-          type: string
-        email:
-          type: string
-          format: email
-        news:
-          type: boolean
-          default: false
-    UserCreateWithId:
-      type: object
-      description: Only used in user/create_user_with_id, and this object should be short lived and not used in webapp.
-      required:
-        - userCreate
-        - userId
-      properties:
-        userCreate:
-          $ref: "#/components/schemas/UserCreate"
-        userId:
-          type: string
-          format: UUID
     UserPaymentAccountId:
       type: string
       description: UserPaymentAccount ID from the Cloud database
@@ -953,31 +852,6 @@ components:
           format: email
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
-    WorkspaceUserInviteWithSignInLink:
-      type: object
-      required:
-        - email
-        - workspaceId
-      properties:
-        email:
-          type: string
-          format: email
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        continueUrl:
-          type: string
-          format: uri
-        metadata:
-          type: object
-          description: Metadata about the request that Airbyte uses for analytics and tracking purposes.
-          properties:
-            invitedFrom:
-              description: Indicates from which page an invitation was initiated.
-              type: string
-              enum:
-                - source
-                - destination
-                - user_settings
     ResendUserInviteWithSignInLink:
       type: object
       required:

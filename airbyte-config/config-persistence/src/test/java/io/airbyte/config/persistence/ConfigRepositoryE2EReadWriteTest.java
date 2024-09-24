@@ -462,12 +462,19 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final Optional<StandardWorkspace> retrievedTombstonedWorkspace = configRepository.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), true);
 
     assertTrue(retrievedWorkspace.isPresent());
-    assertEquals(workspace, retrievedWorkspace.get());
+
+    assertThat(retrievedWorkspace.get())
+        .usingRecursiveComparison()
+        .ignoringFields("createdAt", "updatedAt")
+        .isEqualTo(workspace);
 
     assertFalse(retrievedTombstonedWorkspaceNoTombstone.isPresent());
     assertTrue(retrievedTombstonedWorkspace.isPresent());
 
-    assertEquals(tombstonedWorkspace, retrievedTombstonedWorkspace.get());
+    assertThat(retrievedTombstonedWorkspace.get())
+        .usingRecursiveComparison()
+        .ignoringFields("createdAt", "updatedAt")
+        .isEqualTo(tombstonedWorkspace);
   }
 
   @Test

@@ -10,7 +10,6 @@ import io.airbyte.workers.models.CheckConnectionInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Duration;
-import java.util.UUID;
 
 /**
  * Check connection activity temporal interface.
@@ -19,13 +18,8 @@ import java.util.UUID;
 public interface CheckConnectionActivity {
 
   @ActivityMethod
-  ConnectorJobOutput runWithJobOutput(CheckConnectionInput input);
-
-  @ActivityMethod
   ConnectorJobOutput runWithWorkload(CheckConnectionInput input) throws WorkerException;
 
   Duration getCheckConnectionTimeout();
-
-  boolean shouldUseWorkload(UUID workspaceId);
 
 }

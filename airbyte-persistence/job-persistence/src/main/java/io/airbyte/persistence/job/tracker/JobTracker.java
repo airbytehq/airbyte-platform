@@ -4,8 +4,8 @@
 
 package io.airbyte.persistence.job.tracker;
 
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
+import static io.airbyte.config.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
@@ -20,11 +20,13 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.RefreshStream;
@@ -38,16 +40,8 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.Empty;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseWorkloadApi;
-import io.airbyte.featureflag.WorkloadApiServerEnabled;
-import io.airbyte.featureflag.WorkloadLauncherEnabled;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -93,15 +87,12 @@ public class JobTracker {
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
-  private final FeatureFlagClient featureFlagClient;
 
   public JobTracker(final ConfigRepository configRepository,
                     final JobPersistence jobPersistence,
                     final TrackingClient trackingClient,
-                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                    final FeatureFlagClient featureFlagClient) {
-    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper,
-        featureFlagClient);
+                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper);
   }
 
   @VisibleForTesting
@@ -109,14 +100,12 @@ public class JobTracker {
              final JobPersistence jobPersistence,
              final WorkspaceHelper workspaceHelper,
              final TrackingClient trackingClient,
-             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-             final FeatureFlagClient featureFlagClient) {
+             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.jobPersistence = jobPersistence;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -139,7 +128,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_SOURCE);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
@@ -170,7 +159,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_DESTINATION);
       final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId);
@@ -204,12 +193,7 @@ public class JobTracker {
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
-      var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
-          && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
-      final Map<String, Object> workloadMetadata = Map.of("workload_enabled", ffCheck || envCheck);
-
-      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata, workloadMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -494,12 +478,8 @@ public class JobTracker {
    * job with a failed check. Because of this, tracking just the job attempt status does not capture
    * the whole picture. The `check_connection_outcome` field tracks this.
    */
-  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output, final UUID workspaceId) {
+  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output) {
     final Map<String, Object> metadata = new HashMap<>();
-    var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
-    var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
-        && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
-    metadata.put("workload_enabled", ffCheck || envCheck);
 
     if (output == null) {
       return metadata;

@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
 import { JobConfigType, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
@@ -29,12 +29,12 @@ interface BaseUIStreamState {
   recordsExtracted?: number;
   recordsLoaded?: number;
   bytesLoaded?: number;
-  status: Exclude<ConnectionStatusIndicatorStatus, "rateLimited">;
+  status: Exclude<StreamStatusType, "rateLimited">;
   isLoadingHistoricalData: boolean;
 }
 
 export interface RateLimitedUIStreamState extends Omit<BaseUIStreamState, "status"> {
-  status: ConnectionStatusIndicatorStatus.RateLimited;
+  status: StreamStatusType.RateLimited;
   quotaReset?: number;
 }
 
@@ -87,7 +87,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       recordsExtracted: undefined,
       recordsLoaded: undefined,
       bytesLoaded: undefined,
-      status: ConnectionStatusIndicatorStatus.Pending as ConnectionStatusIndicatorStatus, // cast so TS keeps the wider UIStreamState union instead of narrowing to BaseUIStreamState
+      status: StreamStatusType.Pending as StreamStatusType, // cast so TS keeps the wider UIStreamState union instead of narrowing to BaseUIStreamState
       isLoadingHistoricalData,
     };
 
@@ -98,14 +98,13 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
 
     if (streamStatus?.status) {
       uiState.status = streamStatus.status;
-      if (uiState.status === ConnectionStatusIndicatorStatus.RateLimited) {
+      if (uiState.status === StreamStatusType.RateLimited) {
         uiState.quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
       }
     }
 
     // only pull from syncProgress OR historicalData for the latestSync related data
     if (syncProgressItem) {
-      // uiState.activeJobConfigType = syncProgressItem.jobConfigType; TODO: once added to API!
       // also, for clear jobs, we should not show anything in this column
       uiState.recordsExtracted = syncProgressItem.recordsEmitted;
       uiState.recordsLoaded = syncProgressItem.recordsCommitted;

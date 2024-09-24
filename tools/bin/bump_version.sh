@@ -20,7 +20,7 @@ if [ "$REPO" == "airbyte" ]; then
   NEW_VERSION=$(grep -w 'VERSION=[0-9]\+\(\.[0-9]\+\)\+' run-ab-platform.sh | cut -d"=" -f2)
   echo "Bumped version for Airbyte"
 else
-  NEW_VERSION=$(grep -w VERSION .env | cut -d"=" -f2)
+  NEW_VERSION=$(grep -w VERSION .version | cut -d"=" -f2)
   echo "Bumped version for Airbyte Platform"
 fi
 

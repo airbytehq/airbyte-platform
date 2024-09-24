@@ -24,8 +24,14 @@ interface UsagePerDayGraphProps {
   chartData: UsagePerTimeChunk;
   minimized?: boolean;
   hasFreeUsage?: boolean;
+  hasInternalUsage?: boolean;
 }
-export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized, hasFreeUsage }) => {
+export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({
+  chartData,
+  minimized,
+  hasFreeUsage,
+  hasInternalUsage,
+}) => {
   const { formatMessage } = useIntl();
   const chartLinesColor = styles.grey100;
   const chartTicksColor = styles.grey;
@@ -91,6 +97,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
             tickSize={10}
             width={width}
             hide={minimized}
+            tickFormatter={(value) => value.toFixed(2)}
           />
           {!minimized && (
             <Tooltip
@@ -107,17 +114,19 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               labelFormatter={(timeChunkLabel, items) => {
                 // preferring `labelFormatter` instead of `content` as the latter removes all pre-defined tooltip styling
                 const isLastDay = timeChunkLabel === chartData.at(-1)?.timeChunkLabel;
+                const getTextColor = (name?: string) =>
+                  name === "freeUsage" ? "green" : name === "internalUsage" ? "blue" : undefined;
                 return (
                   <div>
                     <Text size="lg">{timeChunkLabel}</Text>
                     {items.map(({ name, value }) => (
-                      <Text color={name === "freeUsage" ? "green" : "darkBlue"} size="lg">
+                      <Text color={getTextColor(name)} size="lg">
                         {formatMessage({
                           id: `credits.${name}`,
                         })}
                         :{" "}
                         <FormattedCredits
-                          color={name === "freeUsage" ? "green" : undefined}
+                          color={getTextColor(name)}
                           credits={value ? parseFloat(value) : 0}
                           size="md"
                         />
@@ -134,31 +143,33 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
             />
           )}
           <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.darkBlue} isAnimationActive={!minimized}>
-            {chartData.map((item, index) => {
-              return (
-                <Cell
-                  key={`cell-paid-${index}`}
-                  // recharts takes an array here, but their types only permit a string or number :/
-                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                  // @ts-ignore-next-line
-                  radius={
-                    item.freeUsage && item.freeUsage / (item.freeUsage + item.billedCost) > 0.01 ? 0 : [4, 4, 0, 0]
-                  }
-                />
-              );
+            {chartData.map((_, index) => {
+              return <Cell key={`cell-paid-${index}`} />;
             })}
           </Bar>
-          {(hasFreeUsage || minimized) && (
+          {(hasInternalUsage || minimized) && (
             <Bar
-              key="free"
+              key="internal"
               stackId="a"
-              dataKey="freeUsage"
-              fill={styles.green}
-              radius={[4, 4, 0, 0]}
+              dataKey="internalUsage"
+              fill={styles.blue400}
               isAnimationActive={!minimized}
             >
               {chartData.map((item, index) => {
-                return item.freeUsage && item.freeUsage / (item.freeUsage + item.billedCost) < 0.01 ? (
+                return item.internalUsage &&
+                  item.internalUsage / (item.freeUsage + item.billedCost + item.internalUsage) < 0.01 ? (
+                  <Cell key={`cell-internal-${index}`} width={0} />
+                ) : (
+                  <Cell key={`cell-internal-${index}`} />
+                );
+              })}
+            </Bar>
+          )}
+          {(hasFreeUsage || minimized) && (
+            <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} isAnimationActive={!minimized}>
+              {chartData.map((item, index) => {
+                return item.freeUsage &&
+                  item.freeUsage / (item.freeUsage + item.billedCost + item.internalUsage) < 0.01 ? (
                   <Cell key={`cell-free-${index}`} width={0} />
                 ) : (
                   <Cell key={`cell-free-${index}`} />

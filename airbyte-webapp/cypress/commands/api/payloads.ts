@@ -67,6 +67,13 @@ export const getPostgresCreateDestinationBody = (name: string): DestinationCreat
   },
 });
 
+export const getFakerCreateSourceBody = (sourceName: string): SourceCreate => ({
+  name: sourceName,
+  workspaceId: getWorkspaceId(),
+  sourceDefinitionId: ConnectorIds.Sources.Faker,
+  connectionConfiguration: {},
+});
+
 export const getPokeApiCreateSourceBody = (sourceName: string, pokeName: string): SourceCreate => ({
   name: sourceName,
   workspaceId: getWorkspaceId(),

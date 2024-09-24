@@ -52,7 +52,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   private static final List<Field<?>> BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS =
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
           CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE, CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
-          field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"));
+          field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"), CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID,
+          CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID);
 
   private final ExceptionWrappingDatabase database;
 
@@ -93,6 +94,16 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .findFirst();
     });
     return projectOptional.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, builderProjectId));
+  }
+
+  @Override
+  public Optional<UUID> getConnectorBuilderProjectIdForActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx
+        .select(CONNECTOR_BUILDER_PROJECT.ID)
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+            .andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+        .fetchOptional(CONNECTOR_BUILDER_PROJECT.ID));
   }
 
   /**
@@ -189,10 +200,14 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   public void writeBuilderProjectDraft(final UUID projectId,
                                        final UUID workspaceId,
                                        final String name,
-                                       final JsonNode manifestDraft)
+                                       final JsonNode manifestDraft,
+                                       final UUID baseActorDefinitionVersionId,
+                                       final String contributionUrl,
+                                       final UUID contributionActorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
-      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, baseActorDefinitionVersionId, contributionUrl,
+          contributionActorDefinitionId, ctx);
       return null;
     });
   }
@@ -241,7 +256,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * Write name and draft of a builder project. The actor_definition is also updated to match the new
    * builder project name.
    * <p>
-   * Actor definition updated this way should always be private (i.e. public=false). As an additional
+   * Actor definitions updated this way should always be private (i.e. public=false). As an additional
    * protection, we want to shield ourselves from users updating public actor definition and
    * therefore, the name of the actor definition won't be updated if the actor definition is not
    * public. See
@@ -259,10 +274,14 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
                                                      final UUID workspaceId,
                                                      final String name,
                                                      final JsonNode manifestDraft,
+                                                     final UUID baseActorDefinitionVersionId,
+                                                     final String contributionPullRequestUrl,
+                                                     final UUID contributionActorDefinitionId,
                                                      final UUID actorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
-      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, baseActorDefinitionVersionId, contributionPullRequestUrl,
+          contributionActorDefinitionId, ctx);
       ctx.update(ACTOR_DEFINITION)
           .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
           .set(ACTOR_DEFINITION.NAME, name)
@@ -566,6 +585,9 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
                                         final UUID workspaceId,
                                         final String name,
                                         final JsonNode manifestDraft,
+                                        final UUID baseActorDefinitionVersionId,
+                                        final String contributionPullRequestUrl,
+                                        final UUID contributionActorDefinitionId,
                                         final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
@@ -580,6 +602,9 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
           .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
               manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID, baseActorDefinitionVersionId)
+          .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, contributionPullRequestUrl)
+          .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID, contributionActorDefinitionId)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
           .where(matchId)
           .execute();
@@ -590,6 +615,9 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
           .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
               manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID, baseActorDefinitionVersionId)
+          .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, contributionPullRequestUrl)
+          .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID, contributionActorDefinitionId)
           .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
           .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)

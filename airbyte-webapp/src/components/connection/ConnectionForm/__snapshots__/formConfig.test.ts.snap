@@ -18,7 +18,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -532,7 +532,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": false,
           "syncMode": "full_refresh",
@@ -1046,7 +1046,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -1579,7 +1579,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -2093,7 +2093,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": false,
           "syncMode": "full_refresh",
@@ -2607,7 +2607,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "overwrite",
+          "destinationSyncMode": "overwrite_dedup",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",

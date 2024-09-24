@@ -58,7 +58,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater);
 
     jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest();
+    jooqTestDbSetupHelper.setUpDependencies();
   }
 
   @Test

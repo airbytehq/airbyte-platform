@@ -101,7 +101,6 @@ manifest should match snapshot:
       AIRBYTE_EDITION: pro
       AIRBYTE_VERSION: 0.50.19
       API_URL: /api/v1/
-      AUTO_DETECT_SCHEMA: "true"
       CONFIG_ROOT: /configs
       CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.35.15.001
       CONNECTOR_BUILDER_API_HOST: RELEASE-NAME-airbyte-connector-builder-server-svc:80

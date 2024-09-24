@@ -1,0 +1,31 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.invoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, auto) 1fr;
+  row-gap: variables.$spacing-md;
+  column-gap: variables.$spacing-xl;
+  align-items: center;
+  justify-content: start;
+
+  &__open {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__openLink {
+    text-decoration: none;
+  }
+
+  &__separator {
+    grid-column-start: 1;
+    grid-column-end: -1;
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+
+  &__loading {
+    grid-column-start: 1;
+    grid-column-end: -1;
+  }
+}

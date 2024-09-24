@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 
 .button {
   display: inline-flex;
@@ -156,7 +157,7 @@
   }
 
   &.typeSecondary {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-400;
     border: 1px solid colors.$grey-300;
     box-shadow: none;
@@ -173,7 +174,7 @@
   }
 
   &.typeClear {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-300;
     box-shadow: none;
 
@@ -230,7 +231,7 @@
   }
 
   &.typeSecondaryDark {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$dark-blue-900;
     border: 1px solid colors.$dark-blue-900;
     box-shadow: none;
@@ -252,18 +253,39 @@
     justify-content: center;
 
     .childrenContainer {
-      color: colors.$transparentColor;
+      color: transparent;
     }
 
     .buttonIcon {
       &.isRegularIcon {
-        color: colors.$transparentColor;
+        visibility: hidden;
       }
     }
   }
 
+  &.typeMagic {
+    color: colors.$inverse;
+    @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
+
+    & .buttonIcon {
+      // Note: The icon must support a gradient
+      // so we fallback to the start color
+      color: colors.$gradient-primary-start;
+      --start-color: #{colors.$gradient-primary-start};
+      --stop-color: #{colors.$gradient-primary-stop};
+    }
+
+    &:hover {
+      filter: brightness(0.9);
+    }
+
+    &:active {
+      filter: brightness(0.8);
+    }
+  }
+
   &.typeClearDark {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-500;
     box-shadow: none;
     padding: 0;

@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_WORKSPACE_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
@@ -27,7 +29,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,9 +44,10 @@ import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LocalLogMdcHelper;
+import io.airbyte.commons.logging.LogMdcHelper;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -57,9 +59,12 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter;
+import io.airbyte.featureflag.EnableMappers;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.application.RecordMapper;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
@@ -196,13 +201,16 @@ abstract class ReplicationWorkerTest {
   protected StreamStatusCompletionTracker streamStatusCompletionTracker;
   protected ActorDefinitionVersionApi actorDefinitionVersionApi;
   protected StreamStatusTrackerFactory streamStatusTrackerFactory;
+  protected RecordMapper recordMapper;
+  protected FeatureFlagClient featureFlagClient;
+  protected DestinationCatalogGenerator destinationCatalogGenerator;
 
-  ReplicationWorker getDefaultReplicationWorker() {
+  BufferedReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
   }
 
   // Entrypoint to override for ReplicationWorker implementations
-  abstract ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled);
+  abstract BufferedReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled);
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -294,8 +302,16 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4, false));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(
+        new ReplicationFeatureFlags(false, 60, 4, false, false, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
+
+    recordMapper = mock(RecordMapper.class);
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(false);
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
+        .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
   }
 
   @AfterEach
@@ -306,13 +322,15 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void test() throws Exception {
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
     verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(onReplicationRunning).call();
+    verify(replicationWorkerHelper).applyTransformationMappers(new AirbyteJsonRecordAdapter(RECORD_MESSAGE1));
+    verify(replicationWorkerHelper).applyTransformationMappers(new AirbyteJsonRecordAdapter(RECORD_MESSAGE2));
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();
@@ -329,7 +347,7 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testReplicationTimesAreUpdated() throws Exception {
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
 
@@ -346,7 +364,7 @@ abstract class ReplicationWorkerTest {
   void testInvalidSchema() throws Exception {
     sourceStub.setMessages(RECORD_MESSAGE1, RECORD_MESSAGE2, RECORD_MESSAGE3);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
@@ -388,7 +406,7 @@ abstract class ReplicationWorkerTest {
       return null;
     }).when(jsonSchemaValidator).validateInitializedSchema(any(), any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
     worker.run(replicationInput, jobRoot);
 
     verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
@@ -415,7 +433,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testSourceNonZeroExitValue() throws Exception {
     when(source.getExitValue()).thenReturn(1);
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
     assertTrue(output.getFailures().stream().anyMatch(f -> f.getFailureOrigin().equals(FailureOrigin.SOURCE)));
@@ -427,7 +445,7 @@ abstract class ReplicationWorkerTest {
 
     when(source.attemptRead()).thenThrow(new RuntimeException(sourceErrorMessage));
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -439,7 +457,7 @@ abstract class ReplicationWorkerTest {
   void testReplicationRunnableSourceUpdateConfig() throws Exception {
     sourceStub.setMessages(RECORD_MESSAGE1, CONFIG_MESSAGE);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -463,7 +481,7 @@ abstract class ReplicationWorkerTest {
                 Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
                 DESTINATION_DEFINITION_ID)));
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
     doReturn(SOURCE_DEFINITION_ID).when(replicationWorkerHelper).getSourceDefinitionIdForSourceId(replicationInput.getSourceId());
     doReturn(DESTINATION_DEFINITION_ID).when(replicationWorkerHelper).getDestinationDefinitionIdForDestinationId(replicationInput.getDestinationId());
 
@@ -476,7 +494,7 @@ abstract class ReplicationWorkerTest {
     when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE), Optional.of(CONFIG_MESSAGE));
     when(destination.isFinished()).thenReturn(false, false, true);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -502,7 +520,7 @@ abstract class ReplicationWorkerTest {
                 Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
                 DESTINATION_DEFINITION_ID)));
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -514,7 +532,7 @@ abstract class ReplicationWorkerTest {
 
     doThrow(new RuntimeException(destinationErrorMessage)).when(destination).accept(any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -527,7 +545,7 @@ abstract class ReplicationWorkerTest {
     final FailureReason failureReason = FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, Long.valueOf(JOB_ID), JOB_ATTEMPT);
     when(messageTracker.errorTraceMessageFailure(Long.parseLong(JOB_ID), JOB_ATTEMPT)).thenReturn(List.of(failureReason));
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertTrue(output.getFailures().stream()
@@ -541,7 +559,7 @@ abstract class ReplicationWorkerTest {
 
     doThrow(new RuntimeException(workerErrorMessage)).when(messageTracker).acceptFromSource(any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -557,7 +575,7 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(traceMessage)).thenReturn(traceMessage);
     sourceStub.setMessages(RECORD_MESSAGE1, logMessage, traceMessage, RECORD_MESSAGE2);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
@@ -581,7 +599,7 @@ abstract class ReplicationWorkerTest {
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
     recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
         sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = getDefaultReplicationWorker(true);
+    final var worker = getDefaultReplicationWorker(true);
 
     worker.run(replicationInput, jobRoot);
 
@@ -602,7 +620,7 @@ abstract class ReplicationWorkerTest {
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
     recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
         sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
@@ -615,7 +633,7 @@ abstract class ReplicationWorkerTest {
   void testDestinationNonZeroExitValue() throws Exception {
     when(destination.getExitValue()).thenReturn(1);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -629,7 +647,7 @@ abstract class ReplicationWorkerTest {
     when(destination.isFinished()).thenReturn(false);
     doThrow(new RuntimeException(destinationErrorMessage)).when(destination).notifyEndOfInput();
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -648,7 +666,7 @@ abstract class ReplicationWorkerTest {
 
     doThrow(new RuntimeException(workerErrorMessage)).when(messageTracker).acceptFromDestination(any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -658,7 +676,7 @@ abstract class ReplicationWorkerTest {
 
   /**
    * We want to ensure logs are tested, this is to avoid duplicating setups in specific implementation
-   * classes while keeping the actual checks specific as different implementiation will require
+   * classes while keeping the actual checks specific as different implementation will require
    * different checks.
    */
   abstract void verifyTestLoggingInThreads(final String logs);
@@ -668,13 +686,14 @@ abstract class ReplicationWorkerTest {
     // set up the mdc so that actually log to a file, so that we can verify that file logging captures
     // threads.
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, jobRoot);
+    final LogMdcHelper logMdcHelper = new LocalLogMdcHelper();
+    MDC.put(logMdcHelper.getJobLogPathMdcKey(), Path.of(jobRoot.toString(), DEFAULT_LOG_FILENAME).toString());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
-    final Path logPath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final String logs = IOs.readFile(logPath);
     verifyTestLoggingInThreads(logs);
   }
@@ -682,12 +701,12 @@ abstract class ReplicationWorkerTest {
   @Test
   void testLogMaskRegex() throws IOException {
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    MDC.put(LogClientSingleton.WORKSPACE_MDC_KEY, jobRoot.toString());
+    MDC.put(DEFAULT_WORKSPACE_MDC_KEY, jobRoot.toString());
 
     LOGGER.info(
         "500 Server Error: Internal Server Error for url: https://api.hubapi.com/crm/v3/objects/contact?limit=100&archived=false&hapikey=secret-key_1&after=5315621");
 
-    final Path logPath = jobRoot.resolve("logs.log");
+    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final String logs = IOs.readFile(logPath);
     assertTrue(logs.contains("apikey"));
     assertFalse(logs.contains("secret-key_1"));
@@ -699,7 +718,7 @@ abstract class ReplicationWorkerTest {
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1, STATE_MESSAGE);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final Thread workerThread = new Thread(() -> {
       try {
@@ -739,7 +758,7 @@ abstract class ReplicationWorkerTest {
     when(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(6L);
     when(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(3L);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
     // Remove performance metrics from the output, those are implementation specific and should be
@@ -820,7 +839,7 @@ abstract class ReplicationWorkerTest {
     when(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(12L);
     when(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(11L);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
     final SyncStats expectedTotalStats = new SyncStats()
@@ -860,7 +879,7 @@ abstract class ReplicationWorkerTest {
 
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInputWithoutState, jobRoot);
 
@@ -872,7 +891,7 @@ abstract class ReplicationWorkerTest {
   void testDoesNotPopulateOnIrrecoverableFailure() {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(syncStatsTracker).getTotalRecordsEmitted();
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
     assertThrows(WorkerException.class, () -> worker.run(replicationInput, jobRoot));
   }
 
@@ -887,7 +906,7 @@ abstract class ReplicationWorkerTest {
             connectionId, "docker image", mMetricClient);
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
@@ -903,7 +922,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -936,7 +955,7 @@ abstract class ReplicationWorkerTest {
 
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
@@ -951,7 +970,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -982,7 +1001,7 @@ abstract class ReplicationWorkerTest {
       return null;
     }).when(destinationTimeoutMonitor).runWithTimeoutThread(any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
@@ -997,7 +1016,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1033,7 +1052,7 @@ abstract class ReplicationWorkerTest {
       return null;
     }).when(destinationTimeoutMonitor).runWithTimeoutThread(any());
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
@@ -1071,23 +1090,10 @@ abstract class ReplicationWorkerTest {
   }
 
   @Test
-  void testDontCallHeartbeat() throws WorkerException {
-    sourceStub.setMessages(RECORD_MESSAGE1);
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    doReturn(Boolean.FALSE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
-  }
-
-  @Test
   void testCallHeartbeat() throws WorkerException {
     sourceStub.setMessages(RECORD_MESSAGE1);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    doReturn(Boolean.TRUE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
@@ -1098,7 +1104,7 @@ abstract class ReplicationWorkerTest {
   void testStreamStatusCompletionTracking() throws Exception {
     sourceStub.setMessages(RECORD_MESSAGE1);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 
@@ -1114,7 +1120,7 @@ abstract class ReplicationWorkerTest {
         AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
     sourceStub.setMessages(RECORD_MESSAGE1, streamStatus);
 
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     worker.run(replicationInput, jobRoot);
 

@@ -10,7 +10,8 @@ import { useFormatError } from "core/errors";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderYamlField.module.scss";
-import { BuilderState, useBuilderWatch } from "../types";
+import { useBuilderWatchWithPreview } from "../preview";
+import { BuilderState } from "../types";
 import { YamlEditor } from "../YamlEditor";
 
 interface BuilderYamlFieldProps {
@@ -23,7 +24,7 @@ export const BuilderYamlField: React.FC<BuilderYamlFieldProps> = ({ path, setLoc
   const formatError = useFormatError();
   const { setValue, register, getFieldState } = useFormContext();
   const { error } = getFieldState(path);
-  const formValue = useBuilderWatch(path);
+  const { fieldValue: formValue, isPreview } = useBuilderWatchWithPreview(path);
   const pathString = path as string;
 
   // Use a separate state for the YamlEditor value to avoid the debouncedSetValue
@@ -55,6 +56,7 @@ export const BuilderYamlField: React.FC<BuilderYamlFieldProps> = ({ path, setLoc
       <div className={styles.yamlEditor} ref={elementRef}>
         <YamlEditor
           value={localYamlValue}
+          readOnly={isPreview}
           onChange={(val: string | undefined) => {
             setLocalYamlValue(val);
             // If both values are empty or equal, don't set the form value to avoid triggering an unwanted form value change.

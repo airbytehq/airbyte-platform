@@ -12,15 +12,16 @@ class ProtocolConverters {
   companion object {
     @JvmStatic
     fun ProtocolAirbyteStream.toInternal(): InternalAirbyteStream =
-      InternalAirbyteStream()
-        .withName(name)
-        .withJsonSchema(jsonSchema)
-        .withSupportedSyncModes(Enums.convertListTo(supportedSyncModes, InternalSyncMode::class.java))
-        .withSourceDefinedCursor(sourceDefinedCursor)
-        .withDefaultCursorField(defaultCursorField)
-        .withSourceDefinedPrimaryKey(sourceDefinedPrimaryKey)
-        .withNamespace(namespace)
-        .withIsResumable(isResumable)
+      InternalAirbyteStream(
+        name = name,
+        jsonSchema = jsonSchema,
+        supportedSyncModes = Enums.convertListTo(supportedSyncModes, InternalSyncMode::class.java),
+        sourceDefinedCursor = sourceDefinedCursor,
+        defaultCursorField = defaultCursorField,
+        sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,
+        namespace = namespace,
+        isResumable = isResumable,
+      )
 
     @JvmStatic
     fun InternalAirbyteStream.toProtocol(): ProtocolAirbyteStream =

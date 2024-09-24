@@ -12,6 +12,7 @@ export const pruneUnsupportedModes = (
 
 export const replicateSourceModes: Array<[SyncMode, DestinationSyncMode]> = [
   [SyncMode.incremental, DestinationSyncMode.append_dedup],
+  [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
   [SyncMode.full_refresh, DestinationSyncMode.overwrite],
   [SyncMode.incremental, DestinationSyncMode.append],
 ];

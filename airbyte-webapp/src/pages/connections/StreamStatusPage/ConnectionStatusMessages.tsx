@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -13,7 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { useStreamsStatuses } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import { useCurrentConnection, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
 import { ActorDefinitionVersionRead, FailureOrigin, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -21,7 +21,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionStatusMessages.module.scss";
@@ -69,7 +68,7 @@ export const ConnectionStatusMessages: React.FC = () => {
   const { formatMessage } = useIntl();
 
   const workspaceId = useCurrentWorkspaceId();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
     connection.connectionId
   );
@@ -87,7 +86,7 @@ export const ConnectionStatusMessages: React.FC = () => {
   let rateLimitedQuota = Infinity;
   let rateLimitedStreamStatus: StreamStatusRead | undefined;
   streamStatuses.forEach((streamStatus) => {
-    if (streamStatus.status === ConnectionStatusIndicatorStatus.RateLimited) {
+    if (streamStatus.status === StreamStatusType.RateLimited) {
       rateLimitedStreamStatus = streamStatus.relevantHistory.at(0);
       const quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
       if (quotaReset && quotaReset >= Date.now()) {

@@ -5,7 +5,6 @@
 package io.airbyte.persistence.job.tracker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -22,6 +21,7 @@ import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -29,6 +29,7 @@ import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
@@ -51,15 +52,12 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
@@ -107,7 +105,6 @@ class JobTrackerTest {
   private static final String CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY = "connector_source_docker_repository";
   private static final String CONNECTOR_SOURCE_VERSION_KEY = "connector_source_version";
   private static final String FREQUENCY_KEY = "frequency";
-  private static final String WORKLOAD_ENABLED = "workload_enabled";
 
   private static final long SYNC_START_TIME = 1000L;
   private static final long SYNC_END_TIME = 10000L;
@@ -154,7 +151,8 @@ class JobTrackerTest {
       .put("table_prefix", false)
       .put("operation_count", 0)
       .build();
-  private static final ConfiguredAirbyteCatalog CATALOG = CatalogHelpers
+  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
+  private static final ConfiguredAirbyteCatalog CATALOG = catalogHelpers
       .createConfiguredAirbyteCatalog("stream_name", "stream_namespace",
           Field.of("int_field", JsonSchemaType.NUMBER));
 
@@ -196,7 +194,6 @@ class JobTrackerTest {
   private TrackingClient trackingClient;
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
-  private FeatureFlagClient featureFlagClient;
   private JobTracker jobTracker;
 
   @BeforeEach
@@ -206,8 +203,7 @@ class JobTrackerTest {
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
-    featureFlagClient = mock(TestClient.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
+    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Test
@@ -220,7 +216,6 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
         .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -234,7 +229,6 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
 
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
@@ -259,7 +253,6 @@ class JobTrackerTest {
         .put("connector_destination_definition_id", UUID2)
         .put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
         .put("connector_destination_version", CONNECTOR_VERSION)
-        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
@@ -273,7 +266,6 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(destinationVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
 
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, DESTINATION_ID, jobState, output),
@@ -298,7 +290,6 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
         .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -312,7 +303,6 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
 
     assertDiscoverCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
@@ -636,10 +626,10 @@ class JobTrackerTest {
             .withDockerRepository(CONNECTOR_REPOSITORY));
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(new AirbyteStream().withName("stream").withNamespace("namespace"))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("stream", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("namespace"),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
         .withSourceConfiguration(Jsons.jsonNode(ImmutableMap.of("key", "some_value")))

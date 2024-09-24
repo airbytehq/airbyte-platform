@@ -13,6 +13,7 @@ class LocalDeclarativeManifestImageVersionsProvider : DeclarativeManifestImageVe
       DeclarativeManifestImageVersion(1, "1.7.0", "sha256:3cd10771ef1608e8a637ec54a3e5e55760953e2bb187bb0ea4851b869c61258d"),
       DeclarativeManifestImageVersion(2, "2.1.0", "sha256:1e0df4ded4ea1e75b762872cb44c2f62458b1851dc76601cb733400465b790d0"),
       DeclarativeManifestImageVersion(3, "3.10.4", "sha256:aded5b43dfa140f18c55777205bf654690399c3cf0a51aaf26218eba75274eb5"),
+      DeclarativeManifestImageVersion(4, "4.3.0", "sha256:538af3f6237799f10458b2b7bb5d69889c4ebae2b7d82b84b7b887fde9c53aa4"),
     )
   }
 }

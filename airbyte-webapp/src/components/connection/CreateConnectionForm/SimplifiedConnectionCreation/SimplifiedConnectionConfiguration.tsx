@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useState } from "react";
+import React from "react";
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Route, Routes } from "react-router-dom";
@@ -15,11 +15,13 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { ScrollParent } from "components/ui/ScrollParent";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -59,18 +61,13 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
+
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
-
-  const setScrollableContainerRef = (ref: HTMLDivElement | null) => {
-    if (ref === null) {
-      return;
-    }
-    setScrollElement(ref);
-  };
 
   // if the user is navigating back from the second step the form may be dirty
   useMount(() => {
@@ -78,7 +75,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <ScrollableContainer ref={setScrollableContainerRef} className={styles.container}>
+    <ScrollParent props={{ className: styles.container }}>
       <FlexContainer direction="column" gap="lg">
         <Card
           title={formatMessage({ id: "connectionForm.selectSyncMode" })}
@@ -86,17 +83,17 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
         >
           <SimplifiedSchemaQuestionnaire />
         </Card>
-        {isSyncCatalogV2Enabled ? (
+        {useSyncCatalogV2 ? (
           <Card noPadding title={formatMessage({ id: "connection.schema" })}>
             <Box mb="xl" data-testid="catalog-tree-table-body">
-              <SyncCatalogTable scrollParentContainer={scrollElement} />
+              <SyncCatalogTable />
             </Box>
           </Card>
         ) : (
-          <SyncCatalogCard scrollParentContainer={scrollElement} />
+          <SyncCatalogCard />
         )}
       </FlexContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };
 

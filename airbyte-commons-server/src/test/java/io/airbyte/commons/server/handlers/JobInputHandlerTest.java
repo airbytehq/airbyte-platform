@@ -18,7 +18,6 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
@@ -28,6 +27,7 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -47,7 +47,6 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.models.JobInput;
@@ -92,7 +91,6 @@ class JobInputHandlerTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
-  private FeatureFlags featureFlags;
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
@@ -108,7 +106,6 @@ class JobInputHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     job = mock(Job.class);
     featureFlagClient = new TestClient(new HashMap<>());
-    featureFlags = mock(FeatureFlags.class);
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -116,7 +113,6 @@ class JobInputHandlerTest {
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         configRepository,
-        featureFlags,
         featureFlagClient,
         oAuthConfigSupplier,
         configInjector,
@@ -189,7 +185,8 @@ class JobInputHandlerTest {
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withIsReset(false);
+        .withIsReset(false)
+        .withUseAsyncReplicate(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -263,7 +260,8 @@ class JobInputHandlerTest {
         .withSourceConfiguration(Jsons.emptyObject())
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
-        .withIsReset(true);
+        .withIsReset(true)
+        .withUseAsyncReplicate(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))

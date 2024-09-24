@@ -417,6 +417,9 @@ components:
         autoId:
           type: string
           format: uuid
+        signalInput:
+          type: string
+          nullable: true
     WorkloadCancelRequest:
       required:
       - reason
@@ -478,6 +481,9 @@ components:
           nullable: true
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+        signalInput:
+          type: string
+          nullable: true
     WorkloadFailureRequest:
       required:
       - workloadId

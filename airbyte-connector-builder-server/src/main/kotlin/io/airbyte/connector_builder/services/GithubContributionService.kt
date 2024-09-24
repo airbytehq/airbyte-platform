@@ -3,6 +3,7 @@
 package io.airbyte.connector_builder.services
 
 import io.airbyte.commons.server.handlers.logger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -15,6 +16,8 @@ import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 
+private val logger = KotlinLogging.logger {}
+
 class GithubContributionService(var connectorImageName: String, personalAccessToken: String?) {
   var githubService: GitHub? = null
   val repositoryName = "airbyte"
@@ -23,8 +26,10 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   init {
     val builder = GitHubBuilder()
-    if (personalAccessToken != null) {
+    if (!personalAccessToken.isNullOrEmpty()) {
       builder.withOAuthToken(personalAccessToken)
+    } else {
+      logger.warn { "No personal access token provided for GitHub API. This may cause you to be rate limited by the Github API" }
     }
 
     githubService = builder.build()
@@ -53,10 +58,10 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
   }
 
   val connectorDocsSlug: String
-    get() = "integrations/${imageNameAsDocPath(connectorImageName)}.md"
+    get() = "integrations/${imageNameAsDocPath(connectorImageName)}"
 
   val connectorDocsPath: String
-    get() = "docs/$connectorDocsSlug"
+    get() = "docs/integrations/${imageNameAsDocPath(connectorImageName)}.md"
 
   val connectorMetadataPath: String
     get() = "$connectorDirectoryPath/metadata.yaml"
@@ -113,7 +118,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   // PUBLIC METHODS
 
-  fun checkConnectorExistsOnMain(): Boolean {
+  fun checkIfConnectorExistsOnMain(): Boolean {
     return checkFileExistsOnMain(connectorMetadataPath)
   }
 
@@ -127,12 +132,15 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return yaml.load(rawYamlString)
   }
 
-  fun readConnectorMetadataName(): String? {
+/*
+ * Read a top-level field from the connector metadata
+ */
+  fun readConnectorMetadataValue(field: String): String? {
     val parsedYaml = readConnectorMetadata() ?: return null
 
-    // Extract "name" from the "data" section
+    // Extract a top-level field from the "data" section
     val dataSection = parsedYaml["data"] as? Map<*, *>
-    return dataSection?.get("name") as? String
+    return dataSection?.get(field) as? String
   }
 
   fun constructConnectorFilePath(fileName: String): String {
@@ -245,28 +253,36 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return commit
   }
 
-  fun createPullRequest(): GHPullRequest {
+  fun createPullRequest(description: String): GHPullRequest {
     val title = "$connectorImageName contribution from $username"
-    val body = "Auto-generated PR by the Connector Builder for $connectorImageName"
-    return airbyteRepository.createPullRequest(title, forkedContributonBranchName, airbyteRepository.defaultBranch, body)
+    return airbyteRepository.createPullRequest(title, forkedContributonBranchName, airbyteRepository.defaultBranch, description)
   }
 
-  fun getOrCreatePullRequest(): GHPullRequest {
+  fun getOrCreatePullRequest(description: String): GHPullRequest {
     val existingPullRequest = getExistingOpenPullRequest()
     if (existingPullRequest != null) {
+      existingPullRequest.body = description
       return existingPullRequest
     }
 
-    return createPullRequest()
+    return createPullRequest(description)
   }
 
-  fun updateForkedBranchAndRepoToLatest() {
+  fun attemptUpdateForkedBranchAndRepoToLatest() {
     val airbyteMasterSha = getBranchSha(airbyteRepository.defaultBranch, airbyteRepository)
     val forkedMasterRef = getBranchRef(airbyteRepository.defaultBranch, forkedRepository)
     val forkedContributionBranch = getBranch(contributionBranchName, forkedRepository)
 
-    forkedMasterRef?.updateTo(airbyteMasterSha)
-    forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
+    try {
+      forkedMasterRef?.updateTo(airbyteMasterSha)
+      forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
+    } catch (e: GHFileNotFoundException) {
+      // HACK: This method is flaky and relies on an eventually consistent GitHub API
+      // TODO: Update to use `merge-upstream` instead
+      // WHEN: When a version of org.kohsuke:github-api < 1.323 is available
+      // WHY: https://github.com/hub4j/github-api/pull/1898 will be part of that change
+      logger.error(e) { "Failed to update forked branch to latest" }
+    }
   }
 
   fun prepareBranchForContribution() {
@@ -276,7 +292,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     if (existingBranch != null) {
       if (existingPR != null) {
         // Make sure the existing PR stays up to date with master
-        updateForkedBranchAndRepoToLatest()
+        attemptUpdateForkedBranchAndRepoToLatest()
       } else {
         // Delete the branch with old contributions in the PR doesn't exist anymore
         deleteBranch(contributionBranchName, forkedRepository)

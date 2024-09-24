@@ -26,10 +26,8 @@ import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
-import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserRead;
-import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
@@ -45,6 +43,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Application;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthUser;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Organization;
 import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
@@ -54,6 +53,7 @@ import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.WorkspaceUserAccessInfo;
+import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -62,7 +62,6 @@ import io.airbyte.data.services.ApplicationService;
 import io.airbyte.data.services.ExternalUserService;
 import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionService;
-import io.airbyte.featureflag.EnforceEmailUniqueness;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.featureflag.TestClient;
@@ -70,7 +69,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -83,6 +81,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
@@ -112,10 +111,9 @@ class UserHandlerTest {
   private static final String USER_EMAIL = "user_1@whatever.com";
 
   private static final Organization ORGANIZATION = new Organization().withOrganizationId(UUID.randomUUID()).withName(USER_NAME).withEmail(USER_EMAIL);
-  private static final Organization ORGANIZATION2 = new Organization().withOrganizationId(UUID.randomUUID()).withName("org 2").withEmail(USER_EMAIL);
   private static final UUID PERMISSION1_ID = UUID.randomUUID();
 
-  private final User user = new User()
+  private final AuthenticatedUser user = new AuthenticatedUser()
       .withUserId(USER_ID)
       .withAuthUserId(USER_ID.toString())
       .withEmail(USER_EMAIL)
@@ -143,40 +141,12 @@ class UserHandlerTest {
     featureFlagClient = mock(TestClient.class);
 
     when(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains.INSTANCE), any())).thenReturn(true);
-    when(featureFlagClient.boolVariation(eq(EnforceEmailUniqueness.INSTANCE), any())).thenReturn(true);
+
     userHandler =
         new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
             organizationEmailDomainService, Optional.of(applicationService),
             permissionHandler, workspacesHandler,
             uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfig), resourceBootstrapHandler, featureFlagClient);
-  }
-
-  @Test
-  void testCreateUser() throws JsonValidationException, ConfigNotFoundException, IOException {
-    when(uuidSupplier.get()).thenReturn(USER_ID);
-    when(userPersistence.getUser(any())).thenReturn(Optional.of(user));
-    final UserCreate userCreate = new UserCreate()
-        .name(USER_NAME)
-        .authUserId(USER_ID.toString())
-        .authProvider(
-            io.airbyte.api.model.generated.AuthProvider.GOOGLE_IDENTITY_PLATFORM)
-        .status(UserStatus.DISABLED.INVITED)
-        .email(USER_EMAIL);
-    final UserRead actualRead = userHandler.createUser(userCreate);
-    final UserRead expectedRead = new UserRead()
-        .userId(USER_ID)
-        .name(USER_NAME)
-        .authUserId(USER_ID.toString())
-        .authProvider(
-            io.airbyte.api.model.generated.AuthProvider.GOOGLE_IDENTITY_PLATFORM)
-        .status(UserStatus.DISABLED.INVITED)
-        .email(USER_EMAIL)
-        .companyName(null)
-        .metadata(null)
-        .news(false)
-        .metadata(Map.of());
-
-    assertEquals(expectedRead, actualRead);
   }
 
   @Test
@@ -304,12 +274,13 @@ class UserHandlerTest {
       when(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(user);
       when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(user));
 
-      final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId)).getUserRead();
+      final UserGetOrCreateByAuthIdResponse response = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId));
+      final UserRead userRead = response.getUserRead();
 
       assertEquals(userRead.getUserId(), USER_ID);
       assertEquals(userRead.getEmail(), USER_EMAIL);
-      assertEquals(userRead.getAuthUserId(), authUserId);
-      assertEquals(userRead.getAuthProvider(), apiAuthProvider);
+      assertEquals(response.getAuthUserId(), authUserId);
+      assertEquals(response.getAuthProvider(), apiAuthProvider);
     }
 
     @Nested
@@ -320,21 +291,31 @@ class UserHandlerTest {
       private static final String NEW_AUTH_USER_ID = "new_auth_user_id";
       private static final String EMAIL = "user@airbyte.io";
       private static final String SSO_REALM = "airbyte-realm";
+      private static final String REALM = "_airbyte-users";
 
-      private User jwtUser;
+      private AuthenticatedUser jwtUser;
       private User existingUser;
 
       @BeforeEach
       void setup() {
-        jwtUser = new User().withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK);
-        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EMAIL).withAuthUserId(EXISTING_AUTH_USER_ID);
+        jwtUser = new AuthenticatedUser().withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK);
+        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EMAIL);
       }
 
-      @Test
-      void testNonSSOSignInEmailExistsThrowsError() throws Exception {
+      @ParameterizedTest
+      @CsvSource({"true", "false"})
+      void testNonSSOSignInEmailExistsThrowsError(final Boolean isExistingUserSSO) throws Exception {
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
         when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(REALM);
+
+        if (isExistingUserSSO) {
+          when(organizationPersistence.getSsoConfigByRealmName(REALM)).thenReturn(Optional.of(new SsoConfig()));
+        }
+
         assertThrows(UserAlreadyExistsProblem.class,
             () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
@@ -347,20 +328,46 @@ class UserHandlerTest {
         final User defaultUser = new User().withUserId(DEFAULT_USER_ID).withEmail(EMAIL);
         when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(defaultUser));
 
-        final User newUser =
-            new User().withUserId(UUID.randomUUID()).withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withDefaultWorkspaceId(UUID.randomUUID());
+        final AuthenticatedUser newUser =
+            new AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID)
+                .withDefaultWorkspaceId(UUID.randomUUID());
         when(uuidSupplier.get()).thenReturn(newUser.getUserId());
-        when(userPersistence.getUser(newUser.getUserId())).thenReturn(Optional.of(newUser));
+        when(userPersistence.getUser(newUser.getUserId())).thenReturn(Optional.of(AuthenticatedUserConverter.toUser(newUser)));
 
         final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
         assertTrue(res.getNewUserCreated());
         assertEquals(res.getUserRead().getUserId(), newUser.getUserId());
         assertEquals(res.getUserRead().getEmail(), EMAIL);
-        assertEquals(res.getUserRead().getAuthUserId(), NEW_AUTH_USER_ID);
+        assertEquals(res.getAuthUserId(), NEW_AUTH_USER_ID);
 
         verify(userPersistence).writeUser(defaultUser.withEmail(""));
         verify(userPersistence)
-            .writeUser(argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
+            .writeAuthenticatedUser(
+                argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
+      }
+
+      @Test
+      void testRelinkOrphanedUser() throws IOException, JsonValidationException, ConfigNotFoundException {
+        // Auth user in JWT is not linked to any user in the database
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
+        when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
+
+        // A user with the same email exists in the database
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+
+        // None of the auth users configured for the existing user actually exist in the external user
+        // service
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(null);
+
+        final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
+        assertFalse(res.getNewUserCreated());
+        assertEquals(res.getUserRead().getUserId(), EXISTING_USER_ID);
+
+        // verify auth user is replaced
+        verify(userPersistence).replaceAuthUserForUserId(EXISTING_USER_ID, NEW_AUTH_USER_ID, AuthProvider.KEYCLOAK);
       }
 
       private static Stream<Arguments> ssoSignInArgsProvider() {
@@ -383,10 +390,10 @@ class UserHandlerTest {
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
         when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
         when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
 
         if (isExistingUserSSO) {
-          when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
-              .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
           when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(SSO_REALM);
           when(organizationPersistence.getSsoConfigByRealmName(SSO_REALM)).thenReturn(Optional.of(new SsoConfig()));
 
@@ -395,7 +402,16 @@ class UserHandlerTest {
           return;
         }
 
-        when(applicationService.listApplicationsByUser(existingUser)).thenReturn(List.of(new Application().withId("app_id")));
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(REALM);
+        when(organizationPersistence.getSsoConfigByRealmName(REALM)).thenReturn(Optional.empty());
+
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
+
+        final AuthenticatedUser existingAuthedUser =
+            AuthenticatedUserConverter.toAuthenticatedUser(existingUser, EXISTING_AUTH_USER_ID, AuthProvider.KEYCLOAK);
+
+        when(applicationService.listApplicationsByUser(existingAuthedUser)).thenReturn(List.of(new Application().withId("app_id")));
         when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.of(SSO_REALM));
         when(workspacesHandler
             .listWorkspacesInOrganization(new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId())))
@@ -413,7 +429,7 @@ class UserHandlerTest {
         assertFalse(res.getNewUserCreated());
 
         // verify apps are revoked
-        verify(applicationService).deleteApplication(existingUser, "app_id");
+        verify(applicationService).deleteApplication(existingAuthedUser, "app_id");
 
         // verify auth user is replaced
         verify(userPersistence).replaceAuthUserForUserId(EXISTING_USER_ID, NEW_AUTH_USER_ID, AuthProvider.KEYCLOAK);
@@ -448,6 +464,7 @@ class UserHandlerTest {
       private static final String EXISTING_EMAIL = "existing@gmail.com";
       private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
+      private AuthenticatedUser newAuthedUser;
       private User newUser;
       private User existingUser;
       private WorkspaceRead defaultWorkspace;
@@ -484,11 +501,12 @@ class UserHandlerTest {
 
       @BeforeEach
       void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
-        newUser = new User().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
-        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EXISTING_EMAIL).withAuthUserId(EXISTING_AUTH_USER_ID.toString());
+        newAuthedUser = new AuthenticatedUser().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
+        newUser = AuthenticatedUserConverter.toUser(newAuthedUser);
+        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EXISTING_EMAIL);
         defaultWorkspace = new WorkspaceRead().workspaceId(WORKSPACE_ID);
         when(userPersistence.getUserByAuthId(anyString())).thenReturn(Optional.empty());
-        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newUser);
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newAuthedUser);
         when(uuidSupplier.get()).thenReturn(NEW_USER_ID);
         when(userPersistence.getUser(NEW_USER_ID)).thenReturn(Optional.of(newUser));
         when(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace);
@@ -505,7 +523,7 @@ class UserHandlerTest {
                                final UUID domainRestrictedToOrgId)
           throws Exception {
 
-        newUser.setAuthProvider(authProvider);
+        newAuthedUser.setAuthProvider(authProvider);
 
         if (domainRestrictedToOrgId != null) {
           final String emailDomain = newUser.getEmail().split("@")[1];
@@ -559,9 +577,9 @@ class UserHandlerTest {
 
         if (domainRestrictedToOrgId != null && (authRealm == null || domainRestrictedToOrgId != ORGANIZATION.getOrganizationId())) {
           assertThrows(SSORequiredProblem.class, () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
-          verify(userPersistence, never()).writeUser(any());
+          verify(userPersistence, never()).writeAuthenticatedUser(any());
           if (authRealm != null) {
-            verify(externalUserService).deleteUserByExternalId(newUser.getAuthUserId(), authRealm);
+            verify(externalUserService).deleteUserByExternalId(newAuthedUser.getAuthUserId(), authRealm);
           }
           return;
         }
@@ -569,21 +587,18 @@ class UserHandlerTest {
         final UserGetOrCreateByAuthIdResponse response = userHandler.getOrCreateUserByAuthId(
             new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
 
-        final UserRead userRead = response.getUserRead();
-        final boolean newUserCreated = response.getNewUserCreated();
-
         final InOrder userPersistenceInOrder = inOrder(userPersistence);
 
-        assertTrue(newUserCreated);
+        assertTrue(response.getNewUserCreated());
         verifyCreatedUser(authProvider, userPersistenceInOrder);
-        verifyUserRead(userRead, apiAuthProvider);
+        verifyUserRes(response, apiAuthProvider);
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(authRealm, isFirstOrgUser);
         verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {
-        inOrder.verify(userPersistence).writeUser(argThat(user -> user.getUserId().equals(NEW_USER_ID)
+        inOrder.verify(userPersistence).writeAuthenticatedUser(argThat(user -> user.getUserId().equals(NEW_USER_ID)
             && NEW_EMAIL.equals(user.getEmail())
             && NEW_AUTH_USER_ID.equals(user.getAuthUserId())
             && user.getAuthProvider().equals(expectedAuthProvider)));
@@ -605,11 +620,13 @@ class UserHandlerTest {
         }
       }
 
-      private void verifyUserRead(final UserRead userRead, final io.airbyte.api.model.generated.AuthProvider expectedAuthProvider) {
+      private void verifyUserRes(final UserGetOrCreateByAuthIdResponse userRes,
+                                 final io.airbyte.api.model.generated.AuthProvider expectedAuthProvider) {
+        final UserRead userRead = userRes.getUserRead();
         assertEquals(userRead.getUserId(), NEW_USER_ID);
         assertEquals(userRead.getEmail(), NEW_EMAIL);
-        assertEquals(userRead.getAuthUserId(), NEW_AUTH_USER_ID);
-        assertEquals(userRead.getAuthProvider(), expectedAuthProvider);
+        assertEquals(userRes.getAuthUserId(), NEW_AUTH_USER_ID);
+        assertEquals(userRes.getAuthProvider(), expectedAuthProvider);
       }
 
       private void verifyInstanceAdminPermissionCreation(final String initialUserEmail, final boolean initialUserPresent)

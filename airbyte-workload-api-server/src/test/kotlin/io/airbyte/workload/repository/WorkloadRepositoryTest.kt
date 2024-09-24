@@ -139,6 +139,7 @@ internal class WorkloadRepositoryTest {
     val labels = ArrayList<WorkloadLabel>()
     labels.add(label1)
     labels.add(label2)
+    val signalInput = "signalInput"
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -146,6 +147,7 @@ internal class WorkloadRepositoryTest {
         status = WorkloadStatus.PENDING,
         workloadLabels = labels,
         deadline = defaultDeadline,
+        signalInput = signalInput,
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
@@ -158,6 +160,7 @@ internal class WorkloadRepositoryTest {
     assertNotNull(persistedWorkload.get().deadline)
     assertEquals(defaultDeadline.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
     assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
+    assertEquals(signalInput, persistedWorkload.get().signalInput)
 
     val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
     workloadLabels.sortWith(Comparator.comparing(WorkloadLabel::key))
@@ -474,6 +477,7 @@ internal class WorkloadRepositoryTest {
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
       deadline: OffsetDateTime = OffsetDateTime.now(),
+      signalInput: String = "",
     ): Workload =
       Workload(
         id = id,
@@ -486,6 +490,7 @@ internal class WorkloadRepositoryTest {
         mutexKey = mutexKey,
         type = type,
         deadline = deadline,
+        signalInput = signalInput,
       )
   }
 }

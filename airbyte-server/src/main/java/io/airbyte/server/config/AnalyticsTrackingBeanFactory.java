@@ -33,7 +33,7 @@ public class AnalyticsTrackingBeanFactory {
   public Supplier<DeploymentMetadataRead> deploymentSupplier(final DeploymentMetadataHandler deploymentMetadataHandler) {
     return () -> {
       final io.airbyte.api.model.generated.DeploymentMetadataRead deploymentMetadataRead = deploymentMetadataHandler.getDeploymentMetadata();
-      return new DeploymentMetadataRead(deploymentMetadataRead.getEnvironment(), deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
+      return new DeploymentMetadataRead(deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
           deploymentMetadataRead.getVersion());
     };
   }

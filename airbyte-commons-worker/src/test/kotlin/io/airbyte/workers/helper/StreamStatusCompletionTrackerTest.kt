@@ -1,12 +1,19 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
-import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.DestinationSyncMode
+import io.airbyte.config.SyncMode
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.AirbyteMapper
 import io.mockk.every
@@ -14,6 +21,7 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Clock
 import java.util.UUID
 
@@ -27,8 +35,21 @@ internal class StreamStatusCompletionTrackerTest {
     ConfiguredAirbyteCatalog()
       .withStreams(
         listOf(
-          ConfiguredAirbyteStream().withStream(AirbyteStream().withName("name1")),
-          ConfiguredAirbyteStream().withStream(AirbyteStream().withName("name2").withNamespace("namespace2")),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "name1", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(
+              name = "name2",
+              namespace = "namespace2",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+            ),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
         ),
       )
 
@@ -127,6 +148,41 @@ internal class StreamStatusCompletionTrackerTest {
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
     assertEquals(listOf<AirbyteMessage>(), result)
+  }
+
+  @Test
+  fun `test null and empty string namespaces during tracking`() {
+    val catalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              AirbyteStream(name = "name1", namespace = "", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND,
+            ),
+            ConfiguredAirbyteStream(
+              AirbyteStream(
+                name = "name2",
+                namespace = "namespace2",
+                jsonSchema = Jsons.emptyObject(),
+                supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+              ),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val connectorNullNamespace = StreamDescriptor().withName("name1").withNamespace(null)
+    val traceMessage =
+      AirbyteStreamStatusTraceMessage()
+        .withStreamDescriptor(connectorNullNamespace)
+        .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
+    streamStatusCompletionTracker.startTracking(catalog, true)
+
+    assertDoesNotThrow {
+      streamStatusCompletionTracker.track(traceMessage)
+    }
   }
 
   private fun getStreamStatusCompletedMessage(

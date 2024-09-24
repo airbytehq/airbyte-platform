@@ -1,22 +1,19 @@
 import { HTMLAttributes, Ref, forwardRef, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
-import { InferType } from "yup";
 
 import { LoadingPage } from "components";
-import { EmptyState } from "components/common/EmptyState";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
-import { useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
+import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
 import { ConnectionEvent } from "core/api/types/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { EventLineItem } from "./components/EventLineItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
-import { jobRunningSchema } from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
 
 // Virtuoso's `List` ref is an HTMLDivElement so we're coercing some types here
@@ -33,7 +30,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
   filterValues: TimelineFilterValues;
   scrollElement: HTMLDivElement | null;
 }> = ({ filterValues, scrollElement }) => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { isRunning } = useConnectionStatus(connection.connectionId);
   const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
 
@@ -61,15 +58,28 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     createdAtEnd: filterValues.endDate !== "" ? filterValues.endDate : undefined,
   });
 
+  const endDateShowRunningJob =
+    filterValues.endDate === "" || parseInt(filterValues.endDate) > (syncProgressData?.syncStartedAt ?? 0);
+  const startDateShowRunningJob =
+    filterValues.startDate === "" || parseInt(filterValues.startDate) < (syncProgressData?.syncStartedAt ?? 0);
+  const statusFilterShowRunningJob =
+    filterValues.status === "" ||
+    filterValues.eventCategory === syncProgressData?.configType ||
+    (filterValues.eventCategory === "clear" && syncProgressData?.configType === "reset_connection");
+
+  const filtersShouldShowRunningJob = startDateShowRunningJob && endDateShowRunningJob && statusFilterShowRunningJob;
+
+  const showRunningJob = isRunning && !!syncProgressData && filtersShouldShowRunningJob;
+
   const connectionEventsToShow = useMemo(() => {
-    return [
-      ...(isRunning && !!syncProgressData
+    const events = [
+      ...(showRunningJob && !!syncProgressData.jobId && !!syncProgressData.syncStartedAt
         ? [
             {
               id: "running",
               eventType: "RUNNING_JOB",
               connectionId: connection.connectionId,
-              createdAt: syncProgressData.syncStartedAt,
+              createdAt: syncProgressData.syncStartedAt ?? Date.now() / 1000,
               summary: {
                 streams: syncProgressData.streams.map((stream) => {
                   return {
@@ -81,12 +91,15 @@ export const ConnectionTimelineAllEventsList: React.FC<{
                 configType: syncProgressData.configType,
                 jobId: syncProgressData.jobId,
               },
-            } as unknown as InferType<typeof jobRunningSchema>,
+              user: { email: "", name: "", id: "" },
+            },
           ]
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),
     ];
-  }, [connection.connectionId, connectionEventsData?.pages, isRunning, syncProgressData]);
+
+    return events;
+  }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
 
   useEffect(() => {
     refetch();
@@ -126,7 +139,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
           Item: "li" as any,
         }}
         itemContent={(_index, event) => {
-          return <EventLineItem event={event} />;
+          return <EventLineItem event={event} key={event.id} />;
         }}
       />
       {isFetchingNextPage && (

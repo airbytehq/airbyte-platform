@@ -2,17 +2,19 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { FormattedDate, FormattedMessage } from "react-intl";
 
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { MaskedText } from "components/ui/Text/MaskedText";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListApplications } from "core/api";
 import { ApplicationRead } from "core/api/types/AirbyteClient";
 import { useAuthService } from "core/services/auth";
+import { links } from "core/utils/links";
 
 import styles from "./ApplicationSettingsView.module.scss";
 import { CreateApplicationControl } from "./CreateApplicationControl";
@@ -20,7 +22,7 @@ import { DeleteApplicationControl } from "./DeleteApplicationControl";
 import { GenerateTokenControl } from "./GenerateTokenControl";
 
 export const ApplicationSettingsView = () => {
-  const { authType } = useAuthService();
+  const { applicationSupport } = useAuthService();
   const { applications } = useListApplications();
   const columnHelper = useMemo(() => createColumnHelper<ApplicationRead>(), []);
 
@@ -75,7 +77,7 @@ export const ApplicationSettingsView = () => {
                 clientId={props.row.original.clientId}
                 clientSecret={props.row.original.clientSecret}
               />
-              {authType !== "simple" && (
+              {applicationSupport === "multiple" && (
                 <DeleteApplicationControl
                   applicationId={props.row.original.id}
                   applicationName={props.row.original.name}
@@ -87,33 +89,35 @@ export const ApplicationSettingsView = () => {
         meta: { thClassName: styles.actionsColumn },
       }),
     ];
-  }, [columnHelper, authType]);
+  }, [columnHelper, applicationSupport]);
 
   return (
     <>
-      <FlexContainer direction="row" justifyContent="space-between">
-        <FlexContainer gap="none">
+      <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+        <FlexItem>
           <Heading as="h1">
             <FormattedMessage id="settings.applications" />
           </Heading>
-          {authType !== "simple" && (
-            <InfoTooltip>
-              <Text inverseColor align="center">
-                <FormattedMessage id="settings.applications.tooltip" />
-              </Text>
-            </InfoTooltip>
-          )}
-        </FlexContainer>
-        <CreateApplicationControl />
+          <Box pt="sm">
+            <Text color="grey" size="sm">
+              <FormattedMessage id="settings.applications.helptext" />
+              {applicationSupport === "multiple" && (
+                <FormattedMessage id="settings.applications.helptext.permissions" />
+              )}
+              <ExternalLink href={links.apiAccess}>
+                <FormattedMessage id="ui.learnMore" />
+              </ExternalLink>
+            </Text>
+          </Box>
+        </FlexItem>
+        {applicationSupport === "multiple" && <CreateApplicationControl />}
       </FlexContainer>
       <Box py="lg">
         {applications.length ? (
           <Table columns={columns} data={applications} />
         ) : (
-          <Box p="lg">
-            <Text color="grey400" italicized>
-              <FormattedMessage id="settings.applications.table.empty" />
-            </Text>
+          <Box p="xl" m="xl">
+            <EmptyState text={<FormattedMessage id="settings.applications.table.empty" />} icon="grid" />
           </Box>
         )}
       </Box>

@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -12,7 +12,7 @@ interface LatestSyncCellProps {
   recordsLoaded?: number;
   recordsExtracted?: number;
   syncStartedAt?: number;
-  status: ConnectionStatusIndicatorStatus;
+  status: StreamStatusType;
   isLoadingHistoricalData: boolean;
 }
 
@@ -29,10 +29,14 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
   const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
 
   if (!activeStatuses.includes(status) && isLoadingHistoricalData) {
-    return <LoadingSpinner />;
+    return (
+      <span data-testid="streams-list-latest-sync-cell-content" data-loading="true">
+        <LoadingSpinner />
+      </span>
+    );
   }
   return (
-    <>
+    <span data-testid="streams-list-latest-sync-cell-content" data-loading="false">
       {!activeStatuses.includes(status) && (
         <Text color="grey" as="span">
           {recordsLoaded !== undefined ? (
@@ -90,6 +94,6 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
           )}
         </>
       )}
-    </>
+    </span>
   );
 };

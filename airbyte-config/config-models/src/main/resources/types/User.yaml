@@ -2,14 +2,12 @@
 "$schema": http://json-schema.org/draft-07/schema#
 "$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/User.yaml
 title: User
-description: Airbyte user configuration
+description: Airbyte user configuration, without auth-related fields
 type: object
 required:
   - name
   - email
   - userId
-  - authUserId
-  - authProvider
 additionalProperties: false
 properties:
   name:
@@ -19,11 +17,6 @@ properties:
     type: string
     description: Internal Airbyte Cloud User ID
     format: uuid
-  authUserId:
-    description: The userId from the Auth provider
-    type: string
-  authProvider:
-    "$ref": AuthProvider.yaml
   defaultWorkspaceId:
     description: The workspace a user will go to by default when they login
     type: string

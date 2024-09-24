@@ -7,8 +7,8 @@ package io.airbyte.connector_builder.controllers;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 
 import io.airbyte.connector_builder.api.generated.V1Api;
-import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRead;
-import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody;
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRead;
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody;
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody;
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
@@ -16,6 +16,7 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
+import io.airbyte.connector_builder.handlers.AssistProxyHandler;
 import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
@@ -30,6 +31,7 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import java.util.Map;
 
 /**
  * Micronaut controller that defines the behavior for all endpoints related to building and testing
@@ -43,15 +45,18 @@ public class ConnectorBuilderController implements V1Api {
   private final StreamHandler streamHandler;
   private final ResolveManifestHandler resolveManifestHandler;
   private final ConnectorContributionHandler connectorContributionHandler;
+  private final AssistProxyHandler assistProxyHandler;
 
   public ConnectorBuilderController(final HealthHandler healthHandler,
                                     final ResolveManifestHandler resolveManifestHandler,
                                     final StreamHandler streamHandler,
-                                    final ConnectorContributionHandler connectorContributionHandler) {
+                                    final ConnectorContributionHandler connectorContributionHandler,
+                                    final AssistProxyHandler assistProxyHandler) {
     this.healthHandler = healthHandler;
     this.streamHandler = streamHandler;
     this.resolveManifestHandler = resolveManifestHandler;
     this.connectorContributionHandler = connectorContributionHandler;
+    this.assistProxyHandler = assistProxyHandler;
   }
 
   @Override
@@ -68,8 +73,8 @@ public class ConnectorBuilderController implements V1Api {
         produces = MediaType.APPLICATION_JSON)
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
-  public ConnectorContributionRead readConnectorContribution(@Body final ConnectorContributionReadRequestBody connectorContributionReadRequestBody) {
-    return connectorContributionHandler.connectorContributionRead(connectorContributionReadRequestBody);
+  public CheckContributionRead checkContribution(@Body final CheckContributionRequestBody checkContributionRequestBody) {
+    return connectorContributionHandler.checkContribution(checkContributionRequestBody);
   }
 
   @Override
@@ -97,6 +102,16 @@ public class ConnectorBuilderController implements V1Api {
   @ExecuteOn(TaskExecutors.IO)
   public ResolveManifest resolveManifest(@Body final ResolveManifestRequestBody resolveManifestRequestBody) {
     return resolveManifestHandler.resolveManifest(resolveManifestRequestBody);
+  }
+
+  @Override
+  @Post(uri = "/v1/assist/v1/process",
+        consumes = MediaType.APPLICATION_JSON,
+        produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
+  public Map<String, Object> assistV1Process(@Body final Map<String, Object> requestBody) {
+    return assistProxyHandler.process(requestBody);
   }
 
 }

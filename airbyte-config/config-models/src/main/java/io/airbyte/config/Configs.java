@@ -5,8 +5,6 @@
 package io.airbyte.config;
 
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +41,6 @@ public interface Configs {
   String getAirbyteVersionOrWarning();
 
   /**
-   * Defines if the deployment is Docker or Kubernetes. Airbyte behaves accordingly.
-   */
-  WorkerEnvironment getWorkerEnvironment();
-
-  /**
    * Defines the Airbyte workspace directory. Applies only to Docker, and is present in Kubernetes for
    * backward compatibility.
    */
@@ -72,14 +65,7 @@ public interface Configs {
    */
   String getDatabaseUrl();
 
-  /**
-   * Defines a default map of environment variables to use for any launched job containers. The
-   * expected format is a JSON encoded String -> String map. Make sure to escape properly. Defaults to
-   * an empty map.
-   */
-  Map<String, String> getJobDefaultEnvMap();
-
-  // Jobs - Kube only
+  // Jobs
 
   /**
    * Define one or more Job pod tolerations. Tolerations are separated by ';'. Each toleration
@@ -121,60 +107,9 @@ public interface Configs {
   String getJobKubeMainContainerImagePullPolicy();
 
   /**
-   * Define the Job pod connector sidecar image pull policy.
-   */
-  String getJobKubeSidecarContainerImagePullPolicy();
-
-  /**
    * Define the Job pod connector image pull secret. Useful when hosting private images.
    */
   List<String> getJobKubeMainContainerImagePullSecrets();
-
-  /**
-   * Define the Memory request for the Sidecar.
-   */
-  String getSidecarMemoryRequest();
-
-  /**
-   * Define the Memory limit for the Sidecar.
-   */
-  String getSidecarKubeMemoryLimit();
-
-  /**
-   * Define the CPU request for the Sidecar.
-   */
-  String getSidecarKubeCpuRequest();
-
-  /**
-   * Define the CPU limit for the Sidecar.
-   */
-  String getSidecarKubeCpuLimit();
-
-  /**
-   * Define the CPU limit for the SOCAT Sidecar.
-   */
-  String getSocatSidecarKubeCpuLimit();
-
-  /**
-   * Define the Job pod socat image.
-   */
-  String getSocatSidecarKubeCpuRequest();
-
-  // Logging/Monitoring/Tracking
-
-  /**
-   * Define either S3, Minio or GCS as a logging backend. Kubernetes only. Multiple variables are
-   * involved here. Please see {@link CloudStorageConfigs} for more info.
-   */
-  LogConfigs getLogConfigs();
-
-  /**
-   * Worker environment.
-   */
-  enum WorkerEnvironment {
-    DOCKER,
-    KUBERNETES
-  }
 
   /**
    * Deployment type.

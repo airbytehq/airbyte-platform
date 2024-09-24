@@ -30,7 +30,6 @@ create table "public"."attempts" (
   "created_at" timestamp(6) with time zone,
   "updated_at" timestamp(6) with time zone,
   "ended_at" timestamp(6) with time zone,
-  "temporal_workflow_id" varchar(256),
   "failure_summary" jsonb,
   "processing_task_queue" varchar(255),
   "attempt_sync_config" jsonb,
@@ -138,6 +137,7 @@ create unique index "job_attempt_idx" on "public"."attempts"("job_id" asc, "atte
 create index "jobs_config_type_idx" on "public"."jobs"("config_type" asc);
 create index "jobs_scope_idx" on "public"."jobs"("scope" asc);
 create index "jobs_status_idx" on "public"."jobs"("status" asc);
+create index "jobs_updated_at_idx" on "public"."jobs"("updated_at" asc);
 create index "scope_created_at_idx" on "public"."jobs"("scope" asc, "created_at" desc);
 create index "scope_non_terminal_status_idx" on "public"."jobs"("scope" asc, "status" asc)
 where ((status <> ALL (ARRAY['failed'::job_status, 'succeeded'::job_status, 'cancelled'::job_status])));

@@ -27,7 +27,9 @@ export const getFieldPathDisplayName = (path: Path): string => path.join(".");
  * @param stream
  */
 export const checkCursorAndPKRequirements = (config: AirbyteStreamConfiguration, stream: AirbyteStream) => {
-  const pkRequired = config?.destinationSyncMode === DestinationSyncMode.append_dedup;
+  const pkRequired =
+    config?.destinationSyncMode === DestinationSyncMode.append_dedup ||
+    config?.destinationSyncMode === DestinationSyncMode.overwrite_dedup;
   const cursorRequired = config?.syncMode === SyncMode.incremental;
   const shouldDefinePk = stream?.sourceDefinedPrimaryKey?.length === 0 && pkRequired;
   const shouldDefineCursor = !stream?.sourceDefinedCursor && cursorRequired;

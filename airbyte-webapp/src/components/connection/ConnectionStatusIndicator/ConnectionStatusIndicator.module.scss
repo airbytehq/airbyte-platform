@@ -23,13 +23,6 @@
         padding: variables.$border-radius-md;
         border-radius: variables.$border-radius-md;
         background-color: $bg-color;
-
-        .spinner {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          margin: -31%;
-        }
       }
     }
   }

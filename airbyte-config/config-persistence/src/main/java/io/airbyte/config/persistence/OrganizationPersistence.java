@@ -4,6 +4,8 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
@@ -43,6 +45,8 @@ public class OrganizationPersistence {
    */
   public static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
+  public static final String AIRBYTE_ORGANIZATION_EMAIL_DOMAIN = "airbyte.io";
+
   public OrganizationPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
   }
@@ -76,6 +80,27 @@ public class OrganizationPersistence {
         .join(WORKSPACE)
         .on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
         .where(WORKSPACE.ID.eq(workspaceId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
+  public Optional<Organization> getOrganizationByConnectionId(final UUID connectionId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG)
+        .on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .join(WORKSPACE)
+        .on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+        .join(ACTOR)
+        .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .join(CONNECTION)
+        .on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(CONNECTION.ID.eq(connectionId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();

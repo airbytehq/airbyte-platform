@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.updateButton {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  font-size: variables.$font-size-sm;
+  cursor: pointer;
+  color: colors.$grey-500;
+
+  &:hover,
+  &:focus-visible {
+    color: colors.$blue;
+  }
+}

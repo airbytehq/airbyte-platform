@@ -19,7 +19,6 @@ import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
@@ -43,7 +42,6 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -62,7 +60,9 @@ import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
@@ -86,7 +86,10 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
+import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -101,8 +104,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -143,7 +144,6 @@ public class SchedulerHandler {
   private final JobPersistence jobPersistence;
   private final JobConverter jobConverter;
   private final EventRunner eventRunner;
-  private final FeatureFlags envVariableFeatureFlags;
   private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
@@ -169,7 +169,6 @@ public class SchedulerHandler {
                           final EventRunner eventRunner,
                           final JobConverter jobConverter,
                           final ConnectionsHandler connectionsHandler,
-                          final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
                           final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                           final FeatureFlagClient featureFlagClient,
@@ -194,7 +193,6 @@ public class SchedulerHandler {
     this.eventRunner = eventRunner;
     this.jobConverter = jobConverter;
     this.connectionsHandler = connectionsHandler;
-    this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;
@@ -516,10 +514,11 @@ public class SchedulerHandler {
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
       final io.airbyte.api.model.generated.@NotNull AirbyteCatalog syncCatalog =
           connectionRead.getSyncCatalog();
+      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionRead.getConnectionId()));
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
               sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredInternal(syncCatalog));
+              CatalogConverter.toConfiguredInternal(syncCatalog, shouldEnableMappers), connectionRead.getConnectionId());
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
@@ -539,7 +538,8 @@ public class SchedulerHandler {
             diff.getTransforms(),
             sourceAutoPropagateChange.getCatalogId(),
             connectionRead.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
-        connectionsHandler.updateConnection(updateObject);
+        connectionsHandler.updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(),
+            true);
         connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject.getConnectionId(), result);
         LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
@@ -701,33 +701,15 @@ public class SchedulerHandler {
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
       final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
           connectionRead.getSyncCatalog();
+      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionRead.getConnectionId()));
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
-              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog));
+              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog, shouldEnableMappers), connectionRead.getConnectionId());
       final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-
-      if (containsBreakingChange) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
-      } else {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
-      }
-
-      final ConnectionUpdate updateObject =
-          new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
-
-      final ConnectionStatus connectionStatus;
-      if (shouldDisableConnection(containsBreakingChange, connectionRead.getNonBreakingChangesPreference(), diff)) {
-        connectionStatus = ConnectionStatus.INACTIVE;
-      } else {
-        connectionStatus = connectionRead.getStatus();
-      }
-      updateObject.status(connectionStatus);
-
-      connectionsHandler.updateConnection(updateObject);
+      final ConnectionRead updatedConnection =
+          connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
-        discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
+        discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(updatedConnection.getStatus());
       }
     }
   }
@@ -751,16 +733,6 @@ public class SchedulerHandler {
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;
-  }
-
-  private boolean shouldDisableConnection(final boolean containsBreakingChange,
-                                          final NonBreakingChangesPreference preference,
-                                          final CatalogDiff diff) {
-    if (!envVariableFeatureFlags.autoDetectSchema()) {
-      return false;
-    }
-
-    return containsBreakingChange || (preference == NonBreakingChangesPreference.DISABLE && !diff.getTransforms().isEmpty());
   }
 
   private CheckConnectionRead reportConnectionStatus(final SynchronousResponse<StandardCheckConnectionOutput> response) {
@@ -788,7 +760,7 @@ public class SchedulerHandler {
     for (final Attempt attempt : job.getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
     }
-    connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, UUID.fromString(job.getScope()), attemptStats);
+    connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats);
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
   }

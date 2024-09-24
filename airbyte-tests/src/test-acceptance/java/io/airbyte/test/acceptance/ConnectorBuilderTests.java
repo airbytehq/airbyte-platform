@@ -223,7 +223,7 @@ public class ConnectorBuilderTests {
     final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProject = apiClient.getConnectorBuilderProjectApi()
         .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId(
             workspaceId,
-            new ConnectorBuilderProjectDetails("A custom declarative source", null, null)));
+            new ConnectorBuilderProjectDetails("A custom declarative source", null, null, null, null, null)));
     return apiClient.getConnectorBuilderProjectApi()
         .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody(
             workspaceId,

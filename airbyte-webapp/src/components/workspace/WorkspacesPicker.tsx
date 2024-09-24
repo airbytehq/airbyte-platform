@@ -1,5 +1,5 @@
 import { autoUpdate, offset, useFloating } from "@floating-ui/react-dom";
-import { Popover } from "@headlessui/react";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -37,15 +37,15 @@ export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }
     <Popover className={styles.workspacesPicker__container}>
       {({ close }) => (
         <>
-          <Popover.Button ref={reference} as={WorkspaceButton}>
+          <PopoverButton ref={reference} as={WorkspaceButton}>
             <span className={styles.workspacesPicker__buttonContent}>
               <Text size="sm" className={styles.workspacesPicker__buttonText}>
                 {currentWorkspace.name}
               </Text>
               <Icon type="chevronUpDown" size="xs" color="disabled" />
             </span>
-          </Popover.Button>
-          <Popover.Panel
+          </PopoverButton>
+          <PopoverPanel
             ref={floating}
             style={{
               position: strategy,
@@ -66,7 +66,7 @@ export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }
               </Box>
               <WorkspacesPickerList useFetchWorkspaces={useFetchWorkspaces} closePicker={close} />
             </div>
-          </Popover.Panel>
+          </PopoverPanel>
         </>
       )}
     </Popover>

@@ -2,7 +2,7 @@ import { Fragment, Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";

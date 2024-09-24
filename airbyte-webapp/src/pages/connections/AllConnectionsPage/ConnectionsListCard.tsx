@@ -31,42 +31,37 @@ export const ConnectionsListCard = () => {
   const debouncedSearchFilter = useDeferredValue(filterValues.search);
 
   const filteredConnections = useMemo(() => {
-    const statusFilter = filterValues.status;
-    const stateFilter = filterValues.state;
-    const sourceFilter = filterValues.source;
-    const destinationFilter = filterValues.destination;
-
     return connections.filter((connection) => {
-      if (stateFilter) {
+      if (filterValues.state) {
         const isEnabled = isConnectionEnabled(connection);
 
-        if (stateFilter === "enabled" && !isEnabled) {
+        if (filterValues.state === "enabled" && !isEnabled) {
           return false;
-        } else if (stateFilter === "disabled" && isEnabled) {
+        } else if (filterValues.state === "disabled" && isEnabled) {
           return false;
         }
       }
 
-      if (statusFilter) {
+      if (filterValues.status) {
         const isPaused = isConnectionPaused(connection);
         const isRunning = isConnectionRunning(connection);
         const isFailed = isConnectionFailed(connection);
-        if (statusFilter === "paused" && !isPaused) {
+        if (filterValues.status === "paused" && !isPaused) {
           return false;
-        } else if (statusFilter === "running" && (!isRunning || isPaused)) {
+        } else if (filterValues.status === "running" && (!isRunning || isPaused)) {
           return false;
-        } else if (statusFilter === "failed" && (!isFailed || isRunning || isPaused)) {
+        } else if (filterValues.status === "failed" && (!isFailed || isRunning || isPaused)) {
           return false;
-        } else if (statusFilter === "healthy" && (isRunning || isPaused || isFailed)) {
+        } else if (filterValues.status === "healthy" && (isRunning || isPaused || isFailed)) {
           return false;
         }
       }
 
-      if (sourceFilter && sourceFilter !== connection.source.sourceDefinitionId) {
+      if (filterValues.source && filterValues.source !== connection.source.sourceDefinitionId) {
         return false;
       }
 
-      if (destinationFilter && destinationFilter !== connection.destination.destinationDefinitionId) {
+      if (filterValues.destination && filterValues.destination !== connection.destination.destinationDefinitionId) {
         return false;
       }
 
@@ -91,19 +86,30 @@ export const ConnectionsListCard = () => {
 
       return true;
     });
-  }, [connections, debouncedSearchFilter, filterValues]);
+  }, [
+    connections,
+    debouncedSearchFilter,
+    filterValues.status,
+    filterValues.state,
+    filterValues.source,
+    filterValues.destination,
+  ]);
 
   return (
     <Card noPadding className={styles.connections}>
-      <ConnectionsFilters
-        connections={connections}
-        searchFilter={filterValues.search}
-        setSearchFilter={(search) => setFilterValue("search", search)}
-        filterValues={filterValues}
-        setFilterValue={setFilterValue}
-        resetFilters={resetFilters}
-      />
-      <ConnectionsTable connections={filteredConnections} variant="white" />
+      <div className={styles.filters}>
+        <ConnectionsFilters
+          connections={connections}
+          searchFilter={filterValues.search}
+          setSearchFilter={(search) => setFilterValue("search", search)}
+          filterValues={filterValues}
+          setFilterValue={setFilterValue}
+          resetFilters={resetFilters}
+        />
+      </div>
+      <div className={styles.table}>
+        <ConnectionsTable connections={filteredConnections} variant="white" />
+      </div>
       {filteredConnections.length === 0 && (
         <Box pt="xl" pb="lg">
           <Text bold color="grey" align="center">

@@ -6,6 +6,7 @@ package io.airbyte.workers.helper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
@@ -123,12 +124,9 @@ class GsonPksExtractorTest {
                                                     final List<List<String>> pksList) {
     return new ConfiguredAirbyteCatalog()
         .withStreams(List.of(
-            new ConfiguredAirbyteStream()
-                .withStream(new AirbyteStream()
-                    .withName(streamName))
-                .withPrimaryKey(pksList)
-                .withSyncMode(SyncMode.INCREMENTAL)
-                .withDestinationSyncMode(DestinationSyncMode.APPEND_DEDUP)));
+            new ConfiguredAirbyteStream(new AirbyteStream(streamName, Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND_DEDUP)
+                    .withPrimaryKey(pksList)));
   }
 
 }

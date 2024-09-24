@@ -47,6 +47,7 @@ export const links = {
   connectorBuilderParameterizedRequests: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning#parameterized-requests`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
+  connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
@@ -56,6 +57,9 @@ export const links = {
   autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
+  apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
+  deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
+  ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
 } as const;
 
 export type OutboundLinks = typeof links;

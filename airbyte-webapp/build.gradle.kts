@@ -1,7 +1,7 @@
+
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.pnpm.task.PnpmTask
 import groovy.json.JsonSlurper
-import org.gradle.api.tasks.Copy
 import java.io.FileReader
 
 plugins {
@@ -122,7 +122,8 @@ tasks.register<PnpmTask>("cypress") {
     */
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
     args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
-        listOf("run", "cypress:run", "--record")
+        val group = System.getenv("CYPRESS_GROUP") ?: "default-group"
+        listOf("run", "cypress:run", "--record", "--group", group)
     } else {
         listOf("run", "cypress:run")
     }
@@ -133,6 +134,7 @@ tasks.register<PnpmTask>("cypress") {
     */
     outputs.upToDateWhen { false }
 }
+
 
 tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))

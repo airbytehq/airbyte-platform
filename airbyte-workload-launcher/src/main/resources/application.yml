@@ -30,6 +30,8 @@ airbyte:
             access-key: AWS_ACCESS_KEY_ID
             secret-key: AWS_SECRET_ACCESS_KEY
             secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
+  container:
+    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
@@ -37,6 +39,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   kubernetes:
     client:
       call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}
@@ -50,13 +53,6 @@ airbyte:
         delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
-  docker:
-    docker-socket: ${DOCKER_SOCKET:}
-    network: ${DOCKER_NETWORK:host}
-    workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
-    workspace-mount-path: ${WORKSPACE_ROOT}
-    local-mount-name: ${LOCAL_DOCKER_MOUNT:}
-    local-mount-path: ${LOCAL_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -79,19 +75,47 @@ airbyte:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
   secret:
-    persistence: ${SECRET_PERSISTENCE}
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        # injects the names/keys for secret reference
+        access-key-ref-name: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME:}
+        access-key-ref-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY:}
+        secret-key-ref-name: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME:}
+        secret-key-ref-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY:}
       gcp:
+        # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+        # injects the name/key for secret reference
+        credentials-ref-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        credentials-ref-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
         token: ${VAULT_AUTH_TOKEN:}
+        # injects the name/key for secret reference
+        token-ref-name: ${VAULT_AUTH_TOKEN_REF_NAME:}
+        token-ref-key: ${VAULT_AUTH_TOKEN_REF_KEY:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+        # injects actual secret values
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        # injects the name/key for secret reference
+        client-id-ref-name: ${AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME:}
+        client-id-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY:}
+        client-secret-ref-name: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME:}
+        client-secret-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
     data-plane-creds:
@@ -112,7 +136,6 @@ airbyte:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -175,10 +198,14 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
+    otel-collector-endpoint: ${OTEL_COLLECTOR_ENDPOINT:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
       value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    keycloak-auth-client:
+      secret-name: ${KEYCLOAK_AUTH_CLIENT_SECRET_NAME:}
+      secret-key: ${KEYCLOAK_AUTH_CLIENT_SECRET_KEY:}
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
@@ -198,6 +225,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -211,7 +240,6 @@ airbyte:
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   workspace:
-    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
 
 datadog:

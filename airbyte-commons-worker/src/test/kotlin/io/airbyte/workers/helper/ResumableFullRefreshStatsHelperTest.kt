@@ -4,6 +4,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.State
@@ -85,8 +86,16 @@ class ResumableFullRefreshStatsHelperTest {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
-          ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(AirbyteStream().withNamespace(null).withName("s0")),
-          ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(AirbyteStream().withNamespace("ns").withName("s1")),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "s0", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.FULL_REFRESH)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "s0", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
         ),
       )
 
@@ -103,8 +112,16 @@ class ResumableFullRefreshStatsHelperTest {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
-          ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(AirbyteStream().withNamespace(null).withName("s0")),
-          ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(AirbyteStream().withNamespace("ns").withName("s1")),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "s0", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.FULL_REFRESH)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(name = "s1", namespace = "ns", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.FULL_REFRESH)),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND,
+          ),
         ),
       )
 

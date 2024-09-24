@@ -6,6 +6,9 @@ import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
+import io.airbyte.commons.logging.LogClientManager
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
@@ -17,7 +20,6 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -47,6 +49,7 @@ internal class WorkloadApiWorkerTest {
   private var workloadApiClient: WorkloadApiClient = mockk()
   private var featureFlagClient: FeatureFlagClient = mockk()
   private var jobOutputDocStore: JobOutputDocStore = mockk()
+  private var logClientManager: LogClientManager = mockk()
   private lateinit var replicationActivityInput: ReplicationActivityInput
   private lateinit var replicationInput: ReplicationInput
   private lateinit var workloadApiWorker: WorkloadApiWorker
@@ -56,6 +59,7 @@ internal class WorkloadApiWorkerTest {
   fun beforeEach() {
     every { apiClient.connectionApi } returns connectionApi
     every { workloadApiClient.workloadApi } returns workloadApi
+    every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args.first().toString(), DEFAULT_LOG_FILENAME).toString() }
     featureFlagClient = TestClient()
     jobRoot = Path.of("test", "path")
     replicationActivityInput = ReplicationActivityInput()
@@ -69,6 +73,7 @@ internal class WorkloadApiWorkerTest {
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,
+        logClientManager,
       )
   }
 
@@ -351,6 +356,7 @@ internal class WorkloadApiWorkerTest {
       this.workspaceId = workspaceId
       this.connectionId = connectionId
       this.jobRunConfig = jobRunConfig
+      this.signalInput = "signalInputValue"
     }
 
     replicationActivityInput.apply {

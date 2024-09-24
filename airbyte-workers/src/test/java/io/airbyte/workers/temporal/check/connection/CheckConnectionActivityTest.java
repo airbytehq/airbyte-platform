@@ -4,7 +4,9 @@
 
 package io.airbyte.workers.temporal.check.connection;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -13,27 +15,19 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.ConfigFileClient;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.CheckConnectionInputHydrator;
-import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.models.CheckConnectionInput;
-import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -58,22 +52,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CheckConnectionActivityTest {
 
-  private final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
-  private final ProcessFactory processFactory = mock(ProcessFactory.class);
   private final Path workspaceRoot = Path.of("workspace-root");
-  private final Configs.WorkerEnvironment workerEnvironment = mock(Configs.WorkerEnvironment.class);
-  private final LogConfigs logConfigs = mock(LogConfigs.class);
   private final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
-  private final String airbyteVersion = "";
-  private final AirbyteMessageSerDeProvider serDeProvider = mock(AirbyteMessageSerDeProvider.class);
-  private final AirbyteProtocolVersionedMigratorFactory migratorFactory = mock(AirbyteProtocolVersionedMigratorFactory.class);
-  private final FeatureFlags featureFlags = mock(FeatureFlags.class);
-  private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
   private final WorkloadApi workloadApi = mock(WorkloadApi.class);
   private final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
   private final WorkloadIdGenerator workloadIdGenerator = mock(WorkloadIdGenerator.class);
   private final JobOutputDocStore jobOutputDocStore = mock(JobOutputDocStore.class);
   private final FeatureFlagClient featureFlagClient = mock(ConfigFileClient.class);
+  private final LogClientManager logClientManager = mock(LogClientManager.class);
 
   private CheckConnectionActivityImpl checkConnectionActivity;
 
@@ -91,23 +77,14 @@ class CheckConnectionActivityTest {
   @BeforeEach
   void init() throws Exception {
     checkConnectionActivity = spy(new CheckConnectionActivityImpl(
-        workerConfigsProvider,
-        processFactory,
         workspaceRoot,
-        workerEnvironment,
-        logConfigs,
         airbyteApiClient,
-        airbyteVersion,
-        serDeProvider,
-        migratorFactory,
-        featureFlags,
         featureFlagClient,
-        gsonPksExtractor,
         new WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
-        mock(CheckConnectionInputHydrator.class),
         mock(MetricClient.class),
-        mock(ActivityOptions.class)));
+        mock(ActivityOptions.class),
+        logClientManager));
 
     when(workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT))
         .thenReturn(WORKLOAD_ID);
@@ -116,6 +93,7 @@ class CheckConnectionActivityTest {
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.RUNNING))
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.SUCCESS));
     when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
+    when(logClientManager.fullLogPath(any())).then(i -> Path.of(i.getArguments()[0].toString(), DEFAULT_LOG_FILENAME).toString());
   }
 
   @Test
@@ -178,7 +156,8 @@ class CheckConnectionActivityTest {
         null,
         null,
         null,
-        null);
+        null,
+        "");
   }
 
 }

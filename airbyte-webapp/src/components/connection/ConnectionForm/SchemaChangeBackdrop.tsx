@@ -1,6 +1,7 @@
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { FeatureItem, useFeature } from "core/services/features";
@@ -28,17 +29,23 @@ export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = 
   }
 
   return (
-    <div className={styles.schemaChangeBackdropContainer} data-testid="schemaChangesBackdrop">
-      <div className={styles.backdrop}>
-        <div className={styles.contentContainer}>
+    <div className={styles.schemaBreakingChanges} data-testid="schemaChangesBackdrop">
+      <FlexContainer justifyContent="center" alignItems="center" className={styles.schemaBreakingChanges__backdrop}>
+        <FlexContainer
+          justifyContent="center"
+          alignItems="center"
+          direction="column"
+          gap="lg"
+          className={styles.schemaBreakingChanges__message}
+        >
           <Text align="center" size="lg">
             <FormattedMessage id="connectionForm.schemaChangesBackdrop.message" />
           </Text>
           <Button variant="primaryDark" type="button" onClick={refreshSchema}>
             <FormattedMessage id="connection.schemaChange.reviewAction" />
           </Button>
-        </div>
-      </div>
+        </FlexContainer>
+      </FlexContainer>
       {children}
     </div>
   );

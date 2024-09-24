@@ -8,6 +8,7 @@ import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
 import { useCurrentWorkspace, useGetInstanceConfiguration } from "core/api";
 import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
+import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -18,10 +19,14 @@ export const SettingsPage: React.FC = () => {
   const { trackingStrategy } = useGetInstanceConfiguration();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const { applicationSupport } = useAuthService();
+  const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const canViewLicenseSettings = useIntent("ViewLicenseDetails", { workspaceId });
+  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const { formatMessage } = useIntl();
+  const showLicenseUi = licenseUi && canViewLicenseSettings;
 
   return (
     <SettingsLayout>
@@ -32,7 +37,7 @@ export const SettingsPage: React.FC = () => {
             name={formatMessage({ id: "settings.account" })}
             to={SettingsRoutePaths.Account}
           />
-          {apiTokenManagement && (
+          {applicationSupport !== "none" && (
             <SettingsLink
               iconType="grid"
               name={formatMessage({ id: "settings.applications" })}
@@ -84,14 +89,30 @@ export const SettingsPage: React.FC = () => {
         )}
         {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
-            {multiWorkspaceUI && canViewOrganizationSettings && (
+            {canViewOrganizationSettings && (
+              <>
+                <SettingsLink
+                  iconType="gear"
+                  name={formatMessage({ id: "settings.general" })}
+                  to={SettingsRoutePaths.Organization}
+                />
+                {displayOrganizationUsers && (
+                  <SettingsLink
+                    iconType="community"
+                    name={formatMessage({ id: "settings.members" })}
+                    to={SettingsRoutePaths.OrganizationMembers}
+                  />
+                )}
+              </>
+            )}
+            {showLicenseUi && (
               <SettingsLink
-                iconType="community"
-                name={formatMessage({ id: "settings.general" })}
-                to={SettingsRoutePaths.Organization}
+                iconType="license"
+                name={formatMessage({ id: "settings.license" })}
+                to={SettingsRoutePaths.License}
               />
             )}
-            {multiWorkspaceUI && canViewWorkspaceSettings && (
+            {canViewWorkspaceSettings && (
               <>
                 <SettingsLink
                   iconType="source"

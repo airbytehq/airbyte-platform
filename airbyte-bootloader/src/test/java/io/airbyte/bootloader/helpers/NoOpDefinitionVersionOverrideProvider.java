@@ -4,10 +4,9 @@
 
 package io.airbyte.bootloader.helpers;
 
-import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
@@ -19,12 +18,16 @@ import org.jetbrains.annotations.Nullable;
 public class NoOpDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
   @Override
-  public Optional<ActorDefinitionVersionWithOverrideStatus> getOverride(final ActorType actorType,
-                                                                        final UUID actorDefinitionId,
+  public Optional<ActorDefinitionVersionWithOverrideStatus> getOverride(final UUID actorDefinitionId,
                                                                         final UUID workspaceId,
-                                                                        @Nullable final UUID actorId,
-                                                                        final ActorDefinitionVersion defaultVersion) {
+                                                                        @Nullable final UUID actorId) {
     return Optional.empty();
+  }
+
+  @Override
+  public List<ActorDefinitionVersionWithOverrideStatus> getOverrides(List<UUID> actorDefinitionIds,
+                                                                     UUID workspaceId) {
+    return List.of();
   }
 
 }

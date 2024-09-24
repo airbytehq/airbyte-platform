@@ -8,20 +8,19 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import jakarta.inject.Singleton
-import java.util.Optional
 import java.util.function.ToDoubleFunction
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
 @Singleton
 class CustomMetricPublisher(
-  private val maybeMeterRegistry: Optional<MeterRegistry>,
+  private val maybeMeterRegistry: MeterRegistry?,
 ) {
   fun count(
     metricName: String,
     vararg attributes: MetricAttribute,
   ) {
-    maybeMeterRegistry.ifPresent { it.counter(metricName, toTags(*attributes)).increment() }
+    maybeMeterRegistry?.counter(metricName, toTags(*attributes))?.increment()
   }
 
   fun <T> gauge(
@@ -30,7 +29,7 @@ class CustomMetricPublisher(
     valueFunction: ToDoubleFunction<T>,
     vararg attributes: MetricAttribute,
   ) {
-    maybeMeterRegistry.ifPresent { it.gauge(metricName, toTags(*attributes), stateObject, valueFunction) }
+    maybeMeterRegistry?.gauge(metricName, toTags(*attributes), stateObject, valueFunction)
   }
 
   companion object {

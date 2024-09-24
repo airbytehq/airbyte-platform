@@ -10,13 +10,12 @@ import { generateCategoricalChart } from "recharts/es6/chart/generateCategorical
 import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { getStreamKey } from "area/connection/utils";
-import { useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
+import { useCurrentConnection, useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
 import { ConnectionSyncProgressRead, ConnectionUptimeHistoryRead, JobStatus } from "core/api/types/AirbyteClient";
 import { assertNever } from "core/utils/asserts";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
@@ -73,12 +72,11 @@ const generatePlaceholderHistory = (
 
 type SortableStream = Pick<ChartStream, "streamName"> & Partial<Pick<ChartStream, "streamNamespace" | "status">>;
 
-const statusOrder: ConnectionStatusIndicatorStatus[] = [
-  ConnectionStatusIndicatorStatus.Disabled,
-  ConnectionStatusIndicatorStatus.Pending,
-  ConnectionStatusIndicatorStatus.Synced,
-  ConnectionStatusIndicatorStatus.Incomplete,
-  ConnectionStatusIndicatorStatus.Failed,
+const statusOrder: StreamStatusType[] = [
+  StreamStatusType.Pending,
+  StreamStatusType.Synced,
+  StreamStatusType.Incomplete,
+  StreamStatusType.Failed,
 ];
 
 const sortStreams = (a: SortableStream, b: SortableStream) => {
@@ -132,22 +130,22 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
       };
       entry.streamStatuses.reduce<{ bucket: RunBucket; allStreamIdentities: typeof allStreamIdentities }>(
         ({ bucket, allStreamIdentities }, streamStatus) => {
-          let status: ConnectionStatusIndicatorStatus = ConnectionStatusIndicatorStatus.Pending;
+          let status: StreamStatusType = StreamStatusType.Pending;
 
           switch (streamStatus.status) {
             case JobStatus.succeeded:
-              status = ConnectionStatusIndicatorStatus.Synced;
+              status = StreamStatusType.Synced;
               break;
             case JobStatus.failed:
-              status = ConnectionStatusIndicatorStatus.Incomplete;
+              status = StreamStatusType.Incomplete;
               break;
             case JobStatus.running:
-              status = ConnectionStatusIndicatorStatus.Syncing;
+              status = StreamStatusType.Syncing;
               break;
             case JobStatus.cancelled:
             case JobStatus.incomplete:
             case JobStatus.pending:
-              status = ConnectionStatusIndicatorStatus.Pending;
+              status = StreamStatusType.Pending;
               break;
             default:
               assertNever(streamStatus.status);
@@ -222,7 +220,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
     setColorMap(colorMap);
   }, [colorValues]);
 
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const uptimeHistoryData = useGetConnectionUptimeHistory(connection.connectionId);
   const { isRunning } = useConnectionStatus(connection.connectionId);
   const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
@@ -318,7 +316,7 @@ export function ensureStreams(
         ...bucket,
         streams: foundStreams.streams.map((stream) => ({
           ...stream,
-          status: ConnectionStatusIndicatorStatus.Incomplete,
+          status: StreamStatusType.Incomplete,
         })),
       };
     }

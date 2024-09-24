@@ -1,10 +1,10 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { sortStreamsAlphabetically, sortStreamsByStatus } from "components/connection/StreamStatus/streamStatusUtils";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useStreamsStatuses } from "area/connection/utils";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useCurrentConnection } from "core/api";
 
 const useStreamsContextInit = (connectionId: string) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,11 +14,11 @@ const useStreamsContextInit = (connectionId: string) => {
   const streamsByName = sortStreamsAlphabetically(enabledStreams, streamStatuses);
 
   const enabledStreamsByStatus = Object.entries(streamsByStatus)
-    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
+    .filter(([status]) => status !== StreamStatusType.Paused)
     .flatMap(([_, stream]) => stream);
 
   const enabledStreamsByName = Object.entries(streamsByName)
-    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
+    .filter(([status]) => status !== StreamStatusType.Paused)
     .flatMap(([_, stream]) => stream);
 
   const filteredStreamsByStatus = useMemo(
@@ -48,7 +48,7 @@ export const useStreamsListContext = () => {
 };
 
 export const StreamsListContextProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const streamsContext = useStreamsContextInit(connection.connectionId);
 
   return <StreamsContext.Provider value={streamsContext}>{children}</StreamsContext.Provider>;

@@ -18,8 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiresAirbyteProEnabled
 public class AirbyteLicenseContextService {
 
-  public AirbyteLicenseContextService(final AirbyteLicenseFetcher airbyteLicenseFetcher, final ActiveAirbyteLicense activeAirbyteLicense) {
-    activeAirbyteLicense.setLicense(airbyteLicenseFetcher.fetchLicense());
+  public AirbyteLicenseContextService(final AirbyteLicenseReader licenseReader, final ActiveAirbyteLicense activeAirbyteLicense) {
+    activeAirbyteLicense.setLicense(licenseReader.extractLicense());
   }
 
 }

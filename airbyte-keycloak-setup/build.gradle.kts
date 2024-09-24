@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -34,9 +32,6 @@ dependencies {
   testImplementation(project(":oss:airbyte-test-utils"))
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
 airbyte {
   application {
     mainClass = "io.airbyte.keycloak.setup.Application"

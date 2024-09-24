@@ -1,0 +1,74 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.loadingSkeleton {
+  background: colors.$loading-skeleton-base;
+
+  &--buttonHeight {
+    height: variables.$button-height-xs;
+  }
+}
+
+.loadingSkeletonShimmer {
+  animation-duration: 1.6s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: shimmer;
+  animation-timing-function: linear;
+  background: linear-gradient(
+    to right,
+    colors.$loading-skeleton-stop-1 8%,
+    colors.$loading-skeleton-stop-2 25%,
+    colors.$loading-skeleton-stop-1 50%
+  );
+  background-size: 1200px 100%;
+}
+
+.loadingSkeletonMagic {
+  @include mixins.gradient-border(
+    variables.$border-thin,
+    linear-gradient(
+      var(--gradient-angle),
+      colors.$grey-100 0%,
+      colors.$grey-100 70%,
+      colors.$gradient-primary-start 70%,
+      colors.$gradient-primary-stop 100%
+    )
+  );
+
+  border: variables.$border-thin solid transparent;
+  animation-duration: 7s;
+  animation-iteration-count: infinite;
+  animation-name: rotate-gradient;
+  animation-timing-function: linear;
+  animation-delay: 0s;
+}
+
+// ANIMATIONS
+
+@keyframes shimmer {
+  0% {
+    background-position: -1200px 0;
+  }
+
+  100% {
+    background-position: 1200px 0;
+  }
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-gradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+
+  100% {
+    --gradient-angle: 360deg;
+  }
+}

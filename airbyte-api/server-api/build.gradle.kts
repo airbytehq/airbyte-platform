@@ -52,6 +52,7 @@ val genApiServer = tasks.register<GenerateTask>("generateApiServer") {
     generatorName = "jaxrs-spec"
     inputSpec = specFile
     outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/jaxrs-spec"
 
     apiPackage = "io.airbyte.api.generated"
     invokerPackage = "io.airbyte.api.invoker.generated"
@@ -273,6 +274,12 @@ private fun updateApiClientWithFailsafe(clientPath: String) {
     .replace(
       "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient) {",
       "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {")
+    // replace execute call
+    .replace("val response = client.newCall(request).execute()",
+      """val call = client.newCall(request)
+        val failsafeCall = FailsafeCall.with(policy).compose(call)
+        val response: Response = failsafeCall.execute()""")
+
 
   // add imports if not exist
   if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {

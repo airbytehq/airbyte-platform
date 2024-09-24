@@ -10,7 +10,6 @@ import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
-import io.airbyte.config.Configs.WorkerEnvironment
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
@@ -30,7 +29,6 @@ class SegmentTrackingClientTest {
   private val deploymentMetadata: DeploymentMetadataRead =
     DeploymentMetadataRead(
       id = deploymentId,
-      environment = WorkerEnvironment.KUBERNETES.name,
       mode = Configs.DeploymentMode.OSS.name,
       version = airbyteVersion.serialize(),
     )
@@ -78,7 +76,6 @@ class SegmentTrackingClientTest {
       mapOf(
         "anonymized" to identity.anonymousDataCollection!!,
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
-        "deployment_env" to deploymentMetadata.environment,
         "deployment_mode" to deploymentMetadata.mode,
         "deployment_id" to deploymentMetadata.id.toString(),
         EMAIL_KEY to identity.email!!,
@@ -111,7 +108,6 @@ class SegmentTrackingClientTest {
         "airbyte_role" to "role",
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "anonymized" to identity.anonymousDataCollection!!,
-        "deployment_env" to deploymentMetadata.environment,
         "deployment_mode" to deploymentMetadata.mode,
         "deployment_id" to deploymentMetadata.id.toString(),
         EMAIL_KEY to identity.email!!,
@@ -146,7 +142,6 @@ class SegmentTrackingClientTest {
         "airbyte_role" to "role",
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "anonymized" to identity.anonymousDataCollection!!,
-        "deployment_env" to deploymentMetadata.environment,
         "deployment_mode" to deploymentMetadata.mode,
         "deployment_id" to deploymentMetadata.id.toString(),
         EMAIL_KEY to identity.email!!,

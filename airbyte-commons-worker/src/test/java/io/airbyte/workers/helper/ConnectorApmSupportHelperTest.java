@@ -23,6 +23,9 @@ class ConnectorApmSupportHelperTest {
   private static final String CONNECTOR_NAME = "postgres";
   private static final String CONNECTOR_VERSION = "2.0.5";
   private static final String IMAGE = "postgres:2.0.5";
+  private static final String REGISTRY_NAME = "registry.internal:1234";
+  private static final String REPOSITORY_ORG = "airbyte";
+  private static final String IMAGE_WITH_PORT = String.join("/", REGISTRY_NAME, REPOSITORY_ORG, IMAGE);
   private ConnectorApmSupportHelper supportHelper;
 
   @BeforeEach
@@ -36,6 +39,15 @@ class ConnectorApmSupportHelperTest {
     final String imageVersion = ConnectorApmSupportHelper.getImageVersion(IMAGE);
 
     assertEquals(CONNECTOR_NAME, imageName);
+    assertEquals(CONNECTOR_VERSION, imageVersion);
+  }
+
+  @Test
+  void testExtractAirbyteVersionFromImageNameWithRegistryPort() {
+    final String imageName = ConnectorApmSupportHelper.getImageName(IMAGE_WITH_PORT);
+    final String imageVersion = ConnectorApmSupportHelper.getImageVersion(IMAGE_WITH_PORT);
+
+    assertEquals(String.join("/", REGISTRY_NAME, REPOSITORY_ORG, CONNECTOR_NAME), imageName);
     assertEquals(CONNECTOR_VERSION, imageVersion);
   }
 

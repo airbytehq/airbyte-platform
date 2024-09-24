@@ -169,6 +169,30 @@ class ManifestParserTest {
   }
 
   @Test
+  fun `ensure processManifestYaml handles quotes`() {
+    val yaml =
+      """
+            |definitions:
+            |   streams:
+            |     cards:
+            |       name: CARDS
+            |     collections:
+            |       name: "{{ config[\\\"api_key\\\"] }}"
+            |     
+            |streams:
+            |  - "stream1"
+            |  - "stream2"
+            |  - ${"\$ref"}: "#/definitions/streams/cards"
+            |  - ${"\$ref"}: "#/definitions/streams/collections"
+            |manifestYamlString: "string"
+      """.trimMargin()
+
+    val expected = listOf("stream1", "stream2", mapOf("name" to "CARDS"), mapOf("name" to "{{ config[\"api_key\"] }}"))
+    val result = ManifestParser(yaml).streams
+    assertEquals(expected, result)
+  }
+
+  @Test
   fun `ensure processManifestYaml throws contribution error on invalid yaml`() {
     val yaml = "invalid: yaml: string"
 

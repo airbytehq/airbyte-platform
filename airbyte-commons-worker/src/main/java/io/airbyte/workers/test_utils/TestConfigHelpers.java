@@ -10,6 +10,7 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
@@ -17,6 +18,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.State;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -125,17 +127,23 @@ public class TestConfigHelpers {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog();
     if (multipleNamespaces) {
-      final ConfiguredAirbyteStream streamOne = new ConfiguredAirbyteStream()
-          .withStream(CatalogHelpers.createAirbyteStream(STREAM_NAME, "namespace", Field.of(FIELD_NAME, JsonSchemaType.STRING)));
-      final ConfiguredAirbyteStream streamTwo = new ConfiguredAirbyteStream()
-          .withStream(CatalogHelpers.createAirbyteStream(STREAM_NAME, "namespace2", Field.of(FIELD_NAME, JsonSchemaType.STRING)));
+      final ConfiguredAirbyteStream streamOne = new ConfiguredAirbyteStream(
+          CatalogHelpers.createAirbyteStream(STREAM_NAME, "namespace", Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND);
+      final ConfiguredAirbyteStream streamTwo = new ConfiguredAirbyteStream(
+          CatalogHelpers.createAirbyteStream(STREAM_NAME, "namespace2", Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND);
 
       final List<ConfiguredAirbyteStream> streams = List.of(streamOne, streamTwo);
       catalog.withStreams(streams);
 
     } else {
-      final ConfiguredAirbyteStream stream = new ConfiguredAirbyteStream()
-          .withStream(CatalogHelpers.createAirbyteStream(STREAM_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)));
+      final ConfiguredAirbyteStream stream = new ConfiguredAirbyteStream(
+          CatalogHelpers.createAirbyteStream(STREAM_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+          SyncMode.INCREMENTAL,
+          DestinationSyncMode.APPEND);
       catalog.withStreams(Collections.singletonList(stream));
     }
 

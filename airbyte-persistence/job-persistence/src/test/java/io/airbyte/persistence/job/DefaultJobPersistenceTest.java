@@ -29,15 +29,23 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.JobWithStatusAndTimestamp;
+import io.airbyte.config.JobsRecordsCommitted;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.State;
@@ -50,14 +58,6 @@ import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -1020,49 +1020,6 @@ class DefaultJobPersistenceTest {
       assertEquals(bytesEmitted, stats.getBytesEmitted());
       assertEquals(recordsCommitted, stats.getRecordsCommitted());
       assertEquals(bytesCommitted, stats.getBytesCommitted());
-    }
-
-  }
-
-  @Nested
-  class TemporalWorkflowInfo {
-
-    @Test
-    void testSuccessfulGet() throws IOException, SQLException {
-      final var jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-      final var attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
-
-      final var defaultWorkflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber);
-      assertTrue(defaultWorkflowId.isEmpty());
-
-      jobDatabase.query(ctx -> ctx.execute(
-          "UPDATE attempts SET temporal_workflow_id = '56a81f3a-006c-42d7-bce2-29d675d08ea4' WHERE job_id = ? AND attempt_number =?", jobId,
-          attemptNumber));
-      final var workflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber).get();
-      assertEquals(workflowId, "56a81f3a-006c-42d7-bce2-29d675d08ea4");
-    }
-
-    @Test
-    void testGetMissingAttempt() throws IOException {
-      assertTrue(jobPersistence.getAttemptTemporalWorkflowId(0, 0).isEmpty());
-    }
-
-    @Test
-    void testSuccessfulSet() throws IOException, SQLException {
-      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-      final var attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
-      final var temporalWorkflowId = "test-id-usually-uuid";
-      final var syncQueue = "SYNC";
-
-      jobPersistence.setAttemptTemporalWorkflowInfo(jobId, attemptNumber, temporalWorkflowId, syncQueue);
-
-      final var workflowId = jobPersistence.getAttemptTemporalWorkflowId(jobId, attemptNumber).get();
-      assertEquals(workflowId, temporalWorkflowId);
-
-      final var taskQueue = jobDatabase.query(ctx -> ctx.fetch(
-          "SELECT processing_task_queue FROM attempts WHERE job_id = ? AND attempt_number =?", jobId,
-          attemptNumber)).stream().findFirst().get().get("processing_task_queue", String.class);
-      assertEquals(syncQueue, taskQueue);
     }
 
   }

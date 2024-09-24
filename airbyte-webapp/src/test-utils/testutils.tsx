@@ -44,19 +44,19 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   features = defaultOssFeatures,
   route,
 }) => (
-  <I18nProvider locale="en">
-    <NotificationService>
-      <FeatureService features={features}>
-        <ModalServiceProvider>
-          <ConfirmationModalService>
-            <QueryClientProvider client={new QueryClient()}>
-              <MemoryRouter initialEntries={route ? [route] : undefined}>{children}</MemoryRouter>
-            </QueryClientProvider>
-          </ConfirmationModalService>
-        </ModalServiceProvider>
-      </FeatureService>
-    </NotificationService>
-  </I18nProvider>
+  <MemoryRouter initialEntries={route ? [route] : undefined}>
+    <I18nProvider locale="en">
+      <NotificationService>
+        <FeatureService features={features}>
+          <ModalServiceProvider>
+            <ConfirmationModalService>
+              <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+            </ConfirmationModalService>
+          </ModalServiceProvider>
+        </FeatureService>
+      </NotificationService>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

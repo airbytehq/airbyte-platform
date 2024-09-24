@@ -10,9 +10,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.State;
 import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.protocol.models.AirbyteGlobalState;
@@ -40,9 +42,9 @@ class EmptyAirbyteSourceTest {
 
   private static final ConfiguredAirbyteCatalog AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog()
       .withStreams(Lists.newArrayList(
-          new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("a")),
-          new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("b")),
-          new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("c"))));
+          new ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)));
 
   @BeforeEach
   void init() {
@@ -324,10 +326,10 @@ class EmptyAirbyteSourceTest {
         .withStreamsToReset(streamsToReset);
     final ConfiguredAirbyteCatalog airbyteCatalogWithExtraStream = new ConfiguredAirbyteCatalog()
         .withStreams(Lists.newArrayList(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("a")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("b")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("c")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("d"))));
+            new ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("d"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)));
 
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
@@ -350,9 +352,9 @@ class EmptyAirbyteSourceTest {
         .withStreamsToReset(streamsToResetWithExtra);
     final ConfiguredAirbyteCatalog airbyteCatalog = new ConfiguredAirbyteCatalog()
         .withStreams(Lists.newArrayList(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("a")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("b")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("c"))));
+            new ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)));
 
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
@@ -390,9 +392,9 @@ class EmptyAirbyteSourceTest {
         .withStreamsToReset(streamsToReset);
     final ConfiguredAirbyteCatalog airbyteCatalog = new ConfiguredAirbyteCatalog()
         .withStreams(Lists.newArrayList(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("a")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("b")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("c"))));
+            new ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)));
 
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
@@ -429,9 +431,9 @@ class EmptyAirbyteSourceTest {
         .withStreamsToReset(streamsToReset);
     final ConfiguredAirbyteCatalog airbyteCatalogWithExtraStream = new ConfiguredAirbyteCatalog()
         .withStreams(Lists.newArrayList(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("a")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("b")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("c"))));
+            new ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)));
 
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
@@ -538,11 +540,10 @@ class EmptyAirbyteSourceTest {
         new ResetSourceConfiguration().withStreamsToReset(Collections.singletonList(streamDescriptor));
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog()
         .withStreams(
-            Collections.singletonList(new ConfiguredAirbyteStream()
-                .withStream(
-                    new AirbyteStream()
-                        .withName("test")
-                        .withNamespace("schema"))));
+            Collections.singletonList(new ConfiguredAirbyteStream(
+                getAirbyteStream("test").withNamespace("schema"),
+                SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND)));
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig().withSourceId(UUID.randomUUID())
         .withState(new State().withState(Jsons.emptyObject()))
         .withCatalog(configuredAirbyteCatalog)
@@ -554,6 +555,10 @@ class EmptyAirbyteSourceTest {
         .isEmpty();
 
     Assertions.assertThat(emptyAirbyteSource.isFinished()).isTrue();
+  }
+
+  private static AirbyteStream getAirbyteStream(final String name) {
+    return new AirbyteStream(name, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
   }
 
 }

@@ -1,6 +1,6 @@
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.FileConstants
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeBuilder
@@ -30,7 +30,7 @@ class VolumeFactory(
     val mount =
       VolumeMountBuilder()
         .withName("airbyte-config")
-        .withMountPath(KubePodProcess.CONFIG_DIR)
+        .withMountPath(FileConstants.CONFIG_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)
@@ -92,9 +92,90 @@ class VolumeFactory(
 
     return VolumeMountPair(volume, mount)
   }
+
+  fun source(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName("airbyte-source")
+        .withNewEmptyDir()
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName("airbyte-source")
+        .withMountPath(FileConstants.SOURCE_DIR)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  fun destination(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName("airbyte-destination")
+        .withNewEmptyDir()
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName("airbyte-destination")
+        .withMountPath(FileConstants.DEST_DIR)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  fun replication(): ReplicationVolumes {
+    val volumes: MutableList<Volume> = ArrayList()
+    val orchVolumeMounts: MutableList<VolumeMount> = ArrayList()
+    val sourceVolumeMounts: MutableList<VolumeMount> = ArrayList()
+    val destVolumeMounts: MutableList<VolumeMount> = ArrayList()
+
+    val config = config()
+    volumes.add(config.volume)
+    orchVolumeMounts.add(config.mount)
+
+    val source = source()
+    volumes.add(source.volume)
+    orchVolumeMounts.add(source.mount)
+    sourceVolumeMounts.add(source.mount)
+
+    val dest = destination()
+    volumes.add(dest.volume)
+    orchVolumeMounts.add(dest.mount)
+    destVolumeMounts.add(dest.mount)
+
+    val secrets = secret()
+    if (secrets != null) {
+      volumes.add(secrets.volume)
+      orchVolumeMounts.add(secrets.mount)
+    }
+
+    val dataPlaneCreds = dataplaneCreds()
+    if (dataPlaneCreds != null) {
+      volumes.add(dataPlaneCreds.volume)
+      orchVolumeMounts.add(dataPlaneCreds.mount)
+    }
+
+    return ReplicationVolumes(
+      volumes,
+      orchVolumeMounts,
+      sourceVolumeMounts,
+      destVolumeMounts,
+    )
+  }
 }
 
 data class VolumeMountPair(
   val volume: Volume,
   val mount: VolumeMount,
+)
+
+data class ReplicationVolumes(
+  val allVolumes: List<Volume>,
+  val orchVolumeMounts: List<VolumeMount>,
+  val sourceVolumeMounts: List<VolumeMount>,
+  val destVolumeMounts: List<VolumeMount>,
 )

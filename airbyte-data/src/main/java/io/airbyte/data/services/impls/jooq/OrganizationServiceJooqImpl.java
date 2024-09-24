@@ -6,25 +6,27 @@ package io.airbyte.data.services.impls.jooq;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
-import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import io.airbyte.config.Organization;
 import io.airbyte.data.services.OrganizationService;
-import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.jooq.Record;
 import org.jooq.Result;
 
+/**
+ * Deprecated - use OrganizationServiceDataImpl instead. This class is not being deleted right now
+ * because it is used in test database setup code that currently requires jooq. Once that code is
+ * refactored to use Micronaut Data configuration instead, this class can be deleted.
+ */
+@Deprecated(forRemoval = true)
 @Singleton
 public class OrganizationServiceJooqImpl implements OrganizationService {
 
@@ -49,6 +51,11 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
         .where(ORGANIZATION.ID.eq(organizationId))).fetch();
 
     return result.stream().findFirst().map(DbConverter::buildOrganization);
+  }
+
+  @Override
+  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) {
+    throw new UnsupportedOperationException("Not implemented - use OrganizationServiceDataImpl instead");
   }
 
   /**
@@ -90,47 +97,6 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
       }
       return null;
     });
-  }
-
-  /**
-   * List organizations.
-   *
-   * @return organizations
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public List<Organization> listOrganizations() throws IOException {
-    return listOrganizationQuery(Optional.empty()).toList();
-  }
-
-  /**
-   * List organizations (paginated).
-   *
-   * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
-   * @return A List of organizations objects
-   * @throws IOException you never know when you IO
-   */
-  @Override
-  public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
-      throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(ORGANIZATION.ID.in(resourcesByOrganizationQueryPaginated.organizationId()))
-        .limit(resourcesByOrganizationQueryPaginated.pageSize())
-        .offset(resourcesByOrganizationQueryPaginated.rowOffset())
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization)
-        .toList();
-  }
-
-  private Stream<Organization> listOrganizationQuery(final Optional<UUID> organizationId) throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(organizationId.map(ORGANIZATION.ID::eq).orElse(noCondition()))
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization);
   }
 
 }

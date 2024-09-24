@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -25,6 +23,7 @@ dependencies {
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.http)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.flyway)
@@ -43,6 +42,7 @@ dependencies {
   implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
+  implementation(libs.kubernetes.client)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:problems-api"))
@@ -52,6 +52,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
   implementation(project(":oss:airbyte-commons-temporal"))
@@ -119,32 +120,25 @@ tasks.named("assemble") {
   dependsOn(copySeed)
 }
 
-val env =
-  Properties().apply {
-    load(rootProject.file(".env.dev").inputStream())
-  }
-
 airbyte {
   application {
     mainClass = "io.airbyte.server.Application"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
-        "DATABASE_USER" to env["DATABASE_USER"].toString(),
-        "DATABASE_PASSWORD" to env["DATABASE_PASSWORD"].toString(),
-        "CONFIG_DATABASE_USER" to (env["CONFIG_DATABASE_USER"]?.toString() ?: ""),
-        "CONFIG_DATABASE_PASSWORD" to (env["CONFIG_DATABASE_PASSWORD"]?.toString() ?: ""),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
+        "DATABASE_USER" to "docker",
+        "DATABASE_PASSWORD" to "docker",
+        "CONFIG_DATABASE_USER" to "docker",
+        "CONFIG_DATABASE_PASSWORD" to "docker",
         // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
-        "DATABASE_URL" to "jdbc:postgresql://localhost:5433/${env["DATABASE_DB"]}",
-        "CONFIG_DATABASE_URL" to "jdbc:postgresql://localhost:5433/${env["CONFIG_DATABASE_DB"]}",
+        "DATABASE_URL" to "jdbc:postgresql://localhost:5433/airbyte",
+        "CONFIG_DATABASE_URL" to "jdbc:postgresql://localhost:5433/airbyte",
         "RUN_DATABASE_MIGRATION_ON_STARTUP" to "true",
-        "WORKSPACE_ROOT" to env["WORKSPACE_ROOT"].toString(),
+        "WORKSPACE_ROOT" to "/tmp/workspace",
         "CONFIG_ROOT" to "/tmp/airbyte_config",
-        "TRACKING_STRATEGY" to env["TRACKING_STRATEGY"].toString(),
+        "TRACKING_STRATEGY" to "logging",
         "TEMPORAL_HOST" to "localhost:7233",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
       ),
@@ -175,7 +169,7 @@ airbyte {
 tasks.named<Test>("test") {
   environment(
     mapOf(
-      "AIRBYTE_VERSION" to env["VERSION"],
+      "AIRBYTE_VERSION" to "dev",
       "MICRONAUT_ENVIRONMENTS" to "test",
       "SERVICE_NAME" to project.name,
     ),

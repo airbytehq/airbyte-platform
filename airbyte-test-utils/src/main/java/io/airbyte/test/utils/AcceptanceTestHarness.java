@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.io.Resources;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -97,15 +96,13 @@ import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.commons.util.MoreProperties;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.test.container.AirbyteTestContainer;
+import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
-import java.io.File;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.URI;
@@ -147,7 +144,6 @@ import org.testcontainers.utility.MountableFile;
  * Containers and states include:
  * <li>source postgres SQL</li>
  * <li>destination postgres SQL</li>
- * <li>{@link AirbyteTestContainer}</li>
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
@@ -157,10 +153,6 @@ public class AcceptanceTestHarness {
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
   private static final UUID DEFAULT_ORGANIZATION_ID = OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
-  private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
-  // assume env file is one directory level up from airbyte-tests.
-  private static final File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
-
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
@@ -217,7 +209,6 @@ public class AcceptanceTestHarness {
   private static boolean isMinikube;
   private static boolean isGke;
   private static boolean isMac;
-  private static boolean useExternalDeployment;
   private static boolean ensureCleanSlate;
   private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
 
@@ -231,8 +222,8 @@ public class AcceptanceTestHarness {
   private String sourceDatabaseName;
   private String destinationDatabaseName;
 
-  private AirbyteTestContainer airbyteTestContainer;
   private final AirbyteApiClient apiClient;
+  private final TestFlagsSetter testFlagsSetter;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
 
@@ -260,10 +251,19 @@ public class AcceptanceTestHarness {
   public AcceptanceTestHarness(final AirbyteApiClient apiClient,
                                final UUID defaultWorkspaceId,
                                final String postgresSqlInitFile)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, null, defaultWorkspaceId, postgresSqlInitFile);
+  }
+
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient,
+                               final TestFlagsSetter testFlagsSetter,
+                               final UUID defaultWorkspaceId,
+                               final String postgresSqlInitFile)
       throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // reads env vars to assign static variables
     assignEnvVars();
     this.apiClient = apiClient;
+    this.testFlagsSetter = testFlagsSetter;
     this.defaultWorkspaceId = defaultWorkspaceId;
     this.postgresSqlInitFile = postgresSqlInitFile;
 
@@ -310,6 +310,7 @@ public class AcceptanceTestHarness {
         true,
         null,
         List.of(),
+        List.of(),
         null,
         null,
         null);
@@ -323,29 +324,25 @@ public class AcceptanceTestHarness {
         .withMaxRetries(MAX_TRIES)
         .build();
 
-    // by default use airbyte deployment governed by a test container.
-    if (!useExternalDeployment) {
-      LOGGER.info("Using deployment of airbyte managed by test containers.");
-      airbyteTestContainer = new AirbyteTestContainer.Builder(new File(Resources.getResource(DOCKER_COMPOSE_FILE_NAME).toURI()))
-          .setEnv(MoreProperties.envFileToProperties(ENV_FILE))
-          // override env VERSION to use dev to test current build of airbyte.
-          .setEnvVariable("VERSION", "dev")
-          // override to use test mounts.
-          .setEnvVariable("DATA_DOCKER_MOUNT", "airbyte_data_migration_test")
-          .setEnvVariable("DB_DOCKER_MOUNT", "airbyte_db_migration_test")
-          .setEnvVariable("WORKSPACE_DOCKER_MOUNT", "airbyte_workspace_migration_test")
-          .setEnvVariable("LOCAL_ROOT", "/tmp/airbyte_local_migration_test")
-          .setEnvVariable("LOCAL_DOCKER_MOUNT", "/tmp/airbyte_local_migration_test")
-          .build();
-      airbyteTestContainer.startBlocking();
-    } else {
-      LOGGER.info("Using external deployment of airbyte.");
-    }
+    LOGGER.info("Using external deployment of airbyte.");
   }
 
   public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId)
       throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     this(apiClient, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
+  }
+
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId, final TestFlagsSetter testFlagsSetter)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, testFlagsSetter, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
+  }
+
+  public AirbyteApiClient getApiClient() {
+    return apiClient;
+  }
+
+  public TestFlagsSetter getTestFlagsSetter() {
+    return testFlagsSetter;
   }
 
   public void stopDbAndContainers() {
@@ -359,10 +356,6 @@ public class AcceptanceTestHarness {
     } else {
       sourcePsql.stop();
       destinationPsql.stop();
-    }
-
-    if (airbyteTestContainer != null) {
-      airbyteTestContainer.stop();
     }
   }
 
@@ -501,9 +494,6 @@ public class AcceptanceTestHarness {
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
     isGke = System.getenv().containsKey("IS_GKE");
     isMac = System.getProperty("os.name").startsWith("Mac");
-    useExternalDeployment =
-        System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
-            && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
     gcpProjectId = System.getenv("GCP_PROJECT_ID");
@@ -768,7 +758,8 @@ public class AcceptanceTestHarness {
             null));
   }
 
-  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) throws IOException, InterruptedException {
+  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, final UUID sourceCatalogId)
+      throws IOException, InterruptedException {
     return updateConnection(
         new ConnectionUpdate(
             connectionId,
@@ -1057,6 +1048,7 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
+            null,
             dockerImageTag,
             null));
   }
@@ -1066,6 +1058,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            null,
             null));
   }
 
@@ -1341,7 +1334,7 @@ public class AcceptanceTestHarness {
         .get(() -> apiClient.getWebBackendApi().webBackendGetConnection(new WebBackendConnectionRequestBody(connectionId, true)));
   }
 
-  public void createWorkspaceWithId(UUID workspaceId) {
+  public void createWorkspaceWithId(final UUID workspaceId) {
     Failsafe.with(retryPolicy).run(() -> apiClient.getWorkspaceApi()
         .createWorkspaceIfNotExist(
             new WorkspaceCreateWithId(
@@ -1359,7 +1352,7 @@ public class AcceptanceTestHarness {
                 null)));
   }
 
-  public StreamStatusReadList getStreamStatuses(UUID connectionId, Long jobId, Integer attempt, UUID workspaceId) {
+  public StreamStatusReadList getStreamStatuses(final UUID connectionId, final Long jobId, final Integer attempt, final UUID workspaceId) {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getStreamStatusesApi().getStreamStatuses(
         new StreamStatusListRequestBody(
             new Pagination(100, 0),
@@ -1384,6 +1377,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getSuggested(),
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
+            stream.getConfig().getHashedFields(),
             stream.getConfig().getMinimumGenerationId(),
             stream.getConfig().getGenerationId(),
             stream.getConfig().getSyncId())))

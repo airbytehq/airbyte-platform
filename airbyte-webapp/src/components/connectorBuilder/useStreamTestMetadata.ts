@@ -26,6 +26,10 @@ interface TestWarning {
   priority: "primary" | "secondary";
 }
 
+export const getStreamHash = (resolvedStream: DeclarativeStream): string => {
+  return sha1(formatJson(resolvedStream, true));
+};
+
 export const useStreamTestMetadata = () => {
   const { resolvedManifest, jsonManifest, updateJsonManifest } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
@@ -81,13 +85,14 @@ export const useStreamTestMetadata = () => {
         !metadata ||
         !metadata.testedStreams ||
         !metadata.testedStreams[streamName] ||
-        !metadata.testedStreams[streamName].streamHash
+        !metadata.testedStreams[streamName].streamHash ||
+        metadata.testedStreams[streamName].streamHash === null
       ) {
         // null indicates that there is no test metadata for the stream, so it is untested
         return null;
       }
 
-      const streamHash = sha1(formatJson(resolvedStream, true));
+      const streamHash = getStreamHash(resolvedStream);
 
       const { streamHash: metadataStreamHash, ...testStatuses } = metadata.testedStreams[streamName];
 
@@ -126,7 +131,7 @@ export const useStreamTestMetadata = () => {
         });
       }
 
-      if (!streamTestMetadataStatus.hasResponse) {
+      if (isStatusFalse(streamTestMetadataStatus.hasResponse)) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.noResponse" }),
           priority: isStale ? "secondary" : "primary",
@@ -134,7 +139,7 @@ export const useStreamTestMetadata = () => {
         return warnings;
       }
 
-      if (!streamTestMetadataStatus.responsesAreSuccessful) {
+      if (isStatusFalse(streamTestMetadataStatus.responsesAreSuccessful)) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.nonSuccessResponse" }),
           priority: isStale ? "secondary" : "primary",
@@ -142,7 +147,7 @@ export const useStreamTestMetadata = () => {
         return warnings;
       }
 
-      if (!streamTestMetadataStatus.hasRecords) {
+      if (isStatusFalse(streamTestMetadataStatus.hasRecords)) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.noRecords" }),
           priority: isStale ? "secondary" : "primary",
@@ -150,7 +155,7 @@ export const useStreamTestMetadata = () => {
         return warnings;
       }
 
-      if (!streamTestMetadataStatus.primaryKeysArePresent) {
+      if (isStatusFalse(streamTestMetadataStatus.primaryKeysArePresent)) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.primaryKeyMissing" }),
           priority: isStale ? "secondary" : "primary",
@@ -158,7 +163,7 @@ export const useStreamTestMetadata = () => {
         return warnings;
       }
 
-      if (!streamTestMetadataStatus.primaryKeysAreUnique) {
+      if (isStatusFalse(streamTestMetadataStatus.primaryKeysAreUnique)) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.primaryKeyDuplicate" }),
           priority: isStale ? "secondary" : "primary",
@@ -179,11 +184,19 @@ export const useStreamTestMetadata = () => {
   };
 };
 
+// Explicitly check if status is false in the rest of the test statuses, as
+// an explicit false value means that the stream was tested in the Builder and
+// failed that test, whereas an undefined values means that the stream comes
+// from outside of the Builder, for which we assume it is already tested
+const isStatusFalse = (status: boolean | undefined): boolean => {
+  return status === false;
+};
+
 const computeStreamTestResults = (
   streamRead: StreamReadTransformedSlices,
   resolvedTestStream: DeclarativeStream
 ): StreamTestResults => {
-  const streamHash = sha1(formatJson(resolvedTestStream, true));
+  const streamHash = getStreamHash(resolvedTestStream);
 
   if (streamRead.slices.length === 0 || streamRead.slices.every((slice) => slice.pages.length === 0)) {
     return {

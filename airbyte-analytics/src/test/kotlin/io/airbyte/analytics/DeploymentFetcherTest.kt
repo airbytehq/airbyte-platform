@@ -23,9 +23,7 @@ class DeploymentFetcherTest {
     deploymentMetadata =
       DeploymentMetadataRead(
         id = deploymentId,
-        environment = Configs.WorkerEnvironment.KUBERNETES.name,
-        mode =
-          Configs.DeploymentMode.OSS.name,
+        mode = Configs.DeploymentMode.OSS.name,
         version = airbyteVersion.serialize(),
       )
     deploymentFetcher = DeploymentFetcher { deploymentMetadata }
@@ -35,7 +33,6 @@ class DeploymentFetcherTest {
   fun testRetrievingDeploymentMetadata() {
     val deployment = deploymentFetcher.get()
     assertEquals(deploymentMetadata.id, deployment.getDeploymentId())
-    assertEquals(deploymentMetadata.environment, deployment.getDeploymentEnvironment())
     assertEquals(deploymentMetadata.mode, deployment.getDeploymentMode())
     assertEquals(deploymentMetadata.version, deployment.getDeploymentVersion())
   }

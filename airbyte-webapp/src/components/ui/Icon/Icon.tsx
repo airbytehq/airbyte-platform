@@ -4,6 +4,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import AIStarsIcon from "./icons/aiStarsIcon.svg?react";
 import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
@@ -57,6 +58,7 @@ import FileIcon from "./icons/fileIcon.svg?react";
 import FilesIcon from "./icons/filesIcon.svg?react";
 import FlashIcon from "./icons/flashIcon.svg?react";
 import FolderIcon from "./icons/folderIcon.svg?react";
+import FolderOpenIcon from "./icons/folderOpenIcon.svg?react";
 import GearIcon from "./icons/gearIcon.svg?react";
 import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
@@ -72,6 +74,7 @@ import IntegrationsIcon from "./icons/integrationsIcon.svg?react";
 import KeyCircleIcon from "./icons/keyCircleIcon.svg?react";
 import LayersIcon from "./icons/layersIcon.svg?react";
 import LensIcon from "./icons/lensIcon.svg?react";
+import LicenseIcon from "./icons/licenseIcon.svg?react";
 import LightbulbIcon from "./icons/lightbulbIcon.svg?react";
 import LinkIcon from "./icons/linkIcon.svg?react";
 import LoadingIcon from "./icons/loadingIcon.svg?react";
@@ -155,6 +158,7 @@ const colorMap: Record<IconColor, string> = {
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
   foreground: styles[`icon--foreground`],
+  magic: styles[`icon--magic`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -167,6 +171,7 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   addCircle: AddCircleIcon,
+  aiStars: AIStarsIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
@@ -220,6 +225,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   files: FilesIcon,
   flash: FlashIcon,
   folder: FolderIcon,
+  folderOpen: FolderOpenIcon,
   gear: GearIcon,
   github: GithubIcon,
   globe: GlobeIcon,
@@ -235,6 +241,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   keyCircle: KeyCircleIcon,
   layers: LayersIcon,
   lens: LensIcon,
+  license: LicenseIcon,
   lightbulb: LightbulbIcon,
   link: LinkIcon,
   loading: LoadingIcon,

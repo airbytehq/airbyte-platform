@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { createSearchParams, useNavigate } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
 import { TableItemTitle } from "components/ConnectorBlocks";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { DestinationConnectionTable } from "components/destination/DestinationConnectionTable";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
@@ -11,6 +11,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { useGetDestinationFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList, useSourceList } from "core/api";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+
+import styles from "./DestinationConnectionsPage.module.scss";
 
 export const DestinationConnectionsPage = () => {
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ export const DestinationConnectionsPage = () => {
   return (
     <>
       {connections.length ? (
-        <FlexContainer direction="column" gap="xl">
+        <FlexContainer direction="column" gap="xl" className={styles.fullHeight}>
           <TableItemTitle
             type="source"
             dropdownOptions={sourceDropdownOptions}

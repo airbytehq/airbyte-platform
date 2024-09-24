@@ -8,7 +8,8 @@ import io.airbyte.featureflag.UseCustomK8sInitCheck
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.process.KubePodResourceHelper
+import io.airbyte.workers.pod.ContainerConstants
+import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.MAX_DELETION_TIMEOUT
@@ -30,6 +31,7 @@ import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.Objects
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 private val logger = KotlinLogging.logger {}
 
@@ -58,7 +60,7 @@ class KubePodLauncher(
     )
   }
 
-  fun waitForPodInit(
+  fun waitForPodInitStartup(
     pod: Pod,
     waitDuration: Duration,
   ) {
@@ -66,6 +68,58 @@ class KubePodLauncher(
       waitForPodInitCustomCheck(pod, waitDuration)
     } else {
       waitForPodInitDefaultCheck(pod, waitDuration)
+    }
+  }
+
+  fun waitForPodInitComplete(
+    pod: Pod,
+    waitDuration: Duration,
+  ) {
+    val initializedPod =
+      runKubeCommand(
+        {
+          kubernetesClient
+            .resource(pod)
+            .waitUntilCondition(
+              { p: Pod ->
+                (
+                  p.status.initContainerStatuses.isNotEmpty() &&
+                    p.status.initContainerStatuses[0].state.terminated != null
+                )
+              },
+              waitDuration.toMinutes(),
+              TimeUnit.MINUTES,
+            )
+        },
+        "wait",
+      )
+
+    val containerState =
+      initializedPod
+        .status
+        .initContainerStatuses[0]
+        .state
+
+    if (containerState.terminated == null) {
+      throw TimeoutException(
+        "Init container for Pod: ${pod.fullResourceName} was not in terminated state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
+          "Actual container state: $containerState.",
+      )
+    }
+
+    val terminationReason =
+      initializedPod
+        .status
+        .initContainerStatuses[0]
+        .state
+        .terminated
+        .reason
+
+    if (terminationReason != FABRIC8_COMPLETED_REASON_VALUE) {
+      throw RuntimeException(
+        "Init container for Pod: ${pod.fullResourceName} did not complete successfully. " +
+          "Actual termination reason: $terminationReason.",
+      )
     }
   }
 
@@ -145,7 +199,7 @@ class KubePodLauncher(
           .waitUntilCondition(
             { p: Pod? ->
               Objects.nonNull(p) &&
-                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+                (Readiness.getInstance().isReady(p) || isTerminal(p))
             },
             waitDuration.toMinutes(),
             TimeUnit.MINUTES,
@@ -166,7 +220,7 @@ class KubePodLauncher(
           .waitUntilCondition(
             { p: Pod? ->
               Objects.nonNull(p) &&
-                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+                (Readiness.getInstance().isReady(p) || isTerminal(p))
             },
             waitDuration.toMinutes(),
             TimeUnit.MINUTES,
@@ -186,7 +240,7 @@ class KubePodLauncher(
             .list()
             .items
             .stream()
-            .filter { kubePod: Pod -> !KubePodResourceHelper.isTerminal(kubePod) && !PodStatusUtil.isInitializing(kubePod) }
+            .filter { kubePod: Pod -> !isTerminal(kubePod) && !PodStatusUtil.isInitializing(kubePod) }
             .findAny()
             .isPresent
         },
@@ -238,6 +292,34 @@ class KubePodLauncher(
     )
   }
 
+  /**
+   * Checks that the pod's main container(s) are in a terminal state.
+   */
+  private fun isTerminal(pod: Pod?): Boolean {
+    // if pod is null or there is no status default to false.
+    if (pod?.status == null) {
+      return false
+    }
+
+    // Get statuses for all "non-init" containers.
+    val mainContainerStatuses =
+      pod.status
+        .containerStatuses
+        .stream()
+        .filter { containerStatus -> (ContainerConstants.INIT_CONTAINER_NAME) != containerStatus.name }
+        .toList()
+
+    // There should be at least 1 container with a status.
+    if (mainContainerStatuses.size < 1) {
+      logger.warn { "Unexpectedly no non-init container statuses found for pod: ${pod.fullResourceName}" }
+      return false
+    }
+
+    return mainContainerStatuses.all {
+      it.state?.terminated != null
+    }
+  }
+
   private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {
     return kubernetesClient.pods()
       .inNamespace(namespace)
@@ -264,6 +346,9 @@ class KubePodLauncher(
     // Wait why is this named like this?
     // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
     const val KUBECTL_COMPLETED_VALUE = "Succeeded"
+
+    // Explanation: Unlike Kubectl, Fabric8 shows and uses "Completed" for termination reasons
+    const val FABRIC8_COMPLETED_REASON_VALUE = "Completed"
     const val KUBECTL_PHASE_FIELD_NAME = "status.phase"
     const val MAX_DELETION_TIMEOUT = 45L
   }

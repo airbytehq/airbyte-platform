@@ -2,12 +2,13 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
@@ -45,6 +46,7 @@ open class BuildInputStage(
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
   private val featureFlagClient: FeatureFlagClient,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
@@ -71,16 +73,36 @@ open class BuildInputStage(
   private fun buildPayload(
     rawPayload: String,
     type: WorkloadType,
-  ): WorkloadPayload =
-    when (type) {
+  ): WorkloadPayload {
+    return when (type) {
       WorkloadType.CHECK -> {
         val parsed: CheckConnectionInput = deserializer.toCheckConnectionInput(rawPayload)
+        val ffContext =
+          Multi(
+            buildList {
+              add(Workspace(parsed.launcherConfig.workspaceId))
+              addAll(contexts)
+            },
+          )
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)) {
+          return CheckPayload(parsed)
+        }
         val hydrated = parsed.apply { checkConnectionInput = checkInputHydrator.getHydratedStandardCheckInput(parsed.checkConnectionInput) }
         CheckPayload(hydrated)
       }
 
       WorkloadType.DISCOVER -> {
         val parsed: DiscoverCatalogInput = deserializer.toDiscoverCatalogInput(rawPayload)
+        val ffContext =
+          Multi(
+            buildList {
+              add(Workspace(parsed.launcherConfig.workspaceId))
+              addAll(contexts)
+            },
+          )
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)) {
+          return DiscoverCatalogPayload(parsed)
+        }
         val hydrated =
           parsed.apply {
             discoverCatalogInput = discoverConnectionInputHydrator.getHydratedStandardDiscoverInput(parsed.discoverCatalogInput)
@@ -90,13 +112,7 @@ open class BuildInputStage(
 
       WorkloadType.SYNC -> {
         val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(rawPayload)
-        val hydrated: ReplicationInput =
-          if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(parsed.connectionId))) {
-            replicationInputHydrator.mapActivityInputToReplInput(parsed)
-          } else {
-            replicationInputHydrator.getHydratedReplicationInput(parsed)
-          }
-        SyncPayload(hydrated)
+        SyncPayload(replicationInputHydrator.mapActivityInputToReplInput(parsed))
       }
 
       WorkloadType.SPEC -> {
@@ -109,4 +125,5 @@ open class BuildInputStage(
         throw NotImplementedError("Unimplemented workload type: $type")
       }
     }
+  }
 }

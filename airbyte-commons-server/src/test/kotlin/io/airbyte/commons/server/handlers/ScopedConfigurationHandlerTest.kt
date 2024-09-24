@@ -93,7 +93,10 @@ internal class ScopedConfigurationHandlerTest {
     every {
       workspaceService.getStandardWorkspaceNoSecrets(scopedConfiguration.scopeId, true)
     } returns StandardWorkspace().withName("workspace name")
-    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(User().withEmail("email@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("email@airbyte.io"),
+      )
 
     val scopedConfigurationRead = scopedConfigurationHandler.getScopedConfiguration(testId)
 
@@ -217,7 +220,10 @@ internal class ScopedConfigurationHandlerTest {
       sourceService.getStandardSourceDefinition(scopedConfiguration.resourceId)
     } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(scopedConfiguration.scopeId) } returns Optional.of(Organization().withName("wkspc name"))
-    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(User().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("user@airbyte.io"),
+      )
 
     val expectedScopedConfigurationRead =
       ScopedConfigurationRead()
@@ -277,7 +283,10 @@ internal class ScopedConfigurationHandlerTest {
       sourceService.getStandardSourceDefinition(scopedConfiguration.resourceId)
     } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(scopedConfiguration.scopeId) } returns Optional.of(Organization().withName("organization name"))
-    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns Optional.of(User().withEmail("user@airbyte.io"))
+    every { userPersistence.getUser(UUID.fromString(scopedConfiguration.origin)) } returns
+      Optional.of(
+        User().withEmail("user@airbyte.io"),
+      )
 
     val expectedScopedConfigurationRead =
       ScopedConfigurationRead()

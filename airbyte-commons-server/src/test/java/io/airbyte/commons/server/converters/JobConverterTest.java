@@ -30,20 +30,26 @@ import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AirbyteStream;
-import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
@@ -51,13 +57,8 @@ import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -145,8 +146,10 @@ class JobConverterTest {
     private static final JobConfig JOB_CONFIG = new JobConfig()
         .withConfigType(CONFIG_TYPE)
         .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS)),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(ACCOUNTS))))));
+            new ConfiguredAirbyteStream(new AirbyteStream(USERS, Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(ACCOUNTS, Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND)))));
 
     private static final JobOutput JOB_OUTPUT = new JobOutput()
         .withOutputType(OutputType.SYNC)
@@ -236,7 +239,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
+      jobConverter = new JobConverter(mock(LogClientManager.class));
       job = mock(Job.class);
       final Attempt attempt = mock(Attempt.class);
       when(job.getId()).thenReturn(JOB_ID);
@@ -352,7 +355,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
+      jobConverter = new JobConverter(mock(LogClientManager.class));
       metadata = mock(SynchronousJobMetadata.class);
       when(metadata.getId()).thenReturn(JOB_ID);
       when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);

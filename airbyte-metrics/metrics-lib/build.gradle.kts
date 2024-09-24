@@ -9,6 +9,9 @@ dependencies {
 
   ksp(libs.bundles.micronaut.annotation.processor)
 
+  api(libs.bundles.micronaut.metrics)
+  api(libs.kotlin.logging)
+
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-db:jooq"))

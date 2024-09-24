@@ -376,7 +376,7 @@ public class DestinationHandler {
     }
   }
 
-  private DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
+  public DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildDestinationRead(configRepository.getDestinationConnection(destinationId));
   }
 

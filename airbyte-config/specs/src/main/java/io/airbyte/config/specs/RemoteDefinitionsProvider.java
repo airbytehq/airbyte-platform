@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistry;
@@ -151,30 +152,32 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   @VisibleForTesting
-  URL getRegistryUrl() {
+  URL getRemoteRegistryUrlForPath(final String path) {
     try {
-      return new URL(remoteRegistryBaseUrl + String.format("registries/v0/%s_registry.json", getRegistryName()));
+      return remoteRegistryBaseUrl.resolve(path).toURL();
     } catch (final MalformedURLException e) {
       throw new RuntimeException("Invalid URL format", e);
     }
   }
 
   @VisibleForTesting
-  URL getRegistryEntryUrl(final String connectorName, final String version) {
-    try {
-      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/%s.json", connectorName, version, getRegistryName())).toURL();
-    } catch (final MalformedURLException e) {
-      throw new RuntimeException("Invalid URL format", e);
-    }
+  String getRegistryPath() {
+    return String.format("registries/v0/%s_registry.json", getRegistryName());
   }
 
   @VisibleForTesting
-  URL getDocUrl(final String connectorRepository, final String version) {
-    try {
-      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/doc.md", connectorRepository, version)).toURL();
-    } catch (final MalformedURLException e) {
-      throw new RuntimeException("Invalid URL format", e);
-    }
+  String getRegistryEntryPath(final String connectorRepository, final String version) {
+    return String.format("metadata/%s/%s/%s.json", connectorRepository, version, getRegistryName());
+  }
+
+  @VisibleForTesting
+  static String getDocPath(final String connectorRepository, final String version) {
+    return String.format("metadata/%s/%s/doc.md", connectorRepository, version);
+  }
+
+  @VisibleForTesting
+  static String getManifestPath(final String connectorRepository, final String version) {
+    return String.format("metadata/%s/%s/manifest.yaml", connectorRepository, version);
   }
 
   /**
@@ -184,8 +187,9 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
    */
   @Cacheable
   public ConnectorRegistry getRemoteConnectorRegistry() {
+    final URL registryUrl = getRemoteRegistryUrlForPath(getRegistryPath());
     final Request request = new Request.Builder()
-        .url(getRegistryUrl())
+        .url(registryUrl)
         .header(ACCEPT, MediaType.APPLICATION_JSON)
         .build();
 
@@ -195,8 +199,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
         LOGGER.info("Fetched latest remote definitions ({})", responseBody.hashCode());
         return Jsons.deserialize(responseBody, ConnectorRegistry.class);
       } else {
-        throw new IOException(
-            "getRemoteConnectorRegistry request ran into status code error: " + response.code() + " with message: " + response.message());
+        throw new IOException(formatStatusCodeException("getRemoteConnectorRegistry", response));
       }
     } catch (final Exception e) {
       throw new RuntimeException("Failed to fetch remote connector registry", e);
@@ -205,7 +208,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   @VisibleForTesting
   Optional<JsonNode> getConnectorRegistryEntryJson(final String connectorName, final String version) {
-    final URL registryEntryPath = getRegistryEntryUrl(connectorName, version);
+    final URL registryEntryPath = getRemoteRegistryUrlForPath(getRegistryEntryPath(connectorName, version));
     final Request request = new Request.Builder()
         .url(registryEntryPath)
         .header(ACCEPT, MediaType.APPLICATION_JSON)
@@ -217,8 +220,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       } else if (response.isSuccessful() && response.body() != null) {
         return Optional.of(Jsons.deserialize(response.body().string()));
       } else {
-        throw new IOException(
-            "getConnectorRegistryEntry request ran into status code error: " + response.code() + " with message: " + response.message());
+        throw new IOException(formatStatusCodeException("getConnectorRegistryEntryJson", response));
       }
     } catch (final IOException e) {
       throw new RuntimeException(String.format("Failed to fetch connector registry entry for %s:%s", connectorName, version), e);
@@ -231,7 +233,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
    * @return Optional containing the connector doc if it can be found, or empty otherwise.
    */
   public Optional<String> getConnectorDocumentation(final String connectorRepository, final String version) {
-    final URL docUrl = getDocUrl(connectorRepository, version);
+    final URL docUrl = getRemoteRegistryUrlForPath(getDocPath(connectorRepository, version));
     final Request request = new Request.Builder()
         .url(docUrl)
         .header(ACCEPT, MediaType.APPLICATION_JSON)
@@ -243,13 +245,43 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       } else if (response.isSuccessful() && response.body() != null) {
         return Optional.of(response.body().string());
       } else {
-        throw new IOException(
-            "getConnectorDocumentation request ran into status code error: " + response.code() + " with message: " + response.message());
+        throw new IOException(formatStatusCodeException("getConnectorDocumentation", response));
       }
     } catch (final IOException e) {
       throw new RuntimeException(
           String.format("Failed to fetch connector documentation for %s:%s", connectorRepository, version), e);
     }
+  }
+
+  /**
+   * Retrieves the manifest for the specified connector repo and version.
+   *
+   * @return Optional containing the connector manifest if it can be found, or empty otherwise.
+   */
+  public Optional<JsonNode> getConnectorManifest(final String connectorRepository, final String version) {
+    final URL manifestUrl = getRemoteRegistryUrlForPath(getManifestPath(connectorRepository, version));
+    final Request request = new Request.Builder()
+        .url(manifestUrl)
+        .header(ACCEPT, MediaType.APPLICATION_JSON)
+        .build();
+
+    try (final Response response = okHttpClient.newCall(request).execute()) {
+      if (response.code() == NOT_FOUND) {
+        return Optional.empty();
+      } else if (response.isSuccessful() && response.body() != null) {
+        final String manifestYamlContent = response.body().string();
+        return Optional.of(Yamls.deserialize(manifestYamlContent));
+      } else {
+        throw new IOException(formatStatusCodeException("getConnectorManifest", response));
+      }
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          String.format("Failed to fetch manifest file for %s:%s", connectorRepository, version), e);
+    }
+  }
+
+  private String formatStatusCodeException(final String operationName, final Response response) {
+    return String.format("%s request ran into status code error: %d with message: %s", operationName, response.code(), response.message());
   }
 
 }

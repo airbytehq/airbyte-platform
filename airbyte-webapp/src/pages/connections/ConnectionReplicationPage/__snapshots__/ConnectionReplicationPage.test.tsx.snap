@@ -6,7 +6,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
     <div
       class="<removed-for-snapshot-test>"
     >
-      <form>
+      <form
+        class="<removed-for-snapshot-test>"
+      >
         <fieldset
           class="<removed-for-snapshot-test>"
         >
@@ -317,7 +319,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
                                         data-testid="sync-mode-select-listbox-button"
-                                        id="headlessui-listbox-button-:r0:"
+                                        id="headlessui-listbox-button-:r2:"
                                         type="button"
                                       >
                                         <div
@@ -446,7 +448,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
                                         data-testid="sync-mode-select-listbox-button"
-                                        id="headlessui-listbox-button-:r1:"
+                                        id="headlessui-listbox-button-:r5:"
                                         type="button"
                                       >
                                         <div
@@ -626,10 +628,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
         </fieldset>
       </form>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -691,7 +693,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                     <span
                       class="<removed-for-snapshot-test>"
                     >
-                      Sorry. Something went wrong...
+                      Sorry. Something went wrong…
                     </span>
                   </div>
                 </div>
@@ -701,9 +703,9 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
         </div>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;

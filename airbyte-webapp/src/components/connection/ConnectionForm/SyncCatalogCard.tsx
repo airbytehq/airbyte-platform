@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
 import { useFieldArray, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { Location, useLocation } from "react-router-dom";
@@ -11,6 +11,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 
 import { naturalComparatorBy } from "core/utils/objects";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -35,14 +36,7 @@ export interface LocationWithState extends Location {
   state: RedirectionLocationState;
 }
 
-interface SyncCatalogCardProps {
-  /**
-   * Outer scrollable container element for virtualized sync catalog items
-   */
-  scrollParentContainer?: HTMLDivElement;
-}
-
-export const SyncCatalogCard: React.FC<SyncCatalogCardProps> = ({ scrollParentContainer }) => {
+export const SyncCatalogCard: React.FC = () => {
   const { mode } = useConnectionFormService();
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { isSubmitting, isDirty, errors } = useFormState<FormConnectionFormValues>();
@@ -91,6 +85,7 @@ export const SyncCatalogCard: React.FC<SyncCatalogCardProps> = ({ scrollParentCo
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
   const cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
+  const customScrollParent = useContext(ScrollParentContext);
 
   return (
     <Card noPadding>
@@ -134,7 +129,7 @@ export const SyncCatalogCard: React.FC<SyncCatalogCardProps> = ({ scrollParentCo
               initialTopMostItemIndex={initialTopMostItemIndex}
               fixedItemHeight={50}
               useWindowScroll
-              customScrollParent={scrollParentContainer}
+              customScrollParent={customScrollParent ?? undefined}
               itemContent={(_index, streamNode) => (
                 <SyncCatalogRow
                   key={streamNode.id}

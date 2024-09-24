@@ -58,6 +58,16 @@ dependencies {
   testImplementation(libs.json.assert)
 }
 
+tasks.named<Test>("test") {
+  jvmArgs(
+    listOf(
+      // Required to use junit-pioneer @SetEnvironmentVariable
+      "--add-opens=java.base/java.util=ALL-UNNAMED",
+      "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
+  )
+}
+
 tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
@@ -103,6 +113,7 @@ tasks.register<JavaExec>("dumpJobsSchema") {
 val copyInitSql = tasks.register<Copy>("copyInitSql") {
   from("src/main/resources") {
     include("init.sql")
+    include("airbyte-entrypoint.sh")
   }
   into("build/airbyte/docker/bin")
 }

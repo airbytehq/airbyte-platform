@@ -37,10 +37,8 @@ import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.SynchronousJobRead;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Multi;
@@ -73,7 +71,6 @@ class RefreshSchemaActivityTest {
   private SourceApi mSourceApi;
   private ConnectionApi mConnectionApi;
   private WorkspaceApi mWorkspaceApi;
-  private EnvVariableFeatureFlags mEnvVariableFeatureFlags;
   private TestClient mFeatureFlagClient;
   private PayloadChecker mPayloadChecker;
 
@@ -93,13 +90,11 @@ class RefreshSchemaActivityTest {
   @BeforeEach
   void setUp() throws IOException {
     mAirbyteApiClient = mock(AirbyteApiClient.class);
-    mEnvVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     mSourceApi = mock(SourceApi.class, withSettings().strictness(Strictness.LENIENT));
     mConnectionApi = mock(ConnectionApi.class);
     mFeatureFlagClient = mock(TestClient.class, withSettings().strictness(Strictness.LENIENT));
     mWorkspaceApi = mock(WorkspaceApi.class, withSettings().strictness(Strictness.LENIENT));
     mPayloadChecker = mock(PayloadChecker.class, withSettings().strictness(Strictness.LENIENT));
-    when(mEnvVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
             null, null, null, null, null, null));
@@ -127,7 +122,7 @@ class RefreshSchemaActivityTest {
                     null));
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
     refreshSchemaActivity =
-        new RefreshSchemaActivityImpl(mAirbyteApiClient, mEnvVariableFeatureFlags, mFeatureFlagClient, mPayloadChecker);
+        new RefreshSchemaActivityImpl(mAirbyteApiClient, mFeatureFlagClient, mPayloadChecker);
   }
 
   @Test
@@ -233,7 +228,6 @@ class RefreshSchemaActivityTest {
 
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
         .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
@@ -250,7 +244,6 @@ class RefreshSchemaActivityTest {
   void refreshSchemaHandlesNullDiff() throws IOException {
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
     final CatalogDiff catalogDiff = null;
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
@@ -268,7 +261,6 @@ class RefreshSchemaActivityTest {
   void refreshV2ValidatesPayloadSize() throws IOException {
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
         .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
 

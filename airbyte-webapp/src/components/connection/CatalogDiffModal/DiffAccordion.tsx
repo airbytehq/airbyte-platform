@@ -1,4 +1,4 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import { useMemo } from "react";
 
 import { StreamTransform } from "core/api/types/AirbyteClient";
@@ -31,7 +31,7 @@ export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform })
       <Disclosure>
         {({ open }) => (
           <>
-            <Disclosure.Button
+            <DisclosureButton
               className={styles.accordionButton}
               aria-label={`${open ? "collapse" : "expand"} list with changes in ${
                 streamTransform.streamDescriptor.name
@@ -48,15 +48,15 @@ export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform })
                 }
                 open={open}
               />
-            </Disclosure.Button>
-            <Disclosure.Panel className={styles.accordionPanel}>
+            </DisclosureButton>
+            <DisclosurePanel className={styles.accordionPanel}>
               {!!streamTransform.updateStream?.streamAttributeTransforms?.length && (
                 <DiffStreamAttribute transforms={streamTransform.updateStream.streamAttributeTransforms} />
               )}
               {removedItems.length > 0 && <DiffFieldTable fieldTransforms={removedItems} diffVerb="removed" />}
               {newItems.length > 0 && <DiffFieldTable fieldTransforms={newItems} diffVerb="new" />}
               {changedItems.length > 0 && <DiffFieldTable fieldTransforms={changedItems} diffVerb="changed" />}
-            </Disclosure.Panel>
+            </DisclosurePanel>
           </>
         )}
       </Disclosure>

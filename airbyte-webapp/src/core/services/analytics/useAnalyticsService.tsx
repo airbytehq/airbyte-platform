@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import throttle from "lodash/throttle";
+import { useCallback, useEffect } from "react";
 import { useShallowCompareEffect } from "react-use";
 
 import { AnalyticsService } from "./AnalyticsService";
-import { EventParams } from "./types";
+import { Action, EventParams, Namespace } from "./types";
 
 type AnalyticsContext = Record<string, unknown>;
 
@@ -35,4 +36,41 @@ export const useAnalyticsRegisterValues = (props?: AnalyticsContext | null): voi
     analyticsService.setContext(props);
     return () => analyticsService.removeFromContext(...Object.keys(props));
   }, [props]);
+};
+
+const useThrottledTrack = (
+  analyticsService: AnalyticsService,
+  namespace: Namespace,
+  params: Record<string, unknown>,
+  throttleTime: number = 50
+) => {
+  const throttledTrackFunction = throttle(
+    (action: Action) => {
+      analyticsService.track(namespace, action, params);
+    },
+    throttleTime,
+    { leading: true, trailing: false }
+  );
+
+  return useCallback(throttledTrackFunction, [throttledTrackFunction]);
+};
+
+export const useTrackMount = ({
+  namespace,
+  mountAction,
+  unmountAction,
+  params,
+}: {
+  namespace: Namespace;
+  mountAction: Action;
+  unmountAction: Action;
+  params: Record<string, unknown>;
+}) => {
+  const analyticsService = useAnalyticsService();
+  const throttledTrack = useThrottledTrack(analyticsService, namespace, params);
+
+  useEffect(() => {
+    throttledTrack(mountAction);
+    return () => throttledTrack(unmountAction);
+  }, [throttledTrack, mountAction, unmountAction]);
 };

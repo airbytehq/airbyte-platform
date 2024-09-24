@@ -13,6 +13,8 @@ import { Text } from "components/ui/Text";
 import { TextAreaProps } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+
 import { DatepickerWrapper } from "./DatepickerWrapper";
 import { FormValues } from "./Form";
 import styles from "./FormControl.module.scss";
@@ -57,6 +59,10 @@ interface ControlBaseProps<T extends FormValues> {
    * A custom className that is applied to the form control container
    */
   containerControlClassName?: string;
+  /**
+   * Optional text displayed below the input, but only when there is no error to display
+   */
+  footer?: string;
 }
 
 /**
@@ -104,6 +110,7 @@ export const FormControl = <T extends FormValues>({
   inline = false,
   optional = false,
   containerControlClassName,
+  footer,
   ...props
 }: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
@@ -160,7 +167,7 @@ export const FormControl = <T extends FormValues>({
         />
       )}
       <div className={styles.control__field}>{renderControl()}</div>
-      {error && <FormControlError error={error} />}
+      {(error || footer) && <FormControlFooter error={error} footer={footer} />}
     </div>
   );
 };
@@ -192,21 +199,25 @@ export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelT
   );
 };
 
-interface ControlErrorProps {
-  error: FieldError;
+interface ControlFooterProps {
+  error?: FieldError;
+  footer?: string;
 }
 
-export const FormControlError: React.FC<ControlErrorProps> = ({ error }) => {
+export const FormControlFooter: React.FC<ControlFooterProps> = ({ error, footer }) => {
   const { formatMessage } = useIntl();
 
-  // It's possible that an error has no message, but in that case there's no point in rendering anything
-  if (!error.message) {
+  // It's possible that an error has no message, but in that case there's no point in rendering anything if there's no footer
+  if (error && !error.message && !footer) {
     return null;
   }
 
+  // only render the footer if there is no error message to render
   return (
-    <div className={styles.control__errorWrapper}>
-      <p className={styles.control__errorMessage}>{formatMessage({ id: error.message })}</p>
+    <div className={styles.control__footerWrapper}>
+      <p className={classNames(styles.control__footerMessage, { [styles.control__errorMessage]: !!error })}>
+        {error ? (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })) : footer}
+      </p>
     </div>
   );
 };

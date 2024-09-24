@@ -8,6 +8,8 @@ import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.LogConnectorMessages;
+import io.airbyte.featureflag.LogStateMsgs;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
@@ -32,7 +34,7 @@ public class ReplicationFeatureFlagReader {
    */
   public ReplicationFeatureFlags readReplicationFeatureFlags() {
     return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate(), getWorkloadHeartbeatTimeout(),
-        failOnInvalidChecksum());
+        failOnInvalidChecksum(), logStateMessages(), logConnectorMessages());
   }
 
   private int getWorkloadHeartbeatRate() {
@@ -49,6 +51,14 @@ public class ReplicationFeatureFlagReader {
 
   private boolean failOnInvalidChecksum() {
     return featureFlagClient.boolVariation(FailSyncOnInvalidChecksum.INSTANCE, flagContext);
+  }
+
+  private boolean logStateMessages() {
+    return featureFlagClient.boolVariation(LogStateMsgs.INSTANCE, flagContext);
+  }
+
+  private boolean logConnectorMessages() {
+    return featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, flagContext);
   }
 
 }

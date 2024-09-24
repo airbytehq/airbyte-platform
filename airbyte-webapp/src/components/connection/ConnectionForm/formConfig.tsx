@@ -56,6 +56,7 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
   [SyncMode.full_refresh, DestinationSyncMode.overwrite],
   [SyncMode.incremental, DestinationSyncMode.append],
   [SyncMode.full_refresh, DestinationSyncMode.append],
+  [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
 ];
 
 /**

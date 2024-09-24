@@ -1,7 +1,7 @@
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 import { PageContainer } from "components/PageContainer";
 import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";

@@ -29,6 +29,12 @@ import java.util.stream.Collectors;
  */
 public class CatalogHelpers {
 
+  private final FieldGenerator fieldGenerator;
+
+  public CatalogHelpers(final FieldGenerator fieldGenerator) {
+    this.fieldGenerator = fieldGenerator;
+  }
+
   public static AirbyteStream createAirbyteStream(final String streamName, final Field... fields) {
     // Namespace is null since not all sources set it.
     return createAirbyteStream(streamName, null, Arrays.asList(fields));
@@ -43,39 +49,39 @@ public class CatalogHelpers {
   public static AirbyteStream createAirbyteStream(final String streamName,
                                                   final String namespace,
                                                   final List<Field> fields) {
-    return new AirbyteStream().withName(streamName).withNamespace(namespace)
-        .withJsonSchema(fieldsToJsonSchema(fields))
-        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH));
+    return new AirbyteStream(streamName, fieldsToJsonSchema(fields), List.of(SyncMode.FULL_REFRESH)).withNamespace(namespace);
   }
 
-  public static ConfiguredAirbyteCatalog createConfiguredAirbyteCatalog(final String streamName,
-                                                                        final String namespace,
-                                                                        final Field... fields) {
+  public ConfiguredAirbyteCatalog createConfiguredAirbyteCatalog(final String streamName,
+                                                                 final String namespace,
+                                                                 final Field... fields) {
     return new ConfiguredAirbyteCatalog().withStreams(
         List.of(createConfiguredAirbyteStream(streamName, namespace, fields)));
   }
 
-  public static ConfiguredAirbyteCatalog createConfiguredAirbyteCatalog(final String streamName,
-                                                                        final String namespace,
-                                                                        final List<Field> fields) {
+  public ConfiguredAirbyteCatalog createConfiguredAirbyteCatalog(final String streamName,
+                                                                 final String namespace,
+                                                                 final List<Field> fields) {
     return new ConfiguredAirbyteCatalog().withStreams(
         List.of(createConfiguredAirbyteStream(streamName, namespace, fields)));
   }
 
-  public static ConfiguredAirbyteStream createConfiguredAirbyteStream(final String streamName,
-                                                                      final String namespace,
-                                                                      final Field... fields) {
+  public ConfiguredAirbyteStream createConfiguredAirbyteStream(final String streamName,
+                                                               final String namespace,
+                                                               final Field... fields) {
     return createConfiguredAirbyteStream(streamName, namespace, Arrays.asList(fields));
   }
 
-  public static ConfiguredAirbyteStream createConfiguredAirbyteStream(final String streamName,
-                                                                      final String namespace,
-                                                                      final List<Field> fields) {
-    return new ConfiguredAirbyteStream()
-        .withStream(new AirbyteStream().withName(streamName).withNamespace(namespace)
-            .withJsonSchema(fieldsToJsonSchema(fields))
-            .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
-        .withSyncMode(SyncMode.FULL_REFRESH).withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
+  public ConfiguredAirbyteStream createConfiguredAirbyteStream(final String streamName,
+                                                               final String namespace,
+                                                               final List<Field> fields) {
+    final JsonNode jsonSchema = fieldsToJsonSchema(fields);
+    return new ConfiguredAirbyteStream.Builder()
+        .stream(new AirbyteStream(streamName, jsonSchema, List.of(SyncMode.FULL_REFRESH)).withNamespace(namespace))
+        .syncMode(SyncMode.FULL_REFRESH)
+        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+        .fields(fieldGenerator.getFieldsFromSchema(jsonSchema))
+        .build();
   }
 
   /**
@@ -111,8 +117,7 @@ public class CatalogHelpers {
    * @return stream descriptor
    */
   public static StreamDescriptor extractDescriptor(final AirbyteStream airbyteStream) {
-    return new StreamDescriptor().withName(airbyteStream.getName())
-        .withNamespace(airbyteStream.getNamespace());
+    return airbyteStream.getStreamDescriptor();
   }
 
   /**

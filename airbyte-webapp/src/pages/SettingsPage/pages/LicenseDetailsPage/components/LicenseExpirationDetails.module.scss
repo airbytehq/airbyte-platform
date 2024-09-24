@@ -1,0 +1,9 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.expiredLicensePill {
+  background-color: colors.$red-40;
+  border: variables.$border-thin solid colors.$red-300;
+  border-radius: variables.$border-radius-xs;
+  padding: variables.$spacing-xs variables.$spacing-sm;
+}

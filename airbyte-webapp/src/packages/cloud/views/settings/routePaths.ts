@@ -1,6 +1,8 @@
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const CloudSettingsRoutePaths = {
+  Usage: "usage",
+  Billing: "billing",
   Notifications: SettingsRoutePaths.Notifications,
   Account: SettingsRoutePaths.Account,
   Advanced: SettingsRoutePaths.Advanced,
@@ -9,6 +11,7 @@ export const CloudSettingsRoutePaths = {
   DataResidency: SettingsRoutePaths.DataResidency,
   Workspace: SettingsRoutePaths.Workspace,
   Organization: SettingsRoutePaths.Organization,
+  OrganizationMembers: SettingsRoutePaths.OrganizationMembers,
   AccessManagement: SettingsRoutePaths.AccessManagement,
   DbtCloud: "dbt-cloud",
   Applications: SettingsRoutePaths.Applications,

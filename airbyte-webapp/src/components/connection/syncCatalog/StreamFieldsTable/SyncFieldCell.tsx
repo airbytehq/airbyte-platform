@@ -48,6 +48,7 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
     mode === "readonly" ||
     (syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
     (destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
+    (destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
     isNestedField;
   const showTooltip = isDisabled && mode !== "readonly" && !streamIsDisabled;
 

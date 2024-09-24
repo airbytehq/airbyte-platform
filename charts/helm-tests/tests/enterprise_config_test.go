@@ -239,6 +239,23 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 				verifyEnvVar(t, expected, actual)
 			}
 		})
+
+		t.Run("should configure keycloak to use the 'KEYCLOAK_DATABASE_URL'", func(t *testing.T) {
+			expectedEnvVarKeys := map[string]expectedEnvVar{
+				"KEYCLOAK_DATABASE_URL": expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+			}
+
+			keycloakSS, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+			assert.NotNil(t, keycloakSS)
+			assert.NoError(t, err)
+
+			keycloakEnvVars := envVarMap(keycloakSS.Spec.Template.Spec.Containers[0].Env)
+			for k, expected := range expectedEnvVarKeys {
+				actual, ok := keycloakEnvVars[k]
+				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
+				verifyEnvVar(t, expected, actual)
+			}
+		})
 	})
 }
 

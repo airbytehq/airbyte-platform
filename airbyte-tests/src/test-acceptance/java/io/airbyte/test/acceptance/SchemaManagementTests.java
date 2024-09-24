@@ -52,6 +52,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
+ *
+ * These tests need the `refreshSchema.period.hours` feature flag to return `0`, otherwise asserts
+ * will fail.
  */
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
@@ -304,6 +307,7 @@ class SchemaManagementTests {
             existingStreamAndConfig.getConfig().getSuggested(),
             existingStreamAndConfig.getConfig().getFieldSelectionEnabled(),
             existingStreamAndConfig.getConfig().getSelectedFields(),
+            existingStreamAndConfig.getConfig().getHashedFields(),
             existingStreamAndConfig.getConfig().getMinimumGenerationId(),
             existingStreamAndConfig.getConfig().getGenerationId(),
             existingStreamAndConfig.getConfig().getSyncId())));
@@ -331,6 +335,7 @@ class SchemaManagementTests {
             true,
             false,
             false,
+            List.of(),
             List.of(),
             null,
             null,

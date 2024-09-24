@@ -21,7 +21,7 @@ export const ConnectionPageHeader = () => {
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const connectionTimeline = useExperiment("connection.timeline", false);
+  const connectionTimeline = useExperiment("connection.timeline");
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [

@@ -13,10 +13,11 @@ const IGNORED_LINKS = [
   "demoLink",
 ];
 
-async function run() {
+let retries = 0;
+async function run(queue: Array<[string, string]>) {
   // Query all domains and wait for results
   const results = await Promise.allSettled(
-    Object.entries(links).map(([key, url]) => {
+    queue.map(([key, url]) => {
       if (IGNORED_LINKS.includes(key)) {
         console.log(`⚬ [${key}] ${url} ignored for validation`);
         return Promise.resolve(true);
@@ -42,7 +43,14 @@ async function run() {
 
   const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
 
-  if (failures.length > 0) {
+  if (failures.length > 0 && retries < 3) {
+    retries++;
+    const timeout = 30 * retries;
+    console.log(`\nRetrying ${failures.length} links in ${timeout} seconds`);
+    setTimeout(() => {
+      run(failures.map((r) => [r.reason.key, r.reason.url]));
+    }, timeout * 1000);
+  } else if (failures.length > 0) {
     console.log(`\nThe following URLs were not successful: ${failures.map((r) => r.reason.key).join(", ")}`);
     process.exit(1);
   } else {
@@ -50,4 +58,4 @@ async function run() {
   }
 }
 
-run();
+run(Object.entries(links));

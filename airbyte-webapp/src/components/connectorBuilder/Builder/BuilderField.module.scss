@@ -42,3 +42,9 @@
   overflow: hidden;
   resize: vertical;
 }
+
+.inputPreview {
+  color: colors.$grey-300;
+  font-size: variables.$font-size-sm;
+  margin-top: variables.$spacing-sm;
+}

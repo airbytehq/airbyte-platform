@@ -24,6 +24,7 @@ export enum PageTrackingCodes {
   SETTINGS_ACCOUNT = "Settings.Account",
   SETTINGS_WORKSPACE = "Settings.Workspace",
   SETTINGS_ORGANIZATION = "Settings.Organization",
+  SETTINGS_ORGANIZATIONMEMBERS = "Settings.OrganizationMembers",
   SETTINGS_DESTINATION = "Settings.Destination",
   SETTINGS_SOURCE = "Settings.Source",
   SETTINGS_CONFIGURATION = "Settings.Configuration",

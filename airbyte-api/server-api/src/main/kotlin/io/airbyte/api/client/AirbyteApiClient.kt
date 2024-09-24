@@ -9,6 +9,7 @@ import io.airbyte.api.client.generated.ActorDefinitionVersionApi
 import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.ConnectorBuilderProjectApi
+import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.generated.DeploymentMetadataApi
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.DestinationDefinitionApi
@@ -20,6 +21,7 @@ import io.airbyte.api.client.generated.OperationApi
 import io.airbyte.api.client.generated.OrganizationApi
 import io.airbyte.api.client.generated.PermissionApi
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
+import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.generated.SourceDefinitionApi
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi
@@ -67,6 +69,7 @@ class AirbyteApiClient(
   val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
   val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
   val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
+  val connectorRolloutApi = ConnectorRolloutApi(basePath = basePath, client = httpClient, policy = policy)
   val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
@@ -79,6 +82,7 @@ class AirbyteApiClient(
   val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
   val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
   val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
+  val signalApi = SignalApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
   val sourceDefinitionSpecificationApi =

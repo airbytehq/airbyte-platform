@@ -14,7 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.OperationCreate;
 import io.airbyte.api.model.generated.OperationIdRequestBody;
@@ -31,8 +30,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WebhookConfig;
+import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
@@ -55,6 +57,7 @@ class OperationsHandlerTest {
   public static final String EXECUTION_BODY = "{\"cause\": \"airbyte\"}";
   public static final String EXECUTION_URL_TEMPLATE = "https://cloud.getdbt.com/api/v2/accounts/%d/jobs/%d/run/";
   private ConfigRepository configRepository;
+  private WorkspaceService workspaceService;
   private Supplier<UUID> uuidGenerator;
   private OperationsHandler operationsHandler;
   private StandardSyncOperation standardSyncOperation;
@@ -64,9 +67,10 @@ class OperationsHandlerTest {
   @BeforeEach
   void setUp() throws IOException {
     configRepository = mock(ConfigRepository.class);
+    workspaceService = mock(WorkspaceService.class);
     uuidGenerator = mock(Supplier.class);
 
-    operationsHandler = new OperationsHandler(configRepository, uuidGenerator);
+    operationsHandler = new OperationsHandler(configRepository, workspaceService, uuidGenerator);
     operatorWebhook = new io.airbyte.config.OperatorWebhook()
         .withWebhookConfigId(WEBHOOK_CONFIG_ID)
         .withExecutionBody(Jsons.serialize(new OperatorWebhookDbtCloud().accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID).jobId(DBT_CLOUD_WEBHOOK_JOB_ID)))
@@ -81,7 +85,8 @@ class OperationsHandlerTest {
   }
 
   @Test
-  void testCreateWebhookOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateWebhookOperation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
@@ -95,8 +100,8 @@ class OperationsHandlerTest {
         .operatorConfiguration(new OperatorConfiguration()
             .operatorType(OperatorType.WEBHOOK).webhook(webhookConfig));
 
-    final JsonNode webhookOperationConfig = mock(JsonNode.class);
-    when(webhookOperationConfig.get("customDbtHost")).thenReturn(new TextNode(""));
+    final JsonNode webhookOperationConfig =
+        Jsons.jsonNode(new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withCustomDbtHost(""))));
 
     final StandardSyncOperation expectedPersistedOperation = new StandardSyncOperation()
         .withWorkspaceId(standardSyncOperation.getWorkspaceId())
@@ -111,7 +116,7 @@ class OperationsHandlerTest {
         .withTombstone(false);
 
     final StandardWorkspace workspace = new StandardWorkspace().withWebhookOperationConfigs(webhookOperationConfig);
-    when(configRepository.getStandardWorkspaceNoSecrets(operationCreate.getWorkspaceId(), false)).thenReturn(workspace);
+    when(workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(expectedPersistedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.createOperation(operationCreate);
@@ -131,7 +136,8 @@ class OperationsHandlerTest {
   }
 
   @Test
-  void testUpdateWebhookOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateWebhookOperation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
@@ -172,7 +178,7 @@ class OperationsHandlerTest {
         .withOperatorWebhook(updatedWebhook);
 
     StandardWorkspace workspace = new StandardWorkspace();
-    when(configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
+    when(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation).thenReturn(updatedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.updateOperation(operationUpdate);

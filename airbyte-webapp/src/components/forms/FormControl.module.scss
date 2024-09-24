@@ -25,12 +25,12 @@
     margin: 0;
   }
 
-  &__errorMessage {
+  &__footerMessage {
     position: absolute;
     width: 100%;
     top: variables.$spacing-sm;
     font-size: variables.$font-size-sm;
-    color: colors.$red;
+    color: colors.$grey-400;
     margin: 0;
     transition:
       transform variables.$transition ease-in,
@@ -38,9 +38,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &.control__errorMessage {
+      color: colors.$red;
+    }
   }
 
-  &__errorWrapper {
+  &__footerWrapper {
     position: absolute;
     width: 100%;
     height: var(--space-below);

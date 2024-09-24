@@ -6,42 +6,79 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.Geography;
+import io.airbyte.api.model.generated.UserReadInConnectionEvent;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.User;
+import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.shared.ConnectionEvent.Type;
+import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class ConnectionTimelineEventHelperTest {
 
-  private CurrentUserService currentUserService;
-  private ConnectionTimelineEventService connectionTimelineEventService;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private CurrentUserService currentUserService;
+  private OrganizationPersistence organizationPersistence;
+  private PermissionService permissionService;
+  private UserPersistence userPersistence;
+  private ConnectionTimelineEventService connectionTimelineEventService;
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
   @BeforeEach
-  void beforeEach() {
+  void setup() {
     currentUserService = mock(CurrentUserService.class);
+    organizationPersistence = mock(OrganizationPersistence.class);
+    permissionService = mock(PermissionService.class);
+    userPersistence = mock(UserPersistence.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
-    connectionTimelineEventHelper = new ConnectionTimelineEventHelper(connectionTimelineEventService, currentUserService);
   }
 
   @Test
   void testGetLoadedStats() {
+
+    connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
+        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
 
     final String userStreamName = "user";
     final SyncMode userStreamMode = SyncMode.FULL_REFRESH;
@@ -52,13 +89,16 @@ class ConnectionTimelineEventHelperTest {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog()
         .withStreams(List.of(
-            new ConfiguredAirbyteStream().withSyncMode(userStreamMode).withStream(new AirbyteStream().withName(userStreamName)),
-            new ConfiguredAirbyteStream().withSyncMode(purchaseStreamMode).withStream(new AirbyteStream().withName(purchaseStreamName)),
-            new ConfiguredAirbyteStream().withSyncMode(vendorStreamMode).withStream(new AirbyteStream().withName(vendorStreamName))));
+            new ConfiguredAirbyteStream(new AirbyteStream(userStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), userStreamMode,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(purchaseStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)),
+                purchaseStreamMode, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(vendorStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), vendorStreamMode,
+                DestinationSyncMode.APPEND)));
 
     final JobConfig jobConfig = new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
     final Job job =
-        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L);
+        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
 
     /*
      * on a per stream basis, the stats are "users" -> (100L, 1L), (500L, 8L), (200L, 7L) "purchase" ->
@@ -97,6 +137,128 @@ class ConnectionTimelineEventHelperTest {
     final var result = connectionTimelineEventHelper.buildLoadedStats(job, attemptStatsList);
     assertEquals(expectedBytesLoaded, result.bytes());
     assertEquals(expectedRecordsLoaded, result.records());
+  }
+
+  @Nested
+  class TestGetUserReadInConnectionEvent {
+
+    final Set<String> cloudAirbyteSupportEmailDomain = Set.of("airbyte.io");
+    final Set<String> ossAirbyteSupportEmailDomain = Set.of();
+    final UUID airbyteUserId = UUID.randomUUID();
+    final String airbyteUserName = "IAMZOZO";
+    final String airbyteUserEmail = "xx@airbyte.io";
+    final User airbyteUser = new User()
+        .withUserId(airbyteUserId)
+        .withEmail(airbyteUserEmail)
+        .withName(airbyteUserName);
+    final UUID userId = UUID.randomUUID();
+    final String userEmail = "yy@gmail.com";
+    final String userName = "yy";
+    final User externalUser = new User()
+        .withUserId(userId)
+        .withEmail(userEmail)
+        .withName(userName);
+
+    @Test
+    void notApplicableInOSS() throws IOException {
+      // No support email domains. Should show real name as always.
+      connectionTimelineEventHelper = new ConnectionTimelineEventHelper(ossAirbyteSupportEmailDomain,
+          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
+      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
+          new Permission()
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withUserId(userId)));
+      when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
+          Optional.of(new Organization().withEmail(userEmail)));
+      final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, any());
+      assertEquals(false, userRead.getIsDeleted());
+      assertEquals(userName, userRead.getName());
+    }
+
+    @Test
+    void airbyteSupportInAirbytersInternalWorkspace() throws IOException {
+      // Should show real name.
+      connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
+          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
+      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
+          new Permission()
+              .withPermissionType(PermissionType.INSTANCE_ADMIN)
+              .withUserId(airbyteUserId)));
+      when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
+          Optional.of(new Organization().withEmail(airbyteUserEmail)));
+      final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, any());
+      assertEquals(airbyteUserName, userRead.getName());
+    }
+
+    @Test
+    void airbyteSupportInCustomersExternalWorkspace() throws IOException {
+      // Should hide real name.
+      connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
+          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
+      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
+          new Permission()
+              .withPermissionType(PermissionType.INSTANCE_ADMIN)
+              .withUserId(airbyteUserId)));
+      when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
+          Optional.of(new Organization().withEmail(userEmail)));
+      final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, any());
+      assertEquals(ConnectionTimelineEventHelper.AIRBYTE_SUPPORT_USER_NAME, userRead.getName());
+    }
+
+    @Test
+    void detectNonAirbyteSupportUserInCloud() throws IOException {
+      // Should show real name.
+      connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
+          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+      when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
+      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
+          new Permission()
+              .withPermissionType(PermissionType.INSTANCE_ADMIN)
+              .withUserId(userId)));
+      when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
+          Optional.of(new Organization().withEmail(userEmail)));
+      final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, any());
+      assertEquals(false, userRead.getIsDeleted());
+      assertEquals(userName, userRead.getName());
+    }
+
+  }
+
+  @Test
+  void testLogConnectionSettingsChangedEvent() {
+    connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
+        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+    final UUID connectionId = UUID.randomUUID();
+    final ConnectionRead originalConnectionRead = new ConnectionRead()
+        .connectionId(connectionId)
+        .name("old name")
+        .prefix("old prefix")
+        .notifySchemaChanges(false)
+        .geography(Geography.AUTO)
+        .notifySchemaChangesByEmail(false);
+    final ConnectionUpdate patch = new ConnectionUpdate()
+        .connectionId(connectionId)
+        .name("new name")
+        .prefix("new prefix")
+        .geography(Geography.AUTO)
+        .notifySchemaChanges(true);
+    final Map<String, Map<String, Object>> expectedPatches = new HashMap<>();
+    expectedPatches.put("name", Map.of("from", "old name", "to", "new name"));
+    expectedPatches.put("prefix", Map.of("from", "old prefix", "to", "new prefix"));
+    expectedPatches.put("notifySchemaChanges", Map.of("from", false, "to", true));
+    connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, originalConnectionRead, patch, null, true);
+    ArgumentCaptor<ConnectionSettingsChangedEvent> eventCaptor = ArgumentCaptor.forClass(ConnectionSettingsChangedEvent.class);
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull());
+    ConnectionSettingsChangedEvent capturedEvent = eventCaptor.getValue();
+
+    assertNotNull(capturedEvent);
+    assertEquals(expectedPatches, capturedEvent.getPatches());
+    assertNull(capturedEvent.getUpdateReason());
+    assertEquals(Type.CONNECTION_SETTINGS_UPDATE, capturedEvent.getEventType());
+
   }
 
 }

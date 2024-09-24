@@ -4,53 +4,34 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import static io.airbyte.workers.pod.PodConstants.NO_OP_APPLICATION_NAME;
+import static io.airbyte.workers.pod.PodConstants.REPLICATION_APPLICATION_NAME;
+
+import io.airbyte.commons.storage.DocumentType;
+import io.airbyte.commons.storage.StorageClient;
+import io.airbyte.commons.storage.StorageClientFactory;
 import io.airbyte.config.EnvConfigs;
-import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
-import io.airbyte.workers.process.DockerProcessFactory;
-import io.airbyte.workers.process.KubePortManagerSingleton;
-import io.airbyte.workers.process.KubeProcessFactory;
-import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentType;
-import io.airbyte.workers.storage.StorageClient;
-import io.airbyte.workers.storage.StorageClientFactory;
-import io.airbyte.workers.sync.OrchestratorConstants;
-import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workload.api.client.WorkloadApiClient;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.context.env.Environment;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Factory
 class ContainerOrchestratorFactory {
-
-  private static final String DEFAULT_NETWORK = "host";
-  private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
 
   @Singleton
   public MetricClient metricClient() {
@@ -59,49 +40,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
-  }
-
-  @Singleton
   EnvConfigs envConfigs() {
     return new EnvConfigs();
-  }
-
-  @Singleton
-  @Requires(notEnv = Environment.KUBERNETES)
-  ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
-    return new DockerProcessFactory(
-        workerConfigsProvider,
-        configs.getWorkspaceRoot(), // Path.of(workspaceRoot),
-        EnvVar.WORKSPACE_DOCKER_MOUNT.fetch(EnvVar.WORKSPACE_ROOT.fetch()), // workspaceDockerMount,
-        EnvVar.LOCAL_DOCKER_MOUNT.fetch(EnvVar.LOCAL_ROOT.fetch()), // localDockerMount,
-        EnvVar.DOCKER_NETWORK.fetch(DEFAULT_NETWORK)// dockerNetwork
-    );
-  }
-
-  @Singleton
-  @Requires(env = Environment.KUBERNETES)
-  ProcessFactory kubeProcessFactory(
-                                    final WorkerConfigsProvider workerConfigsProvider,
-                                    final FeatureFlagClient featureFlagClient,
-                                    @Value("${micronaut.server.port}") final int serverPort,
-                                    @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
-      throws UnknownHostException {
-    final var localIp = InetAddress.getLocalHost().getHostAddress();
-    final var kubeHeartbeatUrl = localIp + ":" + serverPort;
-
-    // this needs to have two ports for the source and two ports for the destination (all four must be
-    // exposed)
-    KubePortManagerSingleton.init(OrchestratorConstants.PORTS);
-
-    return new KubeProcessFactory(
-        workerConfigsProvider,
-        featureFlagClient,
-        EnvVar.JOB_KUBE_NAMESPACE.fetch(DEFAULT_JOB_KUBE_NAMESPACE),
-        serviceAccount,
-        new DefaultKubernetesClient(),
-        kubeHeartbeatUrl);
   }
 
   @Singleton
@@ -111,14 +51,12 @@ class ContainerOrchestratorFactory {
                                      final EnvConfigs envConfigs,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
-                                     final Optional<AsyncStateManager> asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
-                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadEnabled, jobOutputDocStore);
-      case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
+      case REPLICATION_APPLICATION_NAME -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
+          replicationWorkerFactory, workloadApiClient, jobOutputDocStore);
+      case NO_OP_APPLICATION_NAME -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };
   }

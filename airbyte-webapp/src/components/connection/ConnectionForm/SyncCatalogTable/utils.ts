@@ -1,4 +1,4 @@
-import { Row } from "@tanstack/react-table";
+import { ColumnFilter, Row } from "@tanstack/react-table";
 import isEqual from "lodash/isEqual";
 
 import {
@@ -10,13 +10,28 @@ import { Path, SyncSchemaField, SyncSchemaFieldObject, traverseSchemaToField } f
 
 import { SyncCatalogUIModel } from "./SyncCatalogTable";
 import { StatusToDisplay } from "../../syncCatalog/StreamsConfigTable/useStreamsConfigTableRowProps";
-import { compareObjectsByFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
+import { compareObjectsByFields, flattenSyncSchemaFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 import { isSameSyncStream } from "../utils";
 
 // Streams
 /**
- * Prepare all levels of rows: stream => fields => nestedFields
+ * Group streams by namespace
+ * @param streams Array of stream nodes
+ */
+const groupStreamsByNamespace = (streams: SyncStreamFieldWithId[]) => {
+  return streams.reduce((acc: Record<string, SyncStreamFieldWithId[]>, stream) => {
+    const namespace = stream.stream?.namespace || ""; // Use empty string if namespace is undefined
+    if (!acc[namespace]) {
+      acc[namespace] = [];
+    }
+    acc[namespace].push(stream);
+    return acc;
+  }, {});
+};
+
+/**
+ * Prepare all levels of rows: namespace => stream => fields => nestedFields
  * @param streams
  * @param initialStreams
  * @param prefix
@@ -25,43 +40,61 @@ export const getSyncCatalogRows = (
   streams: SyncStreamFieldWithId[],
   initialStreams: FormConnectionFormValues["syncCatalog"]["streams"],
   prefix?: string
-) =>
-  streams.map((streamNode) => {
-    const traversedFields = traverseSchemaToField(streamNode.stream?.jsonSchema, streamNode.stream?.name);
+) => {
+  const namespaceGroups = groupStreamsByNamespace(streams);
 
-    const initialStreamNode = initialStreams.find((item) =>
-      isSameSyncStream(item, streamNode.stream?.name, streamNode.stream?.namespace)
-    );
+  return Object.entries(namespaceGroups).map(([namespace, groupedStreams]) => ({
+    rowType: "namespace" as const,
+    name: namespace,
+    subRows: groupedStreams.map((streamNode) => {
+      const traversedFields = traverseSchemaToField(streamNode.stream?.jsonSchema, streamNode.stream?.name);
 
-    return {
-      streamNode,
-      initialStreamNode,
-      name: `${prefix ? prefix : ""}${streamNode.stream?.name || ""}`,
-      namespace: streamNode.stream?.namespace || "",
-      isEnabled: streamNode.config?.selected,
-      traversedFields, // we need all traversed fields for updating field
-      subRows: traversedFields.map((rowField) => {
-        return {
+      const initialStreamNode = initialStreams.find((item) =>
+        isSameSyncStream(item, streamNode.stream?.name, streamNode.stream?.namespace)
+      );
+
+      return {
+        rowType: "stream" as const,
+        streamNode,
+        initialStreamNode,
+        name: `${prefix ? prefix : ""}${streamNode.stream?.name || ""}`,
+        namespace: streamNode.stream?.namespace || "",
+        isEnabled: streamNode.config?.selected,
+        traversedFields, // we need all traversed fields for updating field
+        subRows: traversedFields.map((rowField) => ({
+          rowType: "field" as const,
           streamNode,
           initialStreamNode,
           name: getFieldPathDisplayName(rowField.path),
           field: rowField,
           traversedFields,
-          subRows: rowField?.fields?.map((nestedField) => {
-            return {
+          subRows:
+            rowField?.fields &&
+            flattenSyncSchemaFields(rowField?.fields)?.map((nestedField) => ({
+              rowType: "nestedField" as const,
               streamNode,
               initialStreamNode,
               name: getFieldPathDisplayName(nestedField.path),
               field: nestedField,
               traversedFields,
-            };
-          }),
-        };
-      }),
-    };
-  });
+            })),
+        })),
+      };
+    }),
+  }));
+};
 
-export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0;
+export const isNamespaceRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0 && row.original.rowType === "namespace";
+export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 1 && row.original.rowType === "stream";
+
+/**
+ * Is filter by stream enabled
+ * @param columnFilters - column filters array, for "stream.selected" column the format is: { id: "stream.selected", value: boolean }
+ * @param id - column id
+ * @returns boolean - true or false if filter by stream is enabled, undefined if filter is not set
+ */
+export const getColumnFilterValue = (columnFilters: ColumnFilter[], id: string) =>
+  columnFilters.find((filter) => filter.id === id)?.value;
 
 // Stream  Fields
 /*
@@ -80,6 +113,18 @@ export const checkIsFieldSelected = (field: SyncSchemaField, config: AirbyteStre
 
   // path[0] is the top-level field name for all nested fields
   return !!config?.selectedFields?.find((f) => isEqual(f.fieldPath, [field.path[0]]));
+};
+
+/*
+ * Check is stream field is hashed for sync
+ */
+export const checkIsFieldHashed = (field: SyncSchemaField, config: AirbyteStreamConfiguration): boolean => {
+  // If the stream is disabled, effectively each field is unselected
+  if (!config?.hashedFields || config.hashedFields.length === 0) {
+    return false;
+  }
+
+  return config.hashedFields.some((f) => isEqual(f.fieldPath, field.path));
 };
 
 export const pathDisplayName = (path: Path): string => path.join(".");
@@ -122,7 +167,7 @@ export const getFieldChangeStatus = (
   initialStreamNode: AirbyteStreamAndConfiguration,
   streamNode: SyncStreamFieldWithId,
   field?: SyncSchemaField
-): Exclude<StatusToDisplay, "changed"> => {
+): StatusToDisplay => {
   // if stream is disabled then disable all fields
   if (!streamNode.config?.selected) {
     return "disabled";
@@ -138,12 +183,8 @@ export const getFieldChangeStatus = (
   const fieldExistInSelectedFields = streamNode?.config?.selectedFields?.find(findField);
   const fieldExistsInSelectedFieldsInitialValue = initialStreamNode?.config?.selectedFields?.find(findField);
 
-  // if initially field selection was enabled
   if (initialStreamNode?.config?.fieldSelectionEnabled) {
     if (streamNode?.config?.fieldSelectionEnabled) {
-      if (fieldExistsInSelectedFieldsInitialValue && fieldExistInSelectedFields) {
-        return "unchanged";
-      }
       if (fieldExistsInSelectedFieldsInitialValue && !fieldExistInSelectedFields) {
         return "removed";
       }
@@ -151,22 +192,29 @@ export const getFieldChangeStatus = (
       if (!fieldExistsInSelectedFieldsInitialValue && fieldExistInSelectedFields) {
         return "added";
       }
-
-      return "unchanged";
     }
 
-    if (!streamNode?.config?.fieldSelectionEnabled) {
-      return fieldExistsInSelectedFieldsInitialValue ? "unchanged" : "added";
+    // stream field selection was disabled to start with
+    // now it is enabled, so if this field was not part
+    // of the initial selection it has been added
+    if (!streamNode?.config?.fieldSelectionEnabled && !fieldExistsInSelectedFieldsInitialValue) {
+      return "added";
     }
   }
 
   // if initially field selection was disabled
   if (!initialStreamNode?.config?.fieldSelectionEnabled) {
-    if (streamNode?.config?.fieldSelectionEnabled) {
-      return fieldExistInSelectedFields ? "unchanged" : "removed";
+    if (streamNode?.config?.fieldSelectionEnabled && !fieldExistInSelectedFields) {
+      return "removed";
     }
-    if (!streamNode?.config?.fieldSelectionEnabled) {
-      return "unchanged";
+  }
+
+  // if the field's hashing was changed
+  if (initialStreamNode?.config && streamNode.config) {
+    const wasHashed = checkIsFieldHashed(field, initialStreamNode?.config);
+    const isHashed = checkIsFieldHashed(field, streamNode?.config);
+    if (wasHashed !== isHashed) {
+      return "changed";
     }
   }
 
@@ -176,7 +224,7 @@ export const getFieldChangeStatus = (
 export const getRowChangeStatus = (row: Row<SyncCatalogUIModel>) => {
   const { streamNode, initialStreamNode, field } = row.original;
 
-  if (!initialStreamNode) {
+  if (!initialStreamNode || !streamNode) {
     return {
       rowChangeStatus: "unchanged",
     };

@@ -88,6 +88,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerRepository("overwrite me")
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L)
+        .withLanguage("manifest-only")
         .withSpec(new ConnectorSpecification().withAdditionalProperty("overwrite", "me").withProtocolVersion("0.0.0"));
   }
 

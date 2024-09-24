@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ExternalLink } from "components/ui/Link";
 
+import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
@@ -139,13 +140,13 @@ export const useListConnectionEventsInfinite = (
   );
 };
 
-export const useGetConnectionEvent = (connectionEventId: string | null) => {
+export const useGetConnectionEvent = (connectionEventId: string | null, connectionId: string) => {
   const requestOptions = useRequestOptions();
 
   return useQuery(
     connectionsKeys.event(connectionEventId ?? ""),
     async () => {
-      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "", connectionId }, requestOptions);
     },
     {
       enabled: !!connectionEventId,
@@ -328,6 +329,11 @@ export const useGetConnection = (
     () => getConnectionQuery({ connectionId, withRefreshedCatalog: false }),
     options
   );
+};
+
+export const useCurrentConnection = () => {
+  const connectionId = useCurrentConnectionId();
+  return useGetConnection(connectionId);
 };
 
 export const useCreateConnection = () => {
