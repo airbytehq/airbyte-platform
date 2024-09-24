@@ -6,6 +6,9 @@ import { config } from "core/config";
 import { useAuthService } from "core/services/auth";
 
 import "./zendesk.scss";
+import { ACTIONS } from "./constants";
+import { UserEvent } from "./types";
+import { useUpdateStatusMessage } from "./useUpdateStatusMessage";
 
 declare global {
   interface Window {
@@ -18,11 +21,26 @@ export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ ch
   const { zendeskKey } = config;
   const { user } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
+  const { checkAndAddStatusMessage } = useUpdateStatusMessage();
 
   useEffectOnce(() => {
     if (zendeskKey) {
       const script = document.createElement("script");
       script.id = "ze-snippet";
+      script.onload = () => {
+        if (typeof window.zE === "function") {
+          try {
+            window.zE("webWidget:on", "userEvent", (userEvent: UserEvent) => {
+              if (userEvent.action === ACTIONS.helpCenterShown || userEvent.action === ACTIONS.contactFormShown) {
+                console.log("Zendesk userEventAA:", userEvent);
+                checkAndAddStatusMessage(userEvent.action);
+              }
+            });
+          } catch (e) {}
+        } else {
+          console.warn("Zendesk widget not available yet");
+        }
+      };
       script.src = `https://static.zdassets.com/ekr/snippet.js?key=${zendeskKey}`;
       document.body.appendChild(script);
     }

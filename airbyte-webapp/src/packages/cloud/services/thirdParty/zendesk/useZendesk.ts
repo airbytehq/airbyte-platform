@@ -8,6 +8,7 @@ export const useZendesk = () => {
     try {
       if (window.zE) {
         window.zE("webWidget", "open");
+
         opened = true;
       }
     } catch (e) {}
