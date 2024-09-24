@@ -10,7 +10,8 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.BreakingChanges
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
-import io.airbyte.config.ConnectorReleases
+import io.airbyte.config.ConnectorReleasesDestination
+import io.airbyte.config.ConnectorReleasesSource
 import io.airbyte.config.VersionBreakingChange
 import io.airbyte.config.helpers.ConnectorRegistryConverters
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason
@@ -555,7 +556,14 @@ internal class ApplyDefinitionsHelperTest {
     private const val PROTOCOL_VERSION = "2.0.0"
 
     private val POSTGRES_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")
-    private val registryBreakingChanges: BreakingChanges =
+    private val sourceRegistryBreakingChanges: BreakingChanges =
+      BreakingChanges().withAdditionalProperty(
+        BREAKING_CHANGE_VERSION,
+        VersionBreakingChange()
+          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"),
+      )
+
+    private val destinationRegistryBreakingChanges: BreakingChanges =
       BreakingChanges().withAdditionalProperty(
         BREAKING_CHANGE_VERSION,
         VersionBreakingChange()
@@ -578,7 +586,7 @@ internal class ApplyDefinitionsHelperTest {
         .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
         .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres/new")
         .withSpec(ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
-        .withReleases(ConnectorReleases().withBreakingChanges(registryBreakingChanges))
+        .withReleases(ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges))
 
     private val S3_ID: UUID = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362")
     private val DESTINATION_S3: ConnectorRegistryDestinationDefinition =
@@ -597,7 +605,7 @@ internal class ApplyDefinitionsHelperTest {
         .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
         .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3/new")
         .withSpec(ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
-        .withReleases(ConnectorReleases().withBreakingChanges(registryBreakingChanges))
+        .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationRegistryBreakingChanges))
 
     @JvmStatic
     fun updateScenario(): Stream<Arguments> {

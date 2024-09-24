@@ -64,7 +64,7 @@ properties:
   allowedHosts:
     "$ref": AllowedHosts.yaml
   releases:
-    "$ref": ConnectorReleases.yaml
+    "$ref": ConnectorReleasesDestination.yaml
   supportsRefreshes:
     type: boolean
     description: an optional flag indicating whether the refresh operation is available for this destination.
