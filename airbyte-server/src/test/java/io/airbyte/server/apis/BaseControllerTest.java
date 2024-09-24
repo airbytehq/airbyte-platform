@@ -13,6 +13,7 @@ import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandle
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
+import io.airbyte.commons.server.handlers.DiagnosticToolHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
@@ -278,6 +279,14 @@ abstract class BaseControllerTest {
   @Replaces(DeploymentMetadataHandler.class)
   DeploymentMetadataHandler mmDeploymentMetadataHandler() {
     return deploymentMetadataHandler;
+  }
+
+  DiagnosticToolHandler diagnosticToolHandler = Mockito.mock(DiagnosticToolHandler.class);
+
+  @MockBean(DiagnosticToolHandler.class)
+  @Replaces(DiagnosticToolHandler.class)
+  DiagnosticToolHandler mmDiagnosticToolHandler() {
+    return diagnosticToolHandler;
   }
 
   @MockBean(SynchronousSchedulerClient.class)
