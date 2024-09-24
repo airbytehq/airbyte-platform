@@ -104,7 +104,7 @@ public class InstanceConfigurationHandler {
         .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
         .version(airbyteVersion.serialize())
-        .licenseStatus(getLicenseStatus())
+        .licenseStatus(currentLicenseStatus())
         .licenseExpirationDate(licenseExpirationDate())
         .auth(getAuthConfiguration())
         .initialSetupComplete(initialSetupComplete)
@@ -138,14 +138,6 @@ public class InstanceConfigurationHandler {
 
     // Return the updated instance configuration
     return getInstanceConfiguration();
-  }
-
-  private LicenseStatus getLicenseStatus() {
-    if (airbyteEdition.equals(AirbyteEdition.PRO) && activeAirbyteLicense.isPresent()) {
-      return Enums.convertTo(activeAirbyteLicense.get().getLicenseType(), LicenseStatus.class);
-    } else {
-      return null;
-    }
   }
 
   private AuthConfiguration getAuthConfiguration() {
@@ -222,7 +214,7 @@ public class InstanceConfigurationHandler {
           .maxEditors(license.maxEditors().orElse(null))
           .maxNodes(license.maxNodes().orElse(null))
           .usedNodes(nodesUsage())
-          .licenseStatus(getLicenseStatus());
+          .licenseStatus(currentLicenseStatus());
     }
     return null;
   }
@@ -247,9 +239,12 @@ public class InstanceConfigurationHandler {
 
   @VisibleForTesting
   LicenseStatus currentLicenseStatus() {
-    if (activeAirbyteLicense.isEmpty()
-        || activeAirbyteLicense.get().getLicense().isEmpty()
-        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID) {
+    if (activeAirbyteLicense.isEmpty()) {
+      return null;
+    }
+    if (activeAirbyteLicense.get().getLicense().isEmpty()
+        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID
+        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.PRO) {
       return LicenseStatus.INVALID;
     }
     final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense().get();
