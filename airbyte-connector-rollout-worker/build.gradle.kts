@@ -27,17 +27,10 @@ dependencies {
   implementation("io.temporal:temporal-sdk:1.25.0")
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-connector-rollout-shared"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(libs.airbyte.protocol)
-
-  annotationProcessor("io.micronaut:micronaut-http-validation")
-  annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
-  implementation("io.micronaut.serde:micronaut-serde-jackson")
-  compileOnly("io.micronaut:micronaut-http-client")
-  testImplementation("io.micronaut:micronaut-http-client")
-  runtimeOnly("org.yaml:snakeyaml:1.33")
-
 }
 
 application {

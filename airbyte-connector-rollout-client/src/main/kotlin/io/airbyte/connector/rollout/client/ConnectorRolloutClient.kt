@@ -4,22 +4,18 @@
 
 package io.airbyte.connector.rollout.client
 
-import io.airbyte.config.ConnectorEnumRolloutState
+import io.airbyte.connector.rollout.shared.Constants
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
-import io.airbyte.connector.rollout.worker.Constants
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
 import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
 import io.temporal.client.WorkflowUpdateException
 import jakarta.inject.Inject
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -28,7 +24,7 @@ import java.util.UUID
 class ConnectorRolloutClient
   @Inject
   constructor(
-    @Named("connectorRolloutClientWorkflowClient") private val client: WorkflowClient,
+    private val workflowClient: WorkflowClientWrapper,
   ) {
     companion object {
       private val log = LoggerFactory.getLogger(ConnectorRolloutClient::class.java)
@@ -46,13 +42,13 @@ class ConnectorRolloutClient
       return "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
     }
 
-    private fun <I, T> executeWorkflow(
+    private fun <I, T> executeUpdate(
       input: I,
       workflowId: String,
       action: (ConnectorRolloutWorkflow, I) -> T,
     ): T {
       return try {
-        val workflowStub = client.newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowId)
+        val workflowStub = workflowClient.getClient().newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowId)
         log.info("Executing workflow action for $workflowId")
         action(workflowStub, input)
       } catch (e: WorkflowUpdateException) {
@@ -69,7 +65,7 @@ class ConnectorRolloutClient
 
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
       val workflowStub =
-        client.newWorkflowStub(
+        workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
           WorkflowOptions.newBuilder()
             .setWorkflowId(workflowId)
@@ -81,35 +77,18 @@ class ConnectorRolloutClient
       log.info("Starting workflow $workflowId")
       val workflowExecution: WorkflowExecution = WorkflowClient.start(workflowStub::run, input)
       log.info("Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}")
-      val startOutput = executeWorkflow(input, workflowId) { stub, i -> stub.startRollout(i) }
+      val startOutput = executeUpdate(input, workflowId) { stub, i -> stub.startRollout(i) }
       log.info("Rollout $workflowId started with ID: ${workflowExecution.workflowId}")
       return startOutput
     }
 
-    fun findRollout(input: ConnectorRolloutActivityInputFind): List<ConnectorRolloutOutput> {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeWorkflow(input, workflowId) { stub, i -> stub.findRollout(i) }
-    }
-
-    fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeWorkflow(input, workflowId) { stub, i -> stub.getRollout(i) }
-    }
-
     fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeWorkflow(input, workflowId) { stub, i -> stub.doRollout(i) }
+      return executeUpdate(input, workflowId) { stub, i -> stub.doRollout(i) }
     }
 
     fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeWorkflow(input, workflowId) { stub, i -> stub.finalizeRollout(i) }
-    }
-
-    fun getWorkflowResult(input: ConnectorRolloutActivityInputFinalize): ConnectorEnumRolloutState {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      val workflowStubUntyped = client.newUntypedWorkflowStub(workflowId)
-      log.info("Getting workflow result for ID: $workflowId")
-      return workflowStubUntyped.getResult(ConnectorEnumRolloutState::class.java)
+      return executeUpdate(input, workflowId) { stub, i -> stub.finalizeRollout(i) }
     }
   }

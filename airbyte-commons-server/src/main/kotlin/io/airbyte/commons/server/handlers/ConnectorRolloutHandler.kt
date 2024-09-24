@@ -6,6 +6,9 @@ package io.airbyte.commons.server.handlers
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
@@ -16,6 +19,10 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
@@ -31,7 +38,6 @@ import java.util.UUID
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@Transactional("config")
 @Singleton
 open class ConnectorRolloutHandler
   @Inject
@@ -39,6 +45,7 @@ open class ConnectorRolloutHandler
     private val connectorRolloutService: ConnectorRolloutService,
     private val actorDefinitionService: ActorDefinitionService,
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
+    private val connectorRolloutClient: ConnectorRolloutClient,
   ) {
     @VisibleForTesting
     open fun buildConnectorRolloutRead(connectorRollout: ConnectorRollout): ConnectorRolloutRead {
@@ -127,29 +134,53 @@ open class ConnectorRolloutHandler
       }
     }
 
-    @VisibleForTesting
-    open fun getAndValidateStartRequest(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRollout {
+    open fun getOrCreateAndValidateManualStartInput(
+      dockerRepository: String,
+      actorDefinitionId: UUID,
+      dockerImageTag: String,
+    ): ConnectorRollout {
       val actorDefinitionVersion =
         actorDefinitionService.getActorDefinitionVersion(
-          connectorRolloutStart.actorDefinitionId,
-          connectorRolloutStart.dockerImageTag,
+          actorDefinitionId,
+          dockerImageTag,
         )
       if (actorDefinitionVersion.isEmpty) {
         throw InvalidRequest(
-          "Actor definition version not found for actor definition id: ${connectorRolloutStart.actorDefinitionId} " +
-            "and docker image tag: ${connectorRolloutStart.dockerImageTag}",
+          "Actor definition version not found for actor definition id: $actorDefinitionId " +
+            "and docker image tag: $dockerImageTag",
+        )
+      }
+      if (actorDefinitionVersion.get().dockerRepository != dockerRepository) {
+        throw InvalidRequest(
+          "Actor definition version does not match docker repository: $dockerRepository ",
         )
       }
       val connectorRollouts: List<ConnectorRollout> =
         connectorRolloutService.listConnectorRollouts(
-          connectorRolloutStart.actorDefinitionId,
+          actorDefinitionId,
           actorDefinitionVersion.get().versionId,
         )
 
       val initializedRollouts = connectorRollouts.filter { it.state == ConnectorEnumRolloutState.INITIALIZED }
+      val initialVersion =
+        actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
+          ?: throw InvalidRequest("Could not find initial version for actor definition id: $actorDefinitionId")
 
-      if (initializedRollouts.size != 1) {
-        throw InvalidRequest("Expected exactly 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}.")
+      if (initializedRollouts.isEmpty()) {
+        val connectorRollout =
+          ConnectorRollout()
+            .withId(UUID.randomUUID())
+            .withActorDefinitionId(actorDefinitionId)
+            .withReleaseCandidateVersionId(actorDefinitionVersion.get().versionId)
+            .withInitialVersionId(initialVersion.get().versionId)
+            .withState(ConnectorEnumRolloutState.INITIALIZED)
+            .withHasBreakingChanges(false)
+        connectorRolloutService.writeConnectorRollout(connectorRollout)
+        return connectorRollout
+      }
+
+      if (initializedRollouts.size > 1) {
+        throw InvalidRequest("Expected at most 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}.")
       }
       val finalEnumStates =
         ConnectorEnumRolloutState.entries.filter {
@@ -166,7 +197,17 @@ open class ConnectorRolloutHandler
       if (rolloutsInInvalidState.isNotEmpty()) {
         throw InvalidRequest("Found rollouts in invalid states: ${rolloutsInInvalidState.map { it.id }}.")
       }
-      val connectorRollout = initializedRollouts.first()
+      return initializedRollouts.first()
+    }
+
+    @VisibleForTesting
+    open fun getAndValidateStartRequest(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRollout {
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
+      if (connectorRollout.state != ConnectorEnumRolloutState.INITIALIZED) {
+        throw InvalidRequest(
+          "Connector rollout must be in INITIALIZED state to start the rollout, but was in state " + connectorRollout.state.toString(),
+        )
+      }
       return connectorRollout
         .withWorkflowRunId(connectorRolloutStart.workflowRunId)
         .withState(ConnectorEnumRolloutState.WORKFLOW_STARTED)
@@ -258,18 +299,21 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(insertedConnectorRollout)
     }
 
+    @Transactional("config")
     open fun startConnectorRollout(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndValidateStartRequest(connectorRolloutStart)
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return buildConnectorRolloutRead(updatedConnectorRollout)
     }
 
+    @Transactional("config")
     open fun doConnectorRollout(connectorRolloutUpdate: ConnectorRolloutRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndRollOutConnectorRollout(connectorRolloutUpdate)
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return buildConnectorRolloutRead(updatedConnectorRollout)
     }
 
+    @Transactional("config")
     open fun finalizeConnectorRollout(connectorRolloutFinalize: ConnectorRolloutFinalizeRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndValidateFinalizeRequest(connectorRolloutFinalize)
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -279,5 +323,52 @@ open class ConnectorRolloutHandler
     open fun getConnectorRollout(id: UUID): ConnectorRolloutRead {
       val connectorRollout = connectorRolloutService.getConnectorRollout(id)
       return buildConnectorRolloutRead(connectorRollout)
+    }
+
+    open fun manualStartConnectorRollout(connectorRolloutWorkflowStart: ConnectorRolloutManualStartRequestBody): ConnectorRolloutRead {
+      val rollout =
+        getOrCreateAndValidateManualStartInput(
+          connectorRolloutWorkflowStart.dockerRepository,
+          connectorRolloutWorkflowStart.actorDefinitionId,
+          connectorRolloutWorkflowStart.dockerImageTag,
+        )
+      connectorRolloutClient.startWorkflow(
+        ConnectorRolloutActivityInputStart(
+          connectorRolloutWorkflowStart.dockerRepository,
+          connectorRolloutWorkflowStart.dockerImageTag,
+          connectorRolloutWorkflowStart.actorDefinitionId,
+          rollout.id,
+        ),
+      )
+
+      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(rollout.id))
+    }
+
+    open fun manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
+      connectorRolloutClient.doRollout(
+        ConnectorRolloutActivityInputRollout(
+          connectorRolloutWorkflowUpdate.dockerRepository,
+          connectorRolloutWorkflowUpdate.dockerImageTag,
+          connectorRolloutWorkflowUpdate.actorDefinitionId,
+          connectorRolloutWorkflowUpdate.id,
+          connectorRolloutWorkflowUpdate.actorIds,
+        ),
+      )
+      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutWorkflowUpdate.id))
+    }
+
+    open fun manualFinalizeConnectorRolloutWorkflowUpdate(
+      connectorRolloutFinalizeWorkflowUpdate: ConnectorRolloutManualFinalizeRequestBody,
+    ): ConnectorRolloutRead {
+      connectorRolloutClient.finalizeRollout(
+        ConnectorRolloutActivityInputFinalize(
+          connectorRolloutFinalizeWorkflowUpdate.dockerRepository,
+          connectorRolloutFinalizeWorkflowUpdate.dockerImageTag,
+          connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId,
+          connectorRolloutFinalizeWorkflowUpdate.id,
+          ConnectorRolloutFinalState.fromValue(connectorRolloutFinalizeWorkflowUpdate.state.toString()),
+        ),
+      )
+      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutFinalizeWorkflowUpdate.id))
     }
   }

@@ -39,8 +39,7 @@ Navigate to the Temporal UI at http://localhost:8080 to verify that Temporal UI 
 Execute commands using the CLI:
 ```sh
 # Start a rollout for the source-faker connector with version 6.2.11
-# Note: we temporarily give a fake rollout ID (until hooked up to the publishing pipeline)
-./gradlew :oss:airbyte-connector-rollout-client:runConnectorRolloutCLI --args="start -d airbyte/source-faker -i 6.2.11 -a dfd88b22-b603-4c3d-aad7-3701784586b1 -r aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa"
+./gradlew :oss:airbyte-connector-rollout-client:runConnectorRolloutCLI --args="start -d airbyte/source-faker -i 6.2.11 -a dfd88b22-b603-4c3d-aad7-3701784586b1"
 
 # Find information about all rollouts for source-faker version 6.2.11
 # This can be used to get the rollout ID

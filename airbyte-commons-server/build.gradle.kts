@@ -61,6 +61,8 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-connector-rollout-client"))
+  implementation(project(":oss:airbyte-connector-rollout-shared"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-mappers"))

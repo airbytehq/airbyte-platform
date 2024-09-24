@@ -6,17 +6,17 @@ package io.airbyte.connector.rollout.worker
 
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivity
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
 import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
 import io.temporal.failure.ApplicationFailure

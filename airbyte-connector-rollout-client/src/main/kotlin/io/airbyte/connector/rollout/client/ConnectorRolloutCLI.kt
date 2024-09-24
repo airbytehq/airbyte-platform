@@ -5,13 +5,17 @@
 package io.airbyte.connector.rollout.client
 
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.ConnectorRolloutApi
+import io.airbyte.api.client.model.generated.ConnectorRolloutListRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutManualStartRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutReadRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.config.ConnectorRolloutFinalState
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
 import io.micronaut.configuration.picocli.PicocliRunner
 import jakarta.inject.Inject
 import org.slf4j.LoggerFactory
@@ -24,6 +28,7 @@ import java.util.UUID
 val objectMapper =
   jacksonObjectMapper().apply {
     enable(SerializationFeature.INDENT_OUTPUT)
+    registerModule(JavaTimeModule())
   }
 
 @Command(
@@ -34,7 +39,7 @@ val objectMapper =
 )
 class ConnectorRolloutCLI : Runnable {
   @Inject
-  private lateinit var connectorRolloutClient: ConnectorRolloutClient
+  private lateinit var airbyteApiClient: AirbyteApiClient
   private val availableCommands = RolloutCommand.entries.joinToString(", ") { it.command }
 
   @Parameters(
@@ -94,88 +99,83 @@ class ConnectorRolloutCLI : Runnable {
       return
     }
 
+    val rolloutClient = airbyteApiClient.connectorRolloutApi
+
     val rolloutCommand = RolloutCommand.fromString(command)
     log.info("CLI Running command: $rolloutCommand")
 
     when (rolloutCommand) {
       RolloutCommand.START -> {
         val startInput =
-          ConnectorRolloutActivityInputStart(
+          ConnectorRolloutManualStartRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
-            rolloutId!!,
           )
-        startWorkflow(connectorRolloutClient, startInput)
+        startWorkflow(rolloutClient, startInput)
       }
       RolloutCommand.FIND -> {
         val findInput =
-          ConnectorRolloutActivityInputFind(
+          ConnectorRolloutListRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
           )
-        findRollout(connectorRolloutClient, findInput)
+        findRollout(rolloutClient, findInput)
       }
       RolloutCommand.GET -> {
-        val getInput =
-          ConnectorRolloutActivityInputGet(
-            dockerRepository,
-            dockerImageTag,
-            actorDefinitionId,
-            rolloutId!!,
-          )
-        getRollout(connectorRolloutClient, getInput)
+        val getInput = ConnectorRolloutReadRequestBody(rolloutId!!)
+        getRollout(rolloutClient, getInput)
       }
       RolloutCommand.ROLLOUT -> {
         val rolloutInput =
-          ConnectorRolloutActivityInputRollout(
+          ConnectorRolloutManualRolloutRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
             actorIds!!,
           )
-        doRollout(connectorRolloutClient, rolloutInput)
+        doRollout(rolloutClient, rolloutInput)
       }
       RolloutCommand.PROMOTE -> {
         val finalizeInput =
-          ConnectorRolloutActivityInputFinalize(
+          ConnectorRolloutManualFinalizeRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            ConnectorRolloutFinalState.SUCCEEDED,
+            ConnectorRolloutStateTerminal.valueOf(ConnectorRolloutFinalState.SUCCEEDED.toString()),
             null,
             null,
           )
-        finalizeRollout(connectorRolloutClient, finalizeInput)
+        finalizeRollout(rolloutClient, finalizeInput)
       }
       RolloutCommand.FAIL -> {
         val finalizeInput =
-          ConnectorRolloutActivityInputFinalize(
+          ConnectorRolloutManualFinalizeRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            ConnectorRolloutFinalState.FAILED_ROLLED_BACK,
+            ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
             null,
             null,
           )
-        finalizeRollout(connectorRolloutClient, finalizeInput)
+        finalizeRollout(rolloutClient, finalizeInput)
       }
       RolloutCommand.CANCEL -> {
         val finalizeInput =
-          ConnectorRolloutActivityInputFinalize(
+          ConnectorRolloutManualFinalizeRequestBody(
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            ConnectorRolloutFinalState.CANCELED_ROLLED_BACK,
+            ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK,
             null,
             null,
           )
-        finalizeRollout(connectorRolloutClient, finalizeInput)
+        finalizeRollout(rolloutClient, finalizeInput)
       }
       else -> {
         log.info("CLI unknown command $command")
@@ -185,45 +185,42 @@ class ConnectorRolloutCLI : Runnable {
   }
 
   private fun startWorkflow(
-    client: ConnectorRolloutClient,
-    input: ConnectorRolloutActivityInputStart,
+    client: ConnectorRolloutApi,
+    input: ConnectorRolloutManualStartRequestBody,
   ) {
     logFormatted("CLI.startWorkflow with input", input)
-    logFormatted("CLI Rollout workflows status", client.startWorkflow(input))
+    logFormatted("CLI Rollout workflows status", client.manualStartConnectorRollout(input))
   }
 
   private fun findRollout(
-    client: ConnectorRolloutClient,
-    input: ConnectorRolloutActivityInputFind,
+    client: ConnectorRolloutApi,
+    input: ConnectorRolloutListRequestBody,
   ) {
-    logFormatted("CLI Rollout workflows status", client.findRollout(input))
+    logFormatted("CLI Rollout workflows status", client.getConnectorRolloutsList(input))
   }
 
   private fun getRollout(
-    client: ConnectorRolloutClient,
-    input: ConnectorRolloutActivityInputGet,
+    client: ConnectorRolloutApi,
+    input: ConnectorRolloutReadRequestBody,
   ) {
-    logFormatted("CLI Rollout workflows status", client.getRollout(input))
+    logFormatted("CLI Rollout workflows status", client.getConnectorRolloutById(input))
   }
 
   private fun doRollout(
-    client: ConnectorRolloutClient,
-    input: ConnectorRolloutActivityInputRollout,
+    client: ConnectorRolloutApi,
+    input: ConnectorRolloutManualRolloutRequestBody,
   ) {
     if (actorIds.isNullOrEmpty()) {
       throw RuntimeException("CLI Error - please provide a comma-separated list of actor IDs using the --actor-ids option.")
     }
-    logFormatted("CLI Rollout workflows status", client.doRollout(input))
+    logFormatted("CLI Rollout workflows status", client.manualDoConnectorRollout(input))
   }
 
   private fun finalizeRollout(
-    client: ConnectorRolloutClient,
-    input: ConnectorRolloutActivityInputFinalize,
+    client: ConnectorRolloutApi,
+    input: ConnectorRolloutManualFinalizeRequestBody,
   ) {
-    val rolloutOutput = client.finalizeRollout(input)
-    logFormatted("CLI Rollout workflow status", rolloutOutput)
-    val workflowResult = client.getWorkflowResult(input)
-    log.info("CLI Workflow result: $workflowResult")
+    logFormatted("CLI Rollout finalized", client.manualFinalizeConnectorRollout(input))
   }
 
   private fun <T> logFormatted(

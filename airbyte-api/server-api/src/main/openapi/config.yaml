@@ -5076,6 +5076,78 @@ paths:
       tags:
         - connector_rollout
 
+  /v1/connector_rollout/manual_start:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualStartRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually start a connector rollout workflow. This will update the state of the rollout from INITIALIZED to WORKFLOW_STARTED, and add the Temporal run ID of the workflow to the rollout entry.
+      operationId: manualStartConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_rollout:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualRolloutRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually roll out a release candidate. This will pin the actors to the release candidate version ID.
+      operationId: manualDoConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_finalize:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualFinalizeRequestBody"
+      responses:
+        "200":
+          description: Finalized connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutFinalizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
+      operationId: manualFinalizeConnectorRollout
+      tags:
+        - connector_rollout
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -7244,17 +7316,11 @@ components:
     ConnectorRolloutStartRequestBody:
       type: object
       required:
-        - docker_repository
-        - docker_image_tag
-        - actor_definition_id
+        - id
         - workflow_run_id
         - rollout_strategy
       properties:
-        docker_repository:
-          type: string
-        docker_image_tag:
-          type: string
-        actor_definition_id:
+        id:
           type: string
           format: uuid
         workflow_run_id:
@@ -7321,6 +7387,71 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutManualStartRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutManualRolloutRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - id
+        - actor_ids
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        actor_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorId"
+
+    ConnectorRolloutManualFinalizeRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - id
+        - state
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutStateTerminal"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
 
     # WORKSPACE
     WorkspaceId:

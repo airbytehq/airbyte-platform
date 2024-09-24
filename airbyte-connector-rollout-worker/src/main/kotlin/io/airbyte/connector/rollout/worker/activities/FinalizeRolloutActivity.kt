@@ -4,8 +4,8 @@
 
 package io.airbyte.connector.rollout.worker.activities
 
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 

@@ -4,6 +4,7 @@
 
 package io.airbyte.connector.rollout.worker
 
+import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl

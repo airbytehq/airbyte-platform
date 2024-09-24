@@ -5,12 +5,12 @@
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.config.ConnectorEnumRolloutState
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputGet
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.temporal.workflow.UpdateMethod
 import io.temporal.workflow.UpdateValidatorMethod
 import io.temporal.workflow.WorkflowInterface

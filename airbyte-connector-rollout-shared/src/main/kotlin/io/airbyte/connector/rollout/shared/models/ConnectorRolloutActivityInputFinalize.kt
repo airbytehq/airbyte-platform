@@ -1,4 +1,4 @@
-package io.airbyte.connector.rollout.worker.models
+package io.airbyte.connector.rollout.shared.models
 
 import io.airbyte.config.ConnectorRolloutFinalState
 import java.util.UUID

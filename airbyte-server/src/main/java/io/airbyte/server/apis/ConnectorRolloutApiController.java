@@ -13,6 +13,9 @@ import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutListRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutRead;
 import io.airbyte.api.model.generated.ConnectorRolloutReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutReadResponse;
@@ -134,6 +137,56 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
       final ConnectorRolloutRead connectorRollout = connectorRolloutHandler.getConnectorRollout(connectorRolloutId);
 
       return new ConnectorRolloutReadResponse().data(connectorRollout);
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/manual_start")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutStartResponse manualStartConnectorRollout(@Body final ConnectorRolloutManualStartRequestBody connectorRolloutStartRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead startedConnectorRollout = connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutStartRequestBody);
+
+      final ConnectorRolloutStartResponse response = new ConnectorRolloutStartResponse();
+      response.setData(startedConnectorRollout);
+      return response;
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/manual_rollout")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead updatedConnectorRollout =
+          connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutManualRolloutRequestBody);
+
+      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
+      response.setData(updatedConnectorRollout);
+      return response;
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/manual_finalize")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutFinalizeResponse manualFinalizeConnectorRollout(@Body final ConnectorRolloutManualFinalizeRequestBody connectorRolloutFinalizeRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead finalizedConnectorRollout =
+          connectorRolloutHandler.manualFinalizeConnectorRolloutWorkflowUpdate(connectorRolloutFinalizeRequestBody);
+
+      final ConnectorRolloutFinalizeResponse response = new ConnectorRolloutFinalizeResponse();
+      response.setData(finalizedConnectorRollout);
+      return response;
     });
   }
 

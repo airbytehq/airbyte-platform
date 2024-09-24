@@ -2,6 +2,9 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
@@ -13,6 +16,8 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
@@ -63,11 +68,13 @@ internal class ConnectorRolloutHandlerTest {
   private val actorDefinitionService = mockk<ActorDefinitionService>()
   private val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
   private val scopedConfigurationService = mockk<ScopedConfigurationService>()
+  private val connectorRolloutClient = mockk<ConnectorRolloutClient>()
   private val connectorRolloutHandler =
     ConnectorRolloutHandler(
       connectorRolloutService,
       actorDefinitionService,
       actorDefinitionVersionUpdater,
+      connectorRolloutClient,
     )
 
   companion object {
@@ -384,26 +391,20 @@ internal class ConnectorRolloutHandlerTest {
     val rolloutId = UUID.randomUUID()
     val connectorRollout = createMockConnectorRollout(rolloutId).apply { this.state = state }
 
-    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns
-      Optional.of(
-        createMockActorDefinitionVersion(),
-      )
-    every { connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID, RELEASE_CANDIDATE_VERSION_ID) } returns listOf(connectorRollout)
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
 
     val result =
       connectorRolloutHandler.getAndValidateStartRequest(
         ConnectorRolloutStartRequestBody()
-          .actorDefinitionId(ACTOR_DEFINITION_ID)
-          .dockerRepository(DOCKER_REPOSITORY)
-          .dockerImageTag(DOCKER_IMAGE_TAG)
+          .id(rolloutId)
+          .workflowRunId(UUID.randomUUID().toString())
           .rolloutStrategy(ConnectorRolloutStrategy.MANUAL),
       )
 
     assertEquals(connectorRollout, result)
 
     verify {
-      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-      connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID, RELEASE_CANDIDATE_VERSION_ID)
+      connectorRolloutService.getConnectorRollout(rolloutId)
     }
   }
 
@@ -416,16 +417,14 @@ internal class ConnectorRolloutHandlerTest {
         this.state = state
       }
 
-    every { actorDefinitionService.getActorDefinitionVersion(any(), any()) } returns Optional.of(createMockActorDefinitionVersion())
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
+    every { connectorRolloutService.getConnectorRollout(any()) } returns connectorRollout
 
     assertThrows<InvalidRequest> {
       connectorRolloutHandler.getAndValidateStartRequest(createMockConnectorRolloutStartRequestBody())
     }
 
     verify {
-      actorDefinitionService.getActorDefinitionVersion(any(), any())
-      connectorRolloutService.listConnectorRollouts(any(), any())
+      connectorRolloutService.getConnectorRollout(any())
     }
   }
 
@@ -532,6 +531,206 @@ internal class ConnectorRolloutHandlerTest {
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
   }
 
+  @Test
+  fun `test manualStartConnectorRollout`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRolloutWorkflowStart =
+      ConnectorRolloutManualStartRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
+    every { connectorRolloutClient.startWorkflow(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every {
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    } returns Optional.of(createMockActorDefinitionVersion())
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(createMockActorDefinitionVersion())
+
+    val result = connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutWorkflowStart)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.startWorkflow(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      connectorRolloutService.listConnectorRollouts(any(), any())
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    }
+  }
+
+  @Test
+  fun `test manualDoConnectorRolloutWorkflowUpdate`() {
+    val rolloutId = UUID.randomUUID()
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val connectorRolloutWorkflowUpdate =
+      ConnectorRolloutManualRolloutRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+        id = rolloutId
+        this.actorIds = actorIds
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+
+    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+
+    val result = connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.doRollout(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+    }
+  }
+
+  @Test
+  fun `test manualFinalizeConnectorRolloutWorkflowUpdate`() {
+    val rolloutId = UUID.randomUUID()
+    val state = ConnectorRolloutStateTerminal.SUCCEEDED
+    val connectorRolloutFinalizeWorkflowUpdate =
+      ConnectorRolloutManualFinalizeRequestBody().apply {
+        dockerRepository = "airbyte/source-faker"
+        dockerImageTag = "0.1"
+        actorDefinitionId = UUID.randomUUID()
+        id = rolloutId
+        this.state = state
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+
+    every { connectorRolloutClient.finalizeRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+
+    val result = connectorRolloutHandler.manualFinalizeConnectorRolloutWorkflowUpdate(connectorRolloutFinalizeWorkflowUpdate)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.finalizeRollout(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+    }
+  }
+
+  @Test
+  fun `test getOrCreateAndValidateManualStartInput updates rollout when already exists in INITIALIZED state`() {
+    val rolloutId = UUID.randomUUID()
+    val dockerRepository = "airbyte/source-faker"
+    val dockerImageTag = "0.1"
+    val actorDefinitionId = UUID.randomUUID()
+    val actorDefinitionVersion = createMockActorDefinitionVersion()
+
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        this.state = ConnectorEnumRolloutState.INITIALIZED
+      }
+
+    every { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag) } returns Optional.of(actorDefinitionVersion)
+    every { connectorRolloutService.listConnectorRollouts(actorDefinitionId, actorDefinitionVersion.versionId) } returns listOf(connectorRollout)
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(createMockActorDefinitionVersion())
+
+    val result = connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, actorDefinitionId, dockerImageTag)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
+      connectorRolloutService.listConnectorRollouts(actorDefinitionId, actorDefinitionVersion.versionId)
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    }
+  }
+
+  @Test
+  fun `test getOrCreateAndValidateManualStartInput throws when initial version is not found`() {
+    val rolloutId = UUID.randomUUID()
+    val dockerRepository = "airbyte/source-faker"
+    val dockerImageTag = "0.1"
+    val actorDefinitionId = UUID.randomUUID()
+    val actorDefinitionVersion = createMockActorDefinitionVersion()
+
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        this.state = ConnectorEnumRolloutState.INITIALIZED
+      }
+
+    every { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag) } returns Optional.of(actorDefinitionVersion)
+    every { connectorRolloutService.listConnectorRollouts(actorDefinitionId, actorDefinitionVersion.versionId) } returns listOf(connectorRollout)
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns null
+
+    assertThrows<InvalidRequest> {
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+        dockerRepository,
+        actorDefinitionId,
+        dockerImageTag,
+      )
+    }
+  }
+
+  @Test
+  fun `test getOrCreateAndValidateManualStartInput creates new connector rollout if not found`() {
+    val rolloutId = UUID.randomUUID()
+    val actorDefinitionVersion = createMockActorDefinitionVersion()
+
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        this.state = ConnectorEnumRolloutState.INITIALIZED
+      }
+
+    every { connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID, actorDefinitionVersion.versionId) } returns emptyList()
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(actorDefinitionVersion)
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
+
+    connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+
+    verifyAll {
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+      connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID, actorDefinitionVersion.versionId)
+      connectorRolloutService.writeConnectorRollout(any())
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID)
+    }
+  }
+
+  @Test
+  fun `test getOrCreateAndValidateManualStartInput throws InvalidRequest when actor definition version not found`() {
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.empty()
+
+    assertThrows<InvalidRequest> {
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    }
+
+    verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
+  }
+
+  @Test
+  fun `test getOrCreateAndValidateManualStartInput throws InvalidRequest when docker repository doesn't match`() {
+    val rolloutId = UUID.randomUUID()
+    val dockerRepository = "wrong-repo"
+    val actorDefinitionVersion = createMockActorDefinitionVersion()
+
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        this.state = ConnectorEnumRolloutState.INITIALIZED
+      }
+
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
+
+    assertThrows<InvalidRequest> {
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    }
+
+    verifyAll {
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    }
+  }
+
   private fun createMockConnectorRollout(
     id: UUID,
     actorDefinitionId: UUID = ACTOR_DEFINITION_ID,
@@ -568,9 +767,7 @@ internal class ConnectorRolloutHandlerTest {
 
   private fun createMockConnectorRolloutStartRequestBody(): ConnectorRolloutStartRequestBody {
     return ConnectorRolloutStartRequestBody()
-      .dockerRepository(DOCKER_REPOSITORY)
-      .dockerImageTag(DOCKER_IMAGE_TAG)
-      .actorDefinitionId(ACTOR_DEFINITION_ID)
+      .id(UUID.randomUUID())
       .workflowRunId(UUID.randomUUID().toString())
       .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
   }

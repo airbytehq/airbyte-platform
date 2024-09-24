@@ -2,14 +2,14 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connector.rollout.worker.activities
+package io.airbyte.connector.rollout.shared
 
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
 import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import java.util.ArrayList
 
 object ConnectorRolloutActivityHelpers {

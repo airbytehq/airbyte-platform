@@ -8,8 +8,9 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutListRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutListResponse
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutActivityInputFind
-import io.airbyte.connector.rollout.worker.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.temporal.activity.Activity
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
