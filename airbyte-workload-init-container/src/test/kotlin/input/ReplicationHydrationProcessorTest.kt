@@ -126,6 +126,9 @@ class ReplicationHydrationProcessorTest {
     every { serializer.serialize(hydrated.state?.state) } returns serializedState
     every { protocolSerializer.serialize(hydrated.catalog, false) } returns serializedSrcCatalog
     every { protocolSerializer.serialize(mapper.mapCatalog(hydrated.catalog), hydrated.destinationSupportsRefreshes) } returns serializedDestCatalog
+    every {
+      destinationCatalogGenerator.generateDestinationCatalog(any())
+    } returns DestinationCatalogGenerator.CatalogGenerationResult(hydrated.catalog, mapOf())
     every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     processor.process(input)

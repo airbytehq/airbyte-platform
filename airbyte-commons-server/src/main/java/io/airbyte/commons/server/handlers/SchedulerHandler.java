@@ -87,9 +87,7 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
-import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -514,11 +512,10 @@ public class SchedulerHandler {
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
       final io.airbyte.api.model.generated.@NotNull AirbyteCatalog syncCatalog =
           connectionRead.getSyncCatalog();
-      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionRead.getConnectionId()));
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
               sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredInternal(syncCatalog, shouldEnableMappers), connectionRead.getConnectionId());
+              CatalogConverter.toConfiguredInternal(syncCatalog), connectionRead.getConnectionId());
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
@@ -701,10 +698,9 @@ public class SchedulerHandler {
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
       final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
           connectionRead.getSyncCatalog();
-      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionRead.getConnectionId()));
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
-              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog, shouldEnableMappers), connectionRead.getConnectionId());
+              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
       final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
       final ConnectionRead updatedConnection =
           connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);

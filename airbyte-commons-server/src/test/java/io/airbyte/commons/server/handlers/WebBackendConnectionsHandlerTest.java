@@ -113,7 +113,6 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -392,7 +391,6 @@ class WebBackendConnectionsHandlerTest {
         SchemaChange.BREAKING, now, connectionRead.getSyncCatalog(), brokenConnectionRead.getSourceCatalogId());
     when(schedulerHandler.resetConnection(any(ConnectionIdRequestBody.class)))
         .thenReturn(new JobInfoRead().job(new JobRead().status(JobStatus.SUCCEEDED)));
-    when(featureFlagClient.boolVariation(eq(EnableMappers.INSTANCE), any())).thenReturn(true);
   }
 
   WebBackendConnectionRead expectedWebBackendConnectionReadObject(
@@ -1090,7 +1088,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
 
     verify(connectionsHandler).getDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog(),
-        CatalogConverter.toConfiguredInternal(result.getSyncCatalog(), true), expected.getConnectionId());
+        CatalogConverter.toConfiguredInternal(result.getSyncCatalog()), expected.getConnectionId());
     verify(connectionsHandler).getConfigurationDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);

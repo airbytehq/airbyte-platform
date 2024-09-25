@@ -7,7 +7,6 @@ package io.airbyte.commons.converters;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -26,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class CatalogClientConvertersTest {
 
@@ -92,9 +89,8 @@ class CatalogClientConvertersTest {
         CatalogClientConverters.toAirbyteProtocol(EXPECTED_CLIENT_CATALOG));
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testConvertInternalWithMapping(final boolean enableMappers) {
+  @Test
+  void testConvertInternalWithMapping() {
     reset(fieldGenerator);
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
@@ -117,19 +113,13 @@ class CatalogClientConvertersTest {
                     CLIENT_STREAM,
                     streamConfig)));
 
-    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog, enableMappers);
+    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog);
     final var stream = configuredCatalog.getStreams().getFirst();
     assertEquals(STREAM_NAME, stream.getStream().getName());
-    if (enableMappers) {
-      assertEquals(1, stream.getFields().size());
-      assertEquals(1, stream.getMappers().size());
-      assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
-      assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
-    } else {
-      assertEquals(null, stream.getFields());
-      assertEquals(0, stream.getMappers().size());
-      verifyNoInteractions(fieldGenerator);
-    }
+    assertEquals(1, stream.getFields().size());
+    assertEquals(1, stream.getMappers().size());
+    assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
+    assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
   }
 
   @Test

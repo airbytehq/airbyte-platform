@@ -29,8 +29,6 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.EnableMappers
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -127,7 +125,6 @@ class ReplicationWorkerHelper(
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
   private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<ConfiguredMapper>>
-  private var mapperEnabled by Delegates.notNull<Boolean>()
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -244,8 +241,6 @@ class ReplicationWorkerHelper(
       catalogWithoutInvalidMappers.catalog.streams.map { stream ->
         stream.streamDescriptor to stream.mappers
       }.toMap()
-
-    mapperEnabled = featureFlagClient.boolVariation(EnableMappers, Connection(ctx!!.connectionId))
   }
 
   fun startDestination(
@@ -478,12 +473,13 @@ class ReplicationWorkerHelper(
   }
 
   fun applyTransformationMappers(message: AirbyteRecord) {
-    if (mapperEnabled) {
-      val mappersForStream: List<ConfiguredMapper> =
-        mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
+    val mappersForStream: List<ConfiguredMapper> =
+      mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
 
-      recordMapper.applyMappers(message, mappersForStream)
+    if (mappersForStream.isEmpty()) {
+      return
     }
+    recordMapper.applyMappers(message, mappersForStream)
   }
 
   private fun getTotalStats(

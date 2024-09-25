@@ -70,8 +70,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.data.services.ConnectionService;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
@@ -632,10 +630,9 @@ public class WebBackendConnectionsHandler {
             sourceDefinition,
             source.getWorkspaceId(),
             source.getSourceId());
-        final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionId));
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
-                CatalogConverter.toConfiguredInternal(newAirbyteCatalog, shouldEnableMappers), connectionId);
+                CatalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
         breakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
@@ -690,10 +687,9 @@ public class WebBackendConnectionsHandler {
       final AirbyteCatalog apiExistingCatalog = CatalogConverter.toApi(oldConfiguredCatalog,
           CatalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
       final AirbyteCatalog upToDateAirbyteCatalog = updatedConnectionRead.getSyncCatalog();
-      final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionId));
       final CatalogDiff catalogDiff =
           connectionsHandler.getDiff(apiExistingCatalog, upToDateAirbyteCatalog,
-              CatalogConverter.toConfiguredInternal(upToDateAirbyteCatalog, shouldEnableMappers), connectionId);
+              CatalogConverter.toConfiguredInternal(upToDateAirbyteCatalog), connectionId);
       final List<StreamDescriptor> apiStreamsToReset = getStreamsToReset(catalogDiff);
       final Set<StreamDescriptor> changedConfigStreamDescriptors =
           connectionsHandler.getConfigurationDiff(apiExistingCatalog, upToDateAirbyteCatalog);

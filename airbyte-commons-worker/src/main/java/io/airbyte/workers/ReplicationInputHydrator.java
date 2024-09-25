@@ -41,8 +41,6 @@ import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.EnableMappers;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -148,8 +146,7 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
-    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo, shouldEnableMappers)) {
+    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
       streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
@@ -270,9 +267,8 @@ public class ReplicationInputHydrator {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
-    final boolean shouldEnableMappers = featureFlagClient.boolVariation(EnableMappers.INSTANCE, new Connection(connectionInfo.getConnectionId()));
     final ConfiguredAirbyteCatalog catalog =
-        CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog(), shouldEnableMappers);
+        CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
     return catalog;
   }
 

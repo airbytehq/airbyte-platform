@@ -65,13 +65,12 @@ public class CatalogClientConverters {
    */
   @SuppressWarnings("checkstyle:LineLength") // the auto-formatter produces a format that conflicts with checkstyle
   public static io.airbyte.config.ConfiguredAirbyteCatalog toConfiguredAirbyteInternal(
-                                                                                       final io.airbyte.api.client.model.generated.AirbyteCatalog catalog,
-                                                                                       final boolean enableMappers) {
+                                                                                       final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
     final io.airbyte.config.ConfiguredAirbyteCatalog protoCatalog =
         new io.airbyte.config.ConfiguredAirbyteCatalog();
     final var airbyteStream = catalog.getStreams().stream().map(stream -> {
       try {
-        return toConfiguredStreamInternal(stream.getStream(), stream.getConfig(), enableMappers);
+        return toConfiguredStreamInternal(stream.getStream(), stream.getConfig());
       } catch (final JsonValidationException e) {
         return null;
       }
@@ -210,8 +209,7 @@ public class CatalogClientConverters {
   }
 
   private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
-                                                                    final AirbyteStreamConfiguration config,
-                                                                    final boolean enableMappers)
+                                                                    final AirbyteStreamConfiguration config)
       throws JsonValidationException {
     final var convertedStream = toStreamInternal(stream, config);
     final ConfiguredAirbyteStream.Builder builder = new ConfiguredAirbyteStream.Builder()
@@ -224,11 +222,9 @@ public class CatalogClientConverters {
         .minimumGenerationId(config.getMinimumGenerationId())
         .syncId(config.getSyncId());
 
-    if (enableMappers) {
-      builder
-          .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
-          .mappers(toConfiguredHashingMappers(config.getHashedFields()));
-    }
+    builder
+        .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
+        .mappers(toConfiguredHashingMappers(config.getHashedFields()));
 
     return builder.build();
   }

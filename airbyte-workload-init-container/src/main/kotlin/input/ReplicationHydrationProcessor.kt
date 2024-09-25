@@ -1,8 +1,6 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.EnableMappers
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -89,22 +87,11 @@ class ReplicationHydrationProcessor(
         hydrated.prefix,
       )
 
-    val usesMapper: Boolean = featureFlagClient.boolVariation(EnableMappers, Connection(parsed.connectionId))
+    val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
 
-    if (usesMapper) {
-      logger.info { "Applying mapper transformation to destination catalog." }
-    }
+    sendMapperErrorMetrics(transformedCatalog, parsed.connectionId)
 
-    val destinationCatalog =
-      if (usesMapper) {
-        val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
-
-        sendMapperErrorMetrics(transformedCatalog, parsed.connectionId)
-
-        mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
-      } else {
-        mapper.mapCatalog(hydrated.catalog)
-      }
+    val destinationCatalog = mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
 
     fileClient.writeInputFile(
       FileConstants.CATALOG_FILE,

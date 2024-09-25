@@ -228,8 +228,7 @@ public class CatalogConverter {
    * @param catalog api catalog
    * @return protocol catalog
    */
-  public static ConfiguredAirbyteCatalog toConfiguredInternal(final io.airbyte.api.model.generated.AirbyteCatalog catalog,
-                                                              final boolean enableMappers)
+  public static ConfiguredAirbyteCatalog toConfiguredInternal(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final List<JsonValidationException> errors = new ArrayList<>();
     final List<ConfiguredAirbyteStream> streams = catalog.getStreams()
@@ -245,11 +244,9 @@ public class CatalogConverter {
                 .cursorField(s.getConfig().getCursorField())
                 .primaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
 
-            if (enableMappers) {
-              builder
-                  .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
-                  .mappers(toConfiguredHashingMappers(s.getConfig().getHashedFields()));
-            }
+            builder
+                .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
+                .mappers(toConfiguredHashingMappers(s.getConfig().getHashedFields()));
 
             return builder.build();
           } catch (final JsonValidationException e) {
@@ -347,12 +344,11 @@ public class CatalogConverter {
    * @return protocol catalog
    */
   @SuppressWarnings("LineLength")
-  public static ConfiguredAirbyteCatalog toProtocolKeepAllStreams(final io.airbyte.api.model.generated.AirbyteCatalog catalog,
-                                                                  final boolean enableMappers)
+  public static ConfiguredAirbyteCatalog toProtocolKeepAllStreams(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final AirbyteCatalog clone = Jsons.clone(catalog);
     clone.getStreams().forEach(stream -> stream.getConfig().setSelected(true));
-    return toConfiguredInternal(clone, enableMappers);
+    return toConfiguredInternal(clone);
   }
 
   /**

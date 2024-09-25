@@ -29,15 +29,13 @@ import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class CatalogConverterTest {
 
   @Test
   void testConvertToProtocol() throws JsonValidationException {
     assertEquals(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(),
-        CatalogConverter.toConfiguredInternal(ConnectionHelpers.generateBasicApiCatalog(), true));
+        CatalogConverter.toConfiguredInternal(ConnectionHelpers.generateBasicApiCatalog()));
   }
 
   @Test
@@ -52,31 +50,23 @@ class CatalogConverterTest {
     assertTrue(Enums.isCompatible(io.airbyte.config.SyncMode.class, io.airbyte.api.model.generated.SyncMode.class));
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testConvertInternal(final boolean enableMappers) throws JsonValidationException {
+  @Test
+  void testConvertInternal() throws JsonValidationException {
     final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     final var apiStream = apiCatalog.getStreams().getFirst();
     apiStream.getConfig().setHashedFields(List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME))));
 
-    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog, enableMappers);
+    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog);
     assertEquals(1, internalCatalog.getStreams().size());
     final var internalStream = internalCatalog.getStreams().getFirst();
-    if (enableMappers) {
-      final var mappers = internalStream.getMappers();
-      assertEquals(1, mappers.size());
+    final var mappers = internalStream.getMappers();
+    assertEquals(1, mappers.size());
 
-      final var fields = internalStream.getFields();
-      assertEquals(2, fields.size());
+    final var fields = internalStream.getFields();
+    assertEquals(2, fields.size());
 
-      final ConfiguredMapper expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
-      assertEquals(expectedMapper, mappers.getFirst());
-    } else {
-      final var mappers = internalStream.getMappers();
-      assertEquals(0, mappers.size());
-      final var fields = internalStream.getFields();
-      assertEquals(null, fields);
-    }
+    final ConfiguredMapper expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    assertEquals(expectedMapper, mappers.getFirst());
 
   }
 
@@ -88,7 +78,7 @@ class CatalogConverterTest {
 
     apiStream.getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
 
-    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog, true);
+    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog);
     assertEquals(1, internalCatalog.getStreams().size());
 
     final var internalStream = internalCatalog.getStreams().getFirst();
@@ -110,7 +100,7 @@ class CatalogConverterTest {
       // fieldSelectionEnabled=true but selectedFields=null.
       final var catalog = ConnectionHelpers.generateBasicApiCatalog();
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).selectedFields(null);
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(JsonValidationException.class, () -> {
@@ -118,14 +108,14 @@ class CatalogConverterTest {
       final var catalog = ConnectionHelpers.generateBasicApiCatalog();
       ((ObjectNode) catalog.getStreams().get(0).getStream().getJsonSchema()).remove("properties");
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem("foo"));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(JsonValidationException.class, () -> {
       // SelectedFieldInfo with empty path.
       final var catalog = ConnectionHelpers.generateBasicApiCatalog();
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo());
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(UnsupportedOperationException.class, () -> {
@@ -133,14 +123,14 @@ class CatalogConverterTest {
       final var catalog = ConnectionHelpers.generateBasicApiCatalog();
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true)
           .addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem("foo").addFieldPathItem("bar"));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(JsonValidationException.class, () -> {
       // SelectedFieldInfo with empty path.
       final var catalog = ConnectionHelpers.generateBasicApiCatalog();
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem("foo"));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(JsonValidationException.class, () -> {
@@ -149,7 +139,7 @@ class CatalogConverterTest {
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
       // The sync mode is INCREMENTAL and SECOND_FIELD_NAME is a cursor field.
       catalog.getStreams().get(0).getConfig().syncMode(SyncMode.INCREMENTAL).cursorField(List.of(SECOND_FIELD_NAME));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertDoesNotThrow(() -> {
@@ -158,7 +148,7 @@ class CatalogConverterTest {
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
       // The cursor field is not selected, but it's okay because it's FULL_REFRESH so it doesn't throw.
       catalog.getStreams().get(0).getConfig().syncMode(SyncMode.FULL_REFRESH).cursorField(List.of(SECOND_FIELD_NAME));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertThrows(JsonValidationException.class, () -> {
@@ -167,7 +157,7 @@ class CatalogConverterTest {
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
       // The destination sync mode is DEDUP and SECOND_FIELD_NAME is a primary key.
       catalog.getStreams().get(0).getConfig().destinationSyncMode(DestinationSyncMode.APPEND_DEDUP).primaryKey(List.of(List.of(SECOND_FIELD_NAME)));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
 
     assertDoesNotThrow(() -> {
@@ -176,7 +166,7 @@ class CatalogConverterTest {
       catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
       // The primary key is not selected but that's okay because the destination sync mode is OVERWRITE.
       catalog.getStreams().get(0).getConfig().destinationSyncMode(DestinationSyncMode.OVERWRITE).primaryKey(List.of(List.of(SECOND_FIELD_NAME)));
-      CatalogConverter.toConfiguredInternal(catalog, true);
+      CatalogConverter.toConfiguredInternal(catalog);
     });
   }
 
@@ -184,7 +174,7 @@ class CatalogConverterTest {
   void testConvertToProtocolFieldSelection() throws JsonValidationException {
     final var catalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
-    assertEquals(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(), CatalogConverter.toConfiguredInternal(catalog, true));
+    assertEquals(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(), CatalogConverter.toConfiguredInternal(catalog));
   }
 
   @Test
