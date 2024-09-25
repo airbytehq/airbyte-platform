@@ -16,6 +16,8 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.io.File;
 
 @Controller("/api/v1/diagnostic_tool")
@@ -31,7 +33,7 @@ public class DiagnosticToolApiController implements DiagnosticToolApi {
   @Override
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
-  public File generateDiagnosticReport(@Body final DiagnosticReportRequestBody diagnosticReportRequestBody) {
+  public File generateDiagnosticReport(@Body @Valid @NotNull final DiagnosticReportRequestBody diagnosticReportRequestBody) {
     return ApiHelper.execute(diagnosticToolHandler::generateDiagnosticReport);
   }
 
