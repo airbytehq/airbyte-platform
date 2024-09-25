@@ -4,8 +4,7 @@
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.SignalApi;
 import io.airbyte.api.model.generated.SignalInput;
@@ -31,7 +30,7 @@ public class SignalApiController implements SignalApi {
   @Override
   @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({ADMIN})
   public void signal(@Body SignalInput signalInput) {
     ApiHelper.execute(() -> {
       final io.airbyte.config.SignalInput internalSignalInput = new io.airbyte.config.SignalInput(
