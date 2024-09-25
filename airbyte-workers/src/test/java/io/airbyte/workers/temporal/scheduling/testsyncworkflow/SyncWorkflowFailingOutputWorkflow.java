@@ -26,4 +26,7 @@ public class SyncWorkflowFailingOutputWorkflow implements SyncWorkflow {
     return null;
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

@@ -42,4 +42,7 @@ public class SourceAndDestinationFailureSyncWorkflow implements SyncWorkflow {
                 .withRecordsEmitted(20L)));
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

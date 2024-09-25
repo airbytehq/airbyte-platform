@@ -752,14 +752,12 @@ class WorkloadHandlerImplTest {
       ConfigSignalInput(
         workflowType = SYNC_WORKFLOW,
         workflowId = "workflowId",
-        taskQueue = "taskQueue",
       )
 
     val signalInput =
       SignalInput(
         workflowType = configSignalInput.workflowType,
         workflowId = configSignalInput.workflowId,
-        taskQueue = configSignalInput.taskQueue,
       )
 
     fun mockApi() {
@@ -778,7 +776,6 @@ class WorkloadHandlerImplTest {
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
           1,
-          MetricAttribute(MetricTags.TASK_QUEUE, signalInput.taskQueue),
           MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
         )
       } returns Unit
@@ -789,7 +786,6 @@ class WorkloadHandlerImplTest {
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
           1,
-          MetricAttribute(MetricTags.TASK_QUEUE, signalInput.taskQueue),
           MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
         )
       }

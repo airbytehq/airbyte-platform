@@ -36,8 +36,7 @@ public class SignalApiController implements SignalApi {
     ApiHelper.execute(() -> {
       final io.airbyte.config.SignalInput internalSignalInput = new io.airbyte.config.SignalInput(
           signalInput.getWorkflowType(),
-          signalInput.getWorkflowId(),
-          signalInput.getTaskQueue());
+          signalInput.getWorkflowId());
       signalHandler.signal(internalSignalInput);
       return null;
     });

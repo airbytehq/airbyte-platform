@@ -342,7 +342,6 @@ class WorkloadHandlerImpl(
           SignalInput(
             workflowType = signalInput.workflowType,
             workflowId = signalInput.workflowId,
-            taskQueue = signalInput.taskQueue,
           ),
         )
       } catch (e: Exception) {
@@ -350,7 +349,6 @@ class WorkloadHandlerImpl(
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
           1,
-          MetricAttribute(MetricTags.TASK_QUEUE, signalInput.taskQueue),
           MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
         )
       }

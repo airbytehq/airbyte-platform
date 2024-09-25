@@ -425,7 +425,8 @@ class SyncWorkflowTest {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         refreshSchemaOutput,
-        new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID)));
+        new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID),
+        null));
   }
 
   private static void verifyShouldRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity) {

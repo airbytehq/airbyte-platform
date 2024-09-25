@@ -25,6 +25,7 @@ import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWor
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.SignalInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
@@ -83,6 +84,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private InvokeOperationsActivity invokeOperationsActivity;
 
   private Boolean shouldBlock;
+
+  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @Override
+  public void checkAsyncActivityStatus() {
+    this.shouldBlock = false;
+  }
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -153,9 +160,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
         shouldBlock = true;
         while (shouldBlock) {
-          // TODO increase timeout from 1min to avoid burning through the history size too quickly once
-          // signals are implemented
-          Workflow.await(Duration.ofMinutes(1), () -> !shouldBlock);
+          Workflow.await(Duration.ofMinutes(15), () -> !shouldBlock);
           shouldBlock = !replicationActivity.isTerminal(replicationActivityInput, workloadId);
         }
 
@@ -274,6 +279,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
                                                                     final RefreshSchemaActivityOutput refreshSchemaOutput) {
+    final String signalInput;
+    if (syncInput.getUseAsyncReplicate() != null && syncInput.getUseAsyncReplicate()) {
+      signalInput = Jsons.serialize(new SignalInput(SignalInput.SYNC_WORKFLOW, Workflow.getInfo().getWorkflowId()));
+    } else {
+      signalInput = null;
+    }
     return new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -291,7 +302,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         refreshSchemaOutput,
-        syncInput.getConnectionContext());
+        syncInput.getConnectionContext(),
+        signalInput);
   }
 
 }

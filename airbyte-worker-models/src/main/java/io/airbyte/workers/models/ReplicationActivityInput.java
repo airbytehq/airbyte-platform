@@ -64,5 +64,6 @@ public class ReplicationActivityInput {
   private RefreshSchemaActivityOutput schemaRefreshOutput;
   // Replication context object containing relevant IDs
   private ConnectionContext connectionContext;
+  private String signalInput;
 
 }

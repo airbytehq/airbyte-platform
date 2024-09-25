@@ -211,7 +211,8 @@ public class ReplicationInputHydrator {
         .withIsReset(replicationActivityInput.getIsReset())
         .withJobRunConfig(replicationActivityInput.getJobRunConfig())
         .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
-        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig());
+        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
+        .withSignalInput(replicationActivityInput.getSignalInput());
   }
 
   @VisibleForTesting

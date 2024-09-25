@@ -14493,13 +14493,10 @@ components:
       required:
         - workflowType
         - workflowId
-        - taskQueue
       properties:
         workflowType:
           type: string
         workflowId:
-          type: string
-        taskQueue:
           type: string
   responses:
     NotFoundResponse:
