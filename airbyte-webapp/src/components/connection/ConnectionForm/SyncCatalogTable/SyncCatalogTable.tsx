@@ -398,9 +398,9 @@ export const SyncCatalogTable: FC = () => {
     const { rowChangeStatus } = getRowChangeStatus(row);
 
     const rowStatusStyle = classnames(styles.tr, {
-      [styles.added]: rowChangeStatus === "added",
-      [styles.removed]: rowChangeStatus === "removed",
-      [styles.changed]: rowChangeStatus === "changed",
+      [styles.added]: rowChangeStatus === "added" && mode !== "create",
+      [styles.removed]: rowChangeStatus === "removed" && mode !== "create",
+      [styles.changed]: rowChangeStatus === "changed" && mode !== "create",
       [styles.disabled]: rowChangeStatus === "disabled",
       [styles.highlighted]: initialTopMostItemIndex?.index === index,
     });
