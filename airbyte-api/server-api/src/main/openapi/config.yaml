@@ -4972,7 +4972,55 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
 
       operationId: getConnectorRolloutsList
-      summary: Get all connector rollouts matching the provided state
+      summary: Get all connector rollouts matching the provided actor definition ID & docker image version
+      tags:
+        - connector_rollout
+
+  # Connector Rollouts
+  /v1/connector_rollout/list_by_actor_definition_id:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutListByActorDefinitionIdRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getConnectorRolloutsListByActorDefinitionId
+      summary: Get all connector rollouts matching the provided actor definition ID
+      tags:
+        - connector_rollout
+
+  # Connector Rollouts
+  /v1/connector_rollout/list_all:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutListAllRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getConnectorRolloutsListAll
+      summary: Get all connector rollouts
       tags:
         - connector_rollout
 
@@ -7164,6 +7212,10 @@ components:
         - initial_version_id
         - state
       properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
         id:
           type: string
           format: uuid
@@ -7203,7 +7255,6 @@ components:
           format: int32
         updated_by:
           type: string
-          format: uuid
         created_at:
           type: string
           format: date-time
@@ -7253,15 +7304,26 @@ components:
     ConnectorRolloutListRequestBody:
       type: object
       required:
-        - docker_repository
         - docker_image_tag
-        - source_definition_id
+        - actor_definition_id
       properties:
         docker_repository:
           type: string
         docker_image_tag:
           type: string
-        source_definition_id:
+        actor_definition_id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutListAllRequestBody:
+      type: object
+
+    ConnectorRolloutListByActorDefinitionIdRequestBody:
+      type: object
+      required:
+        - actor_definition_id
+      properties:
+        actor_definition_id:
           type: string
           format: uuid
 

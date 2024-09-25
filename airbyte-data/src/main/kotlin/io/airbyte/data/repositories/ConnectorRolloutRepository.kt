@@ -10,6 +10,10 @@ import java.util.UUID
 interface ConnectorRolloutRepository : PageableRepository<ConnectorRollout, UUID> {
   fun save(connectorRollout: ConnectorRollout): ConnectorRollout
 
+  fun findAllOrderByUpdatedAtDesc(): List<ConnectorRollout>
+
+  fun findAllByActorDefinitionIdOrderByUpdatedAtDesc(actorDefinitionId: UUID): List<ConnectorRollout>
+
   fun findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
     actorDefinitionId: UUID,
     releaseCandidateVersion: UUID,

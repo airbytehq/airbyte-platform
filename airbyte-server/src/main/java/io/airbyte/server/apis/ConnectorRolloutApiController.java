@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutCreateResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutListByActorDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody;
@@ -33,6 +34,7 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import jakarta.validation.Valid;
 import java.util.UUID;
 
 @Controller("/api/v1/connector_rollout")
@@ -119,8 +121,35 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   public ConnectorRolloutListResponse getConnectorRolloutsList(@Body final ConnectorRolloutListRequestBody connectorRolloutListRequestBody) {
     return ApiHelper.execute(() -> {
       final var connectorRollouts =
-          connectorRolloutHandler.listConnectorRollouts(connectorRolloutListRequestBody.getSourceDefinitionId(),
+          connectorRolloutHandler.listConnectorRollouts(connectorRolloutListRequestBody.getActorDefinitionId(),
               connectorRolloutListRequestBody.getDockerImageTag());
+      return new ConnectorRolloutListResponse().connectorRollouts(connectorRollouts);
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/list_all")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutListResponse getConnectorRolloutsListAll(@Valid Object body) {
+    return ApiHelper.execute(() -> {
+      final var connectorRollouts = connectorRolloutHandler.listConnectorRollouts();
+      return new ConnectorRolloutListResponse().connectorRollouts(connectorRollouts);
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/list_by_actor_definition_id")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutListResponse getConnectorRolloutsListByActorDefinitionId(@Body final ConnectorRolloutListByActorDefinitionIdRequestBody connectorRolloutListByActorDefinitionIdRequestBody) {
+    return ApiHelper.execute(() -> {
+      final var connectorRollouts =
+          connectorRolloutHandler.listConnectorRollouts(connectorRolloutListByActorDefinitionIdRequestBody.getActorDefinitionId());
       return new ConnectorRolloutListResponse().connectorRollouts(connectorRollouts);
     });
   }

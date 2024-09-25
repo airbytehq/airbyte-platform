@@ -7,6 +7,7 @@ import io.airbyte.commons.temporal.factories.TemporalCloudConfig
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
+import io.airbyte.connector.rollout.shared.Constants
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.temporal.serviceclient.WorkflowServiceStubs
@@ -35,7 +36,7 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
     workflowServiceStubsFactory =
       WorkflowServiceStubsFactory(
         temporalCloudConfig,
-        TemporalSelfHostedConfig(temporalHost, if (this.temporalCloudEnabled) temporalCloudNamespace else DEFAULT_NAMESPACE),
+        TemporalSelfHostedConfig(temporalHost, if (this.temporalCloudEnabled) temporalCloudNamespace else Constants.DEFAULT_NAMESPACE),
         this.temporalCloudEnabled,
       )
   }
@@ -60,6 +61,5 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
 
   companion object {
     private val MAX_TIME_TO_CONNECT = Duration.ofMinutes(2)
-    const val DEFAULT_NAMESPACE = "default"
   }
 }

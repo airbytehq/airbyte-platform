@@ -25,6 +25,20 @@ open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRoll
     return repository.save(connectorRollout.toEntity()).toConfigModel()
   }
 
+  override fun listConnectorRollouts(): List<ConnectorRollout> {
+    return repository.findAllOrderByUpdatedAtDesc().map { unit ->
+      unit.toConfigModel()
+    }
+  }
+
+  override fun listConnectorRollouts(actorDefinitionId: UUID): List<ConnectorRollout> {
+    return repository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(
+      actorDefinitionId,
+    ).map { unit ->
+      unit.toConfigModel()
+    }
+  }
+
   override fun listConnectorRollouts(
     actorDefinitionId: UUID,
     releaseCandidateVersionId: UUID,

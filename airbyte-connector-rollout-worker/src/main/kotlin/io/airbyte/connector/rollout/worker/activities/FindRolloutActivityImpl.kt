@@ -31,7 +31,6 @@ class FindRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : 
     val client: ConnectorRolloutApi = airbyteApiClient.connectorRolloutApi
     val body =
       ConnectorRolloutListRequestBody(
-        input.dockerRepository,
         input.dockerImageTag,
         input.actorDefinitionId,
       )

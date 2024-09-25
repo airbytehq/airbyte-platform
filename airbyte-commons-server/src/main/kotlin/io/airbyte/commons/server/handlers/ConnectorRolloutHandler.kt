@@ -19,6 +19,7 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
@@ -27,6 +28,7 @@ import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
+import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -46,13 +48,17 @@ open class ConnectorRolloutHandler
     private val actorDefinitionService: ActorDefinitionService,
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
     private val connectorRolloutClient: ConnectorRolloutClient,
+    private val userPersistence: UserPersistence,
   ) {
     @VisibleForTesting
     open fun buildConnectorRolloutRead(connectorRollout: ConnectorRollout): ConnectorRolloutRead {
       val rolloutStrategy = connectorRollout.rolloutStrategy?.let { ConnectorRolloutStrategy.fromValue(it.toString()) }
 
+      val actorDefinitionVersion = actorDefinitionService.getActorDefinitionVersion(connectorRollout.releaseCandidateVersionId)
       return ConnectorRolloutRead()
         .id(connectorRollout.id)
+        .dockerRepository(actorDefinitionVersion.dockerRepository)
+        .dockerImageTag(actorDefinitionVersion.dockerImageTag)
         .workflowRunId(connectorRollout.workflowRunId)
         .actorDefinitionId(connectorRollout.actorDefinitionId)
         .releaseCandidateVersionId(connectorRollout.releaseCandidateVersionId)
@@ -64,7 +70,13 @@ open class ConnectorRolloutHandler
         .hasBreakingChanges(connectorRollout.hasBreakingChanges)
         .rolloutStrategy(rolloutStrategy)
         .maxStepWaitTimeMins(connectorRollout.maxStepWaitTimeMins?.toInt())
-        .updatedBy(connectorRollout.updatedBy)
+        .updatedBy(
+          connectorRollout.rolloutStrategy?.let { strategy ->
+            connectorRollout.updatedBy?.let { updatedBy ->
+              getUpdatedBy(strategy, updatedBy)
+            }
+          },
+        )
         .completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
         .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
         .errorMsg(connectorRollout.errorMsg)
@@ -275,6 +287,21 @@ open class ConnectorRolloutHandler
       return Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
     }
 
+    open fun listConnectorRollouts(): List<ConnectorRolloutRead> {
+      val connectorRollouts: List<ConnectorRollout> = connectorRolloutService.listConnectorRollouts()
+      return connectorRollouts.map { connectorRollout ->
+        buildConnectorRolloutRead(connectorRollout)
+      }
+    }
+
+    open fun listConnectorRollouts(actorDefinitionId: UUID): List<ConnectorRolloutRead> {
+      val connectorRollouts: List<ConnectorRollout> =
+        connectorRolloutService.listConnectorRollouts(actorDefinitionId)
+      return connectorRollouts.map { connectorRollout ->
+        buildConnectorRolloutRead(connectorRollout)
+      }
+    }
+
     open fun listConnectorRollouts(
       actorDefinitionId: UUID,
       dockerImageTag: String,
@@ -370,5 +397,16 @@ open class ConnectorRolloutHandler
         ),
       )
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutFinalizeWorkflowUpdate.id))
+    }
+
+    @Cacheable("rollout-updated-by")
+    open fun getUpdatedBy(
+      rolloutStrategy: ConnectorEnumRolloutStrategy,
+      updatedById: UUID,
+    ): String {
+      return when (rolloutStrategy) {
+        ConnectorEnumRolloutStrategy.MANUAL -> userPersistence.getUser(updatedById).get().email
+        else -> ""
+      }
     }
   }

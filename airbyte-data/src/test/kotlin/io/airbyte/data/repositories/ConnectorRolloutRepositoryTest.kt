@@ -346,6 +346,118 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `test db list all`() {
+    val actorDefinitionId1 = UUID.randomUUID()
+    val actorDefinitionId2 = UUID.randomUUID()
+    val releaseCandidateVersionId = UUID.randomUUID()
+    val rolloutId1 = UUID.randomUUID()
+    val rolloutId2 = UUID.randomUUID()
+
+    connectorRolloutRepository.save(
+      ConnectorRollout(
+        id = rolloutId1,
+        workflowRunId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId1,
+        releaseCandidateVersionId = releaseCandidateVersionId,
+        initialVersionId = UUID.randomUUID(),
+        state = ConnectorRolloutStateType.initialized,
+        initialRolloutPct = 10,
+        finalTargetRolloutPct = 100,
+        hasBreakingChanges = false,
+        rolloutStrategy = ConnectorRolloutStrategyType.manual,
+        maxStepWaitTimeMins = 60,
+        expiresAt = OffsetDateTime.now().plusDays(1),
+      ),
+    )
+
+    var persistedRollout =
+      connectorRolloutRepository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        actorDefinitionId1,
+        releaseCandidateVersionId,
+      )
+
+    assertEquals(1, persistedRollout.size)
+    assertEquals(rolloutId1, persistedRollout[0].id)
+
+    connectorRolloutRepository.save(
+      ConnectorRollout(
+        id = rolloutId2,
+        workflowRunId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId2,
+        releaseCandidateVersionId = releaseCandidateVersionId,
+        initialVersionId = UUID.randomUUID(),
+        state = ConnectorRolloutStateType.succeeded,
+        initialRolloutPct = 10,
+        finalTargetRolloutPct = 100,
+        hasBreakingChanges = false,
+        rolloutStrategy = ConnectorRolloutStrategyType.manual,
+        maxStepWaitTimeMins = 60,
+        expiresAt = OffsetDateTime.now().plusDays(1),
+      ),
+    )
+
+    persistedRollout = connectorRolloutRepository.findAllOrderByUpdatedAtDesc()
+
+    assertEquals(2, persistedRollout.size)
+    assertEquals(rolloutId2, persistedRollout[0].id) // Newest by updatedAt
+    assertEquals(rolloutId1, persistedRollout[1].id)
+  }
+
+  @Test
+  fun `test db list by actor_definition_id`() {
+    val actorDefinitionId = UUID.randomUUID()
+    val releaseCandidateVersionId1 = UUID.randomUUID()
+    val releaseCandidateVersionId2 = UUID.randomUUID()
+    val rolloutId1 = UUID.randomUUID()
+    val rolloutId2 = UUID.randomUUID()
+
+    connectorRolloutRepository.save(
+      ConnectorRollout(
+        id = rolloutId1,
+        workflowRunId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = releaseCandidateVersionId1,
+        initialVersionId = UUID.randomUUID(),
+        state = ConnectorRolloutStateType.initialized,
+        initialRolloutPct = 10,
+        finalTargetRolloutPct = 100,
+        hasBreakingChanges = false,
+        rolloutStrategy = ConnectorRolloutStrategyType.manual,
+        maxStepWaitTimeMins = 60,
+        expiresAt = OffsetDateTime.now().plusDays(1),
+      ),
+    )
+
+    var persistedRollout = connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(actorDefinitionId)
+
+    assertEquals(1, persistedRollout.size)
+    assertEquals(rolloutId1, persistedRollout[0].id)
+
+    connectorRolloutRepository.save(
+      ConnectorRollout(
+        id = rolloutId2,
+        workflowRunId = UUID.randomUUID().toString(),
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = releaseCandidateVersionId2,
+        initialVersionId = UUID.randomUUID(),
+        state = ConnectorRolloutStateType.succeeded,
+        initialRolloutPct = 10,
+        finalTargetRolloutPct = 100,
+        hasBreakingChanges = false,
+        rolloutStrategy = ConnectorRolloutStrategyType.manual,
+        maxStepWaitTimeMins = 60,
+        expiresAt = OffsetDateTime.now().plusDays(1),
+      ),
+    )
+
+    persistedRollout = connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(actorDefinitionId)
+
+    assertEquals(2, persistedRollout.size)
+    assertEquals(rolloutId2, persistedRollout[0].id) // Newest by updatedAt
+    assertEquals(rolloutId1, persistedRollout[1].id)
+  }
+
+  @Test
   fun `test db get by actor_definition_id and release_candidate_version_id`() {
     val actorDefinitionId = UUID.randomUUID()
     val releaseCandidateVersionId = UUID.randomUUID()

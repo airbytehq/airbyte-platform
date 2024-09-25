@@ -117,7 +117,6 @@ class ConnectorRolloutCLI : Runnable {
       RolloutCommand.FIND -> {
         val findInput =
           ConnectorRolloutListRequestBody(
-            dockerRepository,
             dockerImageTag,
             actorDefinitionId,
           )

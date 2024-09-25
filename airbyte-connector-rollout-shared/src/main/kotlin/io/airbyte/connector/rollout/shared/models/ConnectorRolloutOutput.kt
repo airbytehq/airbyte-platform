@@ -18,7 +18,7 @@ data class ConnectorRolloutOutput(
   var hasBreakingChanges: Boolean? = null,
   var rolloutStrategy: ConnectorEnumRolloutStrategy? = null,
   var maxStepWaitTimeMins: Int? = null,
-  var updatedBy: UUID? = null,
+  var updatedBy: String? = null,
   var createdAt: OffsetDateTime? = null,
   var updatedAt: OffsetDateTime? = null,
   var completedAt: OffsetDateTime? = null,

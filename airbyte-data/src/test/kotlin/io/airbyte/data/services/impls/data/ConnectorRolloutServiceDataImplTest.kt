@@ -85,6 +85,47 @@ internal class ConnectorRolloutServiceDataImplTest {
     val rollout2 = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, releaseCandidateVersionId)
 
     every {
+      connectorRolloutRepository.findAllOrderByUpdatedAtDesc()
+    } returns listOf(rollout1, rollout2)
+
+    val res = connectorRolloutService.listConnectorRollouts()
+    assertEquals(listOf(rollout1.toConfigModel(), rollout2.toConfigModel()), res)
+
+    verify {
+      connectorRolloutRepository.findAllOrderByUpdatedAtDesc()
+    }
+  }
+
+  @Test
+  fun `test list rollouts by actor definition id`() {
+    val actorDefinitionId = UUID.randomUUID()
+    val rollout1 = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, UUID.randomUUID())
+    val rollout2 = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, UUID.randomUUID())
+
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(
+        actorDefinitionId,
+      )
+    } returns listOf(rollout1, rollout2)
+
+    val res = connectorRolloutService.listConnectorRollouts(actorDefinitionId)
+    assertEquals(listOf(rollout1.toConfigModel(), rollout2.toConfigModel()), res)
+
+    verify {
+      connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(
+        actorDefinitionId,
+      )
+    }
+  }
+
+  @Test
+  fun `test list rollouts by actor definition id and version id`() {
+    val actorDefinitionId = UUID.randomUUID()
+    val releaseCandidateVersionId = UUID.randomUUID()
+    val rollout1 = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, releaseCandidateVersionId)
+    val rollout2 = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, releaseCandidateVersionId)
+
+    every {
       connectorRolloutRepository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
         actorDefinitionId,
         releaseCandidateVersionId,
