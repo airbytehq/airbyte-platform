@@ -4608,6 +4608,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationBalanceRead"
+  /v1/billing/trial_status:
+    post:
+      summary: Get the current trial status of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getOrganizationTrialStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved the trial status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationTrialStatusRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -10630,6 +10649,26 @@ components:
           type: number
           format: double
         expiryDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
+    OrganizationTrialStatusRead:
+      type: object
+      required:
+        - trialStatus
+      properties:
+        trialStatus:
+          type: string
+          description: Indicates the status of the trial for an organization
+          enum:
+            - pre_trial
+            - in_trial
+            - post_trial
+            - unknown
+          x-enum-descriptions:
+            - The trial has not yet started for this organization
+            - The organization is currently in the trial. End of the trial is indicated by the `trialEndsAt` property
+            - The organization has left the trial already
+            - The trial status is unknown
+        trialEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
 
     # ORGANIZATIONS
