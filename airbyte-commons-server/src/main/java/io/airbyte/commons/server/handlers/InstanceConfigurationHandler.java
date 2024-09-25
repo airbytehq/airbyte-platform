@@ -210,7 +210,6 @@ public class InstanceConfigurationHandler {
           .edition(license.type().toString())
           .expirationDate(licenseExpirationDate())
           .usedEditors(editorsUsage())
-          .usedNodes(0)
           .maxEditors(license.maxEditors().orElse(null))
           .maxNodes(license.maxNodes().orElse(null))
           .usedNodes(nodesUsage())
