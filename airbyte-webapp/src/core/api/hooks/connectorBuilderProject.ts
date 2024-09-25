@@ -504,6 +504,7 @@ const transformSlices = (
   // on each page. This way, the user can still see the unique state of each page in the `State` tab, and will also
   // always see the page selection controls when pagination is configured.
   if (
+    stream.retriever.type === "SimpleRetriever" &&
     stream.retriever?.paginator &&
     stream.retriever?.paginator?.type !== NoPaginationType.NoPagination &&
     !stream.incremental_sync &&

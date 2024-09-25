@@ -92,8 +92,9 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
-  assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
-  builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
+  const firstStreamRetriever: SimpleRetriever = streams[0].retriever;
+  assertType<HttpRequester>(firstStreamRetriever.requester, "HttpRequester", streams[0].name);
+  builderFormValues.global.urlBase = firstStreamRetriever.requester.url_base;
 
   const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
 
@@ -114,8 +115,8 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       index.toString(),
       streamNameToIndex,
       serializedStreamToName,
-      streams[0].retriever.requester.url_base,
-      streams[0].retriever.requester.authenticator,
+      firstStreamRetriever.requester.url_base,
+      firstStreamRetriever.requester.authenticator,
       builderMetadata,
       resolvedManifest.spec
     )
