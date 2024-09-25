@@ -18,6 +18,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldRunOnExpandedGkeDataplane;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseRouteToTaskRouting;
 import io.airbyte.featureflag.Workspace;
 import java.io.IOException;
 import java.util.UUID;
@@ -82,6 +83,7 @@ class RouterServiceTest {
   void testGetTaskQueue() throws IOException, ConfigNotFoundException {
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
@@ -94,6 +96,7 @@ class RouterServiceTest {
   @Test
   void testGetTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
@@ -109,6 +112,7 @@ class RouterServiceTest {
   void testGetTaskQueueBehindExpandedFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_EXPANDED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));

@@ -179,3 +179,5 @@ object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
 object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
+
+object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)

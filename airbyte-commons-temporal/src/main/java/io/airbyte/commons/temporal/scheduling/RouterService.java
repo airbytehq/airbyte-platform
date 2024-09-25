@@ -8,12 +8,16 @@ import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.ShouldRunOnExpandedGkeDataplane;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
+import io.airbyte.featureflag.UseRouteToTaskRouting;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +51,13 @@ public class RouterService {
   public String getTaskQueue(final UUID connectionId, final TemporalJobType jobType) throws IOException, ConfigNotFoundException {
     final Geography geography = configRepository.getGeographyForConnection(connectionId);
     final UUID workspaceId = configRepository.getStandardWorkspaceFromConnection(connectionId, false).getWorkspaceId();
+
+    // Feature flag to disable the data-plane routing of temporal queues
+    if (!featureFlagClient.boolVariation(UseRouteToTaskRouting.INSTANCE,
+        new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
+      return jobType.name();
+    }
+
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
       if (featureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
         return taskQueueMapper.getTaskQueueExpanded(geography, jobType);
