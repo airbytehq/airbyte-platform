@@ -140,8 +140,6 @@ object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-s
 
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
 
-object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = false)
-
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
