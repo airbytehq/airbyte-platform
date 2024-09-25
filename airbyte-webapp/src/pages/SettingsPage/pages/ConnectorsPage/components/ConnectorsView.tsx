@@ -17,8 +17,7 @@ import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useIntent } from "core/utils/rbac";
-import { useGeneratedIntent } from "core/utils/rbac/useGeneratedIntent";
+import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import { AddNewConnectorButton } from "./AddNewConnectorButton";
@@ -68,7 +67,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   const canUpdateConnectors = useIntent("UpdateConnectorVersions", {
     organizationId: workspace.organizationId,
   });
-  const canUpdateOrDeleteCustomConnectors = useGeneratedIntent("UpdateOrDeleteCustomConnector");
+  const canUpdateOrDeleteCustomConnectors = useGeneratedIntent(Intent.UpdateOrDeleteCustomConnector);
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && canUpdateConnectors;
   const allowUpdateDeleteCustomConnectors =
     useFeature(FeatureItem.AllowUploadCustomImage) && canUpdateOrDeleteCustomConnectors;

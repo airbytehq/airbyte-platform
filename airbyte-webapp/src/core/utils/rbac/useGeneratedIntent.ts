@@ -3,14 +3,14 @@ import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { assertNever } from "core/utils/asserts";
 
-import { INTENTS } from "./generated-intents";
+import { INTENTS, Intent } from "./generated-intents";
 
 interface MetaOverride {
   organizationId?: string;
   workspaceId?: string;
 }
 
-export const useGeneratedIntent = (intentName: keyof typeof INTENTS, metaOverride?: MetaOverride) => {
+export const useGeneratedIntent = (intentName: Intent, metaOverride?: MetaOverride) => {
   const { workspaceId: currentWorkspaceId, organizationId: currentOrganizationId } = useCurrentWorkspace();
   const { userId } = useCurrentUser();
   const { permissions } = useListPermissions(userId);

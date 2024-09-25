@@ -11,6 +11,10 @@ const MOCK_USER_ID = uuidv4();
 const MOCK_WORKSPACE_UUID = uuidv4();
 const MOCK_ORGANIZATION_UUID = uuidv4();
 
+enum MockIntent {
+  "UploadCustomConnector" = "UploadCustomConnector",
+}
+
 jest.mock(
   "./generated-intents",
   () => ({
@@ -49,7 +53,10 @@ describe(`${useGeneratedIntent.name}`, () => {
     mocked(useListPermissions).mockReturnValue({
       permissions: [{ permissionId: uuidv4(), permissionType: "instance_admin", userId: MOCK_USER_ID }],
     });
-    const { result } = renderHook(() => useGeneratedIntent("UploadCustomConnector"), { wrapper: TestWrapper });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { result } = renderHook(() => useGeneratedIntent(MockIntent.UploadCustomConnector as any), {
+      wrapper: TestWrapper,
+    });
 
     expect(result.current).toBe(true);
   });
@@ -58,7 +65,10 @@ describe(`${useGeneratedIntent.name}`, () => {
     mocked(useListPermissions).mockReturnValue({
       permissions: [],
     });
-    const { result } = renderHook(() => useGeneratedIntent("UploadCustomConnector"), { wrapper: TestWrapper });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { result } = renderHook(() => useGeneratedIntent(MockIntent.UploadCustomConnector as any), {
+      wrapper: TestWrapper,
+    });
 
     expect(result.current).toBe(false);
   });
@@ -74,7 +84,10 @@ describe(`${useGeneratedIntent.name}`, () => {
         },
       ],
     });
-    const { result } = renderHook(() => useGeneratedIntent("UploadCustomConnector"), { wrapper: TestWrapper });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { result } = renderHook(() => useGeneratedIntent(MockIntent.UploadCustomConnector as any), {
+      wrapper: TestWrapper,
+    });
 
     expect(result.current).toBe(true);
   });
@@ -91,7 +104,10 @@ describe(`${useGeneratedIntent.name}`, () => {
         },
       ],
     });
-    const { result } = renderHook(() => useGeneratedIntent("UploadCustomConnector"), { wrapper: TestWrapper });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { result } = renderHook(() => useGeneratedIntent(MockIntent.UploadCustomConnector as any), {
+      wrapper: TestWrapper,
+    });
 
     expect(result.current).toBe(false);
   });
