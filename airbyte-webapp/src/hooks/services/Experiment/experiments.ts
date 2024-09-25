@@ -26,16 +26,12 @@ export interface Experiments {
   "connection.hashingUI": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
-  "billing.organizationBillingPage": boolean;
-  "billing.workspaceUsagePage": boolean;
 }
 
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
   "billing.autoRecharge": false,
   "billing.early-sync-enabled": false,
-  "billing.organizationBillingPage": false,
-  "billing.workspaceUsagePage": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing and FeatureItem.SyncCatalogV2
   "connection.onboarding.destinations": "",

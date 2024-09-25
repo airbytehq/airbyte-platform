@@ -16,6 +16,7 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
+import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
@@ -26,8 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
-  const isOrganizationBillingPageVisible = useExperiment("billing.organizationBillingPage");
-  const isWorkspaceUsagePageVisible = useExperiment("billing.workspaceUsagePage");
+  const showBillingPageV2 = useShowBillingPageV2();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
 
   return (
@@ -95,7 +95,7 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
 
-          {isWorkspaceUsagePageVisible && (
+          {showBillingPageV2 && (
             <SettingsLink
               iconType="chart"
               name={formatMessage({ id: "settings.usage" })}
@@ -115,7 +115,7 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.members" })}
               to={CloudSettingsRoutePaths.OrganizationMembers}
             />
-            {isOrganizationBillingPageVisible && canManageOrganizationBilling && (
+            {showBillingPageV2 && canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}
