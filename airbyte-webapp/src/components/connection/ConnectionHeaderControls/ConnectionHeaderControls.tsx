@@ -23,7 +23,7 @@ import { FreeHistoricalSyncIndicator } from "../EnabledControl/FreeHistoricalSyn
 
 export const ConnectionHeaderControls: React.FC = () => {
   const { mode } = useConnectionFormService();
-  const { connection, updateConnectionStatus, connectionUpdating } = useConnectionEditService();
+  const { connection, updateConnectionStatus, connectionUpdating, schemaRefreshing } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const navigate = useNavigate();
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
@@ -50,9 +50,15 @@ export const ConnectionHeaderControls: React.FC = () => {
   const onChangeStatus = async (checked: boolean) =>
     await updateConnectionStatus(checked ? ConnectionStatus.active : ConnectionStatus.inactive);
 
-  const isDisabled = isReadOnly || syncStarting || cancelStarting || resetStarting || refreshStarting;
+  const isDisabled =
+    isReadOnly ||
+    syncStarting ||
+    cancelStarting ||
+    resetStarting ||
+    refreshStarting ||
+    schemaRefreshing ||
+    connectionUpdating;
   const isStartSyncBtnDisabled = isDisabled || !connectionEnabled;
-  const isCancelBtnDisabled = isDisabled || connectionUpdating;
   const isSwitchDisabled = isDisabled || hasBreakingSchemaChange;
 
   return (
@@ -66,6 +72,7 @@ export const ConnectionHeaderControls: React.FC = () => {
             data-testid="schedule-button"
             className={styles.scheduleButton}
             onClick={onScheduleBtnClick}
+            disabled={isDisabled}
           >
             <FormattedScheduleDataMessage
               scheduleType={connection.scheduleType}
@@ -95,7 +102,7 @@ export const ConnectionHeaderControls: React.FC = () => {
       {connectionStatus.isRunning && cancelJob && (
         <Button
           onClick={cancelJob}
-          disabled={isCancelBtnDisabled}
+          disabled={isDisabled}
           data-testid="cancel-sync-button"
           variant="clear"
           icon={cancelStarting ? "loading" : "cross"}

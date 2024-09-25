@@ -49,7 +49,7 @@ const SchemaChangeMessage: React.FC = () => {
   const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(isDirty);
 
   const { refreshSchema } = useConnectionFormService();
-  const { connection, schemaHasBeenRefreshed, schemaRefreshing } = useConnectionEditService();
+  const { connection, schemaHasBeenRefreshed, schemaRefreshing, connectionUpdating } = useConnectionEditService();
   const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   if (schemaHasBeenRefreshed) {
@@ -62,6 +62,7 @@ const SchemaChangeMessage: React.FC = () => {
         type="info"
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
+        actionBtnProps={{ disabled: connectionUpdating }}
         onAction={refreshSchema}
         data-testid="schemaChangesDetected"
       />
