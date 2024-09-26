@@ -8751,7 +8751,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
         setAsActiveManifest:
           type: boolean
         declarativeManifest:
@@ -8766,7 +8766,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
         version:
           $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
