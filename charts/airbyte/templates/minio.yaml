@@ -122,7 +122,7 @@ spec:
     fsGroup: 1000
   containers:
     - name: minio-mc
-      image: airbyte/mc
+      image: "{{ .Values.minio.mc.image.repository }}:{{ .Values.minio.mc.image.tag }}"
       command: ["/bin/sh", "-c",
         "until (/usr/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
           /usr/bin/mc mb --ignore-existing myminio/state-storage;
