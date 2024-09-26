@@ -25,6 +25,7 @@ import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -42,6 +43,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * InstanceConfigurationHandler. Javadocs suppressed because api docs should be used as source of
@@ -95,6 +98,8 @@ public class InstanceConfigurationHandler {
     this.clock = clock.orElse(Clock.systemUTC());
     this.kubernetesClient = kubernetesClient;
   }
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(InstanceConfigurationHandler.class);
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
     final Organization defaultOrganization = getDefaultOrganization();
@@ -163,8 +168,16 @@ public class InstanceConfigurationHandler {
   private void updateDefaultUser(final InstanceConfigurationSetupRequestBody requestBody) throws IOException {
     final AuthenticatedUser defaultUser =
         userPersistence.getDefaultUser().orElseThrow(() -> new IllegalStateException("Default user does not exist."));
-    // email is a required request property, so always set it.
-    defaultUser.setEmail(requestBody.getEmail());
+
+    // If a user with the provided email already exists (which can be the case in Enterprise), we should
+    // not update the default user's email to the provided email since it would cause a conflict.
+    final Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(requestBody.getEmail());
+    if (existingUserWithEmail.isPresent()) {
+      LOGGER.info("User ID {} already has the provided email {}. Not updating default user's email.", existingUserWithEmail.get().getUserId(),
+          requestBody.getEmail());
+    } else {
+      defaultUser.setEmail(requestBody.getEmail());
+    }
 
     // name is currently optional, so only set it if it is provided.
     if (requestBody.getUserName() != null) {
