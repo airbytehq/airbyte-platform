@@ -332,7 +332,12 @@ class WorkloadHandlerImpl(
           Jsons.deserialize(signalPayload, io.airbyte.config.SignalInput::class.java)
         } catch (e: Exception) {
           logger.error(e) { "Failed to deserialize signal payload: $signalPayload" }
-          metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL_DESERIALIZATION_FAILED, 1)
+          metricClient.count(
+            OssMetricsRegistry.WORKLOADS_SIGNAL,
+            1,
+            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+          )
           return
         }
       }
@@ -344,12 +349,20 @@ class WorkloadHandlerImpl(
             workflowId = signalInput.workflowId,
           ),
         )
+        metricClient.count(
+          OssMetricsRegistry.WORKLOADS_SIGNAL,
+          1,
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+        )
       } catch (e: Exception) {
         logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
+          OssMetricsRegistry.WORKLOADS_SIGNAL,
           1,
           MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+          MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
         )
       }
     }
