@@ -61,6 +61,8 @@ open class LocalTestingSecretPersistence(
     ).execute()
   }
 
+  @Transactional
+  @TransactionalAdvice("local-secrets")
   override fun delete(coordinate: SecretCoordinate) {
     initialize()
     dslContext.execute("DELETE FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
