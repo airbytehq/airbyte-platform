@@ -4,16 +4,23 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Separator } from "components/ui/Separator";
+import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
+import { DiagnosticsButton } from "pages/SettingsPage/components/DiagnosticButton";
 
 import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettingsForm";
 
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
   const { formatMessage } = useIntl();
-  const { organizationId } = useCurrentWorkspace();
+  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const isDownloadDiagnosticsEnabled = useExperiment("settings.downloadDiagnostics");
+  const canDownloadDiagnostics = useIntent("DownloadDiagnostics", { workspaceId }) && isDownloadDiagnosticsEnabled;
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -33,6 +40,23 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
         </CopyButton>
       </FlexContainer>
       <UpdateOrganizationSettingsForm />
+
+      {canDownloadDiagnostics && (
+        <>
+          <Separator />
+          <FlexContainer direction="column" gap="md">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="settings.organization.diagnostics.title" />
+            </Heading>
+            <Text color="grey" size="sm">
+              <FormattedMessage id="settings.organization.diagnostics.description" />
+            </Text>
+            <FlexItem>
+              <DiagnosticsButton />
+            </FlexItem>
+          </FlexContainer>
+        </>
+      )}
     </FlexContainer>
   );
 };

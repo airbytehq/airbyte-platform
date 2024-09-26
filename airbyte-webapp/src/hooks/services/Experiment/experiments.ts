@@ -20,6 +20,7 @@ export interface Experiments {
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "settings.breakingChangeNotifications": boolean;
+  "settings.downloadDiagnostics": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
@@ -47,6 +48,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": false,
   "settings.breakingChangeNotifications": false,
+  "settings.downloadDiagnostics": false,
   "settings.showAdvancedSettings": false,
   "upcomingFeaturesPage.url": "",
 };
