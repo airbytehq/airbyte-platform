@@ -383,7 +383,7 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
               <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.subText" />
             </Text>
             <ExternalLink
-              href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic"
+              href="https://docs.airbyte.com/contributing-to-airbyte/submit-new-connector#obtaining-your-github-access-token"
               className={styles.githubTokenLink}
               variant="primary"
             >
