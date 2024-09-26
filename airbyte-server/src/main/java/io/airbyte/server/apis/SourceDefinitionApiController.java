@@ -12,6 +12,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 import io.airbyte.api.generated.SourceDefinitionApi;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
+import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
 import io.airbyte.api.model.generated.ScopeType;
@@ -23,6 +24,7 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.generated.Intent;
 import io.airbyte.commons.auth.permissions.RequiresIntent;
+import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
@@ -44,11 +46,14 @@ import lombok.extern.slf4j.Slf4j;
 public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   private final SourceDefinitionsHandler sourceDefinitionsHandler;
+  private final EnterpriseSourceStubsHandler enterpriseSourceStubsHandler;
   private final ActorDefinitionAccessValidator accessValidator;
 
   public SourceDefinitionApiController(final SourceDefinitionsHandler sourceDefinitionsHandler,
+                                       final EnterpriseSourceStubsHandler enterpriseSourceStubsHandler,
                                        final ActorDefinitionAccessValidator accessValidator) {
     this.sourceDefinitionsHandler = sourceDefinitionsHandler;
+    this.enterpriseSourceStubsHandler = enterpriseSourceStubsHandler;
     this.accessValidator = accessValidator;
   }
 
@@ -110,6 +115,14 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Override
   public PrivateSourceDefinitionRead grantSourceDefinition(@Body final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(actorDefinitionIdWithScope));
+  }
+
+  @Post("/list_enterprise_source_stubs")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public EnterpriseSourceStubsReadList listEnterpriseSourceStubs() {
+    return ApiHelper.execute(enterpriseSourceStubsHandler::listEnterpriseSourceStubs);
   }
 
   @Post("/list_latest")

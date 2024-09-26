@@ -211,6 +211,11 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
+        - name: ENTERPRISE_SOURCE_STUBS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: ENTERPRISE_SOURCE_STUBS_URL
 
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
         # Values for Airbyte auth configurations, secrets, and credentials in Community edition

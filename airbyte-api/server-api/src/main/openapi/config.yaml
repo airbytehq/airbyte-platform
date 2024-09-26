@@ -645,6 +645,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceDefinitionReadList"
+  /v1/source_definitions/list_enterprise_source_stubs:
+    post:
+      tags:
+        - source_definition
+      summary: List all enterprise source connector stubs from a specified GCS bucket.
+      operationId: listEnterpriseSourceStubs
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+
   /v1/source_definitions/create_custom:
     post:
       tags:
@@ -8600,6 +8614,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
+    EnterpriseSourceStub:
+      type: object
+      required:
+        - id
+        - name
+        - url
+        - icon
+      properties:
+        id:
+          type: string
+          description: The id of the enterprise source connector stub. We use "source-<name>-enterprise" as the ID since these connectors do not necessarily exist yet, and do not have a guaranteed definitionId
+        name:
+          type: string
+          description: The name of the enterprise connector
+        url:
+          type: string
+          description: A url associated with the Enterprise connector. Currently represents a link to the documentation.
+        icon:
+          type: string
+          description: The url of the connector's icon
+        label:
+          type: string
+          description: The connector's label (ie, "enterprise")
+        type:
+          type: string
+          description: The connector's type (ie, "enterprise_source")
+    EnterpriseSourceStubsReadList:
+      type: object
+      required:
+        - enterpriseSourceStubs
+      properties:
+        enterpriseSourceStubs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnterpriseSourceStub"
+          description: A list of source stubs fetched from a JSON file.
     ScopeId:
       type: string
       format: uuid

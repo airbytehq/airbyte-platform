@@ -14,6 +14,7 @@ import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.DiagnosticToolHandler;
+import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
@@ -71,6 +72,14 @@ import org.mockito.Mockito;
 @MicronautTest
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class BaseControllerTest {
+
+  EnterpriseSourceStubsHandler enterpriseSourceStubsHandler = Mockito.mock(EnterpriseSourceStubsHandler.class);
+
+  @MockBean(EnterpriseSourceStubsHandler.class)
+  @Replaces(EnterpriseSourceStubsHandler.class)
+  EnterpriseSourceStubsHandler mmEnterpriseSourceStubsHandler() {
+    return enterpriseSourceStubsHandler;
+  }
 
   ActorDefinitionVersionHandler actorDefinitionVersionHandler = Mockito.mock(ActorDefinitionVersionHandler.class);
 

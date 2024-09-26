@@ -84,6 +84,7 @@ var commonConfigMapKeys = toStringSet(
 	"WORKSPACE_ROOT",
 	"PUB_SUB_ENABLED",
 	"PUB_SUB_TOPIC_NAME",
+	"ENTERPRISE_SOURCE_STUBS_URL",
 )
 
 var proEditionConfigMapKeys = toStringSet(
