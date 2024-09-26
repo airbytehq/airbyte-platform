@@ -1,7 +1,6 @@
 package io.airbyte.data.repositories.entities
 
 import io.micronaut.data.annotation.AutoPopulated
-import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.TypeDef
@@ -19,6 +18,5 @@ data class ConnectionTimelineEvent(
   var eventType: String,
   @field:TypeDef(type = DataType.JSON)
   var summary: String? = null,
-  @DateCreated
   var createdAt: OffsetDateTime? = null,
 )

@@ -29,6 +29,7 @@ import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventList;
 import io.airbyte.api.model.generated.ConnectionEventType;
 import io.airbyte.api.model.generated.ConnectionEventWithDetails;
+import io.airbyte.api.model.generated.ConnectionEventsBackfillRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
@@ -69,6 +70,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
+import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
@@ -120,6 +122,8 @@ import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent;
+import io.airbyte.data.services.shared.FailedEvent;
+import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
@@ -141,7 +145,9 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1152,6 +1158,85 @@ public class ConnectionsHandler {
       connectionEventWithDetails.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.getUserId(), event.getConnectionId()));
     }
     return connectionEventWithDetails;
+  }
+
+  /**
+   * Backfill jobs to timeline events. Supported event types:
+   * <p>
+   * 1. SYNC_CANCELLED 2. SYNC_SUCCEEDED 3. SYNC_FAILED 4. SYNC_INCOMPLETE 5. REFRESH_SUCCEEDED 6.
+   * REFRESH_FAILED 7. REFRESH_INCOMPLETE 8. REFRESH_CANCELLED 9. CLEAR_SUCCEEDED 10. CLEAR_FAILED 11.
+   * CLEAR_INCOMPLETE 12. CLEAR_CANCELLED
+   * </p>
+   * Notes:
+   * <p>
+   * 1. Manually started events (X_STARTED) will NOT be backfilled because we don't have that
+   * information from Jobs table.
+   * </p>
+   * <p>
+   * 2. Manually cancelled events (X_CANCELLED) will be backfilled, but the associated user ID will be
+   * missing as it is not trackable from Jobs table.
+   * </p>
+   * <p>
+   * 3. RESET_CONNECTION is just the old enum name of CLEAR.
+   * </p>
+   */
+  public void backfillConnectionEvents(final ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) throws IOException {
+    final UUID connectionId = connectionEventsBackfillRequestBody.getConnectionId();
+    final OffsetDateTime startTime = connectionEventsBackfillRequestBody.getCreatedAtStart();
+    final OffsetDateTime endTime = connectionEventsBackfillRequestBody.getCreatedAtEnd();
+    LOGGER.info("Backfilled events from {} to {} for connection {}", startTime, endTime, connectionId);
+    // 1. list all jobs within a given time window
+    final List<Job> allJobsToMigrate = jobPersistence.listJobsForConvertingToEvents(
+        Set.of(ConfigType.SYNC, ConfigType.REFRESH, ConfigType.RESET_CONNECTION),
+        Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.INCOMPLETE, JobStatus.CANCELLED),
+        startTime,
+        endTime);
+    LOGGER.info("Verify listing jobs. {} jobs found.", allJobsToMigrate.size());
+    // 2. For each job, log a timeline event
+    allJobsToMigrate.forEach(job -> {
+      final JobWithAttemptsRead jobRead = JobConverter.getJobWithAttemptsRead(job);
+      // Construct a timeline event
+      final FinalStatusEvent event;
+      if (job.getStatus() == JobStatus.FAILED || job.getStatus() == JobStatus.INCOMPLETE) {
+        // We need to log a failed event with job stats and the first failure reason.
+        event = new FailedEvent(
+            job.getId(),
+            job.getCreatedAtInSecond(),
+            job.getUpdatedAtInSecond(),
+            jobRead.getAttempts().stream()
+                .mapToLong(attempt -> attempt.getBytesSynced() != null ? attempt.getBytesSynced() : 0)
+                .sum(),
+            jobRead.getAttempts().stream()
+                .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
+                .sum(),
+            job.getAttemptsCount(),
+            job.getConfigType().name(),
+            job.getStatus().name(),
+            JobConverter.getStreamsAssociatedWithJob(job),
+            job.getLastAttempt()
+                .flatMap(Attempt::getFailureSummary)
+                .flatMap(summary -> summary.getFailures().stream().findFirst()));
+      } else { // SUCCEEDED and CANCELLED
+        // We need to log a timeline event with job stats.
+        event = new FinalStatusEvent(
+            job.getId(),
+            job.getCreatedAtInSecond(),
+            job.getUpdatedAtInSecond(),
+            jobRead.getAttempts().stream()
+                .mapToLong(attempt -> attempt.getBytesSynced() != null ? attempt.getBytesSynced() : 0)
+                .sum(),
+            jobRead.getAttempts().stream()
+                .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
+                .sum(),
+            job.getAttemptsCount(),
+            job.getConfigType().name(),
+            job.getStatus().name(),
+            JobConverter.getStreamsAssociatedWithJob(job));
+      }
+      // Save an event
+      connectionTimelineEventService.writeEventWithTimestamp(
+          UUID.fromString(job.getScope()), event, null, Instant.ofEpochSecond(job.getUpdatedAtInSecond()).atOffset(ZoneOffset.UTC));
+    });
   }
 
   /**

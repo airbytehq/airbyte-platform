@@ -2358,6 +2358,25 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/backfill:
+    post:
+      tags:
+        - connection
+      summary: Backfill events for a connection
+      operationId: backfillConnectionEvents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsBackfillRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/last_job_per_stream:
     post:
       tags:
@@ -10264,6 +10283,23 @@ components:
           format: date-time
         createdAtEnd:
           description: The end datetime of a time range to filter by
+          type: string
+          format: date-time
+    ConnectionEventsBackfillRequestBody:
+      type: object
+      required:
+        - connectionId
+        - createdAtStart
+        - createdAtEnd
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        createdAtStart:
+          description: The start datetime of a time range to backfill events
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to backfill events
           type: string
           format: date-time
 
