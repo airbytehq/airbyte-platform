@@ -1,11 +1,12 @@
 import { Row } from "@tanstack/react-table";
 import get from "lodash/get";
-import React from "react";
+import React, { useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
+import { FlexContainer } from "components/ui/Flex";
 import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
@@ -13,7 +14,7 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 
 import { MultiCatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
-import styles from "./NextPKCell.module.scss";
+import styles from "./StreamPKCell.module.scss";
 import { updatePrimaryKey } from "../../../syncCatalog/SyncCatalog/streamConfigHelpers";
 import { checkCursorAndPKRequirements, getFieldPathType } from "../../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../formConfig";
@@ -26,6 +27,7 @@ interface NextPKCellProps {
 }
 
 export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) => {
+  const [optionsMenuOpened, setOptionsMenuOpened] = useState(false);
   const { errors } = useFormState<FormConnectionFormValues>();
 
   if (!row.original.streamNode) {
@@ -86,15 +88,33 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
         buttonEditText={<FormattedMessage id="form.error.pk.edit" />}
         controlClassName={styles.control}
         controlBtnIcon="keyCircle"
+        onOptionsMenuToggle={(open) => setOptionsMenuOpened(open)}
       />
     ) : null;
 
+  const isSourceDefined = config?.selected && !shouldDefinePk;
+  const isMultiplePKs = config?.selected && config?.primaryKey && config?.primaryKey?.length > 1;
+
   return (
     <div data-testid="primary-key-cell">
-      {config?.selected && !shouldDefinePk ? (
-        <Tooltip placement="bottom" control={pkButton}>
-          <FormattedMessage id="form.field.sourceDefinedPK" />
-          <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
+      {isSourceDefined || isMultiplePKs ? (
+        <Tooltip placement="bottom" control={pkButton} disabled={optionsMenuOpened}>
+          <FlexContainer gap="lg" direction="column">
+            {isSourceDefined && (
+              <div>
+                <FormattedMessage id="form.field.sourceDefinedPK" />
+                <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
+              </div>
+            )}
+            {isMultiplePKs && (
+              <ul className={styles.pkList}>
+                {config?.primaryKey
+                  ?.map((pk) => pathDisplayName(pk))
+                  .sort((a, b) => a.localeCompare(b))
+                  .map((pk) => <li>{pk}</li>)}
+              </ul>
+            )}
+          </FlexContainer>
         </Tooltip>
       ) : (
         pkButton

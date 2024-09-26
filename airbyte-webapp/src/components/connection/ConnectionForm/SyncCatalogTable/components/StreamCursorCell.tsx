@@ -14,7 +14,7 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 
 import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
-import styles from "./NextCursorCell.module.scss";
+import styles from "./StreamCursorCell.module.scss";
 import { updateCursorField } from "../../../syncCatalog/SyncCatalog/streamConfigHelpers";
 import { checkCursorAndPKRequirements, getFieldPathType } from "../../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../formConfig";

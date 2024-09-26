@@ -40,6 +40,11 @@ interface BaseProps {
    * Icon for the control button
    */
   controlBtnIcon: IconProps["type"];
+  /**
+   * Callback to notify when the options menu is opened/closed
+   * @param open
+   */
+  onOptionsMenuToggle?: (open: boolean) => void;
 }
 
 export interface CatalogComboBoxProps extends BaseProps {
@@ -233,7 +238,13 @@ const Options = React.forwardRef(
 );
 Options.displayName = "Options";
 
-export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({ value, options, onChange, ...restControlProps }) => {
+export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({
+  value,
+  options,
+  onChange,
+  onOptionsMenuToggle,
+  ...restControlProps
+}) => {
   const [filterQuery, setFilterQuery] = useState("");
 
   const onCloseOptionsMenu = () => {
@@ -257,6 +268,10 @@ export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({ value, options
           setFilterQuery("");
         }
 
+        if (onOptionsMenuToggle) {
+          onOptionsMenuToggle(open);
+        }
+
         return (
           <FloatLayout>
             <ControlButton value={value} open={open} setFilterQuery={setFilterQuery} {...restControlProps} />
@@ -272,6 +287,7 @@ export const MultiCatalogComboBox: React.FC<MultiCatalogComboBoxProps> = ({
   value,
   options,
   onChange,
+  onOptionsMenuToggle,
   ...restControlProps
 }) => {
   const [filterQuery, setFilterQuery] = useState("");
@@ -299,12 +315,17 @@ export const MultiCatalogComboBox: React.FC<MultiCatalogComboBoxProps> = ({
       onClose={onCloseOptionsMenu}
       immediate
     >
-      {({ open }) => (
-        <FloatLayout>
-          <ControlButton open={open} value={selectedOptions} setFilterQuery={setFilterQuery} {...restControlProps} />
-          <Options options={options} filterQuery={filterQuery} multiple />
-        </FloatLayout>
-      )}
+      {({ open }) => {
+        if (onOptionsMenuToggle) {
+          onOptionsMenuToggle(open);
+        }
+        return (
+          <FloatLayout>
+            <ControlButton open={open} value={selectedOptions} setFilterQuery={setFilterQuery} {...restControlProps} />
+            <Options options={options} filterQuery={filterQuery} multiple />
+          </FloatLayout>
+        );
+      }}
     </Combobox>
   );
 };
