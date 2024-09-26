@@ -9,7 +9,8 @@ import { FeatureItem, useFeature } from "core/services/features";
 export const LicenseBanner: React.FC = () => {
   const showLicenseResults = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const { licenseStatus, licenseExpirationDate } = useGetInstanceConfiguration();
-  const expiresSoon = dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") <= 30;
+  const daysUntilExpiration = dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days");
+  const expiresSoon = daysUntilExpiration <= 30 && daysUntilExpiration >= 0;
 
   const licenseBannerMessage =
     licenseStatus === "expired"
@@ -22,12 +23,9 @@ export const LicenseBanner: React.FC = () => {
       ? "settings.license.banner.expiresSoon"
       : undefined;
 
-  const licenseBannerValues =
-    licenseStatus === "expired"
-      ? { daysAgo: dayjs().diff(dayjs((licenseExpirationDate ?? 0) * 1000), "days") }
-      : expiresSoon
-      ? { daysLeft: dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") }
-      : undefined;
+  const licenseBannerValues = expiresSoon
+    ? { daysLeft: dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") }
+    : undefined;
 
   if (!licenseBannerMessage || !showLicenseResults) {
     return null;

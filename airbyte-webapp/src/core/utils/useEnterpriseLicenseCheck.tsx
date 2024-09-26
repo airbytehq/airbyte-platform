@@ -15,7 +15,8 @@ export const useEnterpriseLicenseCheck = () => {
   const { licenseStatus, licenseExpirationDate } = useGetInstanceConfiguration();
   const [searchParams] = useSearchParams();
   const shouldCheckLicense = searchParams.get("checkLicense");
-  const expiresSoon = dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") <= 30;
+  const daysUntilExpiration = dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days");
+  const expiresSoon = daysUntilExpiration <= 30 && daysUntilExpiration >= 0;
   const showLicenseResults = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const { openModal } = useModalService();
 
@@ -31,12 +32,9 @@ export const useEnterpriseLicenseCheck = () => {
         ? "settings.license.modalTitle.expiresSoon"
         : undefined;
 
-    const licenseWarningTitleValues =
-      licenseStatus === "expired"
-        ? { daysAgo: dayjs().diff(dayjs((licenseExpirationDate ?? 0) * 1000), "days") }
-        : expiresSoon
-        ? { daysLeft: dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") }
-        : undefined;
+    const licenseWarningTitleValues = expiresSoon
+      ? { daysLeft: dayjs((licenseExpirationDate ?? 0) * 1000).diff(dayjs(), "days") }
+      : undefined;
 
     if (licenseWarningTitle) {
       return openModal({

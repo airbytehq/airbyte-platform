@@ -13,6 +13,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,
+  FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MultiWorkspaceUI,
