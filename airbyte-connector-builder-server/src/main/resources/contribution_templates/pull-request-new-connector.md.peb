@@ -31,3 +31,5 @@ Contributor-provided connector description:
 - [ ] Run `/format-fix` to resolve any formatting errors
 - [ ] Help the contributor upload an icon that follows our icon design guidelines
 - [ ] Click into the CI workflows that wait for a maintainer to run them, which should trigger CI runs
+
+<!-- DO NOT REMOVE: connector-builder-new-connector-contribution -->

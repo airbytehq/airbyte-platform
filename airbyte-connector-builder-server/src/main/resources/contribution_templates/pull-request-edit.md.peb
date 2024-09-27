@@ -12,3 +12,5 @@ The contributor provided the following description of the change:
 - [ ] Ensure connector docs are up to date with any changes
 - [ ] Run `/format-fix` to resolve any formatting errors
 - [ ] Click into the CI workflows that wait for a maintainer to run them, which should trigger CI runs
+
+<!-- DO NOT REMOVE: connector-builder-edit-connector-contribution -->
