@@ -83,9 +83,31 @@ export const getSyncCatalogRows = (
     }),
   }));
 };
-
+/**
+ * Check if row is namespace
+ * @param row
+ */
 export const isNamespaceRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0 && row.original.rowType === "namespace";
+
+/**
+ * Check if row is stream
+ * @param row
+ */
 export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 1 && row.original.rowType === "stream";
+
+/**
+ * Get the root parent id, which is the namespace id
+ * @param row
+ */
+export const getNamespaceRowId = (row: Row<SyncCatalogUIModel>) => row.id.split(".")[0];
+
+/**
+ * Find row by id
+ * note: don't use getRow() method from react-table instance, when column filters are applied, it will return row by index not by id
+ * @param rows
+ * @param id
+ */
+export const findRow = (rows: Array<Row<SyncCatalogUIModel>>, id: string) => rows.find((row) => row.id === id);
 
 /**
  * Is filter by stream enabled
