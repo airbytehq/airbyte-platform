@@ -26,6 +26,7 @@ class ContributionTemplatesTest {
 
   val newConnectorContributionInfo =
     BuilderContributionInfo(
+      isEdit = false,
       connectorName = "Test Connector",
       connectorImageName = "test",
       actorDefinitionId = "test-uuid",
@@ -86,7 +87,7 @@ class ContributionTemplatesTest {
     val contributionTemplates = ContributionTemplates()
     val jacksonYaml = jacksonSerialize(serialzedYamlContent)
     val manifestParser = ManifestParser(jacksonYaml)
-    val prDescription = contributionTemplates.renderNewContributionPullRequestDescription(newConnectorContributionInfo)
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(newConnectorContributionInfo)
 
     assert(prDescription.contains(newConnectorContributionInfo.connectorName))
     assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
@@ -104,6 +105,17 @@ class ContributionTemplatesTest {
       // Assert that the rendered PR description contains the spec name
       assert(prDescription.contains("| `${prop.key}` |"))
     }
+  }
+
+  @Test
+  fun `test edit PR description`() {
+    val editConnectorContributionInfo = newConnectorContributionInfo.copy(isEdit = true)
+    val contributionTemplates = ContributionTemplates()
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(editConnectorContributionInfo)
+
+    assert(prDescription.contains(editConnectorContributionInfo.connectorName))
+    assert(prDescription.contains(editConnectorContributionInfo.connectorImageName))
+    assert(prDescription.contains(editConnectorContributionInfo.description))
   }
 
   @Test

@@ -159,7 +159,7 @@ class ContributionTemplates {
     return renderTemplateString("contribution_templates/acceptance-test-config.yml.peb", context)
   }
 
-  fun renderNewContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
+  fun renderContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
     val manifestParser = ManifestParser(contributionInfo.manifestYaml)
     val streams = toTemplateStreams(manifestParser.streams)
     val specProperties = toTemplateSpecProperties(manifestParser.spec)
@@ -171,6 +171,12 @@ class ContributionTemplates {
         "specProperties" to specProperties,
         "streams" to streams,
       )
-    return renderTemplateString("contribution_templates/pull-request-new-connector.md.peb", context)
+    val templatePath =
+      if (contributionInfo.isEdit) {
+        "contribution_templates/pull-request-edit.md.peb"
+      } else {
+        "contribution_templates/pull-request-new-connector.md.peb"
+      }
+    return renderTemplateString(templatePath, context)
   }
 }

@@ -54,29 +54,45 @@ class ConnectorContributionHandler(
     }
   }
 
-  private fun getFilePathToGenerationFunctionMap(
+  fun getFilesToCommitGenerationMap(
     contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
   ): Map<String, () -> String> {
-    return mapOf(
-      githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
-      githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
-      githubContributionService.connectorMetadataPath to {
-        contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService)
-      },
-      githubContributionService.connectorIconPath to { contributionTemplates.renderIconSvg() },
-      githubContributionService.connectorAcceptanceTestConfigPath to { contributionTemplates.renderAcceptanceTestConfigYaml(contributionInfo) },
-      githubContributionService.connectorDocsPath to { contributionTemplates.renderContributionDocsMd(contributionInfo) },
-    )
+    // Always generate the manifest and metadata files
+    val filesToCommit =
+      mutableMapOf(
+        githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
+        githubContributionService.connectorMetadataPath to {
+          contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService)
+        },
+      )
+
+    // Others - generate if not pre-existing
+    val createIfNotExistsFiles =
+      listOf(
+        githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
+        githubContributionService.connectorIconPath to { contributionTemplates.renderIconSvg() },
+        githubContributionService.connectorAcceptanceTestConfigPath to { contributionTemplates.renderAcceptanceTestConfigYaml(contributionInfo) },
+        githubContributionService.connectorDocsPath to { contributionTemplates.renderContributionDocsMd(contributionInfo) },
+      )
+
+    createIfNotExistsFiles.forEach { (filePath, generationFunction) ->
+      if (!githubContributionService.checkFileExistsOnMain(filePath)) {
+        filesToCommit[filePath] = generationFunction
+      }
+    }
+    return filesToCommit
   }
 
   private fun getContributionInfo(
     generateContributionRequestBody: GenerateContributionRequestBody,
     githubContributionService: GithubContributionService,
   ): BuilderContributionInfo {
+    val isEdit = githubContributionService.checkIfConnectorExistsOnMain()
     val actorDefinitionId = githubContributionService.readConnectorMetadataValue("definitionId") ?: UUID.randomUUID().toString()
     val authorUsername = githubContributionService.username
     return BuilderContributionInfo(
+      isEdit = isEdit,
       connectorName = generateContributionRequestBody.name,
       connectorImageName = generateContributionRequestBody.connectorImageName,
       actorDefinitionId = actorDefinitionId,
@@ -99,12 +115,12 @@ class ConnectorContributionHandler(
     githubContributionService.prepareBranchForContribution()
 
     // Commit files to branch
-    val fileGenerationMap = getFilePathToGenerationFunctionMap(contributionInfo, githubContributionService)
-    val filesToCommit = fileGenerationMap.mapValues { it.value() } // Calling .value() evaluates the generation functions
-    githubContributionService.commitFiles("Submission for ${contributionInfo.connectorImageName} from Connector Builder", filesToCommit)
+    val fileGenerationMap = getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
+    val filesToCommit = fileGenerationMap.mapValues { it.value.invoke() }
+    githubContributionService.commitFiles(filesToCommit)
 
     // Create / update pull request of branch
-    val pullRequestDescription = contributionTemplates.renderNewContributionPullRequestDescription(contributionInfo)
+    val pullRequestDescription = contributionTemplates.renderContributionPullRequestDescription(contributionInfo)
     val pullRequest = githubContributionService.getOrCreatePullRequest(pullRequestDescription)
 
     return GenerateContributionResponse()
