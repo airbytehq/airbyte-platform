@@ -4,32 +4,17 @@ import { useIntl } from "react-intl";
 import { Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 
-import { useCurrentOrganizationInfo } from "core/api";
-import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
+import { useBillingStatusBanner } from "packages/cloud/area/billing/utils/useBillingStatusBanner";
 
 export const BillingBanners: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { billing } = useCurrentOrganizationInfo();
+  const billingBanner = useBillingStatusBanner();
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge");
 
   return (
     <>
-      {billing?.paymentStatus === "manual" && (
-        <Message
-          type="info"
-          text={formatMessage(
-            { id: "settings.organization.billing.manualPaymentStatus" },
-            {
-              lnk: (node: React.ReactNode) => (
-                <Link opensInNewTab to={links.contactSales} variant="primary">
-                  {node}
-                </Link>
-              ),
-            }
-          )}
-        />
-      )}
+      {billingBanner && <Message type={billingBanner.level} text={billingBanner.content} />}
       {isAutoRechargeEnabled && (
         <Message
           data-testid="autoRechargeEnabledBanner"

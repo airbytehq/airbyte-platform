@@ -30,6 +30,7 @@ import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -66,6 +67,7 @@ class InstanceConfigurationHandlerTest {
   private static final String EMAIL = "org@airbyte.io";
   private static final String DEFAULT_ORG_NAME = "Default Org Name";
   private static final String DEFAULT_USER_NAME = "Default User Name";
+  private static final String DEFAULT_USER_EMAIL = ""; // matches what we do in production code
   private static final Integer MAX_NODES = 12;
   private static final Integer MAX_EDITORS = 50;
   private static final Date EXPIRATION_DATE = new Date(2025, 12, 3);
@@ -197,12 +199,16 @@ class InstanceConfigurationHandlerTest {
 
   @ParameterizedTest
   @CsvSource({
-    "true, true",
-    "true, false",
-    "false, true",
-    "false, false"
+    "true, true, true",
+    "true, true, false",
+    "true, false, true",
+    "true, false, false",
+    "false, true, true",
+    "false, true, false",
+    "false, false, true",
+    "false, false, false"
   })
-  void testSetupInstanceConfiguration(final boolean userNamePresent, final boolean orgNamePresent)
+  void testSetupInstanceConfiguration(final boolean userNamePresent, final boolean orgNamePresent, final boolean userWithEmailAlreadyExists)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     stubGetDefaultOrganization();
@@ -255,14 +261,22 @@ class InstanceConfigurationHandlerTest {
       requestBody.setOrganizationName(expectedOrgName);
     }
 
+    final String expectedEmailUpdate;
+    if (userWithEmailAlreadyExists) {
+      expectedEmailUpdate = DEFAULT_USER_EMAIL; // email should not be updated if it would conflict with an existing user
+      when(mUserPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(new User().withEmail(EMAIL)));
+    } else {
+      expectedEmailUpdate = EMAIL;
+    }
+
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.setupInstanceConfiguration(requestBody);
 
     assertEquals(expected, actual);
 
-    // verify the user was updated with the email and name from the request
+    // verify the user was updated with the expected email and name from the request
     verify(mUserPersistence).writeAuthenticatedUser(eq(new AuthenticatedUser()
         .withUserId(USER_ID)
-        .withEmail(EMAIL)
+        .withEmail(expectedEmailUpdate)
         .withName(expectedUserName)));
 
     // verify the organization was updated with the name from the request
@@ -358,7 +372,8 @@ class InstanceConfigurationHandlerTest {
     when(mUserPersistence.getDefaultUser()).thenReturn(
         Optional.of(new AuthenticatedUser()
             .withUserId(USER_ID)
-            .withName(DEFAULT_USER_NAME)));
+            .withName(DEFAULT_USER_NAME)
+            .withEmail(DEFAULT_USER_EMAIL)));
   }
 
   private void stubGetDefaultOrganization() throws IOException {

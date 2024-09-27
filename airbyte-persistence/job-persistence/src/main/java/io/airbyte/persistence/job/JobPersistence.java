@@ -286,6 +286,12 @@ public interface JobPersistence {
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
 
+  List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
+                                          Set<JobStatus> jobStatuses,
+                                          OffsetDateTime createdAtStart,
+                                          OffsetDateTime createdAtEnd)
+      throws IOException;
+
   /**
    * List jobs based on job IDs, nothing more.
    *

@@ -435,10 +435,17 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL_DESERIALIZATION_FAILED, 1) } returns Unit
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, 1, any(), any()) } returns Unit
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
-    verify { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL_DESERIALIZATION_FAILED, 1) }
+    verify {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOADS_SIGNAL,
+        1,
+        MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+        MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+      )
+    }
   }
 
   @Test
@@ -741,7 +748,7 @@ class WorkloadHandlerImplTest {
 
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
-    val metricClient: MetricClient = mockk()
+    val metricClient: MetricClient = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
@@ -772,21 +779,16 @@ class WorkloadHandlerImplTest {
     fun mockApiFailingSignal() {
       every { airbyteApi.signalApi } returns signalApi
       every { signalApi.signal(signalInput) } throws Exception("Failed to signal")
-      every {
-        metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
-          1,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
-        )
-      } returns Unit
     }
 
     fun verifyFailedSignal() {
       verify {
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL_FAILED,
+          OssMetricsRegistry.WORKLOADS_SIGNAL,
           1,
           MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+          any(),
         )
       }
     }

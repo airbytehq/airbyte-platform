@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 @MicronautTest
@@ -31,6 +33,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       ConnectionTimelineEvent(
         connectionId = UUID.randomUUID(),
         eventType = "Test",
+        createdAt = OffsetDateTime.now(),
       )
 
     val saved = connectionTimelineEventRepository.save(event)
@@ -47,21 +50,25 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       ConnectionTimelineEvent(
         connectionId = connectionId,
         eventType = ConnectionEvent.Type.SYNC_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC),
       )
     private val event2 =
       ConnectionTimelineEvent(
         connectionId = connectionId,
         eventType = ConnectionEvent.Type.SYNC_CANCELLED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
       )
     private val event3 =
       ConnectionTimelineEvent(
         connectionId = connectionId,
         eventType = ConnectionEvent.Type.REFRESH_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 3, 0, 0, 0, 0, ZoneOffset.UTC),
       )
     private val event4 =
       ConnectionTimelineEvent(
         connectionId = connectionId,
         eventType = ConnectionEvent.Type.REFRESH_SUCCEEDED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
       )
 
     @BeforeEach

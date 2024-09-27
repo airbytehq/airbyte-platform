@@ -4,6 +4,7 @@
 
 package io.airbyte.workers;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.GlobalTracer;
 import datadog.trace.api.Tracer;
 import io.airbyte.commons.logging.LogClientManager;
@@ -273,7 +274,17 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private WorkerOptions getWorkerOptions(final int max) {
     return WorkerOptions.newBuilder()
         .setMaxConcurrentActivityExecutionSize(max)
+        .setMaxConcurrentWorkflowTaskExecutionSize(inferWorkflowExecSizeFromActivityExecutionSize(max))
         .build();
+  }
+
+  @VisibleForTesting
+  static int inferWorkflowExecSizeFromActivityExecutionSize(final int max) {
+    // Divide by 5 seems to be a good ratio given current empirical observations
+    // Keeping floor at 2 to ensure we keep always return a valid value
+    final int floor = 2;
+    final int maxWorkflowSize = max / 5;
+    return Math.max(maxWorkflowSize, floor);
   }
 
   /**

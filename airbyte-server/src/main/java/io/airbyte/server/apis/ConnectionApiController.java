@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventList;
 import io.airbyte.api.model.generated.ConnectionEventWithDetails;
+import io.airbyte.api.model.generated.ConnectionEventsBackfillRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
@@ -112,6 +113,17 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
+  }
+
+  @Override
+  @Post(uri = "/backfill_events")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public void backfillConnectionEvents(ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
+    ApiHelper.execute(() -> {
+      connectionsHandler.backfillConnectionEvents(connectionEventsBackfillRequestBody);
+      return null;
+    });
   }
 
   @Override

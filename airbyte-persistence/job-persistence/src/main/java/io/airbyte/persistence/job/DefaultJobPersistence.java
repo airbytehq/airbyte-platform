@@ -1107,6 +1107,30 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
+                                                 Set<JobStatus> jobStatuses,
+                                                 OffsetDateTime createdAtStart,
+                                                 OffsetDateTime createdAtEnd)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(jobStatuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(jobStatuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return getJobsFromResult(ctx.fetch(fullQuery));
+    });
+
+  }
+
+  @Override
   public List<Job> listJobsLight(final Set<Long> jobIds) throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)

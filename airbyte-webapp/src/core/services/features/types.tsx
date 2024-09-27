@@ -16,6 +16,7 @@ export enum FeatureItem {
   CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
+  DiagnosticsExport = "DIAGNOSTICS_EXPORT",
   DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
