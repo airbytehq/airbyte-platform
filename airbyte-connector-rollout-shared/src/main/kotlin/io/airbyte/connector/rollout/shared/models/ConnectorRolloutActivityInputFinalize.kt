@@ -11,4 +11,5 @@ data class ConnectorRolloutActivityInputFinalize(
   var result: ConnectorRolloutFinalState,
   var errorMsg: String? = null,
   var failedReason: String? = null,
+  var updatedBy: UUID? = null,
 )
