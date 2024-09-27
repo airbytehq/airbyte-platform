@@ -34,6 +34,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.WorkloadConstants;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.WorkloadApiClient;
@@ -193,7 +194,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
 
   public void cancelWorkload(final String workloadId) throws IOException {
     callWithRetry(() -> {
-      workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+      workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(
+          workloadId, WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON, "WorkloadApiWorker"));
       return true;
     });
   }
