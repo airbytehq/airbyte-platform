@@ -28,6 +28,9 @@ micronaut:
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
+    webhook:
+      type: fixed
+      n-threads: ${WEBHOOK_TASK_EXECUTOR_THREADS:3}
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:

@@ -4584,6 +4584,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerPortalRead"
+  /v1/billing/complete_checkout_session:
+    post:
+      summary: Complete a checkout session
+      tags:
+        - billing
+        - cloud-only
+      operationId: completeCheckoutSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingEvent"
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          description: Invalid payload
+        "401":
+          description: Invalid signature
+
   /v1/billing/list_invoices:
     post:
       summary: Get a list of past invoices of the customer
@@ -10655,6 +10675,10 @@ components:
       properties:
         url:
           type: string
+    BillingEvent:
+      description: Generic event for billing, mapped to a JsonNode
+      type: object
+      additionalProperties: true # required for mapping to JsonNode
     InvoiceRead:
       type: object
       required:
