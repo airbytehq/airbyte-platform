@@ -193,6 +193,25 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("replicationPodTolerations")
+  fun replicationPodTolerations(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<Toleration> {
+    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+      return listOf()
+    }
+    return workerConfigs.workerKubeTolerations
+      .map { t ->
+        TolerationBuilder()
+          .withKey(t.key)
+          .withEffect(t.effect)
+          .withOperator(t.operator)
+          .withValue(t.value)
+          .build()
+      }
+  }
+
+  @Singleton
   @Named("checkPodTolerations")
   fun checkPodTolerations(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
