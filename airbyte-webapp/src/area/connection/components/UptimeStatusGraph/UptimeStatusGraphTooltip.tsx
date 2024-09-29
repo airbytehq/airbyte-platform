@@ -1,10 +1,7 @@
 import { FormattedMessage, FormattedTime, useIntl } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
-import {
-  ConnectionStatusIndicator,
-  ConnectionStatusIndicatorStatus,
-} from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusIndicator, StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -16,17 +13,12 @@ import styles from "./UptimeStatusGraphTooltip.module.scss";
 import { ChartStream } from "./WaffleChart";
 
 // What statuses we represent to users, other statuses must map to these
-type PresentingStatuses =
-  | ConnectionStatusIndicatorStatus.OnTime
-  | ConnectionStatusIndicatorStatus.Late
-  | ConnectionStatusIndicatorStatus.Error
-  | ConnectionStatusIndicatorStatus.ActionRequired;
+type PresentingStatuses = StreamStatusType.Synced | StreamStatusType.Incomplete | StreamStatusType.Failed;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
-  onTime: "connection.overview.graph.uptimeStatus.onTime",
-  late: "connection.overview.graph.uptimeStatus.late",
-  error: "connection.overview.graph.uptimeStatus.error",
-  actionRequired: "connection.overview.graph.uptimeStatus.actionRequired",
+  synced: "connection.overview.graph.uptimeStatus.synced",
+  incomplete: "connection.overview.graph.uptimeStatus.incomplete",
+  failed: "connection.overview.graph.uptimeStatus.failed",
 };
 
 export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
@@ -45,19 +37,17 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
 
   const statusesByCount = streams?.reduce<Record<PresentingStatuses, ChartStream[]>>(
     (acc, stream) => {
-      let { status } = stream;
+      const { status } = stream;
 
-      if (status === ConnectionStatusIndicatorStatus.OnTrack) {
-        status = ConnectionStatusIndicatorStatus.OnTime;
-      } else if (
-        status === ConnectionStatusIndicatorStatus.Pending ||
-        status === ConnectionStatusIndicatorStatus.Syncing ||
-        status === ConnectionStatusIndicatorStatus.Clearing ||
-        status === ConnectionStatusIndicatorStatus.Refreshing ||
-        status === ConnectionStatusIndicatorStatus.QueuedForNextSync ||
-        status === ConnectionStatusIndicatorStatus.Queued ||
-        status === ConnectionStatusIndicatorStatus.Disabled ||
-        status === ConnectionStatusIndicatorStatus.Paused
+      if (
+        status === StreamStatusType.Pending ||
+        status === StreamStatusType.Syncing ||
+        status === StreamStatusType.RateLimited ||
+        status === StreamStatusType.Clearing ||
+        status === StreamStatusType.Refreshing ||
+        status === StreamStatusType.QueuedForNextSync ||
+        status === StreamStatusType.Queued ||
+        status === StreamStatusType.Paused
       ) {
         return acc;
       }
@@ -66,12 +56,14 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
     },
     {
       // Order here determines the display order in the tooltip
-      [ConnectionStatusIndicatorStatus.OnTime]: [],
-      [ConnectionStatusIndicatorStatus.Late]: [],
-      [ConnectionStatusIndicatorStatus.Error]: [],
-      [ConnectionStatusIndicatorStatus.ActionRequired]: [],
+      [StreamStatusType.Synced]: [],
+      [StreamStatusType.Incomplete]: [],
+      [StreamStatusType.Failed]: [],
     }
   );
+
+  const showStreamStatusesSection =
+    statusesByCount && Object.values(statusesByCount).some((streams) => streams.length > 0);
 
   return (
     <Card noPadding>
@@ -97,7 +89,7 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
             </Text>
           </FlexContainer>
 
-          {!!streams?.length && (
+          {!!streams?.length && showStreamStatusesSection && (
             <FlexContainer direction="column" gap="sm">
               <Text smallcaps bold color="grey">
                 <FormattedMessage id="connection.overview.graph.uptimeStatus" />
@@ -105,15 +97,13 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
               {Object.entries(statusesByCount ?? []).map(([_status, streams]) => {
                 const status = _status as PresentingStatuses;
                 return streams.length === 0 ? null : (
-                  <FlexContainer key={status} gap="sm">
-                    <Box mt="xs">
-                      <ConnectionStatusIndicator size="xs" status={status} />
-                    </Box>
+                  <FlexContainer key={status} gap="sm" alignItems="baseline">
+                    <StreamStatusIndicator size="sm" status={status} />
                     <FlexContainer direction="column" gap="none">
                       <Text color="grey" size="sm" className={styles.alignText} as="span">
                         {formatMessage({ id: MESSAGE_BY_STATUS[status] }, { count: streams.length })}
                       </Text>
-                      {status === ConnectionStatusIndicatorStatus.Error && (
+                      {status === StreamStatusType.Incomplete && (
                         <>
                           {streams
                             .filter((_, idx) => idx < 3)

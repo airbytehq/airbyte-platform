@@ -4,7 +4,8 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.api.client.WorkloadApiClient
+import com.amazonaws.internal.ExceptionUtils
+import io.airbyte.metrics.lib.MetricEmittingApps
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -20,7 +21,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class WorkloadApiClient(
-  private val workloadApiClient: WorkloadApiClient,
+  private val workloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
 ) {
   fun reportFailure(failure: StageError) {
@@ -31,7 +32,7 @@ class WorkloadApiClient(
     }
 
     try {
-      updateStatusToFailed(failure.io.msg.workloadId)
+      updateStatusToFailed(failure)
     } catch (e: Exception) {
       logger.warn(e) { "Could not set the status for workload ${failure.io.msg.workloadId} to failed." }
     }
@@ -43,9 +44,14 @@ class WorkloadApiClient(
     workloadApiClient.workloadApi.workloadRunning(request)
   }
 
-  fun updateStatusToFailed(workloadId: String) {
-    val request = WorkloadFailureRequest(workloadId)
-    logger.info { "Attempting to update workload: $workloadId to FAILED." }
+  fun updateStatusToFailed(failure: StageError) {
+    val request =
+      WorkloadFailureRequest(
+        failure.io.msg.workloadId,
+        MetricEmittingApps.WORKLOAD_LAUNCHER.applicationName,
+        ExceptionUtils.exceptionStackTrace(failure),
+      )
+    logger.info { "Attempting to update workload: ${failure.io.msg.workloadId} to FAILED." }
     workloadApiClient.workloadApi.workloadFailure(request)
   }
 

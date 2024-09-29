@@ -3,57 +3,25 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 plugins {
   id("io.airbyte.gradle.jvm.lib")
 }
-
-@Suppress("UnstableApiUsage")
-testing {
-  registerTestSuite(name = "acceptanceTest", type = "acceptance-test", dirName = "test-acceptance") {
-    implementation.add(project())
-
-    implementation(project(":airbyte-api"))
-    implementation(project(":airbyte-commons"))
-    implementation(project(":airbyte-commons-auth"))
-    implementation(project(":airbyte-commons-temporal"))
-    implementation(project(":airbyte-config:config-models"))
-    implementation(project(":airbyte-config:config-persistence"))
-    implementation(project(":airbyte-db:db-lib"))
-    implementation(project(":airbyte-tests"))
-    implementation(project(":airbyte-test-utils"))
-    implementation(project(":airbyte-commons-worker"))
-
-    implementation(libs.failsafe)
-    implementation(libs.jackson.databind)
-    implementation(libs.okhttp)
-    implementation(libs.temporal.sdk)
-    implementation(libs.platform.testcontainers.postgresql)
-    implementation(libs.postgresql)
-
-    // needed for fabric to connect to k8s.
-    runtimeOnly(libs.bouncycastle.bcpkix)
-    runtimeOnly(libs.bouncycastle.bcprov)
-  }
-}
-
 /**
  * Registers a test-suite with Gradle's JvmTestSuite
  * @param name name the name of the test suite, must be unique, will match the name of the created task
- * @param type name the name of this test suite, passed directly to the testType property
- * @param dirName directory name which corresponds to this test-suite, assumes that this directory is located in `src`
- * @param deps lambda for registering dependencies specific to this test-suite with this test-suite
+ * @param includeTags tags of the tests to be included in this test-suite
  */
 @Suppress("UnstableApiUsage")
-fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComponentDependencies.() -> Unit) {
+fun registerTestSuite(name: String, includeTags: Array<String> = emptyArray()) {
   testing {
     suites.register<JvmTestSuite>(name) {
-      testType.set(type)
-
-      deps(dependencies)
+      dependencies {
+        implementation(project())
+      }
 
       sources {
         java {
-          setSrcDirs(listOf("src/$dirName/java"))
+          setSrcDirs(listOf("src/test-acceptance/java"))
         }
         resources {
-          setSrcDirs(listOf("src/$dirName/resources"))
+          setSrcDirs(listOf("src/test-acceptance/resources"))
         }
       }
 
@@ -68,6 +36,9 @@ fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComp
             // we use this property for our log4j2 configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
             "ciMode" to ciMode)
 
+          useJUnitPlatform {
+            includeTags(*includeTags)
+          }
           testLogging {
             events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED, TestLogEvent.STARTED, TestLogEvent.SKIPPED)
           }
@@ -84,19 +55,44 @@ fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComp
   }
 }
 
+registerTestSuite(name = "syncAcceptanceTest", includeTags = arrayOf("sync"))
+registerTestSuite(name = "apiAcceptanceTest", includeTags = arrayOf("api"))
+registerTestSuite(name = "builderAcceptanceTest", includeTags = arrayOf("builder"))
+registerTestSuite(name = "enterpriseAcceptanceTest", includeTags = arrayOf("enterprise"))
+registerTestSuite(name = "acceptanceTest")
+
 configurations.configureEach {
   // Temporary hack to avoid dependency conflicts
   exclude(group = "io.micronaut.email")
 }
 
 dependencies {
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-container-orchestrator"))
-
-  testImplementation("com.airbyte:api:0.39.2")
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-test-utils"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-container-orchestrator"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.platform.testcontainers)
+  implementation(libs.failsafe)
+  implementation(libs.jackson.databind)
+  implementation(libs.okhttp)
+  implementation(libs.temporal.sdk)
+  implementation(libs.platform.testcontainers.postgresql)
+  implementation(libs.postgresql)
+
+  runtimeOnly(libs.bouncycastle.bcpkix)
+  runtimeOnly(libs.bouncycastle.bcprov)
+
+  testImplementation("com.airbyte:api:0.39.2")
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

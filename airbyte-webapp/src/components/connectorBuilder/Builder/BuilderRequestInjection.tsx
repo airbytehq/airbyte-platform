@@ -1,8 +1,9 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { useWatchWithPreview } from "../preview";
 import { InjectIntoValue, injectIntoOptions } from "../useBuilderValidationSchema";
 
 interface BuilderRequestInjectionProps {
@@ -21,7 +22,7 @@ export const BuilderRequestInjection: React.FC<BuilderRequestInjectionProps> = (
   excludeValues,
 }) => {
   const { formatMessage } = useIntl();
-  const value = useWatch({ name: `${path}.inject_into` });
+  const { fieldValue: value } = useWatchWithPreview({ name: `${path}.inject_into` });
   const { setValue } = useFormContext();
 
   return (

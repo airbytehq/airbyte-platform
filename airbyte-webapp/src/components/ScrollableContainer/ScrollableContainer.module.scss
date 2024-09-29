@@ -1,0 +1,6 @@
+@use "scss/variables";
+
+.container {
+  overflow-y: auto;
+  padding: variables.$spacing-xl;
+}

@@ -1,5 +1,4 @@
-import classnames from "classnames";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
 import { useFieldArray, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { Location, useLocation } from "react-router-dom";
@@ -12,10 +11,10 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 
 import { naturalComparatorBy } from "core/utils/objects";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "./formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
@@ -38,7 +37,6 @@ export interface LocationWithState extends Location {
 }
 
 export const SyncCatalogCard: React.FC = () => {
-  const listRef = useRef<HTMLElement | Window | null>(null);
   const { mode } = useConnectionFormService();
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { isSubmitting, isDirty, errors } = useFormState<FormConnectionFormValues>();
@@ -46,8 +44,6 @@ export const SyncCatalogCard: React.FC = () => {
     name: "syncCatalog.streams",
     control,
   });
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
-
   const watchedPrefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
@@ -88,14 +84,12 @@ export const SyncCatalogCard: React.FC = () => {
     };
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
-  let cardTitle = mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync";
-  if (isSimplifiedCreation) {
-    cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
-  }
+  const cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
+  const customScrollParent = useContext(ScrollParentContext);
 
   return (
     <Card noPadding>
-      <Box m="xl">
+      <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
           <Heading as="h2" size="sm">
             <FormattedMessage id={cardTitle} />
@@ -115,8 +109,10 @@ export const SyncCatalogCard: React.FC = () => {
         </FlexContainer>
       </Box>
       <LoadingBackdrop loading={isSubmitting}>
-        <SyncCatalogStreamSearch onSearch={setSearchString} />
-        <DisabledStreamsSwitch checked={hideDisabledStreams} onChange={toggleHideDisabledStreams} />
+        <div className={styles.controlsContainer}>
+          <SyncCatalogStreamSearch onSearch={setSearchString} />
+          <DisabledStreamsSwitch checked={hideDisabledStreams} onChange={toggleHideDisabledStreams} />
+        </div>
         <Box mb="xl" data-testid="catalog-tree-table-body">
           <StreamsConfigTableHeader
             streams={fields}
@@ -125,15 +121,15 @@ export const SyncCatalogCard: React.FC = () => {
             namespaceDefinition={watchedNamespaceDefinition}
             namespaceFormat={watchedNamespaceFormat}
             prefix={watchedPrefix}
+            headerClassName={styles.tableHeader}
           />
           {filteredStreams.length ? (
             <Virtuoso
-              // need to set exact height
-              style={{ height: "40vh" }}
-              scrollerRef={(ref) => (listRef.current = ref)}
               data={filteredStreams}
               initialTopMostItemIndex={initialTopMostItemIndex}
               fixedItemHeight={50}
+              useWindowScroll
+              customScrollParent={customScrollParent ?? undefined}
               itemContent={(_index, streamNode) => (
                 <SyncCatalogRow
                   key={streamNode.id}
@@ -143,11 +139,6 @@ export const SyncCatalogCard: React.FC = () => {
                   namespaceFormat={watchedNamespaceFormat}
                   prefix={watchedPrefix}
                   errors={errors}
-                  className={classnames({
-                    [styles.withScrollbar]:
-                      listRef.current instanceof HTMLDivElement &&
-                      listRef?.current?.clientHeight < listRef?.current?.scrollHeight,
-                  })}
                 />
               )}
             />

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.OperationCreate;
 import io.airbyte.api.model.generated.OperationIdRequestBody;
@@ -20,20 +21,20 @@ import io.airbyte.api.model.generated.OperationRead;
 import io.airbyte.api.model.generated.OperationReadList;
 import io.airbyte.api.model.generated.OperationUpdate;
 import io.airbyte.api.model.generated.OperatorConfiguration;
-import io.airbyte.api.model.generated.OperatorDbt;
-import io.airbyte.api.model.generated.OperatorNormalization;
-import io.airbyte.api.model.generated.OperatorNormalization.OptionEnum;
 import io.airbyte.api.model.generated.OperatorType;
 import io.airbyte.api.model.generated.OperatorWebhook;
 import io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum;
 import io.airbyte.api.model.generated.OperatorWebhookDbtCloud;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.config.OperatorNormalization.Option;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WebhookConfig;
+import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
@@ -50,67 +51,46 @@ class OperationsHandlerTest {
   private static final String WEBHOOK_OPERATION_NAME = "fake-operation-name";
   private static final UUID WEBHOOK_CONFIG_ID = UUID.randomUUID();
   private static final UUID WEBHOOK_OPERATION_ID = UUID.randomUUID();
-  private static final Integer DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 123;
-  private static final Integer DBT_CLOUD_WEBHOOK_JOB_ID = 456;
-  private static final Integer NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 789;
+  private static final Long DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 123L;
+  private static final Long DBT_CLOUD_WEBHOOK_JOB_ID = 456L;
+  private static final Long NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 789L;
   public static final String EXECUTION_BODY = "{\"cause\": \"airbyte\"}";
   public static final String EXECUTION_URL_TEMPLATE = "https://cloud.getdbt.com/api/v2/accounts/%d/jobs/%d/run/";
   private ConfigRepository configRepository;
+  private WorkspaceService workspaceService;
   private Supplier<UUID> uuidGenerator;
   private OperationsHandler operationsHandler;
   private StandardSyncOperation standardSyncOperation;
+  private io.airbyte.config.OperatorWebhook operatorWebhook;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
     configRepository = mock(ConfigRepository.class);
+    workspaceService = mock(WorkspaceService.class);
     uuidGenerator = mock(Supplier.class);
 
-    operationsHandler = new OperationsHandler(configRepository, uuidGenerator);
+    operationsHandler = new OperationsHandler(configRepository, workspaceService, uuidGenerator);
+    operatorWebhook = new io.airbyte.config.OperatorWebhook()
+        .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+        .withExecutionBody(Jsons.serialize(new OperatorWebhookDbtCloud().accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID).jobId(DBT_CLOUD_WEBHOOK_JOB_ID)))
+        .withExecutionUrl(String.format(EXECUTION_URL_TEMPLATE, DBT_CLOUD_WEBHOOK_ACCOUNT_ID, DBT_CLOUD_WEBHOOK_JOB_ID));
     standardSyncOperation = new StandardSyncOperation()
         .withWorkspaceId(UUID.randomUUID())
         .withOperationId(UUID.randomUUID())
         .withName("presto to hudi")
-        .withOperatorType(io.airbyte.config.StandardSyncOperation.OperatorType.NORMALIZATION)
-        .withOperatorNormalization(new io.airbyte.config.OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorDbt(null)
-        .withTombstone(false);
+        .withTombstone(false)
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorWebhook(operatorWebhook);
   }
 
   @Test
-  void testCreateOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    when(uuidGenerator.get()).thenReturn(standardSyncOperation.getOperationId());
-
-    when(configRepository.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation);
-
-    final OperationCreate operationCreate = new OperationCreate()
-        .workspaceId(standardSyncOperation.getWorkspaceId())
-        .name(standardSyncOperation.getName())
-        .operatorConfiguration(new OperatorConfiguration()
-            .operatorType(OperatorType.NORMALIZATION)
-            .normalization(new OperatorNormalization().option(OptionEnum.BASIC)));
-
-    final OperationRead actualOperationRead = operationsHandler.createOperation(operationCreate);
-
-    final OperationRead expectedOperationRead = new OperationRead()
-        .workspaceId(standardSyncOperation.getWorkspaceId())
-        .operationId(standardSyncOperation.getOperationId())
-        .name(standardSyncOperation.getName())
-        .operatorConfiguration(new OperatorConfiguration()
-            .operatorType(OperatorType.NORMALIZATION)
-            .normalization(new OperatorNormalization().option(OptionEnum.BASIC)));
-
-    assertEquals(expectedOperationRead, actualOperationRead);
-
-    verify(configRepository).writeStandardSyncOperation(standardSyncOperation);
-  }
-
-  @Test
-  void testCreateWebhookOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateWebhookOperation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBTCLOUD)
+        .webhookType(WebhookTypeEnum.DBT_CLOUD)
         .dbtCloud(new OperatorWebhookDbtCloud()
             .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
             .jobId(DBT_CLOUD_WEBHOOK_JOB_ID));
@@ -119,6 +99,9 @@ class OperationsHandlerTest {
         .name(WEBHOOK_OPERATION_NAME)
         .operatorConfiguration(new OperatorConfiguration()
             .operatorType(OperatorType.WEBHOOK).webhook(webhookConfig));
+
+    final JsonNode webhookOperationConfig =
+        Jsons.jsonNode(new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withCustomDbtHost(""))));
 
     final StandardSyncOperation expectedPersistedOperation = new StandardSyncOperation()
         .withWorkspaceId(standardSyncOperation.getWorkspaceId())
@@ -132,8 +115,8 @@ class OperationsHandlerTest {
             .withExecutionBody(EXECUTION_BODY))
         .withTombstone(false);
 
-    StandardWorkspace workspace = new StandardWorkspace();
-    when(configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
+    final StandardWorkspace workspace = new StandardWorkspace().withWebhookOperationConfigs(webhookOperationConfig);
+    when(workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(expectedPersistedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.createOperation(operationCreate);
@@ -153,59 +136,12 @@ class OperationsHandlerTest {
   }
 
   @Test
-  void testUpdateOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final OperationUpdate operationUpdate = new OperationUpdate()
-        .operationId(standardSyncOperation.getOperationId())
-        .name(standardSyncOperation.getName())
-        .operatorConfiguration(new OperatorConfiguration()
-            .operatorType(OperatorType.DBT)
-            .dbt(new OperatorDbt()
-                .gitRepoUrl("git_repo_url")
-                .gitRepoBranch("git_repo_branch")
-                .dockerImage("docker")
-                .dbtArguments("--full-refresh")));
-
-    final StandardSyncOperation updatedStandardSyncOperation = new StandardSyncOperation()
-        .withWorkspaceId(standardSyncOperation.getWorkspaceId())
-        .withOperationId(standardSyncOperation.getOperationId())
-        .withName(standardSyncOperation.getName())
-        .withOperatorType(io.airbyte.config.StandardSyncOperation.OperatorType.DBT)
-        .withOperatorDbt(new io.airbyte.config.OperatorDbt()
-            .withGitRepoUrl("git_repo_url")
-            .withGitRepoBranch("git_repo_branch")
-            .withDockerImage("docker")
-            .withDbtArguments("--full-refresh"))
-        .withOperatorNormalization(null)
-        .withTombstone(false);
-
-    when(configRepository.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation)
-        .thenReturn(updatedStandardSyncOperation);
-
-    final OperationRead actualOperationRead = operationsHandler.updateOperation(operationUpdate);
-
-    final OperationRead expectedOperationRead = new OperationRead()
-        .workspaceId(standardSyncOperation.getWorkspaceId())
-        .operationId(standardSyncOperation.getOperationId())
-        .name(standardSyncOperation.getName())
-        .operatorConfiguration(new OperatorConfiguration()
-            .operatorType(OperatorType.DBT)
-            .dbt(new OperatorDbt()
-                .gitRepoUrl("git_repo_url")
-                .gitRepoBranch("git_repo_branch")
-                .dockerImage("docker")
-                .dbtArguments("--full-refresh")));
-
-    assertEquals(expectedOperationRead, actualOperationRead);
-
-    verify(configRepository).writeStandardSyncOperation(updatedStandardSyncOperation);
-  }
-
-  @Test
-  void testUpdateWebhookOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateWebhookOperation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBTCLOUD)
+        .webhookType(WebhookTypeEnum.DBT_CLOUD)
         .dbtCloud(new OperatorWebhookDbtCloud()
             .accountId(NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
             .jobId(DBT_CLOUD_WEBHOOK_JOB_ID));
@@ -242,7 +178,7 @@ class OperationsHandlerTest {
         .withOperatorWebhook(updatedWebhook);
 
     StandardWorkspace workspace = new StandardWorkspace();
-    when(configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
+    when(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation).thenReturn(updatedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.updateOperation(operationUpdate);
@@ -278,9 +214,17 @@ class OperationsHandlerTest {
         .workspaceId(standardSyncOperation.getWorkspaceId())
         .operationId(standardSyncOperation.getOperationId())
         .name(standardSyncOperation.getName())
-        .operatorConfiguration(new OperatorConfiguration()
-            .operatorType(OperatorType.NORMALIZATION)
-            .normalization(new OperatorNormalization().option(OptionEnum.BASIC)));
+        .operatorConfiguration(
+            new OperatorConfiguration()
+                .operatorType(OperatorType.WEBHOOK).webhook(
+                    new OperatorWebhook()
+                        .webhookConfigId(WEBHOOK_CONFIG_ID)
+                        .webhookType(WebhookTypeEnum.DBT_CLOUD)
+                        .executionUrl(operatorWebhook.getExecutionUrl())
+                        .executionBody(operatorWebhook.getExecutionBody())
+                        .dbtCloud(new OperatorWebhookDbtCloud()
+                            .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
+                            .jobId(DBT_CLOUD_WEBHOOK_JOB_ID))));
   }
 
   @Test
@@ -349,8 +293,6 @@ class OperationsHandlerTest {
   @Test
   void testEnumConversion() {
     assertTrue(Enums.isCompatible(io.airbyte.api.model.generated.OperatorType.class, io.airbyte.config.StandardSyncOperation.OperatorType.class));
-    assertTrue(Enums.isCompatible(io.airbyte.api.model.generated.OperatorNormalization.OptionEnum.class,
-        io.airbyte.config.OperatorNormalization.Option.class));
   }
 
   @Test

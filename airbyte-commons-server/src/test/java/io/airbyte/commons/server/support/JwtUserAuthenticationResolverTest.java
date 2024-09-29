@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver;
 import io.airbyte.config.AuthProvider;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.utils.SecurityService;
 import java.util.Map;
@@ -42,42 +42,43 @@ class JwtUserAuthenticationResolverTest {
   void testResolveUser_firebase() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
 
-    Optional<Authentication> authentication =
+    final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID,
             Map.of(JWT_USER_EMAIL, EMAIL, JWT_USER_NAME, USER_NAME, JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final User userRead = jwtUserAuthenticationResolver.resolveUser(AUTH_USER_ID);
+    final AuthenticatedUser userRead = jwtUserAuthenticationResolver.resolveUser(AUTH_USER_ID);
 
-    final User expectedUserRead = new User().withAuthUserId(AUTH_USER_ID).withEmail(EMAIL).withName(USER_NAME).withAuthProvider(
-        AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+    final AuthenticatedUser expectedUserRead =
+        new AuthenticatedUser().withAuthUserId(AUTH_USER_ID).withEmail(EMAIL).withName(USER_NAME).withAuthProvider(
+            AuthProvider.GOOGLE_IDENTITY_PLATFORM);
     assertEquals(expectedUserRead, userRead);
 
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
     // request without realm.
-    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertTrue(ssoRealm.isEmpty());
+    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
+    assertTrue(realm.isEmpty());
   }
 
   @Test
-  void testResolveSsoRealm_firebase() {
+  void testResolveRealm_firebase() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
-    Optional<Authentication> authentication =
+    final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertTrue(ssoRealm.isEmpty());
+    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
+    assertTrue(realm.isEmpty());
   }
 
   @Test
-  void testResolveSsoRealm_keycloak() {
+  void testResolveRealm_keycloak() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
     final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_SSO_REALM, "airbyte")));
     when(securityService.getAuthentication()).thenReturn(authentication);
-    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm().orElseThrow();
-    assertEquals("airbyte", ssoRealm);
+    final String realm = jwtUserAuthenticationResolver.resolveRealm().orElseThrow();
+    assertEquals("airbyte", realm);
   }
 
 }

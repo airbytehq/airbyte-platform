@@ -30,7 +30,7 @@ const [
   "sync-field-switch"
 );
 
-const getFieldTableRowTestId = (rowIndex: number) => getTestId(`table-row-${rowIndex}`);
+const getFieldTableRowTestId = (fieldPath: string) => getTestId(`table-row-${fieldPath}`);
 
 const getRowByFieldName = (name: string) => cy.get(streamSourceFieldName).contains(name).parents("tr").first();
 
@@ -133,7 +133,7 @@ export class StreamDetailsPageObject {
 
     names.forEach((name, index) => {
       const dataType = dataTypes[index];
-      const rowTestId = getFieldTableRowTestId(index);
+      const rowTestId = getFieldTableRowTestId(name);
 
       cy.get(rowTestId).within(() => {
         cy.get(streamSourceFieldName).should("have.text", name);

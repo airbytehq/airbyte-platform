@@ -18,6 +18,10 @@ import io.mockk.slot
 import io.mockk.verify
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import okhttp3.Call
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import okhttp3.ResponseBody
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -238,6 +242,102 @@ class ConfigFileClientTest {
       assertEquals("aaaa", stringVariation(flagCtxString, multi), "dddd should be aaaa")
       assertEquals("all", stringVariation(flagCtxString, multiRandom), "dddd should be aaaa")
       assertEquals("aaaa", stringVariation(flagCtxString, multiFindFirst), "aaab should be bbbb")
+    }
+  }
+}
+
+class FeatureFlagServiceClientTest {
+  val baseUrl = "http://test.featureflag.ab.com"
+
+  @Test
+  fun `verify api call`() {
+    val httpClient = mockk<OkHttpClient>(relaxed = true)
+    val client = FeatureFlagServiceClient(httpClient, baseUrl)
+    client.boolVariation(Temporary(key = "test-url-gen", default = true), Connection(UUID.randomUUID()))
+    verify {
+      httpClient.newCall(
+        match {
+          it.url.host == "test.featureflag.ab.com" &&
+            it.url.scheme == "http" &&
+            it.url.encodedPath.startsWith("/api/v1/feature-flags/test-url-gen/evaluate")
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `verify payload generation`() {
+    val testFlag = Temporary(key = "test-feature-flag-client", default = "default")
+    val connectionId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val httpClient =
+      mockk<OkHttpClient> {
+        every { newCall(match { it.url.query == "kind=connection&value=$connectionId" }) } returns mockResponse("connection-eval")
+        every { newCall(match { it.url.query == "kind=workspace&value=$workspaceId" }) } returns mockResponse("workspace-eval")
+        every {
+          newCall(match { it.url.query == "kind=connection&value=$connectionId&kind=workspace&value=$workspaceId" })
+        } returns mockResponse("multi-eval")
+      }
+    val client = FeatureFlagServiceClient(httpClient, baseUrl)
+
+    with(client) {
+      assertEquals("connection-eval", stringVariation(testFlag, Connection(connectionId)))
+      assertEquals("workspace-eval", stringVariation(testFlag, Workspace(workspaceId)))
+      assertEquals("multi-eval", stringVariation(testFlag, Multi(listOf(Connection(connectionId), Workspace(workspaceId)))))
+    }
+  }
+
+  @Test
+  fun `verify response conversion`() {
+    val testBooleanFlag = Temporary(key = "test-feature-flag-client-bool", default = false)
+    val testIntFlag = Temporary(key = "test-feature-flag-client-int", default = 7)
+    val testStringFlag = Temporary(key = "test-feature-flag-client-string", default = "fancy")
+    val connectionId = UUID.randomUUID()
+
+    val httpClient =
+      mockk<OkHttpClient> {
+        every { newCall(match { it.url.encodedPath.endsWith("/${testBooleanFlag.key}/evaluate") }) } returns mockResponse("true")
+        every { newCall(match { it.url.encodedPath.endsWith("/${testIntFlag.key}/evaluate") }) } returns mockResponse("777")
+        every { newCall(match { it.url.encodedPath.endsWith("/${testStringFlag.key}/evaluate") }) } returns mockResponse("airbyte")
+      }
+    val client = FeatureFlagServiceClient(httpClient, baseUrl)
+
+    with(client) {
+      assertEquals(true, boolVariation(testBooleanFlag, Connection(connectionId)))
+      assertEquals(777, intVariation(testIntFlag, Connection(connectionId)))
+      assertEquals("airbyte", stringVariation(testStringFlag, Connection(connectionId)))
+    }
+  }
+
+  @Test
+  fun `verify error handling`() {
+    val flag = Temporary(key = "error-flag", default = 42)
+    val httpClient =
+      mockk<OkHttpClient> {
+        every { newCall(match { it.url.encodedPath.endsWith("/${flag.key}/evaluate") }) } returns mockResponse("not found", statusCode = 404)
+      }
+    val client = FeatureFlagServiceClient(httpClient, baseUrl)
+
+    with(client) {
+      assertEquals(42, intVariation(flag, Connection(UUID.randomUUID())))
+    }
+  }
+
+  private fun mockResponse(
+    bodyString: String,
+    statusCode: Int = 200,
+  ): Call {
+    return mockk<Call> {
+      every { execute() } returns
+        mockk<Response> {
+          every { code } returns statusCode
+          every { body } returns
+            mockk<ResponseBody> {
+              every { string() } returns bodyString
+            }
+          every { close() } returns Unit
+        }
     }
   }
 }

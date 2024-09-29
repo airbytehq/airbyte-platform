@@ -40,14 +40,14 @@ public class AirbyteHttpRequestFieldExtractor {
         final Optional<String> idValue = extract(json, idFieldName);
 
         if (idValue.isEmpty()) {
-          log.debug("No match for field name '{}' in content '{}'.", idFieldName, json);
+          log.trace("No match for field name '{}' in content '{}'.", idFieldName, json);
         } else {
-          log.debug("Found '{}' for field '{}'", idValue, idFieldName);
+          log.trace("Found '{}' for field '{}'", idValue, idFieldName);
           return idValue;
         }
       }
     } catch (final RuntimeException e) {
-      log.debug("Unable to extract ID field '{}' from content '{}'.", idFieldName, json, e);
+      log.trace("Unable to extract ID field '{}' from content '{}'.", idFieldName, json, e);
     }
 
     return Optional.empty();
@@ -55,7 +55,7 @@ public class AirbyteHttpRequestFieldExtractor {
 
   private Optional<String> extract(JsonNode jsonNode, String idFieldName) {
     if (ARRAY_FIELDS.contains(idFieldName)) {
-      log.debug("Try to extract list of ids for field {}", idFieldName);
+      log.trace("Try to extract list of ids for field {}", idFieldName);
       return Optional.ofNullable(jsonNode.get(idFieldName))
           .map(Jsons::serialize)
           .filter(StringUtils::hasText);

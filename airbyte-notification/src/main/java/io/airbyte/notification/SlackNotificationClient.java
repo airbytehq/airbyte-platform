@@ -44,10 +44,12 @@ import org.slf4j.LoggerFactory;
  *
  * For example, slack API expects some text message in the { "text" : "Hello World" } field...
  */
+@SuppressWarnings("PMD.ConfusingArgumentToVarargsMethod")
 public class SlackNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClient.class);
   private static final String SLACK_CLIENT = "slack";
+  private static final String MRKDOWN_TYPE_LABEL = "mrkdwn";
 
   private final SlackNotificationConfiguration config;
 
@@ -107,25 +109,26 @@ public class SlackNotificationClient extends NotificationClient {
 
     final Section description = notification.addSection();
     final Field sourceLabel = description.addField();
-    sourceLabel.setType("mrkdwn");
+
+    sourceLabel.setType(MRKDOWN_TYPE_LABEL);
     sourceLabel.setText("*Source:*");
     final Field sourceValue = description.addField();
-    sourceValue.setType("mrkdwn");
+    sourceValue.setType(MRKDOWN_TYPE_LABEL);
     sourceValue.setText(Notification.createLink(summary.getSource().getName(), summary.getSource().getUrl()));
 
     final Field destinationLabel = description.addField();
-    destinationLabel.setType("mrkdwn");
+    destinationLabel.setType(MRKDOWN_TYPE_LABEL);
     destinationLabel.setText("*Destination:*");
     final Field destinationValue = description.addField();
-    destinationValue.setType("mrkdwn");
+    destinationValue.setType(MRKDOWN_TYPE_LABEL);
     destinationValue.setText(Notification.createLink(summary.getDestination().getName(), summary.getDestination().getUrl()));
 
     if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
       final Field durationLabel = description.addField();
-      durationLabel.setType("mrkdwn");
+      durationLabel.setType(MRKDOWN_TYPE_LABEL);
       durationLabel.setText("*Duration:*");
       final Field durationValue = description.addField();
-      durationValue.setType("mrkdwn");
+      durationValue.setType(MRKDOWN_TYPE_LABEL);
       durationValue.setText(summary.getDurationFormatted());
     }
 
@@ -306,16 +309,16 @@ public class SlackNotificationClient extends NotificationClient {
     titleSection.setText(header);
     final Section section = slackNotification.addSection();
     Field field = section.addField();
-    field.setType("mrkdwn");
+    field.setType(MRKDOWN_TYPE_LABEL);
     field.setText("*Workspace*");
     field = section.addField();
-    field.setType("mrkdwn");
+    field.setType(MRKDOWN_TYPE_LABEL);
     field.setText(Notification.createLink(workspaceName, workspaceUrl));
     field = section.addField();
-    field.setType("mrkdwn");
+    field.setType(MRKDOWN_TYPE_LABEL);
     field.setText("*Source*");
     field = section.addField();
-    field.setType("mrkdwn");
+    field.setType(MRKDOWN_TYPE_LABEL);
     field.setText(Notification.createLink(sourceName, sourceUrl));
     slackNotification.addDivider();
     final Section changeSection = slackNotification.addSection();

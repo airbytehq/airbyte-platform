@@ -29,4 +29,10 @@ public interface AirbyteTaskExecutors extends TaskExecutors {
    */
   String PUBLIC_API = "public-api";
 
+  /**
+   * The name of the {@link java.util.concurrent.ExecutorService} used for webhook endpoints that are
+   * called by external systems.
+   */
+  String WEBHOOK = "webhook";
+
 }

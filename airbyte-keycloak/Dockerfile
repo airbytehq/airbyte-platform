@@ -4,13 +4,14 @@
 # This also lets us take advantage of our pull-through cache.
 # Thus, when upgrading this image, be sure to also upgrade the mirrored image on dockerhub.
 # See README.md for instructions.
-FROM airbyte/mirrored-keycloak:23.0.7
+FROM airbyte/mirrored-keycloak:25.0.2
 
 WORKDIR /opt/keycloak
 
 # Blacklist recommended by pen testers: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
 COPY bin/password-blacklists/10k-most-common.txt data/password-blacklists/10k-most-common.txt
 COPY bin/scripts/entrypoint.sh entrypoint.sh
+COPY bin/scripts/configure_keycloak.sh configure_keycloak.sh
 COPY bin/themes themes
 
 # Doing this instead of creating a separate file and copying it to ensure that we get any keycloak updates to this conf file.
@@ -24,9 +25,9 @@ grep '<distributed-cache name="authenticationSessions" owners="3">' conf/cache-i
 # Create the directory for the infinispan global-state persistence
 mkdir -p /opt/keycloak/data/infinispan && \
 # Inserting the <global-state> block after the <cache-container> start tag
-sed -i '/<cache-container /a \    <global-state><persistent-location path="\/opt\/keycloak\/data\/infinispan"\/><\/global-state>' conf/cache-ispn-override.xml && \
+sed -i '/<cache-container /a \    <global-state unclean-shutdown-action="IGNORE"><persistent-location path="\/opt\/keycloak\/data\/infinispan"\/><\/global-state>' conf/cache-ispn-override.xml && \
 # Make sure that the <global-state> block is actually there
 # i.e. keycloak didn't change its config file
-grep '<global-state><persistent-location path="/opt/keycloak/data/infinispan"/></global-state>' conf/cache-ispn-override.xml -q
+grep '<global-state unclean-shutdown-action="IGNORE"><persistent-location path="/opt/keycloak/data/infinispan"/></global-state>' conf/cache-ispn-override.xml -q
 
 ENTRYPOINT ["./entrypoint.sh"]

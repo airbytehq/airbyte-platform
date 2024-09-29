@@ -1,0 +1,49 @@
+@use "scss/colors";
+
+.connectionTimelineEventIcon {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: colors.$grey-100;
+
+  &--lg {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.connectionTimelineEventIcon__icon {
+  color: colors.$grey-400;
+}
+
+.connectionTimelineEventIcon__statusIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  top: -11%;
+  right: -10%;
+}
+
+.connectionTimelineEventIcon__statusIcon {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.connectionTimelineEventIcon__running {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: -12%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+}

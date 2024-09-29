@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 
@@ -612,12 +613,7 @@ internal class AirbyteCatalogHelperTest {
 
   @Nested
   inner class ValidateFieldSelection {
-    private val selectedFields =
-      listOf(
-        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1", "f2", "f3"))),
-        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m2"))),
-        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("y1"))),
-      )
+    private val streamConfiguration = StreamConfiguration(name = "testStream")
     private val jsonSchemaString =
       """
       {
@@ -661,48 +657,105 @@ internal class AirbyteCatalogHelperTest {
 
     @BeforeEach
     fun setUp() {
-      schemaConfiguration.syncMode = SyncMode.FULL_REFRESH
       schemaConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
-      sourceStream.name = "testStream"
+      schemaConfiguration.fieldSelectionEnabled = null
+      schemaConfiguration.selectedFields = null
       sourceStream.jsonSchema = Jsons.deserialize(jsonSchemaString)
       sourceStream.defaultCursorField = listOf("b1")
       sourceStream.sourceDefinedPrimaryKey = listOf(listOf("f1"))
     }
 
     @Test
-    fun `Null selected fields should be excluded in the updated config`() {
+    fun `Selected fields data is provided in the request, should be included in the updated config`() {
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+            ),
+        )
+      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
+      assertEquals(true, updatedConfig.fieldSelectionEnabled)
+      assertEquals(2, updatedConfig.selectedFields.size)
+    }
+
+    @Test
+    fun `Selected fields data is not provided in the request, should use the original config`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
           selectedFields = null,
         )
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
-      assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
+      assertEquals(null, updatedConfig.fieldSelectionEnabled)
+      assertEquals(null, updatedConfig.selectedFields)
     }
 
     @Test
-    fun `Empty selected fields should be excluded in the updated config`() {
+    fun `Should bypass validation if selected fields are not being set specifically`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
-          selectedFields = emptyList(),
+          selectedFields = null,
         )
-      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
-      assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
+      assertDoesNotThrow { AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream) }
     }
 
     @Test
-    fun `Non-empty selected fields should be included in the updated config`() {
+    fun `Should throw error if input selected fields is set to an empty list`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
-          selectedFields = selectedFields,
+          selectedFields = listOf(),
         )
-      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
-      // test size
-      assertEquals(selectedFields.size, updatedConfig.selectedFields.size)
-      // test type converter
-      assertEquals(selectedFields[0].fieldPath?.get(0), updatedConfig.selectedFields[0].fieldPath[0])
+      val throwable =
+        assertThrows(BadRequestProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("No fields selected"))
+    }
+
+    @Test
+    fun `Should throw error if any selected field contains empty field path`() {
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf()),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+            ),
+        )
+      val throwable =
+        assertThrows(BadRequestProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Selected field path cannot be empty"))
+    }
+
+    @Test
+    fun `Should throw error if any selected field contains nested field path`() {
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              // f1 -> f2 -> f3 is a nested field path
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1", "f2", "f3")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+            ),
+        )
+      val throwable =
+        assertThrows(BadRequestProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Nested field selection not supported"))
     }
 
     @Test
@@ -712,11 +765,11 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1", "f2", "f3"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m2"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
               // `m1` is a dup field
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m3"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       val throwable =
@@ -734,11 +787,11 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
               // `x1` is not existed in source schema
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("x1"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("x1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       var throwable =
@@ -746,19 +799,20 @@ internal class AirbyteCatalogHelperTest {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
       val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Invalid field selected"))
+      assertEquals(true, problemData.message.contains("Invalid fields selected"))
     }
 
     @Test
-    fun `Should throw error if primary key(s) are not selected`() {
+    fun `Should throw error if primary key(s) are not selected in dedup mode`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
+          syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
           selectedFields =
             listOf(
               // "f1" as primary key is missing
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       var throwable =
@@ -770,16 +824,39 @@ internal class AirbyteCatalogHelperTest {
     }
 
     @Test
-    fun `Should throw error if cursor field is not selected`() {
+    fun `Should throw error if cursor field is not selected in incremental_dedup mode`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
+          syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
           selectedFields =
             listOf(
               // "b1" as cursor field is missing
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("y1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("y1")),
+            ),
+        )
+      var throwable =
+        assertThrows(BadRequestProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Cursor field is not selected properly"))
+    }
+
+    @Test
+    fun `Should throw error if cursor field is not selected in incremental_append mode`() {
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+          selectedFields =
+            listOf(
+              // "b1" as cursor field is missing
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("y1")),
             ),
         )
       var throwable =

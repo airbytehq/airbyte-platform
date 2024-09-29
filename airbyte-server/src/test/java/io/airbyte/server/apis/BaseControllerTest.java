@@ -13,6 +13,8 @@ import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandle
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
+import io.airbyte.commons.server.handlers.DiagnosticToolHandler;
+import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
@@ -70,6 +72,14 @@ import org.mockito.Mockito;
 @MicronautTest
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class BaseControllerTest {
+
+  EnterpriseSourceStubsHandler enterpriseSourceStubsHandler = Mockito.mock(EnterpriseSourceStubsHandler.class);
+
+  @MockBean(EnterpriseSourceStubsHandler.class)
+  @Replaces(EnterpriseSourceStubsHandler.class)
+  EnterpriseSourceStubsHandler mmEnterpriseSourceStubsHandler() {
+    return enterpriseSourceStubsHandler;
+  }
 
   ActorDefinitionVersionHandler actorDefinitionVersionHandler = Mockito.mock(ActorDefinitionVersionHandler.class);
 
@@ -278,6 +288,14 @@ abstract class BaseControllerTest {
   @Replaces(DeploymentMetadataHandler.class)
   DeploymentMetadataHandler mmDeploymentMetadataHandler() {
     return deploymentMetadataHandler;
+  }
+
+  DiagnosticToolHandler diagnosticToolHandler = Mockito.mock(DiagnosticToolHandler.class);
+
+  @MockBean(DiagnosticToolHandler.class)
+  @Replaces(DiagnosticToolHandler.class)
+  DiagnosticToolHandler mmDiagnosticToolHandler() {
+    return diagnosticToolHandler;
   }
 
   @MockBean(SynchronousSchedulerClient.class)

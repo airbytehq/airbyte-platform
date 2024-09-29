@@ -1,18 +1,22 @@
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
-import java.util.Properties
 
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("org.openapi.generator")
   id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.kube-reload")
 }
 
 dependencies {
-  // Micronaut dependencies)
+  // Micronaut dependencies
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
   implementation(libs.jackson.datatype)
   implementation(libs.jackson.databind)
@@ -37,40 +41,40 @@ dependencies {
   implementation(libs.swagger.annotations)
 
   // Internal dependencies)
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-server"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-server"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-api:problems-api"))
 
   implementation(libs.airbyte.protocol)
+
+  // Third-party dependencies
+  implementation("org.kohsuke:github-api:1.323")
+  implementation("org.yaml:snakeyaml:2.2")
+  implementation("io.pebbletemplates:pebble:3.2.2")
 
   runtimeOnly(libs.snakeyaml)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-
+  testImplementation(libs.mockk)
   testImplementation(libs.junit.pioneer)
-}
-
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
 }
 
 airbyte {
   application {
     mainClass = "io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: ""),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
         // path to CDK virtual environment)
         "CDK_PYTHON" to (System.getenv("CDK_PYTHON") ?: ""),
         // path to CDK connector builder's main.py
@@ -80,6 +84,11 @@ airbyte {
   }
   docker {
     imageName = "connector-builder-server"
+  }
+
+  kubeReload {
+    deployment = "ab-connector-builder-server"
+    container = "airbyte-connector-builder-server"
   }
 }
 
@@ -131,6 +140,14 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
 tasks.named("compileJava") {
   dependsOn(generateOpenApiServer)
 }
+
+afterEvaluate {
+  tasks.named("kspKotlin").configure {
+    mustRunAfter(generateOpenApiServer)
+  }
+}
+
+
 // Ensures that the generated models are compiled during the build step, so they are available for use at runtime
 
 sourceSets {
@@ -152,12 +169,16 @@ val copyPythonDeps = tasks.register<Copy>("copyPythonDependencies") {
 tasks.named<DockerBuildImage>("dockerBuildImage") {
   // Set build args
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
-  val cdkVersion: String = File(project.projectDir.parentFile, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
+  val cdkVersion: String = File((ext["ossRootProject"] as Project).projectDir, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
   buildArgs.put("CDK_VERSION", cdkVersion)
 }
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyPythonDeps, generateOpenApiServer)
+}
+
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 private fun updateToJakartaApi(srcDir: File) {

@@ -4,7 +4,6 @@ import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.AttemptStats
 import io.airbyte.api.client.model.generated.AttemptStreamStats
-import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
@@ -18,7 +17,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats
@@ -38,12 +36,12 @@ import kotlin.jvm.optionals.getOrNull
 
 interface SyncPersistence : SyncStatsTracker, AutoCloseable {
   /**
-   * Persist a state for a given connectionId.
+   * Buffers a state for a given connectionId for eventual persistence.
    *
    * @param connectionId the connection
    * @param stateMessage stateMessage to persist
    */
-  fun persist(
+  fun accept(
     connectionId: UUID,
     stateMessage: AirbyteStateMessage,
   )
@@ -67,19 +65,18 @@ class SyncPersistenceImpl
     private val metricClient: MetricClient,
     @param:Parameter private val syncStatsTracker: SyncStatsTracker,
     @param:Parameter private val connectionId: UUID,
-    @param:Parameter private val workspaceId: UUID,
     @param:Parameter private val jobId: Long,
     @param:Parameter private val attemptNumber: Int,
-    @param:Parameter private val catalog: ConfiguredAirbyteCatalog,
   ) : SyncPersistence, SyncStatsTracker by syncStatsTracker {
     private var stateBuffer = stateAggregatorFactory.create()
     private var stateFlushFuture: ScheduledFuture<*>? = null
     private var isReceivingStats = false
     private var stateToFlush: StateAggregator? = null
+    private var persistedStats: SaveStatsRequestBody? = null
     private var statsToPersist: SaveStatsRequestBody? = null
     private var retryWithJitterConfig: RetryWithJitterConfig? = null
 
-    protected constructor(
+    constructor(
       airbyteApiClient: AirbyteApiClient,
       stateAggregatorFactory: StateAggregatorFactory,
       syncStatsTracker: SyncStatsTracker,
@@ -87,10 +84,8 @@ class SyncPersistenceImpl
       stateFlushPeriodInSeconds: Long,
       retryWithJitterConfig: RetryWithJitterConfig?,
       connectionId: UUID,
-      workspaceId: UUID,
       jobId: Long,
       attemptNumber: Int,
-      catalog: ConfiguredAirbyteCatalog,
     ) : this(
       airbyteApiClient = airbyteApiClient,
       stateAggregatorFactory = stateAggregatorFactory,
@@ -99,16 +94,18 @@ class SyncPersistenceImpl
       syncStatsTracker = syncStatsTracker,
       metricClient = MetricClientFactory.getMetricClient(),
       connectionId = connectionId,
-      workspaceId = workspaceId,
       jobId = jobId,
       attemptNumber = attemptNumber,
-      catalog = catalog,
     ) {
       this.retryWithJitterConfig = retryWithJitterConfig
     }
 
+    init {
+      startBackgroundFlushStateTask(connectionId)
+    }
+
     @Trace
-    override fun persist(
+    override fun accept(
       connectionId: UUID,
       stateMessage: AirbyteStateMessage,
     ) {
@@ -118,14 +115,9 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATE_BUFFERING, 1)
       stateBuffer.ingest(stateMessage)
-      startBackgroundFlushStateTask(connectionId)
     }
 
     private fun startBackgroundFlushStateTask(connectionId: UUID) {
-      if (stateFlushFuture != null) {
-        return
-      }
-
       // Making sure we only start one of background flush task
       synchronized(this) {
         if (stateFlushFuture == null) {
@@ -256,16 +248,11 @@ class SyncPersistenceImpl
         stateToFlush?.ingest(stateBufferToFlush)
       }
 
-      // We prepare stats to commit. We generate the payload here to keep track as close as possible to
-      // the states that are going to be persisted.
-      // We also only want to generate the stats payload when roll-over state buffers. This is to avoid
-      // updating the committed data counters ahead of the states because this counter is currently
-      // decoupled from the state persistence.
-      // This design favoring accuracy of committed data counters over freshness of emitted data counters.
-      if (isReceivingStats && stateToFlush?.isEmpty() == false) {
-        // TODO figure out a way to remove the double-bangs
-        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
+      if (!isReceivingStats) {
+        return
       }
+
+      statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
     }
 
     private fun doFlushState() {
@@ -306,13 +293,14 @@ class SyncPersistenceImpl
         throw e
       }
 
+      persistedStats = statsToPersist
       statsToPersist = null
       metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_SUCCESSFUL, 1)
     }
 
     private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
 
-    private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null
+    private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null && statsToPersist != persistedStats
 
     override fun updateStats(recordMessage: AirbyteRecordMessage) {
       isReceivingStats = true
@@ -333,9 +321,11 @@ class SyncPersistenceImpl
       isReceivingStats = true
       syncStatsTracker.updateDestinationStateStats(stateMessage)
     }
-  }
 
-private fun isStateEmpty(connectionState: ConnectionState?) = connectionState?.state?.isEmpty ?: false
+    override fun endOfReplication(completedSuccessfully: Boolean) {
+      syncStatsTracker.endOfReplication(completedSuccessfully)
+    }
+  }
 
 private fun buildSaveStatsRequest(
   syncStatsTracker: SyncStatsTracker,

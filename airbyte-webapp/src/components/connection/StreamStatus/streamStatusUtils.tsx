@@ -1,27 +1,26 @@
 import { AirbyteStreamAndConfigurationWithEnforcedStream, getStreamKey } from "area/connection/utils";
 import { StreamStatusRead } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
-import { useExperiment } from "hooks/services/Experiment";
 
-import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
+import { StreamStatusType } from "../StreamStatusIndicator";
 
 export interface StreamWithStatus {
   streamName: string;
   streamNamespace?: string;
-  status: ConnectionStatusIndicatorStatus;
+  status: StreamStatusType;
   isRunning: boolean;
   relevantHistory: StreamStatusRead[];
   lastSuccessfulSyncAt?: StreamStatusRead["transitionedAt"];
 }
 
-type StreamMapping = Record<ConnectionStatusIndicatorStatus, StreamWithStatus[]>;
+type StreamMapping = Record<StreamStatusType, StreamWithStatus[]>;
 
 /** deprecated... will remove with sync progress project */
 export const sortStreamsByStatus = (
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[],
   streamStatuses: Map<string, StreamWithStatus>
 ): StreamMapping => {
-  const mappedStreams = enabledStreams.reduce<Record<ConnectionStatusIndicatorStatus, StreamWithStatus[]>>(
+  const mappedStreams = enabledStreams.reduce<Record<StreamStatusType, StreamWithStatus[]>>(
     (sortedStreams, { stream }) => {
       const streamKey = getStreamKey(stream);
       const streamStatus = streamStatuses.get(streamKey);
@@ -32,19 +31,17 @@ export const sortStreamsByStatus = (
     },
     // This is the intended display order thanks to Javascript object insertion order!
     {
-      [ConnectionStatusIndicatorStatus.ActionRequired]: [],
-      [ConnectionStatusIndicatorStatus.Error]: [],
-      [ConnectionStatusIndicatorStatus.Late]: [],
-      [ConnectionStatusIndicatorStatus.Pending]: [],
-      [ConnectionStatusIndicatorStatus.OnTrack]: [],
-      [ConnectionStatusIndicatorStatus.OnTime]: [],
-      [ConnectionStatusIndicatorStatus.Disabled]: [],
-      [ConnectionStatusIndicatorStatus.Paused]: [],
-      [ConnectionStatusIndicatorStatus.Syncing]: [],
-      [ConnectionStatusIndicatorStatus.Clearing]: [],
-      [ConnectionStatusIndicatorStatus.Refreshing]: [],
-      [ConnectionStatusIndicatorStatus.Queued]: [],
-      [ConnectionStatusIndicatorStatus.QueuedForNextSync]: [],
+      [StreamStatusType.Failed]: [],
+      [StreamStatusType.Incomplete]: [],
+      [StreamStatusType.Pending]: [],
+      [StreamStatusType.Synced]: [],
+      [StreamStatusType.Paused]: [],
+      [StreamStatusType.RateLimited]: [],
+      [StreamStatusType.Syncing]: [],
+      [StreamStatusType.Clearing]: [],
+      [StreamStatusType.Refreshing]: [],
+      [StreamStatusType.Queued]: [],
+      [StreamStatusType.QueuedForNextSync]: [],
     }
   );
 
@@ -91,6 +88,3 @@ export const sortStreamsAlphabetically = (
 
   return allStreams;
 };
-
-export const useLateMultiplierExperiment = () => useExperiment("connection.streamCentricUI.lateMultiplier", 2);
-export const useErrorMultiplierExperiment = () => useExperiment("connection.streamCentricUI.errorMultiplier", 2);

@@ -1,7 +1,6 @@
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
 import {
   AirbyteStreamAndConfiguration,
@@ -16,8 +15,7 @@ import {
   SyncMode,
   SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
-
-import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
+import { traverseSchemaToField } from "core/domain/catalog";
 
 /**
  * yup schema for the schedule data
@@ -101,6 +99,10 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .array()
     .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
     .optional(),
+  hashedFields: yup
+    .array()
+    .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
+    .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   minimumGenerationId: yup.number().optional(),
@@ -124,7 +126,11 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         // it's possible that primaryKey array is always present
         // however yup couldn't determine type correctly even with .required() call
 
-        if (DestinationSyncMode.append_dedup === value.destinationSyncMode && value.primaryKey?.length === 0) {
+        if (
+          (DestinationSyncMode.append_dedup === value.destinationSyncMode ||
+            DestinationSyncMode.overwrite_dedup === value.destinationSyncMode) &&
+          value.primaryKey?.length === 0
+        ) {
           errors.push(
             this.createError({
               message: "connectionForm.primaryKey.required",
@@ -138,7 +144,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         if (
           SyncMode.incremental === value.syncMode &&
           !this.parent.stream.sourceDefinedCursor &&
-          value.cursorField?.length === 0
+          value.cursorField?.filter(Boolean).length === 0 // filter out empty strings
         ) {
           errors.push(
             this.createError({
@@ -165,7 +171,71 @@ const syncCatalogSchema = yup.object({
       "syncCatalog.streams.required",
       "connectionForm.streams.required",
       (streams) => streams?.some(({ config }) => !!config?.selected) ?? false
-    ),
+    )
+    .test("syncCatalog.streams.hash", "connectionForm.streams.hashFieldCollision", (streams) => {
+      // group all top-level included fields by stream name & namespace
+      const selectedFieldNamesByStream = (streams ?? []).reduce<Record<string, Set<string>>>(
+        (acc, { stream, config }) => {
+          if (!stream || !config?.selected) {
+            return acc;
+          }
+
+          const namespace = stream.namespace ?? "";
+          const name = stream.name ?? "";
+          const key = `${namespace}_${name}`;
+
+          const selectedFields = config.selectedFields?.map((field) => field.fieldPath?.join(".")) ?? [];
+          const hasSelectedFields = selectedFields.length > 0;
+
+          const traversedFields = traverseSchemaToField(stream.jsonSchema, stream.name);
+          const topLevelFields = traversedFields.reduce<Set<string>>((acc, field) => {
+            if (field.path.length === 1) {
+              if (!hasSelectedFields || selectedFields.includes(field.path[0])) {
+                acc.add(field.path[0]);
+              }
+            }
+            return acc;
+          }, new Set());
+
+          acc[key] = topLevelFields;
+          return acc;
+        },
+        {}
+      );
+
+      // check if any included, hashed field within a given stream will conflict
+      // with another stream with the same resulting field name
+      const hasConflictingStream = streams?.some(({ stream, config }) => {
+        if (!config?.selected) {
+          // stream isn't selected
+          return false;
+        }
+
+        const { hashedFields } = config;
+        if (!hashedFields) {
+          // stream doesn't have hashed fields
+          return false;
+        }
+
+        const streamName = stream?.name;
+        const namespace = stream?.namespace ?? "";
+        const selectedFieldNames = selectedFieldNamesByStream[`${namespace}_${streamName}`];
+
+        const resolvedHashedFields = hashedFields.map(({ fieldPath }) => fieldPath?.join("."));
+        if (
+          resolvedHashedFields.some(
+            // check if this field is selected and conflicts with another selected field
+            (field) => selectedFieldNames.has(field ?? "") && selectedFieldNames.has(`${field}_hashed`)
+          )
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      return !hasConflictingStream;
+    }),
 });
 
 /**
@@ -203,8 +273,6 @@ export const createConnectionValidationSchema = (
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),
       geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
-      normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
-      transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
       notifySchemaChanges: yup.boolean().optional(),
       backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),

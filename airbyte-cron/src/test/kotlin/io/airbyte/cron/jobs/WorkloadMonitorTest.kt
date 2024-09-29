@@ -1,10 +1,14 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.cron.jobs
 
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -23,6 +27,7 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.Optional
 
 class WorkloadMonitorTest {
   val nonSyncTimeout = Duration.of(9, ChronoUnit.MINUTES)
@@ -49,7 +54,7 @@ class WorkloadMonitorTest {
         nonSyncWorkloadTimeout = nonSyncTimeout,
         syncWorkloadTimeout = syncTimeout,
         metricClient = metricClient,
-        timeProvider = { _: ZoneId -> currentTime },
+        timeProvider = Optional.of({ _: ZoneId -> currentTime }),
       )
   }
 

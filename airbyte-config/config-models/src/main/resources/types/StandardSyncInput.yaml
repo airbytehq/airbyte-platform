@@ -56,10 +56,6 @@ properties:
     description: The id of the connection associated with this sync
     type: string
     format: uuid
-  normalizeInDestinationContainer:
-    description: whether normalization should be run in the destination container
-    type: boolean
-    default: false
   isReset:
     description: whether this 'sync' is performing a logical reset
     type: boolean
@@ -68,3 +64,6 @@ properties:
     description: Context object with IDs of the relevant connection, source, destination, etc.
     type: object
     "$ref": ConnectionContext.yaml
+  useAsyncReplicate:
+    description: whether we should use async replicate
+    type: boolean

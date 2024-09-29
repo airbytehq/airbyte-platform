@@ -22,6 +22,10 @@ open class PermissionServiceDataImpl(
   private val workspaceService: WorkspaceService,
   private val permissionRepository: PermissionRepository,
 ) : PermissionService {
+  override fun listPermissions(): List<Permission> {
+    return permissionRepository.find().map { it.toConfigModel() }
+  }
+
   override fun getPermissionsForUser(userId: UUID): List<Permission> {
     return permissionRepository.findByUserId(userId).map { it.toConfigModel() }
   }

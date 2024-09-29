@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 
-import { useExperiment } from "hooks/services/Experiment/ExperimentService";
+import { useExperiment } from "hooks/services/Experiment";
 
 export const useSuggestedDestinations = () => {
-  const suggestedDestinationConnectors = useExperiment("connector.suggestedDestinationConnectors", "");
+  const suggestedDestinationConnectors = useExperiment("connector.suggestedDestinationConnectors");
   return useMemo(
-    () => suggestedDestinationConnectors.split(",").map((id) => id.trim()),
+    () => (!suggestedDestinationConnectors ? [] : suggestedDestinationConnectors.split(",").map((id) => id.trim())),
     [suggestedDestinationConnectors]
   );
 };

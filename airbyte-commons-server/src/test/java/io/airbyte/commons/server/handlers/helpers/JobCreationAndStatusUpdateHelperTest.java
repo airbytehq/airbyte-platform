@@ -17,18 +17,18 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import java.io.IOException;
@@ -52,6 +52,7 @@ class JobCreationAndStatusUpdateHelperTest {
   JobTracker mJobTracker;
 
   JobCreationAndStatusUpdateHelper helper;
+  ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   @BeforeEach
   void setup() {
@@ -59,12 +60,13 @@ class JobCreationAndStatusUpdateHelperTest {
     mJobNotifier = mock(JobNotifier.class);
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
         mConfigRepository,
         mJobNotifier,
-        mJobTracker);
+        mJobTracker, connectionTimelineEventHelper);
   }
 
   @Test

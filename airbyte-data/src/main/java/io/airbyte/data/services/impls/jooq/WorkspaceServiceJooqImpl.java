@@ -9,7 +9,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -52,7 +51,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -583,20 +581,6 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     });
   }
 
-  private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(CONNECTION_OPERATION)
-        .where(CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
-        .fetch());
-
-    final List<UUID> ids = new ArrayList<>();
-    for (final Record record : result) {
-      ids.add(record.get(CONNECTION_OPERATION.OPERATION_ID));
-    }
-
-    return ids;
-  }
-
   /**
    * Returns source with a given id. Does not contain secrets. To hydrate with secrets see { @link
    * SourceService#getSourceConnectionWithSecrets(final UUID sourceId) }.
@@ -735,7 +719,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
         secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
       }
 
-      JsonNode partialConfig;
+      final JsonNode partialConfig;
       if (previousWebhookConfigs.isPresent()) {
         partialConfig = secretsRepositoryWriter.updateFromConfig(
             workspace.getWorkspaceId(),

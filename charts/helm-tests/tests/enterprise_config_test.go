@@ -239,5 +239,80 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 				verifyEnvVar(t, expected, actual)
 			}
 		})
+
+		t.Run("should configure keycloak to use the 'KEYCLOAK_DATABASE_URL'", func(t *testing.T) {
+			expectedEnvVarKeys := map[string]expectedEnvVar{
+				"KEYCLOAK_DATABASE_URL": expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+			}
+
+			keycloakSS, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+			assert.NotNil(t, keycloakSS)
+			assert.NoError(t, err)
+
+			keycloakEnvVars := envVarMap(keycloakSS.Spec.Template.Spec.Containers[0].Env)
+			for k, expected := range expectedEnvVarKeys {
+				actual, ok := keycloakEnvVars[k]
+				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
+				verifyEnvVar(t, expected, actual)
+			}
+		})
+	})
+}
+
+func TestKeycloakInitContainerOverride(t *testing.T) {
+	t.Run("default keycloak readiness image is curlimages/curl", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
+		helmOpts.SetValues["global.auth.identityProvider.type"] = "oidc"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.domain"] = "example.com"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.appName"] = "example-app"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
+		assert.NoError(t, err)
+		assert.NotNil(t, keycloakSetupJob)
+
+		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+		assert.NoError(t, err)
+		assert.NotNil(t, keycloakStatefulSet)
+
+		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "curlimages/curl:8.1.1", setupInitContainers[0].Image)
+		assert.Equal(t, "postgres:13-alpine", keycloakInitContainers[0].Image)
+	})
+
+	t.Run("override init container image ", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
+		helmOpts.SetValues["global.auth.identityProvider.type"] = "oidc"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.domain"] = "example.com"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.appName"] = "example-app"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
+		helmOpts.SetValues["keycloak-setup.initContainers.keycloakReadinessCheck.image"] = "airbyte/custom-curl-image"
+		helmOpts.SetValues["keycloak.initContainers.initDb.image"] = "airbyte/custom-postgres-image"
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
+		assert.NotNil(t, keycloakSetupJob)
+		assert.NoError(t, err)
+
+		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+		assert.NotNil(t, keycloakStatefulSet)
+		assert.NoError(t, err)
+
+		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "airbyte/custom-curl-image", setupInitContainers[0].Image)
+		assert.Equal(t, "airbyte/custom-postgres-image", keycloakInitContainers[0].Image)
 	})
 }

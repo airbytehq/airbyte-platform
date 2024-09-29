@@ -42,6 +42,7 @@ object ApplyDefinitionMetricsHelper {
   enum class DefinitionProcessingSuccessOutcome : DefinitionProcessingOutcome {
     INITIAL_VERSION_ADDED,
     DEFAULT_VERSION_UPDATED,
+    REFRESH_VERSION,
     VERSION_UNCHANGED,
     ;
 
@@ -52,6 +53,7 @@ object ApplyDefinitionMetricsHelper {
   enum class DefinitionProcessingFailureReason : DefinitionProcessingOutcome {
     INCOMPATIBLE_PROTOCOL_VERSION,
     DEFINITION_CONVERSION_FAILED,
+    INCOMPATIBLE_AIRBYTE_VERSION,
     ;
 
     override val status: String

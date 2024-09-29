@@ -78,4 +78,11 @@ public interface DestinationService {
                                              ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
 
+  void tombstoneDestination(
+                            final String name,
+                            final UUID workspaceId,
+                            final UUID destinationId,
+                            final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
+
 }

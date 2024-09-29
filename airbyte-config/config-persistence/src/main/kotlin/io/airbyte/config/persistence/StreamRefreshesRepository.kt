@@ -1,9 +1,9 @@
 package io.airbyte.config.persistence
 
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
-import io.airbyte.protocol.models.StreamDescriptor
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect

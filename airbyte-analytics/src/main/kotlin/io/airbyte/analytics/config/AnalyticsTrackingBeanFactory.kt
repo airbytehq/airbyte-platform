@@ -7,7 +7,6 @@ import io.airbyte.config.Configs
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
-import io.micronaut.context.env.Environment
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -24,11 +23,9 @@ class AnalyticsTrackingBeanFactory {
   fun deploymentSupplier(
     airbyteVersion: AirbyteVersion,
     deploymentMode: Configs.DeploymentMode,
-    environment: Environment,
   ): Supplier<DeploymentMetadataRead> =
     Supplier {
       DeploymentMetadataRead(
-        environment = getDeploymentEnvironment(environment),
         id = BLANK_UUID,
         mode = deploymentMode.name,
         version = airbyteVersion.serialize(),
@@ -66,13 +63,6 @@ class AnalyticsTrackingBeanFactory {
   private fun <T> convertToEnum(
     value: String,
     creatorFunction: Function<String, T>,
-    defaultValue: T,
+    @Suppress("SameParameterValue") defaultValue: T,
   ): T = if (StringUtils.isNotEmpty(value)) creatorFunction.apply(value.uppercase()) else defaultValue
-
-  private fun getDeploymentEnvironment(environment: Environment): String =
-    if (environment.activeNames.contains(Environment.KUBERNETES)) {
-      Configs.WorkerEnvironment.KUBERNETES.name
-    } else {
-      Configs.WorkerEnvironment.DOCKER.name
-    }
 }

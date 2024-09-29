@@ -99,6 +99,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withDockerImageTag("1.0.0")
         .withDockerRepository("repo")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 
@@ -108,6 +109,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withDockerImageTag(dockerImageTag)
         .withDockerRepository("repo")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 

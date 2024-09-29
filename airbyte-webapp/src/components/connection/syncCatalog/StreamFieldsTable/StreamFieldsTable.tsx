@@ -75,7 +75,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
   toggleAllFieldsSelected,
 }) => {
   const { formatMessage } = useIntl();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const checkIsCursor = useCallback((path: string[]) => isCursor(config, path), [config]);
   const checkIsChildFieldCursor = useCallback((path: string[]) => isChildFieldCursor(config, path), [config]);
   const checkIsPrimaryKey = useCallback((path: string[]) => isPrimaryKey(config, path), [config]);
@@ -305,6 +305,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
 
   return (
     <Table<TableStream>
+      rowId={(row) => row.path.join(".")}
       variant="light"
       columns={columns}
       data={tableData}

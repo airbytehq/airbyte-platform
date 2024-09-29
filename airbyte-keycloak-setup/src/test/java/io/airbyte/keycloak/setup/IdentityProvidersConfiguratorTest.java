@@ -36,6 +36,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @ExtendWith(MockitoExtension.class)
 class IdentityProvidersConfiguratorTest {
 
@@ -114,7 +115,7 @@ class IdentityProvidersConfiguratorTest {
 
       // verify the existing idp (based on internal id) is updated with new config
       verify(identityProviderResource, times(1)).update(
-          argThat(idp -> idp.getConfig().equals(configMap) && idp.getInternalId().equals("some-internal-id")));
+          argThat(idp -> idp.getConfig().equals(configMap) && ("some-internal-id").equals(idp.getInternalId())));
       // verify that the idp is marked as managed by Airbyte
       verify(configMap, times(1)).put(AIRBYTE_MANAGED_IDP_KEY, AIRBYTE_MANAGED_IDP_VALUE);
     }
@@ -142,7 +143,7 @@ class IdentityProvidersConfiguratorTest {
 
       // verify the marked idp is updated with new config
       verify(identityProviderResource, times(1)).update(
-          argThat(idp -> idp.getConfig().equals(configMap) && idp.getInternalId().equals("some-internal-id")));
+          argThat(idp -> idp.getConfig().equals(configMap) && ("some-internal-id").equals(idp.getInternalId())));
       // verify the unmarkedIdp was examined, but not touched
       verify(unmarkedIdp, times(1)).getConfig();
       verifyNoMoreInteractions(unmarkedIdp);

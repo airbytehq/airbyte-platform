@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { matchPath, useLocation } from "react-router-dom";
 
@@ -12,6 +12,7 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
+import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
@@ -32,16 +33,39 @@ const HIDDEN_SIDEBAR_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
 ];
 
+const BillingPageLink: React.FC = () => {
+  const showBillingPageV2 = useShowBillingPageV2();
+  if (showBillingPageV2) {
+    return null;
+  }
+
+  return (
+    <NavItem
+      icon="credits"
+      label={<FormattedMessage id="sidebar.billing" />}
+      to={CloudRoutes.Billing}
+      testId="creditsButton"
+    />
+  );
+};
+
 export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   workspaceFetcher,
   bottomSlot,
   settingHighlight,
 }) => {
-  const { logout, user } = useAuthService();
+  const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
   const { pathname } = useLocation();
   const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
+
+  const username = useMemo(() => {
+    if (authType === "simple" || authType === "none") {
+      return formatMessage({ id: "sidebar.defaultUsername" });
+    }
+    return user?.name?.trim() || user?.email?.trim();
+  }, [authType, user?.name, user?.email, formatMessage]);
 
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
@@ -77,15 +101,9 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             icon="wrench"
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
-            withBadge="beta"
           />
           <IfFeatureEnabled feature={FeatureItem.Billing}>
-            <NavItem
-              icon="credits"
-              label={<FormattedMessage id="sidebar.billing" />}
-              to={CloudRoutes.Billing}
-              testId="creditsButton"
-            />
+            <BillingPageLink />
           </IfFeatureEnabled>
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
@@ -121,7 +139,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
                 },
               ]}
               icon="user"
-              label={user.name}
+              label={username}
             />
           )}
         </MenuContent>

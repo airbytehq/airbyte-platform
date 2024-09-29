@@ -20,8 +20,10 @@ import io.airbyte.workers.internal.bookkeeping.getStateHashCode
 import io.airbyte.workers.internal.bookkeeping.getStateIdForStatsTracking
 import io.airbyte.workers.models.StateCheckSumCountEvent
 import io.airbyte.workers.models.StateWithId
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
@@ -40,9 +42,10 @@ class StateCheckSumCountEventHandlerTest {
   private val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
   private val deploymentFetcher = mockk<DeploymentFetcher>(relaxed = true)
   private val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>(relaxed = true)
+  private val stateCheckSumErrorReporter = mockk<StateCheckSumErrorReporter>(relaxed = true)
   private val connectionId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
-  private val deployment = Deployment(DeploymentMetadataRead("test-environment", UUID.randomUUID(), "test-mode", "test-version"))
+  private val deployment = Deployment(DeploymentMetadataRead(UUID.randomUUID(), "test-mode", "test-version"))
   private val trackingIdentity = TrackingIdentity(UUID.randomUUID(), "test-email", null, null, null)
   private val jobId = 123L
   private val attemptNumber = 1
@@ -56,18 +59,20 @@ class StateCheckSumCountEventHandlerTest {
     every { trackingIdentityFetcher.apply(any()) } returns trackingIdentity
     every { deploymentFetcher.get() } returns deployment
     every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     handler =
       StateCheckSumCountEventHandler(
-        Optional.of(pubSubWriter),
-        featureFlagClient,
-        deploymentFetcher,
-        trackingIdentityFetcher,
-        connectionId,
-        workspaceId,
-        jobId,
-        attemptNumber,
-        epochMilliSupplier,
-        idSupplier,
+        pubSubWriter = Optional.of(pubSubWriter),
+        featureFlagClient = featureFlagClient,
+        deploymentFetcher = deploymentFetcher,
+        trackingIdentityFetcher = trackingIdentityFetcher,
+        stateCheckSumReporter = stateCheckSumErrorReporter,
+        connectionId = connectionId,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+        epochMilliSupplier = epochMilliSupplier,
+        idSupplier = idSupplier,
       )
   }
 
@@ -87,14 +92,15 @@ class StateCheckSumCountEventHandlerTest {
   fun `default epochMilliSupplier test`() {
     val handler =
       StateCheckSumCountEventHandler(
-        Optional.of(pubSubWriter),
-        featureFlagClient,
-        deploymentFetcher,
-        trackingIdentityFetcher,
-        connectionId,
-        workspaceId,
-        jobId,
-        attemptNumber,
+        pubSubWriter = Optional.of(pubSubWriter),
+        featureFlagClient = featureFlagClient,
+        deploymentFetcher = deploymentFetcher,
+        trackingIdentityFetcher = trackingIdentityFetcher,
+        stateCheckSumReporter = stateCheckSumErrorReporter,
+        connectionId = connectionId,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
       )
     val timeInMicroSecond = handler.getCurrentTimeInMicroSecond()
     val instant = Instant.ofEpochMilli(timeInMicroSecond / 1000)

@@ -6,22 +6,20 @@ package io.airbyte.persistence.job;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.AttemptWithJobInfo;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobStatusSummary;
+import io.airbyte.config.JobWithStatusAndTimestamp;
+import io.airbyte.config.JobsRecordsCommitted;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -69,8 +67,6 @@ public interface JobPersistence {
    * @return {@link AttemptStats}
    */
   SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
-
-  List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
   Job getJob(long jobId) throws IOException;
 
@@ -153,11 +149,6 @@ public interface JobPersistence {
    * Sets an attempt's temporal workflow id. Later used to cancel the workflow.
    */
   void setAttemptTemporalWorkflowInfo(long jobId, int attemptNumber, String temporalWorkflowId, String processingTaskQueue) throws IOException;
-
-  /**
-   * Retrieves an attempt's temporal workflow id. Used to cancel the workflow.
-   */
-  Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
 
   //
   // END OF LIFECYCLE
@@ -295,6 +286,12 @@ public interface JobPersistence {
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
 
+  List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
+                                          Set<JobStatus> jobStatuses,
+                                          OffsetDateTime createdAtStart,
+                                          OffsetDateTime createdAtEnd)
+      throws IOException;
+
   /**
    * List jobs based on job IDs, nothing more.
    *
@@ -387,6 +384,8 @@ public interface JobPersistence {
 
   List<Job> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 
+  List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException;
+
   Optional<Job> getFirstReplicationJob(UUID connectionId) throws IOException;
 
   Optional<Job> getNextJob() throws IOException;
@@ -454,8 +453,6 @@ public interface JobPersistence {
   void purgeJobHistory();
   // a deployment references a setup of airbyte. it is created the first time the docker compose or
   // K8s is ready.
-
-  List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 
   void updateJobConfig(Long jobId, JobConfig config) throws IOException;
 

@@ -69,24 +69,7 @@ fun DomainWorkload.toApi(): ApiWorkload {
     terminationReason = this.terminationReason,
     terminationSource = this.terminationSource,
     autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
-  )
-}
-
-fun ApiWorkload.toDomain(): DomainWorkload {
-  return DomainWorkload(
-    id = this.id,
-    dataplaneId = this.dataplaneId,
-    status = this.status?.toDomain() ?: WorkloadStatus.PENDING,
-    workloadLabels = this.labels.map { it.toDomain() },
-    inputPayload = this.inputPayload,
-    logPath = this.logPath,
-    geography = this.geography,
-    mutexKey = this.mutexKey,
-    type = this.type.toDomain(),
-    terminationReason = terminationReason,
-    terminationSource = terminationSource,
-    autoId = this.autoId,
-    deadline = this.deadline,
+    signalInput = this.signalInput,
   )
 }
 

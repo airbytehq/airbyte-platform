@@ -46,7 +46,7 @@ public class WorkflowState {
   private final boolean continueAsReset = false;
   @Deprecated
   @Getter(AccessLevel.NONE)
-  private boolean quarantined = false;
+  private final boolean quarantined = false;
   private boolean success = true;
   private boolean cancelledForReset = false;
   @Deprecated

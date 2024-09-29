@@ -25,6 +25,7 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -43,18 +44,22 @@ import java.util.function.Supplier;
 public class OperationsHandler {
 
   private final ConfigRepository configRepository;
+
+  private final WorkspaceService workspaceService;
   private final Supplier<UUID> uuidGenerator;
 
   @Inject
-  public OperationsHandler(final ConfigRepository configRepository) {
-    this(configRepository, UUID::randomUUID);
+  public OperationsHandler(final ConfigRepository configRepository, WorkspaceService workspaceService) {
+    this(configRepository, workspaceService, UUID::randomUUID);
   }
 
   @VisibleForTesting
   OperationsHandler(final ConfigRepository configRepository,
+                    final WorkspaceService workspaceService,
                     @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
+    this.workspaceService = workspaceService;
   }
 
   public CheckOperationRead checkOperation(final OperatorConfiguration operationCheck) {
@@ -67,10 +72,16 @@ public class OperationsHandler {
     return new CheckOperationRead().status(StatusEnum.SUCCEEDED);
   }
 
+  @SuppressWarnings({"PMD.PreserveStackTrace"})
   public OperationRead createOperation(final OperationCreate operationCreate)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID operationId = uuidGenerator.get();
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(operationCreate.getWorkspaceId(), false);
+    final StandardWorkspace workspace;
+    try {
+      workspace = workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false);
+    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException("WORKSPACE", operationCreate.getWorkspaceId().toString());
+    }
     final StandardSyncOperation standardSyncOperation = toStandardSyncOperation(operationCreate, workspace)
         .withOperationId(operationId);
     return persistOperation(standardSyncOperation);
@@ -87,21 +98,21 @@ public class OperationsHandler {
   }
 
   private void validateOperation(final OperatorConfiguration operatorConfiguration) {
-    if ((io.airbyte.api.model.generated.OperatorType.NORMALIZATION).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getNormalization() != null);
-    }
-    if ((io.airbyte.api.model.generated.OperatorType.DBT).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getDbt() != null);
-    }
     if (io.airbyte.api.model.generated.OperatorType.WEBHOOK.equals(operatorConfiguration.getOperatorType())) {
       Preconditions.checkArgument(operatorConfiguration.getWebhook() != null);
     }
   }
 
+  @SuppressWarnings({"PMD.PreserveStackTrace"})
   public OperationRead updateOperation(final OperationUpdate operationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationUpdate.getOperationId());
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false);
+    final StandardWorkspace workspace;
+    try {
+      workspace = workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false);
+    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException("WORKSPACE", standardSyncOperation.getWorkspaceId().toString());
+    }
     return persistOperation(updateOperation(operationUpdate, standardSyncOperation, workspace));
   }
 

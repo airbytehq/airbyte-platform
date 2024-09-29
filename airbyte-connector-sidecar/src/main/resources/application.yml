@@ -26,6 +26,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -56,6 +58,7 @@ airbyte:
     # Can we bump this value? Does it need to be configured per operation?
     # Should we pass it in from the launcher?
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
+    file-timeout-minutes-within-sync: ${SIDECAR_FILE_TIMEOUT_WITHIN_SYNC_MINUTES:30}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -64,5 +67,3 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workload:
-    enabled: false

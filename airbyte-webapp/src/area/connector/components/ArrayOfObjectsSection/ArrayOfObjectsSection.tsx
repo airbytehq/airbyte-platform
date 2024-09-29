@@ -54,11 +54,11 @@ export const ArrayOfObjectsSection: React.FC<ArrayOfObjectsSectionProps> = ({ fo
         }
       >
         {items.map((item, index) => (
-          <FlexContainer key={item.id}>
+          <FlexContainer key={item.id} alignItems="flex-start">
             <FlexItem grow className={styles.container}>
               <ObjectItem item={formField.properties} path={`${path}.${index}`} initiallyOpen={initiallyOpen} />
             </FlexItem>
-            <RemoveButton onClick={() => remove(index)} />
+            <RemoveButton className={styles.removeButton} onClick={() => remove(index)} />
           </FlexContainer>
         ))}
       </GroupControls>

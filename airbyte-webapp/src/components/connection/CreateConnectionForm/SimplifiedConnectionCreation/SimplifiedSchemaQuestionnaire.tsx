@@ -18,6 +18,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useGetDestinationDefinitionSpecification } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -99,10 +100,10 @@ export const getEnforcedIncrementOrRefresh = (supportedSyncModes: SyncMode[]) =>
 
 export const SimplifiedSchemaQuestionnaire = () => {
   const analyticsService = useAnalyticsService();
-  const {
-    connection,
-    destDefinitionSpecification: { supportedDestinationSyncModes },
-  } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
+    connection.destination.destinationId
+  );
 
   const supportedSyncModes: SyncMode[] = useMemo(() => {
     const foundModes = new Set<SyncMode>();

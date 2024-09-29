@@ -7,6 +7,8 @@ package io.airbyte.persistence.job.models;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
 import org.junit.jupiter.api.Test;
 
 class AttemptTest {

@@ -7,6 +7,7 @@ import { KnownApiProblem } from "./errors/problems";
 export interface ApiCallOptions {
   getAccessToken: () => Promise<string | null>;
   signal?: RequestInit["signal"];
+  includeCredentials?: boolean;
 }
 
 export interface RequestOptions<DataType = unknown> {
@@ -58,6 +59,7 @@ export const fetchApiCall = async <T, U = unknown>(
     ...(data ? { body: getRequestBody(data) } : {}),
     headers: requestHeaders,
     signal: options.signal,
+    ...(options.includeCredentials ? { credentials: "include" } : {}),
   });
 
   return parseResponse(response, request, requestUrl, responseType);

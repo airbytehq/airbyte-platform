@@ -5,13 +5,13 @@
 package io.airbyte.workload.launcher.pipeline
 
 import fixtures.RecordFixtures
-import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.config.Configs
+import io.airbyte.commons.logging.LocalLogMdcHelper
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.client.LogContextFactory
-import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
 import io.airbyte.workload.launcher.fixtures.TestStage
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.inputMsgs
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.launchPipeline
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.readTestLogs
@@ -33,7 +33,6 @@ import java.util.Optional
 import java.util.function.Function
 import java.util.stream.Stream
 import kotlin.io.path.Path
-import io.airbyte.workload.launcher.client.WorkloadApiClient as LauncherWorkloadApiClient
 
 class LogPathTest {
   @ParameterizedTest
@@ -78,6 +77,7 @@ class LogPathTest {
       mockk<ClaimProcessorTracker> {
         every { trackResumed() } returns Unit
       }
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     val processor =
       ClaimedProcessor(
@@ -126,12 +126,28 @@ class LogPathTest {
   }
 
   object Fixtures {
-    private val mockApiClient: LauncherWorkloadApiClient =
-      mockk {
-        every { reportFailure(any()) } returns Unit
-      }
-    private val successHandler = SuccessHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
-    private val failureHandler = FailureHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: failure. Id: $id." }))
+    private val successHandler =
+      SuccessHandler(
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        Optional.of(
+          Function {
+              id ->
+            "TEST: success. Id: $id."
+          },
+        ),
+      )
+    private val failureHandler =
+      FailureHandler(
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        Optional.of(
+          Function {
+              id ->
+            "TEST: failure. Id: $id."
+          },
+        ),
+      )
 
     private const val TEST_LOG_PREFIX = "TEST"
 
@@ -162,8 +178,8 @@ class LogPathTest {
         TestStage(StageName.LAUNCH, stageLogMsgFn, testErrorCase),
         successHandler,
         failureHandler,
-        metricPublisher,
-        LogContextFactory(Configs.WorkerEnvironment.DOCKER),
+        mockk(relaxed = true),
+        LogContextFactory(LocalLogMdcHelper()),
       )
 
     fun readTestLogs(logPath: String): List<String> = Files.readAllLines(Path(logPath)).filter { line -> line.contains(TEST_LOG_PREFIX) }

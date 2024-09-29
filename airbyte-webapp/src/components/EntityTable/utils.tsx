@@ -47,6 +47,9 @@ export function getEntityTableData<
         lastSync: null,
         connectEntities: [],
         isActive: entityItem.status === ActorStatus.active,
+        breakingChanges: entityItem.breakingChanges,
+        isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
+        supportState: entityItem.supportState,
       };
     }
 
@@ -72,6 +75,9 @@ export function getEntityTableData<
       connectEntities,
       connectorIcon: entityItem.icon,
       isActive: entityItem.status === ActorStatus.active,
+      breakingChanges: entityItem.breakingChanges,
+      isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
+      supportState: entityItem.supportState,
     };
   });
 
@@ -92,6 +98,8 @@ export const getConnectionTableData = (
     lastSync: connection.latestSyncJobCreatedAt,
     enabled: connection.status === ConnectionStatus.active,
     schemaChange: connection.schemaChange,
+    source: connection.sourceActorDefinitionVersion,
+    destination: connection.destinationActorDefinitionVersion,
     scheduleData: connection.scheduleData,
     scheduleType: connection.scheduleType,
     status: connection.status,

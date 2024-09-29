@@ -4,13 +4,14 @@
 
 package io.airbyte.commons.temporal;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
+
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.temporal.api.namespace.v1.NamespaceConfig;
@@ -67,6 +68,8 @@ public class TemporalUtils {
   /**
    * Create temporal service client.
    *
+   * Wait until the Temporal service is available and the namespace is initialized.
+   *
    * @param options client options
    * @param namespace temporal namespace
    * @return temporal service client
@@ -82,6 +85,8 @@ public class TemporalUtils {
 
   /**
    * Create temporal service client.
+   *
+   * Wait until the Temporal service is available and the namespace is initialized.
    *
    * @return temporal service client
    */
@@ -190,7 +195,7 @@ public class TemporalUtils {
    * @return path to logs for an attempt
    */
   public static Path getLogPath(final Path jobRoot) {
-    return jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    return jobRoot.resolve(DEFAULT_LOG_FILENAME);
   }
 
   /**

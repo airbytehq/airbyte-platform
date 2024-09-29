@@ -1,0 +1,7 @@
+@use "scss/variables";
+
+.connectionTimelineEventItem__container {
+  padding: 0 variables.$spacing-lg;
+  max-width: 100%;
+  min-width: 0;
+}

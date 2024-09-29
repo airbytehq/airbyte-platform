@@ -65,10 +65,16 @@ export interface BuilderState {
   name: string;
   mode: "ui" | "yaml";
   formValues: BuilderFormValues;
+  previewValues?: BuilderFormValues;
   yaml: string;
   view: "global" | "inputs" | number;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
+}
+
+export interface AssistData {
+  docsUrl?: string;
+  openapiSpecUrl?: string;
 }
 
 export interface BuilderFormInput {
@@ -123,11 +129,24 @@ export interface BuilderFormValues {
     urlBase: string;
     authenticator: BuilderFormAuthenticator | YamlString;
   };
+  assist: AssistData;
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
+  description?: string;
 }
+
+export interface StreamTestResults {
+  streamHash: string | null;
+  hasResponse?: boolean;
+  responsesAreSuccessful?: boolean;
+  hasRecords?: boolean;
+  primaryKeysArePresent?: boolean;
+  primaryKeysAreUnique?: boolean;
+}
+
+type TestedStreams = Record<string, StreamTestResults>;
 
 export type RequestOptionOrPathInject = Omit<RequestOption, "type"> | { inject_into: "path" };
 
@@ -153,6 +172,7 @@ export interface BuilderParentStream {
   partition_field: string;
   parentStreamReference: string;
   request_option?: RequestOption;
+  incremental_dependency?: boolean;
 }
 
 export interface BuilderParameterizedRequests extends Omit<ListPartitionRouter, "values"> {
@@ -254,6 +274,7 @@ export interface BuilderStream {
   schema?: string;
   autoImportSchema: boolean;
   unknownFields?: YamlString;
+  testResults?: StreamTestResults;
 }
 
 type StreamName = string;
@@ -276,6 +297,8 @@ export interface BuilderMetadata {
     streams?: Record<StreamName, Array<YamlSupportedComponentName["stream"]>>;
     global?: Array<YamlSupportedComponentName["global"]>;
   };
+  testedStreams?: TestedStreams;
+  assist?: AssistData;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -322,6 +345,10 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
     urlBase: "",
     authenticator: { type: "NoAuth" },
   },
+  assist: {
+    docsUrl: "",
+    openapiSpecUrl: "",
+  },
   inputs: [],
   streams: [],
   checkStreams: [],
@@ -359,6 +386,8 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   autoImportSchema: true,
   unknownFields: undefined,
 };
+
+export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
@@ -684,6 +713,7 @@ export function builderParentStreamsToManifest(
             request_option: parentStreamConfiguration.request_option,
             partition_field: parentStreamConfiguration.partition_field,
             stream: streamRef(parentStream.name),
+            incremental_dependency: parentStreamConfiguration.incremental_dependency ? true : undefined,
           },
         ],
       };
@@ -893,6 +923,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   ) => (isYamlString(value) ? [componentName] : []);
 
   const yamlComponentsPerStream = {} as Record<string, Array<YamlSupportedComponentName["stream"]>>;
+  const testedStreams = {} as TestedStreams;
   values.streams.forEach((stream) => {
     const yamlComponents = [
       ...componentNameIfString("paginator", stream.paginator),
@@ -906,11 +937,17 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
     if (yamlComponents.length > 0) {
       yamlComponentsPerStream[stream.name] = yamlComponents;
     }
+
+    if (stream.testResults) {
+      testedStreams[stream.name] = stream.testResults;
+    }
   });
   const hasStreamYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
 
   const globalYamlComponents = [...componentNameIfString("authenticator", values.global.authenticator)];
   const hasGlobalYamlComponents = globalYamlComponents.length > 0;
+
+  const assistData = values.assist ?? {};
 
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
@@ -924,6 +961,8 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
         }),
       },
     }),
+    testedStreams,
+    assist: assistData,
   };
 };
 
@@ -993,6 +1032,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     schemas: streamNameToSchema,
     spec: builderInputsToSpec(values.inputs),
     metadata: builderFormValuesToMetadata(values),
+    description: values.description,
   };
 };
 
@@ -1001,6 +1041,28 @@ function schemaRef(streamName: string) {
 }
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
+export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      url_base: "",
+      authenticator: undefined,
+      path: "",
+      http_method: "GET",
+    },
+    paginator: undefined,
+  },
+  primary_key: undefined,
+};
 
 export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
   useWatch<BuilderState, TPath>({ name: path, ...options });

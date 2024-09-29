@@ -4,12 +4,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import AirbyteLogo from "images/airbyteLogo.svg?react";
 
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./AirbyteHomeLink.module.scss";
-import AirbyteLogo from "./airbyteLogo.svg?react";
 
 export const AirbyteHomeLink: React.FC = () => {
   const { formatMessage } = useIntl();

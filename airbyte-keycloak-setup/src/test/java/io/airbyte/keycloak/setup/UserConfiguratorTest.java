@@ -25,6 +25,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@SuppressWarnings("PMD.LiteralsFirstInComparisons")
 class UserConfiguratorTest {
 
   private static final String EMAIL = "jon@airbyte.io";
@@ -113,7 +114,7 @@ class UserConfiguratorTest {
         && userRepresentation.getEmail().equals(USER_REPRESENTATION.getEmail())
         && userRepresentation.getFirstName().equals(USER_REPRESENTATION.getFirstName())
         && userRepresentation.getLastName().equals(USER_REPRESENTATION.getLastName())
-        && userRepresentation.isEnabled() == USER_REPRESENTATION.isEnabled()
+        && userRepresentation.isEnabled().equals(USER_REPRESENTATION.isEnabled())
         && userRepresentation.getCredentials().equals(USER_REPRESENTATION.getCredentials())));
   }
 

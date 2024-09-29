@@ -1,7 +1,7 @@
+
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.pnpm.task.PnpmTask
 import groovy.json.JsonSlurper
-import org.gradle.api.tasks.Copy
 import java.io.FileReader
 
 plugins {
@@ -42,11 +42,11 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
  * if those change we can't reuse a cached build.
  */
 val outsideWebappDependencies = listOf(
-    "../airbyte-api/src/main/openapi/config.yaml",
-    "../airbyte-api/src/main/openapi/cloud-config.yaml",
-    "../airbyte-api/src/main/openapi/api-problems.yaml",
-    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
-    "../airbyte-connector-builder-resources/CDK_VERSION",
+    project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").path,
+    project(":oss:airbyte-api:commons").file("src/main/openapi/cloud-config.yaml").path,
+    project(":oss:airbyte-api:problems-api").file("src/main/openapi/api-problems.yaml").path,
+    project(":oss:airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").path,
+    project(":oss:airbyte-connector-builder-server").file("CDK_VERSION").path,
 )
 
 configure<NodeExtension> {
@@ -88,7 +88,8 @@ val allFiles = fileTree(".") {
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn(tasks.named("pnpmInstall"))
 
-    environment.put("VERSION", rootProject.ext.get("version") as String)
+    // todo (cgardens) - this isn't great because this version is used for cloud as well (even though it's pulled from the oss project).
+    environment.put("VERSION", (ext["ossRootProject"] as Project).ext["webapp_version"] as String)
 
     args = listOf("build")
 
@@ -121,7 +122,8 @@ tasks.register<PnpmTask>("cypress") {
     */
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
     args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
-        listOf("run", "cypress:run", "--record")
+        val group = System.getenv("CYPRESS_GROUP") ?: "default-group"
+        listOf("run", "cypress:run", "--record", "--group", group)
     } else {
         listOf("run", "cypress:run")
     }
@@ -132,6 +134,7 @@ tasks.register<PnpmTask>("cypress") {
     */
     outputs.upToDateWhen { false }
 }
+
 
 tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))

@@ -15,7 +15,6 @@ import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAut
 
 import { AuthContext, AuthContextApi } from "./AuthContext";
 
-// This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const { auth, airbyteUrl } = useGetInstanceConfiguration();
 
@@ -26,7 +25,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
   const oidcConfig = {
     authority: `${airbyteUrl}/auth/realms/${auth.defaultRealm}`,
     client_id: auth.clientId,
-    redirect_uri: createUriWithoutSsoParams(),
+    redirect_uri: createUriWithoutSsoParams(true), // creates redirect uri and adds `checkLicense=true` query param to trigger Enterprise license check.
     onSigninCallback: () => {
       // Remove OIDC params from URL, but don't remove other params that might be present
       const searchParams = new URLSearchParams(window.location.search);
@@ -127,6 +126,7 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
   const contextValue = useMemo((): AuthContextApi => {
     return {
       authType: "oidc",
+      applicationSupport: "multiple",
       user: airbyteUser,
       inited,
       emailVerified: false,

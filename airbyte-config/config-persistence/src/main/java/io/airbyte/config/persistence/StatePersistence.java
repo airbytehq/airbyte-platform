@@ -12,6 +12,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -19,7 +21,6 @@ import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -129,16 +130,34 @@ public class StatePersistence {
       return;
     }
 
-    final var conditions = streamsToDelete.stream().map(stream -> {
-      var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
-      var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
-      var namespaceCondition = stream.getNamespace() == null
-          ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
-          : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+    final Optional<StateWrapper> maybeCurrentState = getCurrentState(connectionId);
+    if (maybeCurrentState.isEmpty()) {
+      return;
+    }
 
-      return DSL.and(namespaceCondition, nameCondition, connCondition);
-    }).reduce(DSL.noCondition(), DSL::or);
-    this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+    final Set<StreamDescriptor> streamsInState = maybeCurrentState.get().getStateType() == StateType.GLOBAL
+        ? maybeCurrentState.get().getGlobal().getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor)
+            .map(ProtocolConverters::toInternal)
+            .collect(Collectors.toSet())
+        : maybeCurrentState.get().getStateMessages().stream().map(airbyteStateMessage -> airbyteStateMessage.getStream().getStreamDescriptor())
+            .map(ProtocolConverters::toInternal)
+            .collect(Collectors.toSet());
+
+    if (streamsInState.equals(streamsToDelete)) {
+      eraseState(connectionId);
+    } else {
+
+      final var conditions = streamsToDelete.stream().map(stream -> {
+        var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
+        var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
+        var namespaceCondition = stream.getNamespace() == null
+            ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
+            : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+
+        return DSL.and(namespaceCondition, nameCondition, connCondition);
+      }).reduce(DSL.noCondition(), DSL::or);
+      this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+    }
   }
 
   private static void clearLegacyState(final DSLContext ctx, final UUID connectionId) {
@@ -270,7 +289,7 @@ public class StatePersistence {
     }
 
     throw new IllegalStateException("Inconsistent StateTypes for connectionId " + connectionId
-        + " (" + String.join(", ", types.stream().map(stateType -> stateType.getLiteral()).toList()) + ")");
+        + " (" + String.join(", ", types.stream().map(io.airbyte.db.instance.configs.jooq.generated.enums.StateType::getLiteral).toList()) + ")");
   }
 
   /**
@@ -356,7 +375,7 @@ public class StatePersistence {
    */
   private static AirbyteStreamState buildAirbyteStreamState(final StateRecord record) {
     return new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
+        .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
         .withStreamState(record.state);
   }
 

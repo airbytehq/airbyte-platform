@@ -10,7 +10,7 @@ import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL;
 import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME;
 
 import io.airbyte.config.AuthProvider;
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
 import java.util.Optional;
@@ -33,10 +33,10 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
    * Resolves JWT token into a UserRead object with user metadata.
    */
   @Override
-  public User resolveUser(final String expectedAuthUserId) {
+  public AuthenticatedUser resolveUser(final String expectedAuthUserId) {
     if (securityService.isEmpty()) {
       log.warn("Security service is not available. Returning empty user.");
-      return new User();
+      return new AuthenticatedUser();
     }
     final String authUserId = securityService.get().username().get();
     if (!expectedAuthUserId.equals(authUserId)) {
@@ -48,14 +48,14 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
     // Default name to email address if name is not found
     final String name = (String) jwtMap.getOrDefault(JWT_USER_NAME, email);
     final AuthProvider authProvider = (AuthProvider) jwtMap.getOrDefault(JWT_AUTH_PROVIDER, null);
-    return new User().withName(name).withEmail(email).withAuthUserId(authUserId).withAuthProvider(authProvider);
+    return new AuthenticatedUser().withName(name).withEmail(email).withAuthUserId(authUserId).withAuthProvider(authProvider);
   }
 
   /**
-   * Resolves JWT token to SsoRealm. If Sso realm does not exist, it will return null.
+   * Resolves JWT token to realm. If a realm is not set, it will return null.
    */
   @Override
-  public Optional<String> resolveSsoRealm() {
+  public Optional<String> resolveRealm() {
     if (securityService.isEmpty()) {
       log.warn("Security service is not available. Returning empty realm.");
       return Optional.empty();

@@ -4,11 +4,14 @@
 
 package io.airbyte.workers.temporal.sync;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import dev.failsafe.FailsafeException;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
@@ -18,6 +21,7 @@ import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -53,7 +57,7 @@ class WebhookOperationActivityTest {
   @Test
   void webhookActivityInvokesConfiguredWebhook() throws IOException, InterruptedException {
     final HttpResponse mockHttpResponse = mock(HttpResponse.class);
-    when(mockHttpResponse.statusCode()).thenReturn(200).thenReturn(200);
+    when(mockHttpResponse.statusCode()).thenReturn(HttpStatus.OK.getCode()).thenReturn(HttpStatus.OK.getCode());
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(Jsons.jsonNode(WORKSPACE_WEBHOOK_CONFIGS));
     final OperatorWebhookInput input = new OperatorWebhookInput()
         .withExecutionBody(WEBHOOK_EXECUTION_BODY)
@@ -64,6 +68,20 @@ class WebhookOperationActivityTest {
     when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
     final boolean success = webhookActivity.invokeWebhook(input);
     assertTrue(success);
+  }
+
+  @Test
+  void webhookActivityFailsWhenRetriesExhausted() throws IOException, InterruptedException {
+    final IOException exception = new IOException("test");
+    when(httpClient.send(any(), any())).thenThrow(exception);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(Jsons.jsonNode(WORKSPACE_WEBHOOK_CONFIGS));
+    final OperatorWebhookInput input = new OperatorWebhookInput()
+        .withExecutionBody(WEBHOOK_EXECUTION_BODY)
+        .withExecutionUrl(WEBHOOK_EXECUTION_URL)
+        .withWebhookConfigId(WEBHOOK_ID)
+        .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
+    final Throwable t = assertThrows(FailsafeException.class, () -> webhookActivity.invokeWebhook(input));
+    assertEquals(exception, t.getCause());
   }
 
 }

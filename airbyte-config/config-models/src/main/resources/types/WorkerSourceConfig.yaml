@@ -19,6 +19,6 @@ properties:
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   catalog:
     type: object
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+    existingJavaType: io.airbyte.config.ConfiguredAirbyteCatalog
   state:
     "$ref": State.yaml

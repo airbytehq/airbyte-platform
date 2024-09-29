@@ -8,7 +8,6 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import messages from "../src/locales/en.json";
 import { FeatureService } from "../src/core/services/features";
 import { DocumentationPanelProvider } from "../src/views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
-import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitoringService";
 import { AirbyteThemeProvider } from "../src/hooks/theme/useAirbyteTheme";
 
 const queryClient = new QueryClient({
@@ -33,9 +32,7 @@ export const withProviders = (getStory: Parameters<Decorator>[0]) => (
             }}
           >
             <DocumentationPanelProvider>
-              <AppMonitoringServiceProvider>
                 <FeatureService features={[]}>{getStory()}</FeatureService>
-              </AppMonitoringServiceProvider>
             </DocumentationPanelProvider>
           </IntlProvider>
         </MemoryRouter>

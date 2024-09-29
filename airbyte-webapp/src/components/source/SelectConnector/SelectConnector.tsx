@@ -1,27 +1,35 @@
 import classNames from "classnames";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
+import { match } from "ts-pattern";
 
-import { Box } from "components/ui/Box";
+import { ConnectorIcon } from "components/ConnectorIcon";
+import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
+import { SortableTableHeader } from "components/ui/Table/SortableTableHeader";
+import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
-import { SuggestedConnectors } from "area/connector/components";
-import { useCurrentWorkspace } from "core/api";
-import { SupportLevel } from "core/api/types/AirbyteClient";
+import { useCurrentWorkspace, useFilters } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useModalService } from "hooks/services/Modal";
+import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
-import { ConnectorGrid } from "./ConnectorGrid";
-import { FilterSupportLevel } from "./FilterSupportLevel";
+import { ConnectorList } from "./ConnectorList";
 import { RequestConnectorModal } from "./RequestConnectorModal";
 import styles from "./SelectConnector.module.scss";
 import { useTrackSelectConnector } from "./useTrackSelectConnector";
+
+export type ConnectorTab = "certified" | "marketplace" | "custom";
+export type ConnectorSortColumn = "name" | "successRate" | "usage";
+export interface ConnectorSorting {
+  column: ConnectorSortColumn;
+  isAscending: boolean;
+}
 
 interface SelectConnectorProps {
   connectorType: "source" | "destination";
@@ -30,15 +38,7 @@ interface SelectConnectorProps {
   suggestedConnectorDefinitionIds: string[];
 }
 
-const SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "archived", "none"];
-const HIDDEN_SUPPORT_LEVELS: SupportLevel[] = ["archived"];
-export const DEFAULT_SELECTED_SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
-
-export const SelectConnector: React.FC<SelectConnectorProps> = (props) => {
-  return <SelectConnectorSupportLevel {...props} />;
-};
-
-const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
+export const SelectConnector: React.FC<SelectConnectorProps> = ({
   connectorType,
   connectorDefinitions,
   onSelectConnectorDefinition,
@@ -48,27 +48,19 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
   const { email } = useCurrentWorkspace();
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [supportLevelsInLocalStorage, setSelectedSupportLevels] = useLocalStorage(
-    "airbyte_connector-grid-support-level-filter",
-    []
-  );
-  const availableSupportLevels = SUPPORT_LEVELS.filter((stage) => !HIDDEN_SUPPORT_LEVELS.includes(stage)).filter(
-    (stage) => connectorDefinitions.some((d) => d.supportLevel === stage)
-  );
-  const selectedSupportLevels = supportLevelsInLocalStorage.filter((supportLevel) =>
-    availableSupportLevels.includes(supportLevel)
-  );
-  if (selectedSupportLevels.length === 0) {
-    selectedSupportLevels.push(...DEFAULT_SELECTED_SUPPORT_LEVELS);
-  }
 
-  const updateSelectedSupportLevels = (updatedSelectedSupportLevels: SupportLevel[]) => {
-    // It's possible there was a release stage selected that is currently not being displayed.
-    // We should add that back in before we persist to local storage.
-    const hiddenSupportLevels = supportLevelsInLocalStorage.filter((stage) => !selectedSupportLevels.includes(stage));
-    setSelectedSupportLevels([...updatedSelectedSupportLevels, ...hiddenSupportLevels]);
-  };
+  const [{ search: searchTerm, tab: selectedTab, col: sortColumn, asc }, setFilterValue] = useFilters<{
+    search: string;
+    tab: ConnectorTab;
+    col: ConnectorSortColumn;
+    asc: "true" | "false";
+  }>({
+    search: "",
+    tab: "certified",
+    col: "name",
+    asc: "true",
+  });
+  const isSortAscending = asc === "true";
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
@@ -95,12 +87,30 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
       size: "sm",
     });
 
-  const filteredSearchResults = useMemo(
-    () =>
-      connectorDefinitions
-        .filter((definition) => definition.supportLevel && selectedSupportLevels.includes(definition.supportLevel))
-        .filter((definition) => definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())),
-    [searchTerm, connectorDefinitions, selectedSupportLevels]
+  const handleSortClick = useCallback(
+    (clickedColumn: ConnectorSortColumn) => {
+      if (clickedColumn === sortColumn) {
+        setFilterValue("asc", !isSortAscending ? "true" : "false");
+      } else {
+        setFilterValue("col", clickedColumn);
+        setFilterValue("asc", clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
+      }
+    },
+    [isSortAscending, setFilterValue, sortColumn]
+  );
+
+  const setSelectedTab = useCallback(
+    (tab: ConnectorTab) => {
+      setFilterValue("tab", tab);
+      setFilterValue("col", "name");
+      setFilterValue("asc", "true");
+    },
+    [setFilterValue]
+  );
+
+  const hasCustomConnectors = useMemo(
+    () => connectorDefinitions.some((definition) => definition.supportLevel === "none"),
+    [connectorDefinitions]
   );
 
   const allSearchResults = useMemo(
@@ -111,10 +121,60 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
     [searchTerm, connectorDefinitions]
   );
 
+  const searchResultsByTab: Record<ConnectorTab, ConnectorDefinition[]> = useMemo(
+    () =>
+      allSearchResults.reduce(
+        (acc, definition) => {
+          if (definition.supportLevel) {
+            switch (definition.supportLevel) {
+              case "certified":
+                acc.certified.push(definition);
+                break;
+              case "community":
+                acc.marketplace.push(definition);
+                break;
+              case "none":
+                acc.custom.push(definition);
+                break;
+            }
+          }
+          return acc;
+        },
+        {
+          certified: [],
+          marketplace: [],
+          custom: [],
+        } as Record<ConnectorTab, ConnectorDefinition[]>
+      ),
+    [allSearchResults]
+  );
+
+  const certifiedBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.certified.length > 0
+        ? searchResultsByTab.certified.length.toString()
+        : undefined,
+    [searchTerm, searchResultsByTab.certified.length]
+  );
+
+  const marketplaceBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.marketplace.length > 0
+        ? searchResultsByTab.marketplace.length.toString()
+        : undefined,
+    [searchTerm, searchResultsByTab.marketplace.length]
+  );
+
+  const customBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.custom.length > 0 ? searchResultsByTab.custom.length.toString() : undefined,
+    [searchTerm, searchResultsByTab.custom.length]
+  );
+
   const analyticsService = useAnalyticsService();
   useDebounce(
     () => {
-      if (filteredSearchResults.length === 0) {
+      if (allSearchResults.length === 0) {
         analyticsService.track(
           connectorType === "source" ? Namespace.SOURCE : Namespace.DESTINATION,
           Action.NO_MATCHING_CONNECTOR,
@@ -129,51 +189,190 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
     [searchTerm]
   );
 
+  const getTabDisplayName = useCallback(
+    (tab: ConnectorTab) =>
+      match(tab)
+        .with("certified", () => formatMessage({ id: "connector.tab.certified" }))
+        .with("marketplace", () => formatMessage({ id: "connector.tab.marketplace" }))
+        .with("custom", () => formatMessage({ id: "connector.tab.custom" }))
+        .exhaustive(),
+    [formatMessage]
+  );
+  const { theme } = useAirbyteTheme();
+
+  const seeMoreButtons = (
+    <FlexContainer className={styles.selectConnector__seeMore}>
+      {Object.keys(searchResultsByTab)
+        .filter((tab) => selectedTab !== tab && searchResultsByTab[tab as ConnectorTab].length > 0)
+        .map((tab) => {
+          const tabName = tab as ConnectorTab;
+          return (
+            <Button
+              key={tabName}
+              data-testid={`see-more-${tabName}`}
+              type="button"
+              variant="secondary"
+              className={styles.selectConnector__seeMore}
+              onClick={() => setSelectedTab(tabName)}
+            >
+              <FlexContainer alignItems="center" gap="lg">
+                {tabName !== "custom" && (
+                  <FlexContainer gap="none">
+                    {searchResultsByTab[tabName].slice(0, 3).map((definition) => (
+                      <ConnectorIcon
+                        icon={definition.icon}
+                        key={definition.name}
+                        className={classNames(styles.seeMoreIcon, {
+                          [styles.seeMoreIconDarkTheme]: theme === "airbyteThemeDark",
+                        })}
+                      />
+                    ))}
+                  </FlexContainer>
+                )}
+                <div>
+                  <FormattedMessage
+                    id="connector.seeMore"
+                    values={{
+                      count: searchResultsByTab[tabName].length,
+                      tabName: getTabDisplayName(tabName),
+                    }}
+                  />
+                </div>
+              </FlexContainer>
+            </Button>
+          );
+        })}
+    </FlexContainer>
+  );
+
   return (
     <div className={styles.selectConnector}>
-      <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--left"])} />
-      <div className={styles.selectConnector__header}>
-        <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-
-        <Box mt="lg">
-          <FlexContainer justifyContent="space-between">
-            <FilterSupportLevel
-              availableSupportLevels={availableSupportLevels}
-              selectedSupportLevels={selectedSupportLevels}
-              onUpdateSelectedSupportLevels={(supportLevels) => updateSelectedSupportLevels(supportLevels)}
-            />
-            <Text color="grey">
-              <FormattedMessage id="connector.connectorCount" values={{ count: filteredSearchResults.length }} />
-            </Text>
-          </FlexContainer>
-        </Box>
-      </div>
-
-      <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
-
-      {suggestedConnectorDefinitionIds.length > 0 && (
-        <div className={styles.selectConnector__suggestedConnectors}>
-          <SuggestedConnectors
-            definitionIds={suggestedConnectorDefinitionIds}
-            onConnectorButtonClick={handleConnectorButtonClick}
+      <div className={classNames(styles.selectConnector__stickied, styles["selectConnector__gutter--left"])} />
+      <FlexContainer
+        className={classNames(styles.selectConnector__stickied, styles.selectConnector__header)}
+        direction="column"
+        gap="lg"
+      >
+        <SearchInput
+          value={searchTerm}
+          onChange={(e) => setFilterValue("search", e.target.value)}
+          placeholder={formatMessage(
+            { id: "connector.searchPlaceholder" },
+            { tabName: getTabDisplayName(selectedTab) }
+          )}
+        />
+        <Tabs className={styles.selectConnector__tabs}>
+          <ButtonTab
+            id="certified"
+            name={getTabDisplayName("certified")}
+            badge={certifiedBadge}
+            isActive={selectedTab === "certified"}
+            onSelect={() => {
+              setSelectedTab("certified");
+            }}
           />
-        </div>
-      )}
+          <ButtonTab
+            id="marketplace"
+            name={getTabDisplayName("marketplace")}
+            badge={marketplaceBadge}
+            isActive={selectedTab === "marketplace"}
+            onSelect={() => setSelectedTab("marketplace")}
+          />
+          {hasCustomConnectors && (
+            <ButtonTab
+              id="custom"
+              name={getTabDisplayName("custom")}
+              badge={customBadge}
+              isActive={selectedTab === "custom"}
+              onSelect={() => setSelectedTab("custom")}
+            />
+          )}
+        </Tabs>
+        <FlexContainer
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          className={styles.countAndSort}
+        >
+          <Text size="sm">
+            <FormattedMessage
+              id="connector.connectorCount"
+              values={{
+                count: searchResultsByTab[selectedTab].length,
+              }}
+            />
+          </Text>
+          <FlexContainer direction="row" className={styles.sortHeader} gap="lg">
+            <SortableTableHeader
+              className={styles.sortButton}
+              activeClassName={styles.activeSortColumn}
+              onClick={() => handleSortClick("name")}
+              isActive={sortColumn === "name"}
+              isAscending={isSortAscending}
+              iconSize="sm"
+            >
+              <FormattedMessage id="connector.sort.name" />
+            </SortableTableHeader>
+            {selectedTab === "marketplace" && (
+              <>
+                <SortableTableHeader
+                  className={styles.sortButton}
+                  activeClassName={styles.activeSortColumn}
+                  onClick={() => handleSortClick("successRate")}
+                  isActive={sortColumn === "successRate"}
+                  isAscending={isSortAscending}
+                  iconSize="sm"
+                >
+                  <FormattedMessage id="connector.sort.success" />
+                </SortableTableHeader>
+                <SortableTableHeader
+                  className={styles.sortButton}
+                  activeClassName={styles.activeSortColumn}
+                  onClick={() => handleSortClick("usage")}
+                  isActive={sortColumn === "usage"}
+                  isAscending={isSortAscending}
+                  iconSize="sm"
+                >
+                  <FormattedMessage id="connector.sort.usage" />
+                </SortableTableHeader>
+              </>
+            )}
+          </FlexContainer>
+        </FlexContainer>
+      </FlexContainer>
+      <div className={classNames(styles.selectConnector__stickied, styles["selectConnector__gutter--right"])} />
 
       <div className={styles.selectConnector__grid}>
-        <ConnectorGrid
-          searchResultsHiddenByFilters={
-            searchTerm.length > 0 ? allSearchResults.length - filteredSearchResults.length : 0
-          }
-          onShowAllResultsClick={() => {
-            updateSelectedSupportLevels(SUPPORT_LEVELS);
+        <ConnectorList
+          sorting={{
+            column: sortColumn,
+            isAscending: isSortAscending,
           }}
-          connectorDefinitions={filteredSearchResults}
+          displayType={selectedTab === "marketplace" ? "list" : "grid"}
+          connectorDefinitions={searchResultsByTab[selectedTab]}
+          suggestedConnectorDefinitionIds={
+            selectedTab === "certified" ? (searchTerm ? [] : suggestedConnectorDefinitionIds) : undefined
+          }
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}
           showConnectorBuilderButton={connectorType === "source"}
+          noSearchResultsContent={
+            <FlexContainer direction="column" gap="none">
+              <Text size="sm" italicized color="grey400">
+                <FormattedMessage
+                  id="connector.noSearchResults"
+                  values={{
+                    tabName: getTabDisplayName(selectedTab),
+                  }}
+                />
+              </Text>
+              {seeMoreButtons}
+            </FlexContainer>
+          }
         />
       </div>
+
+      {searchTerm.length > 0 && searchResultsByTab[selectedTab].length > 0 && seeMoreButtons}
     </div>
   );
 };

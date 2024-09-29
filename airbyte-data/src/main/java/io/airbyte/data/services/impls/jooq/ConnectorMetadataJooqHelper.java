@@ -16,8 +16,8 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -72,19 +72,6 @@ public class ConnectorMetadataJooqHelper {
                   ReleaseStage.class).orElseThrow())
           .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
               : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
           .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
               : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
@@ -95,6 +82,11 @@ public class ConnectorMetadataJooqHelper {
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())
+          .set(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED, actorDefinitionVersion.getLastPublished() == null ? null
+              : actorDefinitionVersion.getLastPublished().toInstant().atOffset(ZoneOffset.UTC))
+          .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
+          .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
+          .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
           .execute();
     } else {
@@ -120,19 +112,6 @@ public class ConnectorMetadataJooqHelper {
                   ReleaseStage.class).orElseThrow())
           .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
               : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
           .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
               : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
@@ -140,9 +119,14 @@ public class ConnectorMetadataJooqHelper {
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
           .set(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES,
               actorDefinitionVersion.getSupportsRefreshes() != null && actorDefinitionVersion.getSupportsRefreshes())
+          .set(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED, actorDefinitionVersion.getLastPublished() == null ? null
+              : actorDefinitionVersion.getLastPublished().toInstant().atOffset(ZoneOffset.UTC))
+          .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())
+          .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
+          .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .execute();
     }
 

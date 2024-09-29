@@ -10,22 +10,18 @@ class DeclarativeManifestImageVersionServiceDataImpl(
   private val repository: DeclarativeManifestImageVersionRepository,
 ) : DeclarativeManifestImageVersionService {
   override fun writeDeclarativeManifestImageVersion(
-    majorVersion: Int,
-    imageVersion: String,
+    declarativeManifestImageVersion: DeclarativeManifestImageVersion,
   ): DeclarativeManifestImageVersion {
-    val version = DeclarativeManifestImageVersion(majorVersion, imageVersion)
-    if (repository.existsById(majorVersion)) {
-      return repository.update(version)
+    if (repository.existsById(declarativeManifestImageVersion.majorVersion)) {
+      return repository.update(declarativeManifestImageVersion)
     }
-    return repository.save(version)
+    return repository.save(declarativeManifestImageVersion)
   }
 
-  override fun getImageVersionByMajorVersion(majorVersion: Int): String {
-    val resolvedVersion =
-      repository.findById(majorVersion).orElseThrow {
-        IllegalStateException("No declarative manifest image version found in database for major version $majorVersion")
-      }
-    return resolvedVersion.imageVersion
+  override fun getDeclarativeManifestImageVersionByMajorVersion(majorVersion: Int): DeclarativeManifestImageVersion {
+    return repository.findById(majorVersion).orElseThrow {
+      IllegalStateException("No declarative manifest image version found in database for major version $majorVersion")
+    }
   }
 
   override fun listDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {

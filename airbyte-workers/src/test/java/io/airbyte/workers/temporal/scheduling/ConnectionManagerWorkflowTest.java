@@ -71,10 +71,7 @@ import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionS
 import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSuccessWorkflow;
 import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSystemErrorWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.CancelledSyncWorkflow;
-import io.airbyte.workers.temporal.scheduling.testsyncworkflow.DbtFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.EmptySyncWorkflow;
-import io.airbyte.workers.temporal.scheduling.testsyncworkflow.NormalizationFailureSyncWorkflow;
-import io.airbyte.workers.temporal.scheduling.testsyncworkflow.NormalizationTraceFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.PersistFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.ReplicateFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SleepingSyncWorkflow;
@@ -1287,89 +1284,6 @@ class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
-    @DisplayName("Test that normalization failure is recorded")
-    void testNormalizationFailure() throws Exception {
-      setupNormalizationFailure();
-
-      Mockito.verify(mJobCreationAndStatusUpdateActivity)
-          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.NORMALIZATION)));
-    }
-
-    @Test
-    @Timeout(value = 10,
-             unit = TimeUnit.SECONDS)
-    @DisplayName("Test that normalization trace failure is recorded")
-    void testNormalizationTraceFailure() throws Exception {
-      returnTrueForLastJobOrAttemptFailure();
-      final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
-      syncWorker.registerWorkflowImplementationTypes(NormalizationTraceFailureSyncWorkflow.class);
-      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
-      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
-
-      testEnv.start();
-
-      final UUID testId = UUID.randomUUID();
-      final TestStateListener testStateListener = new TestStateListener();
-      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
-      final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
-          .connectionId(UUID.randomUUID())
-          .jobId(JOB_ID)
-          .attemptId(ATTEMPT_ID)
-          .fromFailure(false)
-          .attemptNumber(1)
-          .workflowState(workflowState)
-          .build();
-
-      startWorkflowAndWaitUntilReady(workflow, input);
-
-      // wait for workflow to initialize
-      testEnv.sleep(Duration.ofMinutes(1));
-
-      workflow.submitManualSync();
-
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
-          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.NORMALIZATION)));
-    }
-
-    @Test
-    @Timeout(value = 10,
-             unit = TimeUnit.SECONDS)
-    @DisplayName("Test that dbt failure is recorded")
-    void testDbtFailureRecorded() throws Exception {
-      returnTrueForLastJobOrAttemptFailure();
-      final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
-      syncWorker.registerWorkflowImplementationTypes(DbtFailureSyncWorkflow.class);
-      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
-      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
-
-      testEnv.start();
-
-      final UUID testId = UUID.randomUUID();
-      final TestStateListener testStateListener = new TestStateListener();
-      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
-      final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
-          .connectionId(UUID.randomUUID())
-          .jobId(JOB_ID)
-          .attemptId(ATTEMPT_ID)
-          .fromFailure(false)
-          .attemptNumber(1)
-          .workflowState(workflowState)
-          .build();
-
-      startWorkflowAndWaitUntilReady(workflow, input);
-
-      // wait for workflow to initialize
-      testEnv.sleep(Duration.ofMinutes(1));
-
-      workflow.submitManualSync();
-
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
-          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.DBT)));
-    }
-
-    @Test
-    @Timeout(value = 10,
-             unit = TimeUnit.SECONDS)
     @DisplayName("Test that persistence failure is recorded")
     void testPersistenceFailureRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
@@ -1641,7 +1555,6 @@ class ConnectionManagerWorkflowTest {
     // proxy. This is deliberately incomplete as the permutations of failure cases is large.
     public static Stream<Arguments> coreFailureTypesMatrix() {
       return Stream.of(
-          Arguments.of(NormalizationFailureSyncWorkflow.class),
           Arguments.of(SourceAndDestinationFailureSyncWorkflow.class),
           Arguments.of(ReplicateFailureSyncWorkflow.class),
           Arguments.of(PersistFailureSyncWorkflow.class),
@@ -2076,10 +1989,6 @@ class ConnectionManagerWorkflowTest {
 
   private void setupReplicationFailure() throws Exception {
     setupFailureCase(ReplicateFailureSyncWorkflow.class);
-  }
-
-  private void setupNormalizationFailure() throws Exception {
-    setupFailureCase(NormalizationFailureSyncWorkflow.class);
   }
 
   /**

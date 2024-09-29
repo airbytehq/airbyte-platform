@@ -1,8 +1,6 @@
 import { render, renderHook } from "@testing-library/react";
 import React, { useEffect } from "react";
 
-import { mockProInstanceConfig } from "test-utils/mock-data/mockInstanceConfig";
-
 import { FeatureService, IfFeatureEnabled, useFeature, useFeatureService } from "./FeatureService";
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -38,20 +36,7 @@ describe("Feature Service", () => {
     it("should allow setting default features", () => {
       const getFeature = (feature: FeatureItem) => renderHook(() => useFeature(feature), { wrapper }).result.current;
       expect(getFeature(FeatureItem.AllowDBTCloudIntegration)).toBe(true);
-      expect(getFeature(FeatureItem.AllowCustomDBT)).toBe(false);
       expect(getFeature(FeatureItem.AllowUpdateConnectors)).toBe(false);
-    });
-
-    it("should set features based on airbyte pro edition", () => {
-      const wrapperWithInstanceConfig: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-        <FeatureService features={[FeatureItem.AllowDBTCloudIntegration]} instanceConfig={mockProInstanceConfig}>
-          {children}
-        </FeatureService>
-      );
-      const getFeature = (feature: FeatureItem) =>
-        renderHook(() => useFeature(feature), { wrapper: wrapperWithInstanceConfig }).result.current;
-
-      expect(getFeature(FeatureItem.KeycloakAuthentication)).toBe(true);
     });
 
     it("overwrite features can overwrite default features", () => {
@@ -64,9 +49,9 @@ describe("Feature Service", () => {
 
     it("overwritten features can be cleared again", () => {
       const { result, rerender } = getFeatures({
-        overwrite: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
+        overwrite: {} as FeatureSet,
       });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration]);
+      expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
       rerender({ overwrite: undefined });
       expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
     });

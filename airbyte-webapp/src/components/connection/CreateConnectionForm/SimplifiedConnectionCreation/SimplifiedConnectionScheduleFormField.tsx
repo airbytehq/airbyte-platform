@@ -55,7 +55,7 @@ const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ di
   const scheduleTypeOptions: Array<Option<ConnectionScheduleType>> = [
     {
       label: formatMessage({
-        id: "frequency.scheduled",
+        id: "frequency.basic",
       }),
       value: ConnectionScheduleType.basic,
       "data-testid": "scheduled",
@@ -241,7 +241,14 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
                   <FormattedMessage id="form.cronExpression" />
                 </Text>
                 <Text size="sm" color="grey">
-                  <FormattedMessage id="form.cronExpression.subtitle" />
+                  <FormattedMessage
+                    id="form.cronExpression.subtitle"
+                    values={{
+                      lnk: (children: React.ReactNode) => (
+                        <ExternalLink href={links.cronReferenceLink}>{children}</ExternalLink>
+                      ),
+                    }}
+                  />
                 </Text>
               </FlexContainer>
             }

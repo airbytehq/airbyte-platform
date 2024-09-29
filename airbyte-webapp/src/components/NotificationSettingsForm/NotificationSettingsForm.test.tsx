@@ -9,8 +9,6 @@ import messages from "locales/en.json";
 
 import { NotificationSettingsForm } from "./NotificationSettingsForm";
 
-jest.mock("hooks/services/AppMonitoringService");
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({
     ...mockWorkspace,

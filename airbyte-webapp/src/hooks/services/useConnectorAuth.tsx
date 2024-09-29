@@ -15,10 +15,10 @@ import {
 } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
+import { trackError } from "core/utils/datadog";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
-import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";
 
@@ -75,7 +75,6 @@ export function useConnectorAuth(): {
   ) => Promise<CompleteOAuthResponse>;
 } {
   const { formatMessage } = useIntl();
-  const { trackError } = useAppMonitoringService();
   const { workspaceId } = useCurrentWorkspace();
   const { getDestinationConsentUrl, getSourceConsentUrl } = useConsentUrls();
   const { completeDestinationOAuth, completeSourceOAuth } = useCompleteOAuth();

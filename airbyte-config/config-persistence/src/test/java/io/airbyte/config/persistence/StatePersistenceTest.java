@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -61,6 +62,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class StatePersistenceTest extends BaseConfigDatabaseTest {
 
   private StatePersistence statePersistence;
@@ -642,9 +644,9 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     statePersistence.updateOrCreateState(connectionId, clone(perStreamToModify));
 
     final var toDelete = Set.of(
-        new StreamDescriptor().withName("del-1").withNamespace("del-n1"),
-        new StreamDescriptor().withName("del-2"),
-        new StreamDescriptor().withName("del-1").withNamespace("del-n2"));
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n1"),
+        new io.airbyte.config.StreamDescriptor().withName("del-2"),
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n2"));
     statePersistence.bulkDelete(connectionId, toDelete);
 
     var curr = statePersistence.getCurrentState(connectionId);
@@ -692,9 +694,9 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     statePersistence.updateOrCreateState(connectionId, clone(globalToModify));
 
     final var toDelete = Set.of(
-        new StreamDescriptor().withName("del-1").withNamespace("del-n1"),
-        new StreamDescriptor().withName("del-2"),
-        new StreamDescriptor().withName("del-1").withNamespace("del-n2"));
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n1"),
+        new io.airbyte.config.StreamDescriptor().withName("del-2"),
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n2"));
     statePersistence.bulkDelete(connectionId, toDelete);
 
     var curr = statePersistence.getCurrentState(connectionId);
@@ -712,6 +714,38 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
                         .withStreamDescriptor(new StreamDescriptor().withName("keep-1").withNamespace("keep-n1"))
                         .withStreamState(Jsons.deserialize(""))))));
     assertEquals(exp, curr.get());
+  }
+
+  @Test
+  void testBulkDeleteGlobalAllStreams() throws IOException {
+    final StateWrapper globalToModify = new StateWrapper()
+        .withStateType(StateType.GLOBAL)
+        .withGlobal(new AirbyteStateMessage()
+            .withType(AirbyteStateType.GLOBAL)
+            .withGlobal(new AirbyteGlobalState()
+                .withSharedState(Jsons.deserialize("\"woot\""))
+                .withStreamStates(Arrays.asList(
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-1").withNamespace("del-n1"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-2"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-1").withNamespace("del-n2"))
+                        .withStreamState(Jsons.deserialize(""))))));
+
+    statePersistence.updateOrCreateState(connectionId, clone(globalToModify));
+
+    final var toDelete = Set.of(
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n1"),
+        new io.airbyte.config.StreamDescriptor().withName("del-2"),
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n2"));
+    statePersistence.bulkDelete(connectionId, toDelete);
+
+    var curr = statePersistence.getCurrentState(connectionId);
+
+    assertTrue(curr.isEmpty());
   }
 
   @Test
@@ -739,8 +773,8 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     statePersistence.updateOrCreateState(secondConn, clone(globalToModify));
 
     final var toDelete = Set.of(
-        new StreamDescriptor().withName("del-1").withNamespace("del-n1"),
-        new StreamDescriptor().withName("del-2"));
+        new io.airbyte.config.StreamDescriptor().withName("del-1").withNamespace("del-n1"),
+        new io.airbyte.config.StreamDescriptor().withName("del-2"));
     statePersistence.bulkDelete(connectionId, toDelete);
 
     var curr = statePersistence.getCurrentState(connectionId);
@@ -839,7 +873,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  public void testEraseStreamState() throws JsonValidationException, IOException {
+  void testEraseStreamState() throws JsonValidationException, IOException {
     final StateWrapper connectionState = new StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(List.of(

@@ -1,0 +1,7 @@
+package io.airbyte.commons.auth.generated
+
+// Auto-generated file. Do not edit manually!
+
+enum class Intent(val roles: Set<String>) {
+  <enum-entries>
+}

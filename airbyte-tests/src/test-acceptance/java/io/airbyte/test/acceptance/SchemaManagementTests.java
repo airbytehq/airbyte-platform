@@ -12,9 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -32,7 +29,6 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.test.utils.AcceptanceTestHarness;
-import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -46,9 +42,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
@@ -56,12 +52,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
+ *
+ * These tests need the `refreshSchema.period.hours` feature flag to return `0`, otherwise asserts
+ * will fail.
  */
-@DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
-                               matches = "true")
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
 @Execution(ExecutionMode.CONCURRENT)
+@Tag("api")
 class SchemaManagementTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaManagementTests.class);
@@ -85,7 +83,6 @@ class SchemaManagementTests {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
     // Use incremental append-dedup with a primary key column, so we can simulate a breaking change by
     // removing that column.
     final SyncMode syncMode = SyncMode.INCREMENTAL;
@@ -108,9 +105,7 @@ class SchemaManagementTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .build());
+            discoverResult.getCatalogId()).build());
     LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
@@ -125,7 +120,7 @@ class SchemaManagementTests {
             .build());
   }
 
-  void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
+  private void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // Set up the API client.
     final var airbyteApiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
 
@@ -205,8 +200,6 @@ class SchemaManagementTests {
     final AirbyteCatalog catalogWithPropagatedChanges = getExpectedCatalogWithExtraColumnAndTable();
     assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
     assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), currentConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
 
     // This connection does not have auto propagation, so it should have stayed the same.
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
@@ -224,8 +217,6 @@ class SchemaManagementTests {
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
 
     // Modify the source to add a new column and populate it with default values.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -236,8 +227,6 @@ class SchemaManagementTests {
     testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
   }
 
   @Test
@@ -250,8 +239,6 @@ class SchemaManagementTests {
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
 
     // Modify the source to add a new column, which will be populated with a default value.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -262,8 +249,6 @@ class SchemaManagementTests {
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     // Expect that we have the two original fields, plus the new one.
     assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithBackfilledColumn());
   }
 
   @Test
@@ -287,39 +272,6 @@ class SchemaManagementTests {
     final ConnectionRead secondUpdate = testHarness.getConnection(createdConnection.getConnectionId());
     assertEquals(firstUpdate.getSyncCatalog(), secondUpdate.getSyncCatalog());
     assertNotEquals(firstUpdate.getSourceCatalogId(), secondUpdate.getSourceCatalogId());
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndName() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif"),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles"),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared"),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel"),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john"));
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndNameWithBackfilledColumn() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        // Note: this is a new record, with a different value from the default.
-        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
   }
 
   private AirbyteCatalog getExpectedCatalogWithExtraColumnAndTable() {
@@ -355,6 +307,7 @@ class SchemaManagementTests {
             existingStreamAndConfig.getConfig().getSuggested(),
             existingStreamAndConfig.getConfig().getFieldSelectionEnabled(),
             existingStreamAndConfig.getConfig().getSelectedFields(),
+            existingStreamAndConfig.getConfig().getHashedFields(),
             existingStreamAndConfig.getConfig().getMinimumGenerationId(),
             existingStreamAndConfig.getConfig().getGenerationId(),
             existingStreamAndConfig.getConfig().getSyncId())));
@@ -382,6 +335,7 @@ class SchemaManagementTests {
             true,
             false,
             false,
+            List.of(),
             List.of(),
             null,
             null,

@@ -6,8 +6,8 @@ package io.airbyte.workers.internal;
 
 import io.airbyte.commons.protocol.AirbyteMessageVersionedMigrator;
 import io.airbyte.commons.protocol.serde.AirbyteMessageSerializer;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Optional;

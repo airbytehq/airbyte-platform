@@ -1,13 +1,15 @@
 package io.airbyte.data.repositories.specialized
 
 import io.airbyte.data.repositories.AbstractConfigRepositoryTest
-import io.airbyte.db.instance.jobs.jooq.generated.Keys
+import io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS
 import io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATUSES
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState
+import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.StreamStatusesRecord
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -23,14 +25,6 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
     private val streamNameBar = "bar"
     private val streamNamespace1 = "ns1"
     private val streamNamespace2 = "ns2"
-
-    @JvmStatic
-    @BeforeAll
-    fun beforeAll() {
-      // so we don't have to deal with making jobs as well
-      jooqDslContext.alterTable(STREAM_STATUSES)
-        .dropForeignKey(Keys.STREAM_STATUSES__STREAM_STATUSES_JOB_ID_FKEY.constraint()).execute()
-    }
   }
 
   @Test
@@ -58,6 +52,11 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
   }
 
   private fun setupFixtures() {
+    val job1 = jobRecord(job1Id, connectionId)
+    val job2 = jobRecord(job2Id, connectionId)
+    val job3 = jobRecord(job3Id, connectionId)
+    jooqDslContext.batchInsert(job1, job2, job3).execute()
+
     val job1FooNs1 = streamStatusesRecord(job1Id, streamNameFoo, streamNamespace1, connectionId)
     val job1FooNsNull = streamStatusesRecord(job1Id, streamNameFoo, null, connectionId)
     val job1FooNs2 = streamStatusesRecord(job1Id, streamNameFoo, streamNamespace2, connectionId)
@@ -85,6 +84,18 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
       this.attemptNumber = 0
       this.runState = JobStreamStatusRunState.complete
       this.transitionedAt = OffsetDateTime.now()
+    }
+  }
+
+  private fun jobRecord(
+    jobId: Long,
+    connectionId: UUID,
+  ): JobsRecord {
+    return AbstractConfigRepositoryTest.jooqDslContext.newRecord(JOBS).apply {
+      this.id = jobId
+      this.scope = connectionId.toString()
+      this.configType = JobConfigType.sync
+      this.status = JobStatus.succeeded
     }
   }
 }

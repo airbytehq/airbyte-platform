@@ -1,13 +1,13 @@
 package io.airbyte.workers.workload
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.workload.exception.DocStoreAccessException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -35,13 +35,7 @@ class JobOutputDocStore(
     workloadId: String,
     connectorJobOutput: ConnectorJobOutput,
   ) {
-    try {
-      storageClient.write(workloadId, Jsons.serialize(connectorJobOutput))
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
-    } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
-      throw DocStoreAccessException("Unable to write output for $workloadId", e)
-    }
+    writeOutput(workloadId = workloadId, output = connectorJobOutput)
   }
 
   @Throws(DocStoreAccessException::class)
@@ -63,8 +57,15 @@ class JobOutputDocStore(
     workloadId: String,
     connectorJobOutput: ReplicationOutput,
   ) {
+    writeOutput(workloadId = workloadId, output = connectorJobOutput)
+  }
+
+  private fun writeOutput(
+    workloadId: String,
+    output: Any,
+  ) {
     try {
-      storageClient.write(workloadId, Jsons.serialize(connectorJobOutput))
+      storageClient.write(workloadId, Jsons.serialize(output))
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
     } catch (e: Exception) {
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))

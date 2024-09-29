@@ -104,7 +104,7 @@ public class LeverOAuthFlow extends BaseOAuth2Flow {
   private boolean isProduction(final JsonNode inputOAuthConfiguration) {
     final var environment = inputOAuthConfiguration.get("environment");
     return environment != null
-        && environment.asText().toLowerCase(Locale.ROOT).equals("production");
+        && "production".equals(environment.asText().toLowerCase(Locale.ROOT));
   }
 
 }

@@ -6,8 +6,6 @@ import jakarta.ws.rs.core.Response
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.ClientScopeRepresentation
 import org.keycloak.representations.idm.ProtocolMapperRepresentation
-import java.util.Arrays
-import java.util.Map
 
 private val logger = KotlinLogging.logger {}
 
@@ -75,7 +73,7 @@ class ClientScopeConfigurator {
     val clientScopeRepresentation = ClientScopeRepresentation()
     clientScopeRepresentation.name = "openid"
     clientScopeRepresentation.protocol = "openid-connect"
-    clientScopeRepresentation.protocolMappers = Arrays.asList(buildUserIdMapper(), buildSubMapper())
+    clientScopeRepresentation.protocolMappers = listOf(buildUserIdMapper(), buildSubMapper())
     return clientScopeRepresentation
   }
 
@@ -90,23 +88,15 @@ class ClientScopeConfigurator {
     userIdMapper.protocol = "openid-connect"
     userIdMapper.protocolMapper = "oidc-usermodel-attribute-mapper"
     userIdMapper.config =
-      Map.of(
-        "user.attribute",
-        "user_id",
-        "claim.name",
-        "user_id",
-        "jsonType.label",
-        "",
-        "id.token.claim",
-        "true",
-        "access.token.claim",
-        "true",
-        "userinfo.token.claim",
-        "true",
-        "multivalued",
-        "false",
-        "aggregate.attrs",
-        "false",
+      mapOf(
+        "user.attribute" to "user_id",
+        "claim.name" to "user_id",
+        "jsonType.label" to "",
+        "id.token.claim" to "true",
+        "access.token.claim" to "true",
+        "userinfo.token.claim" to "true",
+        "multivalued" to "false",
+        "aggregate.attrs" to "false",
       )
     return userIdMapper
   }
@@ -122,23 +112,20 @@ class ClientScopeConfigurator {
     subMapper.protocol = "openid-connect"
     subMapper.protocolMapper = "oidc-usermodel-attribute-mapper"
     subMapper.config =
-      Map.of(
-        "user.attribute",
-        "user_id",
-        "claim.name",
-        "sub",
-        "jsonType.label",
-        "",
-        "id.token.claim",
-        "true",
-        "access.token.claim",
-        "true",
-        "userinfo.token.claim",
-        "true",
-        "multivalued",
-        "false",
-        "aggregate.attrs",
-        "false",
+      mapOf(
+        "user.attribute" to "user_id",
+        "claim.name" to "sub",
+        "jsonType.label" to "",
+        "id.token.claim" to
+          "true",
+        "access.token.claim" to
+          "true",
+        "userinfo.token.claim" to
+          "true",
+        "multivalued" to
+          "false",
+        "aggregate.attrs" to
+          "false",
       )
     return subMapper
   }

@@ -18,6 +18,7 @@ class OidcConfigFactory {
   fun defaultOidcConfig(
     @Value("\${airbyte.auth.identity-provider.oidc.domain}") domain: String?,
     @Value("\${airbyte.auth.identity-provider.oidc.app-name}") appName: String?,
+    @Value("\${airbyte.auth.identity-provider.oidc.display-name}") displayName: String?,
     @Value("\${airbyte.auth.identity-provider.oidc.client-id}") clientId: String?,
     @Value("\${airbyte.auth.identity-provider.oidc.client-secret}") clientSecret: String?,
   ): OidcConfig {
@@ -31,7 +32,9 @@ class OidcConfigFactory {
       )
     }
 
-    return OidcConfig(domain, appName, clientId, clientSecret)
+    val displayName = displayName ?: appName
+
+    return OidcConfig(domain, appName, displayName, clientId, clientSecret)
   }
 
   /**
@@ -43,6 +46,7 @@ class OidcConfigFactory {
   fun airbyteYmlSingleOidcConfig(
     @Value("\${airbyte-yml.auth.identity-provider.oidc.domain}") domain: String?,
     @Value("\${airbyte-yml.auth.identity-provider.oidc.app-name}") appName: String?,
+    @Value("\${airbyte-yml.auth.identity-provider.oidc.display-name}") displayName: String?,
     @Value("\${airbyte-yml.auth.identity-provider.oidc.client-id}") clientId: String?,
     @Value("\${airbyte-yml.auth.identity-provider.oidc.client-secret}") clientSecret: String?,
   ): OidcConfig {
@@ -55,7 +59,10 @@ class OidcConfigFactory {
           "airbyte-yml.auth.identity-provider.oidc.client-secret",
       )
     }
-    return OidcConfig(domain, appName, clientId, clientSecret)
+
+    val displayName = displayName ?: appName
+
+    return OidcConfig(domain, appName, displayName, clientId, clientSecret)
   }
 
   /**
@@ -82,6 +89,7 @@ class OidcConfigFactory {
 data class OidcConfig(
   var domain: String,
   var appName: String,
+  var displayName: String,
   var clientId: String,
   var clientSecret: String,
 )

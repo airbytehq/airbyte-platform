@@ -1,5 +1,7 @@
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
+
 import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -25,6 +27,7 @@ export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
       docLink={links.connectorBuilderRecordSelector}
       label={label}
       tooltip={getDescriptionByManifest("RecordSelector")}
+      labelAction={<AssistButton assistKey="record_selector" streamNum={currentStreamIndex} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("recordSelector"),

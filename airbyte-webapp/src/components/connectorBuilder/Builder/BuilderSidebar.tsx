@@ -1,5 +1,5 @@
-import classnames from "classnames";
-import React from "react";
+import classNames from "classnames";
+import React, { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -17,11 +17,12 @@ import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
 import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 interface ViewSelectButtonProps {
   className?: string;
   selected: boolean;
-  showErrorIndicator: boolean;
+  showIndicator?: "warning" | "error";
   onClick: () => void;
   "data-testid": string;
 }
@@ -30,7 +31,7 @@ const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>>
   children,
   className,
   selected,
-  showErrorIndicator,
+  showIndicator,
   onClick,
   "data-testid": testId,
 }) => {
@@ -38,15 +39,58 @@ const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>>
     <button
       type="button"
       data-testid={testId}
-      className={classnames(className, styles.viewButton, {
+      className={classNames(className, styles.viewButton, {
         [styles.selectedViewButton]: selected,
         [styles.unselectedViewButton]: !selected,
       })}
       onClick={onClick}
     >
       <div className={styles.viewLabel}>{children}</div>
-      {showErrorIndicator && <Indicator className={styles.errorIndicator} />}
+      {showIndicator && (
+        <Indicator
+          className={classNames(styles.indicator, { [styles.warningIndicator]: showIndicator === "warning" })}
+        />
+      )}
     </button>
+  );
+};
+
+interface StreamViewButtonProps {
+  id: string;
+  name: string;
+  num: number;
+}
+const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) => {
+  const analyticsService = useAnalyticsService();
+  const { hasErrors } = useBuilderErrors();
+  const { setValue } = useFormContext();
+  const view = useBuilderWatch("view");
+
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const testWarnings = useMemo(() => getStreamTestWarnings(name), [getStreamTestWarnings, name]);
+
+  return (
+    <ViewSelectButton
+      data-testid={`navbutton-${String(num)}`}
+      selected={view === num}
+      showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+      onClick={() => {
+        setValue("view", num);
+        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
+          actionDescription: "Stream view selected",
+          stream_id: id,
+          stream_name: name,
+        });
+      }}
+    >
+      {name && name.trim() ? (
+        <Text className={styles.streamViewText}>{name}</Text>
+      ) : (
+        <Text className={styles.emptyStreamViewText}>
+          <FormattedMessage id="connectorBuilder.emptyName" />
+        </Text>
+      )}
+    </ViewSelectButton>
   );
 };
 
@@ -71,7 +115,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         <ViewSelectButton
           data-testid="navbutton-global"
           selected={view === "global"}
-          showErrorIndicator={hasErrors(["global"])}
+          showIndicator={hasErrors(["global"]) ? "error" : undefined}
           onClick={() => {
             handleViewSelect("global");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.GLOBAL_CONFIGURATION_SELECT, {
@@ -87,7 +131,6 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
 
         <ViewSelectButton
           data-testid="navbutton-inputs"
-          showErrorIndicator={false}
           selected={view === "inputs"}
           onClick={() => {
             handleViewSelect("inputs");
@@ -128,28 +171,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
 
         <div className={styles.streamList}>
           {formValues.streams.map(({ name, id }, num) => (
-            <ViewSelectButton
-              key={num}
-              data-testid={`navbutton-${String(num)}`}
-              selected={view === num}
-              showErrorIndicator={hasErrors([num])}
-              onClick={() => {
-                handleViewSelect(num);
-                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
-                  actionDescription: "Stream view selected",
-                  stream_id: id,
-                  stream_name: name,
-                });
-              }}
-            >
-              {name && name.trim() ? (
-                <Text className={styles.streamViewText}>{name}</Text>
-              ) : (
-                <Text className={styles.emptyStreamViewText}>
-                  <FormattedMessage id="connectorBuilder.emptyName" />
-                </Text>
-              )}
-            </ViewSelectButton>
+            <StreamViewButton key={num} id={id} name={name} num={num} />
           ))}
         </div>
       </FlexContainer>

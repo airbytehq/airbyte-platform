@@ -5,12 +5,10 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.config.Configs.WorkerEnvironment;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
@@ -21,26 +19,21 @@ import org.slf4j.LoggerFactory;
  * Concrete implementation of AppendToAttemptLogActivity.
  */
 @Singleton
+@SuppressWarnings("PMD.AppendToAttemptLogActivityImpl")
 public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivity {
 
   @VisibleForTesting
   protected Logger logger = LoggerFactory.getLogger(AppendToAttemptLogActivityImpl.class);
-  private final LogClientSingleton logClientSingleton;
-  private final LogConfigs logConfigs;
+  private final LogClientManager logClientManager;
   private final Path workspaceRoot;
-  private final WorkerEnvironment workerEnvironment;
 
-  public AppendToAttemptLogActivityImpl(
-                                        final LogClientSingleton logClientSingleton,
-                                        final LogConfigs logConfigs,
-                                        @Named("workspaceRoot") final Path workspaceRoot,
-                                        final WorkerEnvironment workerEnvironment) {
-    this.logClientSingleton = logClientSingleton;
-    this.logConfigs = logConfigs;
+  public AppendToAttemptLogActivityImpl(final LogClientManager logClientManager,
+                                        @Named("workspaceRoot") final Path workspaceRoot) {
+    this.logClientManager = logClientManager;
     this.workspaceRoot = workspaceRoot;
-    this.workerEnvironment = workerEnvironment;
   }
 
+  @SuppressWarnings("PMD.UnusedLocalVariable")
   @Override
   public LogOutput log(final LogInput input) {
     if (input.getJobId() == null || input.getAttemptNumber() == null) {
@@ -75,11 +68,11 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
         String.valueOf(input.getJobId()),
         (long) input.getAttemptNumber());
 
-    logClientSingleton.setJobMdc(workerEnvironment, logConfigs, jobRoot);
+    logClientManager.setJobMdc(jobRoot);
   }
 
   private void unsetMdc() {
-    logClientSingleton.setJobMdc(workerEnvironment, logConfigs, null);
+    logClientManager.setJobMdc(null);
   }
 
 }

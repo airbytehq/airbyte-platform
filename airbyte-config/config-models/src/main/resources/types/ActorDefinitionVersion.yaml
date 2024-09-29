@@ -44,14 +44,22 @@ properties:
     "$ref": AllowedHosts.yaml
   suggestedStreams:
     "$ref": SuggestedStreams.yaml
-  normalizationConfig:
-    "$ref": NormalizationDestinationDefinitionConfig.yaml
-  supportsDbt:
-    type: boolean
-    description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
   supportsRefreshes:
     type: boolean
     description: an optional flag indicating whether a destination connector supports refreshes.
     default: false
   supportState:
     "$ref": SupportState.yaml
+  lastPublished:
+    description: The time the connector was modified in the codebase.
+    type: string
+    format: date-time
+  cdkVersion:
+    description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
+    type: string
+  internalSupportLevel:
+    description: Support level that we use for alerting
+    type: integer
+  language:
+    description: The language that the connector is written in.
+    type: string

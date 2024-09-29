@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import React, { ComponentPropsWithoutRef, useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, Tooltip, XAxis } from "recharts";
 // these are not worth typing
@@ -8,13 +9,13 @@ import { generateCategoricalChart } from "recharts/es6/chart/generateCategorical
 // @ts-ignore-next-line
 import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { getStreamKey } from "area/connection/utils";
-import { useGetConnectionUptimeHistory } from "core/api";
-import { JobStatus } from "core/api/types/AirbyteClient";
+import { useCurrentConnection, useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "core/api";
+import { ConnectionSyncProgressRead, ConnectionUptimeHistoryRead, JobStatus } from "core/api/types/AirbyteClient";
 import { assertNever } from "core/utils/asserts";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
@@ -37,16 +38,45 @@ const StreamChart = generateCategoricalChart({
   formatAxisMap,
 });
 
+const generatePlaceholderHistory = (
+  connectionSyncProgress?: ConnectionSyncProgressRead
+): ConnectionUptimeHistoryRead => {
+  if (
+    !connectionSyncProgress ||
+    connectionSyncProgress.configType === "clear" ||
+    connectionSyncProgress.configType === "reset_connection"
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      bytesCommitted: connectionSyncProgress.bytesCommitted ?? 0,
+      bytesEmitted: connectionSyncProgress.bytesCommitted ?? 0,
+      configType: connectionSyncProgress.configType,
+      jobId: connectionSyncProgress.jobId ?? 0,
+      jobCreatedAt: connectionSyncProgress.syncStartedAt ?? dayjs().unix(),
+      jobUpdatedAt: dayjs().unix(),
+      recordsCommitted: connectionSyncProgress.recordsCommitted ?? 0,
+      recordsEmitted: connectionSyncProgress.recordsEmitted ?? 0,
+      streamStatuses: connectionSyncProgress.streams.map((syncProgressItem) => {
+        return {
+          status: "running",
+          streamName: syncProgressItem.streamName,
+          streamNamespace: syncProgressItem.streamNamespace ?? "",
+        };
+      }),
+    },
+  ];
+};
+
 type SortableStream = Pick<ChartStream, "streamName"> & Partial<Pick<ChartStream, "streamNamespace" | "status">>;
 
-const statusOrder: ConnectionStatusIndicatorStatus[] = [
-  ConnectionStatusIndicatorStatus.Disabled,
-  ConnectionStatusIndicatorStatus.Pending,
-  ConnectionStatusIndicatorStatus.OnTime,
-  ConnectionStatusIndicatorStatus.OnTrack,
-  ConnectionStatusIndicatorStatus.Late,
-  ConnectionStatusIndicatorStatus.Error,
-  ConnectionStatusIndicatorStatus.ActionRequired,
+const statusOrder: StreamStatusType[] = [
+  StreamStatusType.Pending,
+  StreamStatusType.Synced,
+  StreamStatusType.Incomplete,
+  StreamStatusType.Failed,
 ];
 
 const sortStreams = (a: SortableStream, b: SortableStream) => {
@@ -65,7 +95,8 @@ const sortStreams = (a: SortableStream, b: SortableStream) => {
     return namespaceCompare;
   }
 
-  return nameA.localeCompare(nameB);
+  // streams that are in the job but don't emit a status are given null values
+  return (nameA ?? "").localeCompare(nameB ?? "");
 };
 
 interface RunBucket {
@@ -99,22 +130,22 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
       };
       entry.streamStatuses.reduce<{ bucket: RunBucket; allStreamIdentities: typeof allStreamIdentities }>(
         ({ bucket, allStreamIdentities }, streamStatus) => {
-          let status: ConnectionStatusIndicatorStatus = ConnectionStatusIndicatorStatus.Pending;
+          let status: StreamStatusType = StreamStatusType.Pending;
 
           switch (streamStatus.status) {
             case JobStatus.succeeded:
-              status = ConnectionStatusIndicatorStatus.OnTime;
+              status = StreamStatusType.Synced;
               break;
             case JobStatus.failed:
-              status = ConnectionStatusIndicatorStatus.Error;
+              status = StreamStatusType.Incomplete;
               break;
             case JobStatus.running:
-              status = ConnectionStatusIndicatorStatus.Syncing;
+              status = StreamStatusType.Syncing;
               break;
             case JobStatus.cancelled:
             case JobStatus.incomplete:
             case JobStatus.pending:
-              status = ConnectionStatusIndicatorStatus.Pending;
+              status = StreamStatusType.Pending;
               break;
             default:
               assertNever(streamStatus.status);
@@ -155,8 +186,8 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
   // entries in the graph's expected format
   const uptimeData: UptimeDayEntry[] = [];
 
-  dateBucketKeys.forEach((dateBucketKey) => {
-    const dateEntries = bucketedEntries[dateBucketKey];
+  dateBucketKeys.forEach((dateBucketKey, idx) => {
+    const dateEntries = ensureStreams(bucketedEntries[dateBucketKey], idx, bucketedEntries, dateBucketKeys);
     dateEntries.streams.sort(sortStreams);
 
     uptimeData.push({
@@ -182,21 +213,32 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
       green: colorValues[styles.greenVar],
       darkBlue: colorValues[styles.darkBlueVar],
       red: colorValues[styles.redVar],
-      black: colorValues[styles.blackVar],
+      yellow: colorValues[styles.yellowVar],
+      blue: colorValues[styles.blueVar],
       empty: colorValues[styles.emptyVar],
     };
     setColorMap(colorMap);
   }, [colorValues]);
 
-  const { connection } = useConnectionEditService();
-  const data = useGetConnectionUptimeHistory(connection.connectionId);
-  const hasData = data.length > 0;
+  const connection = useCurrentConnection();
+  const uptimeHistoryData = useGetConnectionUptimeHistory(connection.connectionId);
+  const { isRunning } = useConnectionStatus(connection.connectionId);
+  const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
 
-  const { uptimeData, streamIdentities } = useMemo(() => formatDataForChart(data), [data]);
+  const placeholderHistory = useMemo(
+    () => generatePlaceholderHistory(isRunning ? syncProgressData : undefined),
+    [syncProgressData, isRunning]
+  );
+  const hasHistoryData = uptimeHistoryData.length > 0 || placeholderHistory.length > 0;
+
+  const { uptimeData, streamIdentities } = useMemo(
+    () => formatDataForChart([...uptimeHistoryData, ...placeholderHistory]),
+    [placeholderHistory, uptimeHistoryData]
+  );
 
   const maxStreamsCount = Math.max(...uptimeData.map(({ streams: { length } }) => length));
 
-  if (!hasData) {
+  if (!hasHistoryData) {
     return <NoDataMessage />;
   }
 
@@ -236,3 +278,48 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
   );
 });
 UptimeStatusGraph.displayName = "UptimeStatusGraph";
+
+export function ensureStreams(
+  bucket: RunBucket,
+  idx: number,
+  bucketedEntries: Record<string, RunBucket>,
+  dateBucketKeys: string[]
+) {
+  if (bucket.streams.length === 1 && bucket.streams[0].streamName == null) {
+    // there are no stream statuses for this job - this can happen if e.g. the orchestrator falls over before the source emits data
+    // find streams to inject by walking backwards and then forwards
+    // walk back
+    let foundStreams;
+    for (let i = idx - 1; i >= 0; i--) {
+      const thisBucket = bucketedEntries[dateBucketKeys[i]];
+      if (thisBucket.streams.length === 1 && thisBucket.streams[0].streamName == null) {
+        continue;
+      }
+      foundStreams = thisBucket;
+      break;
+    }
+    // walk forward
+    if (!foundStreams) {
+      for (let i = idx + 1; i < dateBucketKeys.length; i++) {
+        const thisBucket = bucketedEntries[dateBucketKeys[i]];
+        if (thisBucket.streams.length === 1 && thisBucket.streams[0].streamName == null) {
+          continue;
+        }
+        console.log("found forwards at", i);
+        foundStreams = thisBucket;
+        break;
+      }
+    }
+
+    if (foundStreams) {
+      return {
+        ...bucket,
+        streams: foundStreams.streams.map((stream) => ({
+          ...stream,
+          status: StreamStatusType.Incomplete,
+        })),
+      };
+    }
+  }
+  return bucket;
+}

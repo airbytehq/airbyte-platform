@@ -1,4 +1,4 @@
-import { Tab } from "@headlessui/react";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
 import classNames from "classnames";
 import { useEffect, useState } from "react";
 
@@ -29,9 +29,9 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
   }, [defaultTabIndex, selectedIndex, tabs.length]);
 
   return (
-    <FlexContainer className={classNames(className, styles.container)} direction="column">
-      <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-        <Tab.List className={styles.tabList}>
+    <TabGroup className={styles.tabGroup} selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+      <FlexContainer className={classNames(className, styles.container)} direction="column">
+        <TabList className={styles.tabList}>
           {tabs.map((tab) => (
             <Tab className={styles.tab} key={tab.key} data-testid={tab["data-testid"]}>
               {({ selected }) => (
@@ -46,15 +46,15 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
               )}
             </Tab>
           ))}
-        </Tab.List>
-        <Tab.Panels className={styles.tabPanelContainer}>
+        </TabList>
+        <TabPanels className={styles.tabPanelContainer}>
           {tabs.map((tab) => (
-            <Tab.Panel className={styles.tabPanel} key={tab.key}>
+            <TabPanel className={styles.tabPanel} key={tab.key}>
               {tab.content}
-            </Tab.Panel>
+            </TabPanel>
           ))}
-        </Tab.Panels>
-      </Tab.Group>
-    </FlexContainer>
+        </TabPanels>
+      </FlexContainer>
+    </TabGroup>
   );
 };

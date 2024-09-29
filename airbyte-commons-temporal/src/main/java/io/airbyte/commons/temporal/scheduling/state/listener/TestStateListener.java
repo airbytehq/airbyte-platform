@@ -8,6 +8,7 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Workflow state change listener for testing. Used to verify the behavior of event signals in
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class TestStateListener implements WorkflowStateChangedListener {
 
-  private static final ConcurrentHashMap<UUID, Queue<ChangedStateEvent>> events = new ConcurrentHashMap<>();
+  private static final ConcurrentMap<UUID, Queue<ChangedStateEvent>> events = new ConcurrentHashMap<>();
 
   public static void reset() {
     events.clear();

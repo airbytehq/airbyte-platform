@@ -16,9 +16,9 @@ dependencies {
 
   api(libs.bundles.micronaut.annotation)
 
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-featureflag"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.datadog)
@@ -26,14 +26,10 @@ dependencies {
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
   implementation(libs.micronaut.kotlin.extension.functions)
-  implementation(libs.google.cloud.storage)
-  implementation(libs.aws.java.sdk.s3)
-  implementation(libs.aws.java.sdk.sts)
-  implementation(libs.s3)
-  implementation(libs.sts)
   implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
   implementation(libs.commons.io)
+  implementation(libs.kotlin.logging)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

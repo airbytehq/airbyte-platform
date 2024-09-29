@@ -15,6 +15,7 @@ import {
   docMiddleware,
   environmentVariables,
   experimentOverwrites,
+  generateIntents,
   preloadTags,
 } from "./packages/vite-plugins";
 
@@ -25,12 +26,18 @@ export default defineConfig(() => {
       basicSsl(),
       react(),
       buildInfo(),
+      generateIntents(),
       compileFormatJsMessages(),
       viteTsconfigPaths({ ignoreConfigErrors: true }),
       viteYaml(),
       svgrPlugin({
         svgrOptions: {
           plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
+          jsx: {
+            babelConfig: {
+              plugins: ["react-inline-svg-unique-id"],
+            },
+          },
           titleProp: true,
           svgoConfig: {
             plugins: [

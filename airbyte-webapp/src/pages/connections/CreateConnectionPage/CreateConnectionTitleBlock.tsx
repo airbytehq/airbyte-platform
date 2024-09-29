@@ -2,7 +2,7 @@ import { Fragment, Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -20,7 +20,6 @@ import {
   useGetSource,
 } from "core/api";
 import { SupportLevel } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
@@ -35,11 +34,11 @@ const DESTINATIONID_PARAM = "destinationId";
 interface ConnectionSteps {
   defineSource: StepStatus;
   defineDestination: StepStatus;
+  selectStreams: StepStatus;
   configureConnection: StepStatus;
 }
 
 const useCalculateStepStatuses = (source: string | null, destination: string | null): ConnectionSteps | undefined => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const location = useLocation();
   const isOnContinuedSimplifiedStep = location.pathname.endsWith("/continued");
 
@@ -47,12 +46,8 @@ const useCalculateStepStatuses = (source: string | null, destination: string | n
     return {
       defineSource: ACTIVE,
       defineDestination: INCOMPLETE,
-      ...(!isSimplifiedCreation
-        ? { configureConnection: INCOMPLETE }
-        : {
-            selectStreams: INCOMPLETE,
-            configureConnection: INCOMPLETE,
-          }),
+      selectStreams: INCOMPLETE,
+      configureConnection: INCOMPLETE,
     };
   }
 
@@ -60,36 +55,24 @@ const useCalculateStepStatuses = (source: string | null, destination: string | n
     return {
       defineSource: COMPLETE,
       defineDestination: ACTIVE,
-      ...(!isSimplifiedCreation
-        ? { configureConnection: INCOMPLETE }
-        : {
-            selectStreams: INCOMPLETE,
-            configureConnection: INCOMPLETE,
-          }),
+      selectStreams: INCOMPLETE,
+      configureConnection: INCOMPLETE,
     };
   }
   if (destination && !source) {
     return {
       defineSource: ACTIVE,
       defineDestination: COMPLETE,
-      ...(!isSimplifiedCreation
-        ? { configureConnection: INCOMPLETE }
-        : {
-            selectStreams: INCOMPLETE,
-            configureConnection: INCOMPLETE,
-          }),
+      selectStreams: INCOMPLETE,
+      configureConnection: INCOMPLETE,
     };
   }
   if (source && destination) {
     return {
       defineSource: COMPLETE,
       defineDestination: COMPLETE,
-      ...(!isSimplifiedCreation
-        ? { configureConnection: ACTIVE }
-        : {
-            selectStreams: isOnContinuedSimplifiedStep ? COMPLETE : ACTIVE,
-            configureConnection: isOnContinuedSimplifiedStep ? ACTIVE : INCOMPLETE,
-          }),
+      selectStreams: isOnContinuedSimplifiedStep ? COMPLETE : ACTIVE,
+      configureConnection: isOnContinuedSimplifiedStep ? ACTIVE : INCOMPLETE,
     };
   }
   return undefined;

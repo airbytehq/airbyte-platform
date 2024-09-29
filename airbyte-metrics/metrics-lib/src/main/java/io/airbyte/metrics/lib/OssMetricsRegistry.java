@@ -34,10 +34,6 @@ import com.google.api.client.util.Preconditions;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
-  ACTIVITY_DBT_TRANSFORMATION(
-      MetricEmittingApps.WORKER,
-      "activity_dbt_transformation",
-      "increments when we start a dbt transformation activity"),
   ACTIVITY_CHECK_CONNECTION(
       MetricEmittingApps.WORKER,
       "activity_check_connection",
@@ -126,6 +122,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
       "estimated metrics emitted by the reporter in the last interval. this is estimated since the count is not precise."),
+  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
+      "inconsistent_activity_input",
+      "whenever we detect a mismatch between the input and the actual config"),
+  INVALID_MAPPER_CONFIG(MetricEmittingApps.ORCHESTRATOR,
+      "invalid_mapper_config",
+      "a mapper configuration is invalid"),
   JOB_CANCELLED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "job_cancelled_by_release_stage",
@@ -150,13 +152,24 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
       "time taken to create a new kube pod process"),
-  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
-      "inconsistent_activity_input",
-      "whenever we detect a mismatch between the input and the actual config"),
-
+  LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED(MetricEmittingApps.SERVER,
+      "log_client_file_byte_count",
+      "the number of bytes retrieved from the job log file(s)"),
+  LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED(MetricEmittingApps.SERVER,
+      "log_client_file_line_count",
+      "the number of lines retrieved from the job log file(s)"),
+  LOG_CLIENT_FILES_RETRIEVED(MetricEmittingApps.SERVER,
+      "log_client_files_retrieved",
+      "the number of job log files retrieved in one operation"),
+  LOG_CLIENT_FILES_RETRIEVAL_TIME_MS(MetricEmittingApps.SERVER,
+      "log_client_file_retrieval_time_ms",
+      "the amount of time spent retrieving a job log in milliseconds"),
   MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
       "missing_apply_schema_change_input",
       "one expected value for applying the schema change is missing"),
+  MISSING_MAPPER(MetricEmittingApps.ORCHESTRATOR,
+      "missing_mapper",
+      "a mapper implementation is missing"),
   NORMALIZATION_IN_DESTINATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_destination_container",
@@ -363,6 +376,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOADS_CANCEL(MetricEmittingApps.CRON,
       "workload_cancel",
       "number of workloads canceled"),
+  WORKLOADS_SIGNAL(MetricEmittingApps.WORKLOAD_API,
+      "workloads_signal",
+      "When emitting signal from the workload-api"),
   NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
       "notifications_sent",
       "number of notifications sent"),
@@ -390,12 +406,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
       "job_output_read",
       "Read a job output from the output folder"),
-  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
-      "sync_record_checksum",
-      "Report the status of a record checksum"),
-  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
-      "sync_state_record_count",
-      "The record count emitted between state messages."),
 
   DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "destination_deserialization_error",
@@ -465,7 +475,27 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "replication_context_not_initialized_error",
-      "The replication context was not initialized when it was expected to be.");
+      "The replication context was not initialized when it was expected to be."),
+
+  DISCOVER_CATALOG_RUN_TIME(MetricEmittingApps.WORKER,
+      "discover_catalog_run_time",
+      "Time to run a discover catalog before a replication."),
+
+  REPLICATION_RUN_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "replication_run_time",
+      "Time to run a replication withing a sync."),
+
+  SYNC_TOTAL_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "sync_total_time",
+      "Time to run a sync workflow."),
+
+  SYNC_WITH_EMPTY_CATALOG(MetricEmittingApps.ORCHESTRATOR,
+      "sync_with_empty_catalog",
+      "Sync was started with an empty configured catalog."),
+
+  CONNECTOR_FAILURE_EXIT_VALUE(MetricEmittingApps.ORCHESTRATOR,
+      "connector_failure_exit_value",
+      "Count of failure exit codes produced by a connector.");
 
   private final MetricEmittingApp application;
   private final String metricName;

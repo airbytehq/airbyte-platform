@@ -1,0 +1,30 @@
+# {{ connectorName }}
+
+{{ description }}
+
+
+## Configuration
+
+| Input | Type | Description | Default Value |
+|-------|------|-------------|---------------|
+{% for property in specProperties -%}
+| `{{ property.name }}` | `{{ property.type }}` | {{ property.description }} | {{ property.default }} |
+{% endfor %}
+
+## Streams
+| Stream Name | Primary Key | Pagination | Supports Full Sync | Supports Incremental |
+|-------------|-------------|------------|---------------------|----------------------|
+{% for stream in streams -%}
+| {{ stream.name }} | {{ stream.primaryKey }} | {{ stream.paginationStrategy }} | ✅ | {% if stream.incrementalSyncEnabled %} ✅ {% else %} ❌ {% endif %} |
+{% endfor %}
+
+## Changelog
+
+<details>
+  <summary>Expand to review</summary>
+
+| Version          | Date       | Subject        |
+|------------------|------------|----------------|
+| {{ versionTag }} | {{ releaseDate }} | {{ changelogMessage }}|
+
+</details>

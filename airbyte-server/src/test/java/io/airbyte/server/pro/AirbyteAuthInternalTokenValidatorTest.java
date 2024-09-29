@@ -23,12 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.test.StepVerifier;
 
-public class AirbyteAuthInternalTokenValidatorTest {
+class AirbyteAuthInternalTokenValidatorTest {
 
   private final AirbyteAuthInternalTokenValidator airbyteAuthInternalTokenValidator = new AirbyteAuthInternalTokenValidator();
 
   @Test
-  public void testValidateTokenIsWorker() {
+  void testValidateTokenIsWorker() {
     final String token = "worker";
     final HttpRequest httpRequest = mock(HttpRequest.class);
 
@@ -51,7 +51,7 @@ public class AirbyteAuthInternalTokenValidatorTest {
   }
 
   @Test
-  public void testValidateTokenIsNotWorker() {
+  void testValidateTokenIsNotWorker() {
     final String token = "not-worker";
     final HttpRequest httpRequest = mock(HttpRequest.class);
 

@@ -8,7 +8,6 @@ PUBLISH ?= false
 
 BASE_JAVA_IMAGE_VERSION ?= 3.2.3
 BASE_JAVA_IMAGE = airbyte/airbyte-base-java-image:$(BASE_JAVA_IMAGE_VERSION)
-BASE_SOCAT_IMAGE_VERSION ?= 1.8.0.0
 BASE_BUSYBOX_IMAGE_VERSION ?= 1.28
 ALPINE_IMAGE_VERSION ?= 3.18
 
@@ -56,20 +55,6 @@ image.airbyte-base-java-worker-image: ## Build the airbyte/airbyte-base-java-wor
 			--build-arg JDK_IMAGE=$(BASE_JAVA_IMAGE) \
 			-t airbyte/airbyte-base-java-worker-image:$(VERSION) \
 			-f $(IMAGES_DIR)/airbyte-base-java-worker-image/Dockerfile . ; \
-	fi
-
-image.airbyte-socat: ## Build the airbyte/socat image
-	@if [ "$(PUBLISH)" = "true" ]; then \
-		docker buildx build -t airbyte/socat:$(VERSION) \
-			--build-arg BASE_SOCAT_IMAGE_VERSION=$(BASE_SOCAT_IMAGE_VERSION) \
-			--platform linux/amd64,linux/arm64 \
-			--push \
-			-f $(IMAGES_DIR)/airbyte-socat/Dockerfile . ; \
-	else \
-		docker build \
-			--build-arg BASE_SOCAT_IMAGE_VERSION=$(BASE_SOCAT_IMAGE_VERSION) \
-			-t airbyte/socat:$(VERSION) \
-			-f $(IMAGES_DIR)/airbyte-socat/Dockerfile . ; \
 	fi
 
 image.airbyte-busybox: ## Build the airbyte/busybox image

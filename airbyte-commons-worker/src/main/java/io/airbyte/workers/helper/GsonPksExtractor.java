@@ -6,8 +6,8 @@ package io.airbyte.workers.helper;
 
 import com.google.common.base.Joiner;
 import com.google.gson.Gson;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import jakarta.inject.Singleton;
 import java.util.HashMap;
 import java.util.List;

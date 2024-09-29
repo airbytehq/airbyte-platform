@@ -3,7 +3,6 @@ import { screen } from "@testing-library/react";
 import { mocked, render } from "test-utils";
 
 import { trackError } from "core/utils/datadog";
-import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 
 import { DefaultErrorBoundary } from "./DefaultErrorBoundary";
 
@@ -35,11 +34,9 @@ describe(`${DefaultErrorBoundary.name}`, () => {
 
   it("should render children when no error is thrown", async () => {
     await render(
-      <AppMonitoringServiceProvider>
-        <DefaultErrorBoundary>
-          <p>test</p>
-        </DefaultErrorBoundary>
-      </AppMonitoringServiceProvider>
+      <DefaultErrorBoundary>
+        <p>test</p>
+      </DefaultErrorBoundary>
     );
 
     expect(screen.getByText("test")).toBeInTheDocument();
@@ -47,11 +44,9 @@ describe(`${DefaultErrorBoundary.name}`, () => {
 
   it("should render error view when an error is thrown", async () => {
     await render(
-      <AppMonitoringServiceProvider>
-        <DefaultErrorBoundary>
-          <ChildThatThrowsError />
-        </DefaultErrorBoundary>
-      </AppMonitoringServiceProvider>
+      <DefaultErrorBoundary>
+        <ChildThatThrowsError />
+      </DefaultErrorBoundary>
     );
 
     expect(screen.getByTestId("errorDetails")).toBeInTheDocument();

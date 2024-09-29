@@ -14,13 +14,12 @@ import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 
 import { HttpProblem } from "core/api";
+import { fullStorySessionLink } from "core/utils/fullstory";
 import { useGetAllExperiments } from "hooks/services/Experiment";
 
 import styles from "./ErrorDetails.module.scss";
 import octavia from "./pixel-octavia.png";
 import { useFormatError } from "../formatErrors";
-
-type FullStoryGlobal = (method: "getSession", options: { format: "url.now" }) => string;
 
 interface ErrorDetailsProps {
   error: Error;
@@ -43,7 +42,7 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
           stacktrace: error.stack,
           userAgent: navigator.userAgent,
           // If fullstory is loaded add the current session recording link
-          fullStory: (window as { FS?: FullStoryGlobal }).FS?.("getSession", { format: "url.now" }),
+          fullStory: fullStorySessionLink(),
           featureFlags: getAllExperiments(),
         },
         jsonReplacer,

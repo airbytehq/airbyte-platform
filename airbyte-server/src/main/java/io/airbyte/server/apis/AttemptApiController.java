@@ -18,7 +18,7 @@ import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
-import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.MediaType;
@@ -78,12 +78,11 @@ public class AttemptApiController implements AttemptApi {
   }
 
   @Override
-  @Post(uri = "/set_workflow_in_attempt",
+  @Post(uri = "/save_stream_metadata",
         processes = MediaType.APPLICATION_JSON)
-  @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public InternalOperationResult setWorkflowInAttempt(@Body final SetWorkflowInAttemptRequestBody requestBody) {
-    return ApiHelper.execute(() -> attemptHandler.setWorkflowInAttempt(requestBody));
+  public InternalOperationResult saveStreamMetadata(@Body final SaveStreamAttemptMetadataRequestBody requestBody) {
+    return ApiHelper.execute(() -> attemptHandler.saveStreamMetadata(requestBody));
   }
 
   @Override

@@ -1,56 +1,16 @@
 import dayjs from "dayjs";
 
-import {
-  useErrorMultiplierExperiment,
-  useLateMultiplierExperiment,
-} from "components/connection/StreamStatus/streamStatusUtils";
-
 import { useGetConnection, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
-import {
-  ConnectionScheduleType,
-  ConnectionStatus,
-  FailureReason,
-  FailureType,
-  JobStatus,
-  WebBackendConnectionRead,
-} from "core/api/types/AirbyteClient";
+import { ConnectionStatus, FailureReason, FailureType, JobStatus } from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useExperiment } from "hooks/services/Experiment";
 
-import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
-
-export const isHandleableScheduledConnection = (scheduleType: ConnectionScheduleType | undefined) =>
-  scheduleType === "basic";
-
-// `late` here refers to how long past the last successful sync until it is flagged
-export const isConnectionLate = (
-  connection: WebBackendConnectionRead,
-  lastSuccessfulSync: number | undefined,
-  lateMultiplier: number
-) => {
-  if (lastSuccessfulSync === undefined) {
-    return false;
-  }
-
-  return !!(
-    isHandleableScheduledConnection(connection.scheduleType) &&
-    connection.scheduleData?.basicSchedule?.units &&
-    (lastSuccessfulSync ?? 0) * 1000 < // x1000 for a JS datetime
-      dayjs()
-        // Subtract 2x (default of lateMultiplier) the scheduled interval and compare it to last sync time
-        .subtract(
-          connection.scheduleData.basicSchedule.units * lateMultiplier,
-          connection.scheduleData.basicSchedule.timeUnit
-        )
-        .valueOf()
-  );
-};
+import { ConnectionStatusType } from "../ConnectionStatusIndicator";
 
 export interface UIConnectionStatus {
   // user-facing status reflecting the state of the connection
-  status: ConnectionStatusIndicatorStatus;
-  // status of the last completed sync job, useful for distinguishing between failed & delayed in OnTrack status
+  status: ConnectionStatusType;
+  // status of the last completed sync job, useful for distinguishing failed jobs, first job since reset, etc.
   lastSyncJobStatus: JobStatus | undefined;
   // unix timestamp of the last successful sync job
   lastSuccessfulSync: number | undefined;
@@ -58,7 +18,6 @@ export interface UIConnectionStatus {
   nextSync: number | undefined;
   // is the connection currently running a job
   isRunning: boolean;
-
   // for displaying error message and linking to the relevant logs
   failureReason?: FailureReason;
   lastSyncJobId?: number;
@@ -69,7 +28,6 @@ export interface UIConnectionStatus {
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
   const connection = useGetConnection(connectionId);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
 
   const connectionStatuses = useListConnectionsStatuses([connectionId]);
   const connectionStatus = connectionStatuses[0];
@@ -84,16 +42,11 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     lastSyncAttemptNumber,
   } = connectionStatus;
 
-  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, showSyncProgress && isRunning);
+  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, isRunning);
 
   const hasConfigError = failureReason?.failureType === FailureType.config_error;
 
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-
-  // both default to 2; used as the connection schedule multiplier
-  // to evaluate if a connection is OnTrack vs. Late/Error
-  const lateMultiplier = useLateMultiplierExperiment();
-  const errorMultiplier = useErrorMultiplierExperiment();
 
   // calculate the time we expect the next sync to start (basic schedule only)
   const latestSyncJobCreatedAt = connection.latestSyncJobCreatedAt;
@@ -107,13 +60,9 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     ).valueOf();
   }
 
-  if (isRunning && showSyncProgress) {
-    const hasRecordsExtracted = syncProgress?.streams.some(
-      (progress) => progress?.recordsEmitted && progress.recordsEmitted > 0
-    );
-
+  if (isRunning) {
     return {
-      status: hasRecordsExtracted ? ConnectionStatusIndicatorStatus.Syncing : ConnectionStatusIndicatorStatus.Queued,
+      status: ConnectionStatusType.Syncing,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -121,14 +70,14 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
+      recordsExtracted: syncProgress?.recordsEmitted,
+      recordsLoaded: syncProgress?.recordsCommitted,
     };
   }
 
   if (hasBreakingSchemaChange || hasConfigError) {
     return {
-      status: ConnectionStatusIndicatorStatus.ActionRequired,
+      status: ConnectionStatusType.Failed,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -143,7 +92,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (connection.status !== ConnectionStatus.active) {
     return {
-      status: ConnectionStatusIndicatorStatus.Paused,
+      status: ConnectionStatusType.Paused,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -158,55 +107,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (lastSyncJobStatus == null || isLastCompletedJobReset) {
     return {
-      status: ConnectionStatusIndicatorStatus.Pending,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
-  // The `error` value is based on the `connection.streamCentricUI.errorMultiplyer` experiment
-  if (
-    !hasBreakingSchemaChange &&
-    lastSyncJobStatus === JobStatus.failed &&
-    (!isHandleableScheduledConnection(connection.scheduleType) ||
-      isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
-      lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
-  ) {
-    return {
-      status: ConnectionStatusIndicatorStatus.Error,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
-  // The `late` value is based on the `connection.streamCentricUI.late` experiment
-  if (isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
-    return {
-      status: ConnectionStatusIndicatorStatus.Late,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  } else if (isConnectionLate(connection, lastSuccessfulSync, 1)) {
-    return {
-      status: ConnectionStatusIndicatorStatus.OnTrack,
+      status: ConnectionStatusType.Pending,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -221,7 +122,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (lastSyncJobStatus === JobStatus.failed) {
     return {
-      status: ConnectionStatusIndicatorStatus.OnTrack,
+      status: ConnectionStatusType.Incomplete,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -235,7 +136,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   }
 
   return {
-    status: ConnectionStatusIndicatorStatus.OnTime,
+    status: ConnectionStatusType.Synced,
     lastSyncJobStatus,
     nextSync,
     lastSuccessfulSync,

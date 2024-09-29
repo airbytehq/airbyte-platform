@@ -63,6 +63,29 @@ export function updateFieldSelected({
   };
 }
 
+interface updateFieldHashingArguments {
+  config: AirbyteStreamConfiguration;
+  fieldPath: string[];
+  isFieldHashed: boolean;
+}
+export function updateFieldHashing({
+  config,
+  fieldPath,
+  isFieldHashed,
+}: updateFieldHashingArguments): Partial<AirbyteStreamConfiguration> {
+  if (isFieldHashed) {
+    return { hashedFields: [...(config.hashedFields ?? []), { fieldPath }] };
+  }
+
+  const nextConfig: Partial<AirbyteStreamConfiguration> = {
+    hashedFields: (config.hashedFields ?? []).filter((f) => !isEqual(f.fieldPath, fieldPath)),
+  };
+  if (nextConfig.hashedFields?.length === 0) {
+    nextConfig.hashedFields = undefined;
+  }
+  return nextConfig;
+}
+
 /**
  * Updates the cursor field in AirbyteStreamConfiguration
  */
@@ -97,7 +120,11 @@ export function toggleAllFieldsSelected(config: AirbyteStreamConfiguration): Par
 
   // When deselecting all fields, we need to be careful not to deselect any primary keys or the cursor field
   if (!wasFieldSelectionEnabled) {
-    if (config?.primaryKey && config.primaryKey.length > 0 && config.destinationSyncMode === "append_dedup") {
+    if (
+      config?.primaryKey &&
+      config.primaryKey.length > 0 &&
+      (config.destinationSyncMode === "append_dedup" || config.destinationSyncMode === "overwrite_dedup")
+    ) {
       selectedFields.push(...config.primaryKey);
     }
     if (config?.cursorField && config.cursorField.length > 0 && config.syncMode === "incremental") {

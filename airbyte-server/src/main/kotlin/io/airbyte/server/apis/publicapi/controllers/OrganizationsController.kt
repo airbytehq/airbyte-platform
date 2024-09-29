@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicOrganizationsApi
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.ORGANIZATIONS_PATH
 import io.airbyte.server.apis.publicapi.services.OrganizationService
@@ -19,12 +19,11 @@ import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.UUID
 
-@Controller(ORGANIZATIONS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationsController(
   private val organizationService: OrganizationService,
   private val trackingHelper: TrackingHelper,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicOrganizationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)

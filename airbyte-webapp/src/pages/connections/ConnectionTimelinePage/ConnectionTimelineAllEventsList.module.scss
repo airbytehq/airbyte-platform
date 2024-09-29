@@ -1,0 +1,38 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.eventList {
+  padding: 0;
+  margin: 0;
+
+  li {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+
+    /* stylelint-disable-next-line selector-not-notation */
+    &:not(:last-child):not(:has(> span))::before {
+      content: "";
+      position: absolute;
+      top: variables.$spacing-lg;
+      left: 30px;
+      height: 100%;
+      width: variables.$border-thick;
+      background-color: colors.$grey-100;
+      transform: translateX(-50%);
+    }
+
+    &:empty {
+      // virtuoso cannot gracefully handle a <1px item inside an li, so we need to return a 1px tall empty item
+      // https://virtuoso.dev/troubleshooting/#i-get-error-zero-sized-element-this-should-not-happen
+      // https://github.com/petyosi/react-virtuoso/issues/35
+      height: 1px;
+
+      /* stylelint-disable-next-line no-descending-specificity */
+      &::before {
+        background-color: transparent;
+      }
+    }
+  }
+}

@@ -7,12 +7,15 @@ package io.airbyte.config.persistence;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.AuthProvider;
+import io.airbyte.config.AuthUser;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
@@ -34,11 +37,13 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -109,65 +114,47 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
       }
       // write user table
-      for (final User user : MockData.users()) {
-        userPersistence.writeUser(user);
+      for (final AuthenticatedUser user : MockData.users()) {
+        userPersistence.writeAuthenticatedUser(user);
       }
     }
 
     @Test
     void getUserByIdTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUser(user.getUserId());
+      for (final AuthenticatedUser user : MockData.users()) {
+        final Optional<AuthenticatedUser> userFromDb = userPersistence.getAuthenticatedUser(user.getUserId());
         Assertions.assertEquals(user, userFromDb.get());
       }
     }
 
     @Test
     void getUserByAuthIdTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId());
-        Assertions.assertEquals(user, userFromDb.get());
-      }
-    }
-
-    @Test
-    void getUserByAuthIdFromUserTableTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromUserTable(user.getAuthUserId());
+      for (final AuthenticatedUser user : MockData.users()) {
+        final Optional<AuthenticatedUser> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId());
         Assertions.assertEquals(user, userFromDb.get());
       }
     }
 
     @Test
     void getUserByAuthIdFromAuthUserTableTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
+      for (final AuthenticatedUser user : MockData.users()) {
+        final Optional<AuthenticatedUser> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
         Assertions.assertEquals(user, userFromDb.get());
       }
     }
 
     @Test
     void getUserByEmailTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByEmail(user.getEmail());
+      for (final AuthenticatedUser user : MockData.users()) {
+        final Optional<AuthenticatedUser> userFromDb = userPersistence.getAuthenticatedUserByEmail(user.getEmail());
         Assertions.assertEquals(user, userFromDb.get());
       }
     }
 
     @Test
-    void getUsersByEmailTest() throws IOException {
-      for (final User user : MockData.dupEmailUsers()) {
-        userPersistence.writeUser(user);
-      }
-
-      final List<User> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
-      Assertions.assertEquals(new HashSet<>(MockData.dupEmailUsers()), new HashSet<>(usersWithSameEmail));
-    }
-
-    @Test
     void deleteUserByIdTest() throws IOException {
       userPersistence.deleteUserById(MockData.CREATOR_USER_ID_1);
-      Assertions.assertEquals(Optional.empty(), userPersistence.getUser(MockData.CREATOR_USER_ID_1));
+      Assertions.assertEquals(Optional.empty(), userPersistence.getAuthenticatedUser(MockData.CREATOR_USER_ID_1));
     }
 
     @Test
@@ -179,6 +166,45 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
       Assertions.assertEquals(Set.of(expectedAuthUserId, user1.getAuthUserId()), actualAuthUserIds);
+    }
+
+    @Test
+    void listAuthUsersTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // add an extra auth user
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final List<AuthUser> expectedAuthUsers = Stream.of(
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(user1.getAuthUserId()).withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM),
+          new AuthUser().withUserId(user1.getUserId()).withAuthUserId(newAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK))
+          .sorted(Comparator.comparing(AuthUser::getUserId))
+          .toList();
+
+      final List<AuthUser> authUsers = userPersistence.listAuthUsersForUser(user1.getUserId());
+      Assertions.assertEquals(expectedAuthUsers, authUsers.stream().sorted(Comparator.comparing(AuthUser::getUserId)).toList());
+    }
+
+    @Test
+    void replaceAuthUserTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+
+      // create auth users
+      final String oldAuthUserId = UUID.randomUUID().toString();
+      final String oldAuthUserId2 = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+      userPersistence.writeAuthUser(user1.getUserId(), oldAuthUserId2, AuthProvider.KEYCLOAK);
+
+      final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(oldAuthUserId, oldAuthUserId2, user1.getAuthUserId()), actualAuthUserIds);
+
+      // replace auth_user_id
+      final var newAuthUserId = UUID.randomUUID().toString();
+      userPersistence.replaceAuthUserForUserId(user1.getUserId(), newAuthUserId, AuthProvider.KEYCLOAK);
+
+      final Set<String> newAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(newAuthUserId), newAuthUserIds);
     }
 
   }
@@ -229,21 +255,21 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
 
-    private static final User ORG_MEMBER_USER = new User()
+    private static final AuthenticatedUser ORG_MEMBER_USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
         .withEmail("orgMember@airbyte.io")
         .withName("orgMember");
 
-    private static final User ORG_READER_USER = new User()
+    private static final AuthenticatedUser ORG_READER_USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
         .withEmail("orgReader@airbyte.io")
         .withName("orgReader");
 
-    private static final User WORKSPACE_2_AND_3_READER_USER = new User()
+    private static final AuthenticatedUser WORKSPACE_2_AND_3_READER_USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
@@ -251,7 +277,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withName("workspace2and3Reader");
 
     // this user will have both workspace-level and org-level permissions to workspace 2
-    private static final User BOTH_ORG_AND_WORKSPACE_USER = new User()
+    private static final AuthenticatedUser BOTH_ORG_AND_WORKSPACE_USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
         .withAuthUserId(UUID.randomUUID().toString())
         .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
@@ -311,8 +337,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
       }
 
-      for (final User user : List.of(ORG_MEMBER_USER, ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER)) {
-        userPersistence.writeUser(user);
+      for (final AuthenticatedUser user : List.of(ORG_MEMBER_USER, ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER)) {
+        userPersistence.writeAuthenticatedUser(user);
       }
 
       for (final Permission permission : List.of(ORG_MEMBER_USER_PERMISSION, ORG_READER_PERMISSION, WORKSPACE_2_READER_PERMISSION,
@@ -323,9 +349,12 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
     @Test
     void getUsersWithWorkspaceAccess() throws IOException {
-      final Set<User> expectedUsersWorkspace1 = Set.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace2 = Set.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace3 = Set.of(WORKSPACE_2_AND_3_READER_USER);
+      final Set<User> expectedUsersWorkspace1 =
+          Set.copyOf(Stream.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(AuthenticatedUserConverter::toUser).toList());
+      final Set<User> expectedUsersWorkspace2 = Set.copyOf(
+          Stream.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(AuthenticatedUserConverter::toUser).toList());
+      final Set<User> expectedUsersWorkspace3 =
+          Set.copyOf(Stream.of(WORKSPACE_2_AND_3_READER_USER).map(AuthenticatedUserConverter::toUser).toList());
 
       final Set<User> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
       final Set<User> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));

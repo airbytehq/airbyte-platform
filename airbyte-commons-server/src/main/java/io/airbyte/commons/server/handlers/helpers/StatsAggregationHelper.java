@@ -12,13 +12,13 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler.StreamNameAndNamespace;
+import io.airbyte.config.Job;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -220,7 +220,7 @@ public class StatsAggregationHelper {
     List<StreamStatsRecord> streamAggregatedStats = new ArrayList<>();
     streamToSyncMode.keySet().forEach(streamNameAndNamespace -> {
       if (!streamToAttemptStats.containsKey(streamNameAndNamespace)) {
-        log.info("No stats have been persisted for job {} stream {}.", job.getJob().getId(), streamNameAndNamespace);
+        log.debug("No stats have been persisted for job {} stream {}.", job.getJob().getId(), streamNameAndNamespace);
         return;
       }
 

@@ -26,7 +26,6 @@ import io.airbyte.protocol.models.AirbyteRecordMessage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,14 +38,12 @@ class AirbyteCdkRequesterImplTest {
   private static final List<JsonNode> A_STATE;
   private static final String A_STREAM = "test";
   private static final Integer A_LIMIT = 1;
-  private static final List<JsonNode> AN_EMPTY_STATE;
 
   static {
     try {
       A_CONFIG = new ObjectMapper().readTree("{\"config\": 1}");
       A_MANIFEST = new ObjectMapper().readTree("{\"manifest\": 1}");
       A_STATE = Collections.singletonList(new ObjectMapper().readTree("{\"key\": \"value\"}"));
-      AN_EMPTY_STATE = Lists.newArrayList();
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }

@@ -42,12 +42,6 @@ micronaut:
           secret: ${WORKLOAD_API_BEARER_TOKEN:}
   server:
     port: 8007
-    cors:
-      enabled: true
-      configurations:
-        web:
-          allowed-origins-regex:
-            - ^.*$
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
       access-logger:
@@ -61,6 +55,17 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
 
 endpoints:
   beans:

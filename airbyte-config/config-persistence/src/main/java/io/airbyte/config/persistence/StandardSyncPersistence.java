@@ -19,6 +19,8 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;
@@ -27,8 +29,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;

@@ -60,7 +60,7 @@ class DatabaseInitializerTest {
 
     };
 
-    Assertions.assertThrows(DatabaseInitializationException.class, () -> initializer.initialize());
+    Assertions.assertThrows(DatabaseInitializationException.class, initializer::initialize);
   }
 
   @Test
@@ -100,9 +100,9 @@ class DatabaseInitializerTest {
 
     };
 
-    Assertions.assertEquals(false, initializer.initializeSchema(dslContext));
+    Assertions.assertFalse(initializer.initializeSchema(dslContext));
     Assertions.assertNotNull(initializer.getTableNames());
-    Assertions.assertEquals(false, initializer.getTableNames().isPresent());
+    Assertions.assertFalse(initializer.getTableNames().isPresent());
   }
 
 }

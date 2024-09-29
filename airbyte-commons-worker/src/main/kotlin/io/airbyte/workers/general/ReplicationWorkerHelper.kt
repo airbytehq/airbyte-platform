@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
@@ -17,31 +16,38 @@ import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
+import io.airbyte.config.State
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
+import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.mappers.application.RecordMapper
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
@@ -62,6 +68,7 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
@@ -74,6 +81,7 @@ import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.properties.Delegates
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
 
 private val logger = KotlinLogging.logger { }
@@ -87,12 +95,14 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
   private val workloadApiClient: WorkloadApiClient,
-  private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
+  private val recordMapper: RecordMapper,
+  private val featureFlagClient: FeatureFlagClient,
+  private val destinationCatalogGenerator: DestinationCatalogGenerator,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -113,6 +123,8 @@ class ReplicationWorkerHelper(
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
+  private var supportRefreshes by Delegates.notNull<Boolean>()
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<ConfiguredMapper>>
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -139,7 +151,6 @@ class ReplicationWorkerHelper(
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
-        Thread.sleep(heartbeatInterval.toMillis())
         ctx?.let {
           try {
             if (workloadId.isEmpty) {
@@ -157,6 +168,7 @@ class ReplicationWorkerHelper(
              * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
              */
             if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
+              logger.warn(e) { "Cancelling sync, workload is in a terminal state" }
               metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
@@ -171,6 +183,7 @@ class ReplicationWorkerHelper(
             logger.warn(e) { "Error while trying to heartbeat, re-trying" }
           }
         }
+        Thread.sleep(heartbeatInterval.toMillis())
       } while (true)
     }
   }
@@ -180,6 +193,7 @@ class ReplicationWorkerHelper(
     replicationFeatureFlags: ReplicationFeatureFlags,
     jobRoot: Path,
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
+    state: State?,
   ) {
     timeTracker.trackReplicationStartTime()
 
@@ -196,7 +210,7 @@ class ReplicationWorkerHelper(
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
 
-    val supportRefreshes =
+    supportRefreshes =
       airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
         ResolveActorDefinitionVersionRequestBody(
           actorDefinitionId = ctx.destinationDefinitionId,
@@ -204,7 +218,29 @@ class ReplicationWorkerHelper(
           dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
         ),
       ).supportRefreshes
+
+    if (supportRefreshes) {
+      // if configured airbyte catalog has full refresh with state
+      val resumedFRStreams = ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(configuredAirbyteCatalog, state)
+      logger.info { "Number of Resumed Full Refresh Streams: {${resumedFRStreams.size}}" }
+      if (resumedFRStreams.isNotEmpty()) {
+        resumedFRStreams.forEach { streamDescriptor ->
+          logger.info { " Resumed stream name: ${streamDescriptor.name} namespace: ${streamDescriptor.namespace}" }
+        }
+      }
+    }
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
+
+    if (configuredAirbyteCatalog.streams.isEmpty()) {
+      metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
+    }
+
+    val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
+
+    mappersPerStreamDescriptor =
+      catalogWithoutInvalidMappers.catalog.streams.map { stream ->
+        stream.streamDescriptor to stream.mappers
+      }.toMap()
   }
 
   fun startDestination(
@@ -215,12 +251,15 @@ class ReplicationWorkerHelper(
     timeTracker.trackDestinationWriteStartTime()
     destinationConfig =
       WorkerUtils.syncToWorkerDestinationConfig(replicationInput)
-        .apply { catalog = mapper.mapCatalog(catalog) }
+        .apply {
+          catalog = mapper.mapCatalog(catalog)
+          supportRefreshes = this@ReplicationWorkerHelper.supportRefreshes
+        }
 
     try {
       destination.start(destinationConfig, jobRoot)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the destination", e)
     }
   }
 
@@ -238,7 +277,7 @@ class ReplicationWorkerHelper(
     try {
       source.start(sourceConfig, jobRoot, ctx?.connectionId)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the source", e)
     }
   }
 
@@ -310,7 +349,7 @@ class ReplicationWorkerHelper(
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.replicationStartTime)
         .withEndTime(System.currentTimeMillis())
-        .withPerformanceMetrics(performanceMetrics)
+        .withPerformanceMetrics(buildPerformanceMetrics(performanceMetrics))
 
     val output =
       ReplicationOutput()
@@ -325,12 +364,28 @@ class ReplicationWorkerHelper(
     }
 
     // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
-    if (failures.any { f -> f.failureOrigin.equals("destination") && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage") }) {
+    if (failures.any { f ->
+        f.failureOrigin.equals(FailureReason.FailureOrigin.DESTINATION) &&
+          f.internalMessage != null && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
+      }
+    ) {
       metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
     }
 
     LineGobbler.endSection("REPLICATION")
     return output
+  }
+
+  private fun buildPerformanceMetrics(performanceMetrics: PerformanceMetrics?): PerformanceMetrics {
+    val finalMetrics = PerformanceMetrics()
+    performanceMetrics?.let {
+      it.additionalProperties.map { (key, value) -> finalMetrics.setAdditionalProperty(key, value) }
+    }
+    val mapperMetrics = recordMapper.collectStopwatches()
+    if (mapperMetrics.isNotEmpty()) {
+      finalMetrics.setAdditionalProperty("mappers", mapperMetrics)
+    }
+    return finalMetrics
   }
 
   @VisibleForTesting
@@ -357,7 +412,10 @@ class ReplicationWorkerHelper(
 
     if (sourceRawMessage.type == Type.STATE) {
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
-      recordStateStatsMetrics(metricClient, sourceRawMessage.state, AirbyteMessageOrigin.SOURCE, ctx!!)
+    }
+
+    if (sourceRawMessage.type == Type.RECORD) {
+      applyTransformationMappers(AirbyteJsonRecordAdapter(sourceRawMessage))
     }
 
     return sourceRawMessage
@@ -389,8 +447,7 @@ class ReplicationWorkerHelper(
 
     if (destinationRawMessage.type == Type.STATE) {
       val airbyteStateMessage = destinationRawMessage.state
-      recordStateStatsMetrics(metricClient, airbyteStateMessage, AirbyteMessageOrigin.DESTINATION, ctx!!)
-      syncPersistence.persist(context.connectionId, destinationRawMessage.state)
+      syncPersistence.accept(context.connectionId, destinationRawMessage.state)
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
 
@@ -402,14 +459,9 @@ class ReplicationWorkerHelper(
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
-    return attachIdToStateMessageFromSource(sourceRawMessage)
-      .let { internalProcessMessageFromSource(it) }
+    return internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
       .let { mapper.mapMessage(it) }
       .let { Optional.ofNullable(it) }
-  }
-
-  fun isWorkerV2TestEnabled(): Boolean {
-    return workloadEnabled
   }
 
   fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {
@@ -418,6 +470,16 @@ class ReplicationWorkerHelper(
 
   fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
     return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
+  }
+
+  fun applyTransformationMappers(message: AirbyteRecord) {
+    val mappersForStream: List<ConfiguredMapper> =
+      mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
+
+    if (mappersForStream.isEmpty()) {
+      return
+    }
+    recordMapper.applyMappers(message, mappersForStream)
   }
 
   private fun getTotalStats(
@@ -494,57 +556,9 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
   }
 
   return buildList {
-    ctx.connectionId?.let { add(MetricAttribute(MetricTags.CONNECTION_ID, it.toString())) }
-    ctx.jobId?.let { add(MetricAttribute(MetricTags.JOB_ID, it.toString())) }
-    ctx.attempt?.let { add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, it.toString())) }
+    add(MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId.toString()))
+    add(MetricAttribute(MetricTags.JOB_ID, ctx.jobId.toString()))
+    add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt.toString()))
+    add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
-}
-
-private fun extractStateRecordCount(stats: AirbyteStateStats?): Double {
-  return stats?.recordCount ?: 0.0
-}
-
-private fun recordStateStatsMetrics(
-  metricClient: MetricClient,
-  stateMessage: AirbyteStateMessage,
-  messageOrigin: AirbyteMessageOrigin,
-  ctx: ReplicationContext,
-) {
-  // Only record the destination stats for state messages coming from the destination.
-  // The destination stats will always be blank for state messages coming from the source
-  if (messageOrigin == AirbyteMessageOrigin.DESTINATION && stateMessage.destinationStats != null) {
-    recordStateStatsMetric(
-      metricClient,
-      stateMessage.destinationStats,
-      messageOrigin,
-      AirbyteMessageOrigin.DESTINATION,
-      ctx,
-    )
-  }
-
-  if (stateMessage.sourceStats != null) {
-    recordStateStatsMetric(metricClient, stateMessage.sourceStats, messageOrigin, AirbyteMessageOrigin.SOURCE, ctx)
-  }
-}
-
-private fun recordStateStatsMetric(
-  metricClient: MetricClient,
-  stats: AirbyteStateStats,
-  messageOrigin: AirbyteMessageOrigin,
-  statsType: AirbyteMessageOrigin,
-  ctx: ReplicationContext,
-) {
-  metricClient.gauge(
-    OssMetricsRegistry.SYNC_STATE_RECORD_COUNT,
-    extractStateRecordCount(stats),
-    *toConnectionAttrs(ctx).toTypedArray(),
-    *buildList {
-      ctx.sourceImage?.let { add(MetricAttribute(MetricTags.SOURCE_IMAGE, it)) }
-      ctx.destinationImage?.let {
-        add(MetricAttribute(MetricTags.DESTINATION_IMAGE, it))
-        add(MetricAttribute(MetricTags.AIRBYTE_MESSAGE_ORIGIN, messageOrigin.name))
-      }
-      add(MetricAttribute(MetricTags.RECORD_COUNT_TYPE, statsType.name))
-    }.toTypedArray(),
-  )
 }

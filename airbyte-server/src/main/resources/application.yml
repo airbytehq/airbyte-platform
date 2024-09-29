@@ -10,6 +10,8 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   executors:
@@ -26,6 +28,9 @@ micronaut:
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
+    webhook:
+      type: fixed
+      n-threads: ${WEBHOOK_TASK_EXECUTOR_THREADS:3}
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:
@@ -52,8 +57,15 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowed-origins-regex:
-            - ^.*$
+          allowed-origins-regex: ${CORS_ALLOWED_ORIGINS_REGEX:}
+          allowed-methods:
+            - GET
+            - POST
+            - OPTIONS
+          allowed-headers:
+            - authorization
+            - content-type
+            - X-Airbyte-Analytic-Source
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
       access-logger:
@@ -97,6 +109,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -116,11 +130,17 @@ airbyte:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
+    enterprise:
+      enterprise-source-stubs-url: ${ENTERPRISE_SOURCE_STUBS_URL}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  support-email-domains:
+    oss: ""
+    cloud: "airbyte.io"
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -145,52 +165,31 @@ airbyte:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
+    kube-job-config-variant-override: ${JOB_RESOURCE_VARIANT_OVERRIDE:}
     kube-job-configs:
       default:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
 
-      # Generally low resource containers
-      destination-stderr:
-        cpu-limit: 0.5
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      destination-stdout:
-        cpu-limit: 0.5
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      heartbeat:
-        cpu-limit: 0.2
-        cpu-request: 0.05
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      source-stderr:
-        cpu-limit: 0.5
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
       # Default base sync values
       destination:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      destination-stdin:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
       orchestrator:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
@@ -201,22 +200,12 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      source-stdout:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
       # API syncs
       source-api:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      source-stdout-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 50Mi
-        memory-request: 25Mi
       orchestrator-api:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
@@ -227,22 +216,12 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      destination-stdin-api:
-        cpu-limit: 1
-        cpu-request: 0.1
-        memory-limit: 50Mi
-        memory-request: 25Mi
       # Database syncs resource override
       source-database:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      source-stdout-database:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
       orchestrator-database:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:2}
@@ -253,11 +232,55 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
-      destination-stdin-database:
-        cpu-limit: 2
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
+
+      # Default base sync values
+      lowresource--destination:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--orchestrator:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      # API syncs
+      lowresource--source-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--orchestrator-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      # Database syncs resource override
+      lowresource--source-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--orchestrator-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
 
     job:
       error-reporting:
@@ -265,17 +288,10 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
-        images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
-          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
         main:
           container:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
-        sidecar:
-          container:
-            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
     isolated:
       kube:
@@ -305,6 +321,7 @@ airbyte:
     client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
     client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
     realm: ${KEYCLOAK_REALM:master}
+    internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
     password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
 
@@ -332,6 +349,8 @@ temporal:
     enabled: ${TEMPORAL_CLOUD_ENABLED:false}
     host: ${TEMPORAL_CLOUD_HOST:}
     namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+    connector-rollout:
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT:}
   host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
   retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
   sdk:

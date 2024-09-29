@@ -7,9 +7,9 @@ import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu
 import { Icon } from "components/ui/Icon";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreateDestinationDefinition, useCreateSourceDefinition, useCurrentWorkspace } from "core/api";
+import { useCreateDestinationDefinition, useCreateSourceDefinition } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
@@ -29,10 +29,7 @@ interface ConnectorDefinitionProps {
 
 export const AddNewConnectorButton: React.FC<AddNewConnectorButtonProps> = ({ type }) => {
   const { formatMessage } = useIntl();
-  const workspace = useCurrentWorkspace();
-  const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
-    organizationId: workspace.organizationId,
-  });
+  const hasUploadCustomConnectorPermissions = useGeneratedIntent(Intent.UploadCustomConnector);
   const allowUploadCustomDockerImage =
     useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
   const navigate = useNavigate();

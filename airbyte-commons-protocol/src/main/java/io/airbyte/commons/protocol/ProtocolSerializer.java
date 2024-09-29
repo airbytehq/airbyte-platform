@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.protocol;
 
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 
 /**
  * Protocol serialization interface.
  */
 public interface ProtocolSerializer {
 
-  String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog);
+  String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes);
 
 }

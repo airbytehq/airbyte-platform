@@ -34,6 +34,9 @@ micronaut:
     enabled: false
 
 airbyte:
+  application: ${WORKER_APPLICATION:replication-orchestrator}
+  job-id: ${JOB_ID:}
+  attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
@@ -48,6 +51,10 @@ airbyte:
       request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
       message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
       publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
@@ -55,6 +62,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -67,6 +76,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  container:
+    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -79,6 +90,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:config}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
@@ -93,47 +105,8 @@ airbyte:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
-    isolated:
-      kube:
-        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
-        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
-    job:
-      kube:
-        images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
-          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
-        main:
-          container:
-            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
-        sidecar:
-          container:
-            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-        tolerations: ${JOB_KUBE_TOLERATIONS:}
-        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
-    kube-job-configs:
-      default:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      normalization:
-        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      replication:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
-        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
-        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
-        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
     replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -142,8 +115,7 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workload:
-    enabled: false
+  workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
   beans:

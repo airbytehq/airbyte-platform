@@ -1,0 +1,16 @@
+.container {
+  white-space: nowrap;
+  min-width: 0;
+}
+
+$iconWidth: 16px;
+
+.connectorIcon {
+  width: $iconWidth;
+  height: $iconWidth;
+}
+
+.nameAndVersion {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}

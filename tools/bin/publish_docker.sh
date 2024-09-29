@@ -11,16 +11,15 @@ projectDir=(
   "connector-builder-server"
   "db/db-lib"
   "metrics/reporter"
-  "proxy"
   "server"
   "temporal"
   "webapp"
   "workers"
   "workload-api-server"
   "workload-launcher"
+  "workload-init-container"
   "keycloak"
   "keycloak-setup"
-  "api-server"
 )
 
 # Set default values to required vars. If set in env, values will be taken from there.
@@ -46,10 +45,6 @@ for workdir in "${projectDir[@]}"
         artifactName="worker"
         ;;
 
-      "api-server")
-        artifactName="airbyte-api-server"
-        ;;
-
       *)
         artifactName=${workdir%/*}
         ;;
@@ -58,13 +53,14 @@ for workdir in "${projectDir[@]}"
     echo "Publishing airbyte/$artifactName..."
     sleep 1
 
-    docker buildx create --use --name $artifactName &&      \
+    docker buildx create --use --driver=docker-container --name $artifactName && \
     docker buildx build -t "airbyte/$artifactName:$VERSION" \
       --platform linux/amd64,linux/arm64                    \
       --build-arg VERSION=$VERSION                          \
       --build-arg ALPINE_IMAGE=$ALPINE_IMAGE                \
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
+      --sbom=true                                           \
       --push                                                \
       airbyte-$workdir/build/airbyte/docker
     docker buildx rm $artifactName

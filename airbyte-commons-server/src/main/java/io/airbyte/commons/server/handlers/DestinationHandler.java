@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -42,8 +41,6 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -147,24 +144,18 @@ public class DestinationHandler {
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
 
-    final JsonNode fullConfig;
-    try {
-      fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
     final ConnectorSpecification spec =
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
-    // persist
-    persistDestinationConnection(
-        destination.getName(),
-        destination.getDestinationDefinitionId(),
-        destination.getWorkspaceId(),
-        destination.getDestinationId(),
-        fullConfig,
-        true,
-        spec);
+    // Delete secrets and config in this destination and mark it tombstoned.
+    try {
+      destinationService.tombstoneDestination(
+          destination.getName(),
+          destination.getWorkspaceId(),
+          destination.getDestinationId(), spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
@@ -385,7 +376,7 @@ public class DestinationHandler {
     }
   }
 
-  private DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
+  public DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildDestinationRead(configRepository.getDestinationConnection(destinationId));
   }
 
@@ -433,8 +424,6 @@ public class DestinationHandler {
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
             standardDestinationDefinition, destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
 
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
-
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion());
 
@@ -446,8 +435,7 @@ public class DestinationHandler {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .name(destinationConnection.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
-            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()))
+        .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
@@ -455,15 +443,13 @@ public class DestinationHandler {
 
   protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
                                                             final StandardDestinationDefinition standardDestinationDefinition) {
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
 
     return new DestinationSnippetRead()
         .destinationId(destinationConnection.getDestinationId())
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
-            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(standardDestinationDefinition.getIconUrl());
   }
 
 }

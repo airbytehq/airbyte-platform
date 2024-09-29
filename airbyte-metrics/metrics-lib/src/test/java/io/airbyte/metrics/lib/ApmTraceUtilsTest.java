@@ -151,7 +151,7 @@ class ApmTraceUtilsTest {
     final UUID connectionID = UUID.randomUUID();
     final String jobId = UUID.randomUUID().toString();
     final Path jobRoot = Path.of("dev", "null");
-    final Long attemptNumber = Long.valueOf(2L);
+    final Long attemptNumber = 2L;
 
     ApmTraceUtils.addTagsToTrace(connectionID, attemptNumber, jobId, jobRoot);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());

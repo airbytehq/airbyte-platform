@@ -32,33 +32,30 @@ enum class AuthMode {
 
 @Factory
 class AuthModeFactory(
-  val deploymentMode: DeploymentMode,
-  val airbyteEdition: Configs.AirbyteEdition,
+  private val deploymentMode: DeploymentMode,
+  private val airbyteEdition: Configs.AirbyteEdition,
 ) {
   /**
-   * When the Micronaut environment is set to `community-auth`, the `SIMPLE` auth mode is used
-   * regardless of the deployment mode or other configurations. This bean replaces the
-   * [defaultAuthMode] when the `community-auth` environment is active.
+   * When the Airbyte edition is set to `community` and Micronaut Security is enabled, the
+   * `SIMPLE` auth mode is used regardless of the deployment mode or other configurations.
    */
   @Singleton
-  @Requires(env = ["community-auth"])
+  @Requires(property = "airbyte.edition", value = "community")
+  @Requires(property = "micronaut.security.enabled", value = "true")
   @Primary
-  fun communityAuthMode(): AuthMode {
-    return AuthMode.SIMPLE
-  }
+  fun communityAuthMode(): AuthMode = AuthMode.SIMPLE
 
   /**
    * The default auth mode is determined by the deployment mode and edition.
    */
   @Singleton
-  fun defaultAuthMode(): AuthMode {
-    return when {
+  fun defaultAuthMode(): AuthMode =
+    when {
       deploymentMode == DeploymentMode.CLOUD -> AuthMode.OIDC
       airbyteEdition == Configs.AirbyteEdition.PRO -> AuthMode.OIDC
       deploymentMode == DeploymentMode.OSS -> AuthMode.NONE
       else -> throw IllegalStateException("Unknown or unspecified deployment mode: $deploymentMode")
     }
-  }
 }
 
 /**
@@ -69,13 +66,11 @@ class AuthModeFactory(
  */
 @Factory
 class AuthConfigFactory(
-  val authMode: AuthMode,
-  val keycloakConfig: AirbyteKeycloakConfiguration? = null,
-  val oidcConfig: OidcConfig? = null,
-  val initialUserConfig: InitialUserConfig? = null,
+  private val authMode: AuthMode,
+  private val keycloakConfig: AirbyteKeycloakConfiguration? = null,
+  private val oidcConfig: OidcConfig? = null,
+  private val initialUserConfig: InitialUserConfig? = null,
 ) {
   @Singleton
-  fun authConfig(): AuthConfigs {
-    return AuthConfigs(authMode, keycloakConfig, oidcConfig, initialUserConfig)
-  }
+  fun authConfig(): AuthConfigs = AuthConfigs(authMode, keycloakConfig, oidcConfig, initialUserConfig)
 }

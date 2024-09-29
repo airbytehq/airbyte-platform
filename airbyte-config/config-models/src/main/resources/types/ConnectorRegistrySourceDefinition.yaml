@@ -76,4 +76,13 @@ properties:
     description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
     type: integer
   releases:
-    "$ref": ConnectorReleases.yaml
+    "$ref": ConnectorReleasesSource.yaml
+  generated:
+    "$ref": ConnectorRegistryEntryGeneratedFields.yaml
+  packageInfo:
+    "$ref": ConnectorPackageInfo.yaml
+  ab_internal:
+    "$ref": AbInternal.yaml
+  language:
+    description: The language that the connector is written in.
+    type: string

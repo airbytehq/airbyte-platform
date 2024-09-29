@@ -20,16 +20,17 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.guava)
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-auth"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-license"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-featureflag"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.airbyte.protocol)
   // For Keycloak Application Management
   implementation(libs.bundles.keycloak.client)
@@ -43,13 +44,13 @@ dependencies {
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockk)
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
 
   // TODO: flip this import - MockData should live in airbyte-data's testFixtures
   // and be imported in this manner by config-persistence
   // We can move the BaseConfigDatasets to airbyte-data's testFixtures as well.
-  testImplementation(testFixtures(project(":airbyte-config:config-persistence")))
+  testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }
 
 // Even though Kotlin is excluded on Spotbugs, this project

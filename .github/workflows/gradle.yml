@@ -65,7 +65,6 @@ jobs:
               - 'airbyte-!(cdk|integrations|webapp)/**'
               - 'airbyte-integrations/connectors/(destination-jdbc|destination-postgres|source-jdbc|source-postgres)/**'
               - 'airbyte-config/init/src/main/resources/seed/(source|destination)_definitions.yaml'
-              - 'docker-compose*.yaml'
               - '(charts|kube)/**'
             build:
               - '.github/**'
@@ -78,8 +77,8 @@ jobs:
             db:
               - 'airbyte-db/**'
             frontend:
-              - 'airbyte-api/src/main/openapi/config.yaml'
-              - 'oss/airbyte-api/src/main/openapi/cloud-config.yaml'
+              - 'airbyte-api/server-api/src/main/openapi/config.yaml'
+              - 'oss/airbyte-api/commons/src/main/openapi/cloud-config.yaml'
               - 'airbyte-connector-builder-resources/CDK_VERSION'
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
@@ -156,7 +155,7 @@ jobs:
           # todo (cgardens): temporarily skipping airbyte-commons-worker because one of the tests uses too much memory. we are
           # adjusting the test to use a more reasonable amount of memory. https://github.com/airbytehq/oncall/issues/4415
           # command: ./gradlew build javadoc --scan
-          command: ./gradlew build -x :airbyte-commons-worker:test javadoc --scan
+          command: ./gradlew build -x :oss:airbyte-commons-worker:test javadoc --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 

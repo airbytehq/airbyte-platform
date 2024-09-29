@@ -8,9 +8,9 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-config:config-models"))
 
   implementation(libs.guava)
 

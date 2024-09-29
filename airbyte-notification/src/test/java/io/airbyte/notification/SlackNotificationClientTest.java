@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class SlackNotificationClientTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClientTest.class);
@@ -239,7 +240,7 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  public void buildSummaryNewStreamTest() {
+  void buildSummaryNewStreamTest() {
     final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo").namespace("ns")));
@@ -255,7 +256,7 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  public void buildSummaryDeletedStreamTest() {
+  void buildSummaryDeletedStreamTest() {
     final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("deprecated")));
@@ -272,7 +273,7 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  public void buildSummaryAlteredStreamTest() {
+  void buildSummaryAlteredStreamTest() {
     final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))

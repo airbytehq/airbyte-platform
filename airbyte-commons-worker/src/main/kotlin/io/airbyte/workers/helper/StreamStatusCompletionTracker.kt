@@ -1,9 +1,13 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper
@@ -14,10 +18,10 @@ import java.time.Clock
 class StreamStatusCompletionTracker(
   private val clock: Clock,
 ) {
-  private val hasCompletedStatus = mutableMapOf<StreamDescriptor, Boolean>()
+  private val hasCompletedStatus = StreamStatusMap()
   private var shouldEmitStreamStatus = false
 
-  open fun startTracking(
+  fun startTracking(
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
     supportRefreshes: Boolean,
   ) {
@@ -30,27 +34,26 @@ class StreamStatusCompletionTracker(
     }
   }
 
-  open fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
+  fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
     if (shouldEmitStreamStatus && streamStatus.status == AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE) {
-      hasCompletedStatus[streamStatus.streamDescriptor] ?: run {
-        throw WorkerException("A stream status has been detected for a stream not present in the catalog")
+      if (!hasCompletedStatus.containsStream(streamStatus.streamDescriptor)) {
+        throw WorkerException(
+          "A stream status (${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}) " +
+            "has been detected for a stream not present in the catalog",
+        )
       }
       hasCompletedStatus[streamStatus.streamDescriptor] = true
     }
   }
 
-  open fun finalize(
+  fun finalize(
     exitCode: Int,
     namespacingMapper: AirbyteMapper,
   ): List<AirbyteMessage> {
-    if (!shouldEmitStreamStatus) {
+    if (!shouldEmitStreamStatus || exitCode != 0) {
       return listOf()
     }
-    return if (0 == exitCode) {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
-    } else {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.filter { it.value }.keys, namespacingMapper)
-    }
+    return streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
   }
 
   private fun streamDescriptorsToCompleteStatusMessage(
@@ -72,6 +75,25 @@ class StreamStatusCompletionTracker(
               ),
           ),
       )
+    }
+  }
+}
+
+/**
+ * Custom map implementation that is used in order to override the `containsKey` functionality
+ * to account for [StreamDescriptor] instances with either `null` or empty string `namespace`
+ * values.
+ */
+class StreamStatusMap : HashMap<StreamDescriptor, Boolean>() {
+  /**
+   * Determines of the map contains an entry for the [StreamDescriptor].  It handles [StreamDescriptor] instances
+   * with either a `null` or empty `namespace` value when checking for the value in the map.
+   */
+  fun containsStream(descriptor: StreamDescriptor): Boolean {
+    return if (descriptor.namespace == null) {
+      containsKey(descriptor) || containsKey(StreamDescriptor().withName(descriptor.name).withNamespace(""))
+    } else {
+      containsKey(descriptor)
     }
   }
 }

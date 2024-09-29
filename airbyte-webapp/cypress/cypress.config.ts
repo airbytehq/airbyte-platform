@@ -8,7 +8,7 @@ export const DB_CONFIG = {
   host: process.env.SOURCE_DB_HOST || "127.0.0.1",
   database: process.env.SOURCE_DB_NAME || "airbyte_ci_source",
   password: process.env.SOURCE_DB_PASSWORD || "secret_password",
-  port: process.env.SOURCE_DB_PORT || 5433,
+  port: Number(process.env.SOURCE_DB_PORT || 5433),
 };
 
 export default defineConfig({
@@ -23,17 +23,9 @@ export default defineConfig({
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       require("dd-trace/ci/cypress/plugin")(on, config);
       on("task", {
-        dbQuery(params) {
-          const { query, connection = DB_CONFIG } = params;
-          // apply override if set
-          if (config.env.SOURCE_DB_HOST) {
-            connection.host = config.env.SOURCE_DB_HOST;
-          }
-          // apply override if set
-          if (config.env.SOURCE_DB_PORT) {
-            connection.port = config.env.SOURCE_DB_PORT;
-          }
-          const db = pgp(connection);
+        dbQuery(params: { query: string }) {
+          const { query } = params;
+          const db = pgp(DB_CONFIG);
           return db.any(query).finally(db.$pool.end);
         },
       });

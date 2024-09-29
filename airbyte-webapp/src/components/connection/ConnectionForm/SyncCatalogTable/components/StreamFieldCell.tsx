@@ -1,9 +1,8 @@
 import { Row } from "@tanstack/react-table";
-import classnames from "classnames";
+import isEqual from "lodash/isEqual";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -16,8 +15,7 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { GlobalFilterHighlighter } from "./GlobalFilterHighlighter";
-import styles from "./StreamFieldCell.module.scss";
+import { TextHighlighter } from "./TextHighlighter";
 import {
   isChildFieldCursor as checkIsChildFieldCursor,
   isChildFieldPrimaryKey as checkIsChildFieldPrimaryKey,
@@ -28,7 +26,7 @@ import { updateFieldSelected } from "../../../syncCatalog/SyncCatalog/streamConf
 import { getFieldPathDisplayName } from "../../../syncCatalog/utils";
 import { SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { checkIsFieldSelected } from "../utils";
+import { checkIsFieldHashed, checkIsFieldSelected } from "../utils";
 
 interface StreamFieldNameCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -41,9 +39,13 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const { formatMessage } = useIntl();
   const { mode } = useConnectionFormService();
+
+  if (!row.original.streamNode) {
+    return null;
+  }
 
   const {
     streamNode: { config, stream },
@@ -59,12 +61,14 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isChildFieldCursor = checkIsChildFieldCursor(config, field.path);
   const isPrimaryKey = checkIsPrimaryKey(config, field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(config, field.path);
+  const isHashed = checkIsFieldHashed(field, config);
 
   const isDisabled =
     !config?.selected ||
     mode === "readonly" ||
     (config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
     (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
+    (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
     isNestedField;
   const showTooltip = isDisabled && mode !== "readonly" && config?.selected;
 
@@ -81,6 +85,10 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   };
 
   const onToggleFieldSelected = (fieldPath: string[], isSelected: boolean) => {
+    if (!row.original.streamNode) {
+      return;
+    }
+
     const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
     const updatedConfig = updateFieldSelected({
       config,
@@ -93,48 +101,54 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
     updateStreamField(row.original.streamNode, {
       ...updatedConfig,
       selectedFields: !updatedConfig?.fieldSelectionEnabled ? [] : updatedConfig?.selectedFields,
+      // remove this field if it was part of hashedFields
+      hashedFields: config.hashedFields?.filter((f) => !isEqual(f.fieldPath, fieldPath)),
     });
   };
 
   return (
-    <Box className={classnames(styles.secondDepth, { [styles.thirdDepth]: isNestedField })}>
-      <FlexContainer alignItems="center">
-        <FlexContainer alignItems="center" gap="xs">
-          {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
-          {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
-            <CheckBox
-              checkboxSize="sm"
-              checked={isFieldSelected}
-              disabled={isDisabled}
-              onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
-              data-testid="sync-field-checkbox"
-            />
-          )}
-          {showTooltip && !isNestedField && (
-            <Tooltip
-              control={
-                <FlexContainer alignItems="center">
-                  <CheckBox checkboxSize="sm" disabled checked={isFieldSelected} readOnly />
-                </FlexContainer>
-              }
-            >
-              {renderDisabledReasonMessage()}
-            </Tooltip>
-          )}
-        </FlexContainer>
-        <TextWithOverflowTooltip size="sm">
-          <GlobalFilterHighlighter
-            searchWords={[globalFilterValue]}
-            textToHighlight={getFieldPathDisplayName(field.path)}
+    <FlexContainer alignItems="center">
+      <FlexContainer alignItems="center" gap="xs">
+        {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
+        {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
+          <CheckBox
+            checkboxSize="sm"
+            checked={isFieldSelected}
+            disabled={isDisabled}
+            onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
+            data-testid="sync-field-checkbox"
           />
-        </TextWithOverflowTooltip>
-        <Text size="sm" color="grey300">
-          <FormattedMessage
-            id={`${getDataType(field)}`}
-            defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
-          />
-        </Text>
+        )}
+        {showTooltip && !isNestedField && (
+          <Tooltip
+            control={
+              <FlexContainer alignItems="center">
+                <CheckBox checkboxSize="sm" disabled checked={isFieldSelected} readOnly />
+              </FlexContainer>
+            }
+          >
+            {renderDisabledReasonMessage()}
+          </Tooltip>
+        )}
       </FlexContainer>
-    </Box>
+      <TextWithOverflowTooltip size="sm">
+        {isHashed ? (
+          <>
+            {getFieldPathDisplayName(field.path)}
+            <Text as="span" bold>
+              _hashed
+            </Text>
+          </>
+        ) : (
+          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
+        )}
+      </TextWithOverflowTooltip>
+      <Text size="sm" color="grey300" bold={isHashed}>
+        <FormattedMessage
+          id={isHashed ? "airbyte.datatype.string" : `${getDataType(field)}`}
+          defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
+        />
+      </Text>
+    </FlexContainer>
   );
 };

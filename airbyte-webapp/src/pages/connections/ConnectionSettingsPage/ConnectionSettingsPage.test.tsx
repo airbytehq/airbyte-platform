@@ -28,10 +28,14 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnectionQuery: jest.fn(() => async () => mockConnection),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
   useUpdateConnection: () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,
   }),
+  useGetConnectionSyncProgress: () => {
+    return [];
+  },
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
@@ -61,17 +65,11 @@ jest.mock("core/api", () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   }),
+  useListStreamsStatuses: () => [],
 }));
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
-}));
-
-jest.mock("hooks/services/AppMonitoringService", () => ({
-  useAppMonitoringService: () => ({
-    trackError: jest.fn(),
-    trackAction: jest.fn(),
-  }),
 }));
 
 jest.mock("components/connection/ConnectionStatus/useConnectionStatus", () => ({

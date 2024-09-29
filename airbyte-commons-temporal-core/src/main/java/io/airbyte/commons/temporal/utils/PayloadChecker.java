@@ -24,9 +24,10 @@ import org.slf4j.LoggerFactory;
  * is that having this fail in temporal means that we are mistakenly reporting the activity as
  * successful.
  */
+@SuppressWarnings("PMD.UseVarargs")
 public class PayloadChecker {
 
-  private MetricClient metricClient;
+  private final MetricClient metricClient;
 
   private static final Logger log = LoggerFactory.getLogger(PayloadChecker.class);
 

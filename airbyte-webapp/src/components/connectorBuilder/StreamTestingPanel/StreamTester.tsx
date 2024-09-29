@@ -1,6 +1,6 @@
+import classNames from "classnames";
 import partition from "lodash/partition";
 import { useEffect, useMemo } from "react";
-import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Collapsible } from "components/ui/Collapsible";
@@ -9,7 +9,6 @@ import { Message } from "components/ui/Message";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
-import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { HttpError } from "core/api";
@@ -26,10 +25,8 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
-import { useTestWarnings } from "./useTestWarnings";
 import { useBuilderWatch } from "../types";
-import { useAutoImportSchema } from "../useAutoImportSchema";
-import { formatJson } from "../utils";
+import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 export const StreamTester: React.FC<{
   hasTestingValuesErrors: boolean;
@@ -40,7 +37,6 @@ export const StreamTester: React.FC<{
   const {
     streamRead: {
       data: streamReadData,
-      refetch: readStream,
       isError,
       error,
       isFetching,
@@ -49,13 +45,12 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
+    queuedStreamRead,
+    queueStreamRead,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
-  const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
-  const { setValue } = useFormContext();
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
-  const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
   const streamName = streamNames[testStreamIndex];
 
@@ -107,17 +102,8 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
-  useEffect(() => {
-    if (mode === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
-      setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
-        shouldValidate: true,
-        shouldTouch: true,
-        shouldDirty: true,
-      });
-    }
-  }, [mode, autoImportSchema, testStreamIndex, streamReadData?.inferred_schema, setValue]);
-
-  const testDataWarnings = useTestWarnings();
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const testDataWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
 
   return (
     <div className={styles.container}>
@@ -128,8 +114,8 @@ export const StreamTester: React.FC<{
       )}
 
       <StreamTestButton
-        readStream={() => {
-          readStream();
+        queueStreamRead={() => {
+          queueStreamRead();
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
             actionDescription: "Stream test initiated",
             stream_name: streamName,
@@ -137,8 +123,9 @@ export const StreamTester: React.FC<{
         }}
         hasTestingValuesErrors={hasTestingValuesErrors}
         setTestingValuesInputOpen={setTestingValuesInputOpen}
-        isResolving={isResolving}
         hasResolveErrors={Boolean(resolveErrorMessage)}
+        isStreamTestQueued={queuedStreamRead}
+        isStreamTestRunning={isFetching}
       />
 
       {resolveErrorMessage !== undefined && (
@@ -179,12 +166,7 @@ export const StreamTester: React.FC<{
           </Text>
         </div>
       )}
-      {isFetching && (
-        <div className={styles.fetchingSpinner}>
-          <Spinner />
-        </div>
-      )}
-      {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
+      {streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
           type="info"
           text={
@@ -198,8 +180,15 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
-      {!isFetching && testDataWarnings.map((warning, index) => <Message type="warning" text={warning} key={index} />)}
-      {!isFetching && (streamReadData !== undefined || errorMessage !== undefined) && (
+      {testDataWarnings.map((warning, index) => (
+        <Message
+          className={classNames({ [styles.secondaryWarning]: warning.priority === "secondary" })}
+          type="warning"
+          text={warning.message}
+          key={index}
+        />
+      ))}
+      {(streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels
           className={styles.resizablePanelsContainer}
           orientation="horizontal"
@@ -234,7 +223,11 @@ export const StreamTester: React.FC<{
             ...(hasAuxiliaryRequests
               ? [
                   {
-                    children: <GlobalRequestsDisplay requests={auxiliaryRequests} />,
+                    children: (
+                      // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
+                      // to reset the selected request index in case the number of requests differs between streams
+                      <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
+                    ),
                     minWidth: 0,
                     flex: auxiliaryRequestsFlex,
                     splitter: (

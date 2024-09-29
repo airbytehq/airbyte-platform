@@ -35,7 +35,7 @@ public class ConnectorDocumentationApiController implements ConnectorDocumentati
   }
 
   @Override
-  @Post(uri = "/get")
+  @Post
   @Status(HttpStatus.OK)
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)

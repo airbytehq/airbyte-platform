@@ -22,8 +22,11 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
@@ -39,9 +42,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -469,6 +469,15 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     });
   }
 
+  @Override
+  public List<UUID> listConnectionIdsForWorkspace(final UUID workspaceId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .fetchInto(UUID.class));
+  }
+
   private Set<Long> getEarlySyncJobsFromResult(final Result<Record> result) {
     // Transform the result to a list of early sync job ids
     // the rest of the fields are not used, we aim to keep the set small
@@ -504,7 +513,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           // Consider only jobs that are in a generally accepted terminal status
           // io/airbyte/persistence/job/models/JobStatus.java:23
           + " WHERE j.status IN ('succeeded', 'cancelled', 'failed')"
-          + " AND j.config_type = 'sync'"
+          + " AND j.config_type IN ('sync', 'refresh')"
           + " AND c.id IS NOT NULL"
           // Keep a job if it was created within 7 days of its connection's creation,
           // OR if it was the first successful sync job of its connection

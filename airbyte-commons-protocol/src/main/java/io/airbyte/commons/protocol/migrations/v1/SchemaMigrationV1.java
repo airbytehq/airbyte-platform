@@ -27,6 +27,9 @@ import java.util.stream.StreamSupport;
  */
 public class SchemaMigrationV1 {
 
+  private static final String BASE64_STRING = "base64";
+  private static final String ENCODING_FIELD_NAME = "contentEncoding";
+
   /**
    * Perform the {type: foo} -> {$ref: foo} upgrade. Modifies the schema in-place.
    */
@@ -286,8 +289,8 @@ public class SchemaMigrationV1 {
       case "string" -> {
         if (schemaNode.hasNonNull("format")) {
           yield getFormat(schemaNode);
-        } else if (schemaNode.hasNonNull("contentEncoding")) {
-          if ("base64".equals(schemaNode.get("contentEncoding").asText())) {
+        } else if (schemaNode.hasNonNull(ENCODING_FIELD_NAME)) {
+          if (BASE64_STRING.equals(schemaNode.get(ENCODING_FIELD_NAME).asText())) {
             yield JsonSchemaReferenceTypes.BINARY_DATA_REFERENCE;
           } else {
             yield JsonSchemaReferenceTypes.STRING_REFERENCE;

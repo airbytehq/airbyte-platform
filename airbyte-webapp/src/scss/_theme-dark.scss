@@ -88,6 +88,7 @@
   --color-red-800: hsl(349, 100%, 97%);
   --color-red-900: hsl(349, 100%, 98%);
 
+  --color-yellow-25: hsl(35, 83%, 10%);
   --color-yellow-50: hsl(39, 82%, 15%);
   --color-yellow-100: hsl(40, 84%, 22%);
   --color-yellow-200: hsl(39, 100%, 29%);
@@ -118,6 +119,10 @@
   --box-shadow-inset: inset 0 1.5px 3px hsla(241, 51%, 20%, 50%);
   --box-shadow-menu: 0 8px 10px 0 hsla(0, 0%, 0%, 40%), 0 3px 14px 0 hsla(0, 0%, 0%, 45%),
     0 5px 5px 0 hsla(0, 0%, 0%, 50%);
+
+  --color-loading-skeleton-base: hsl(0, 0%, 13%);
+  --color-loading-skeleton-gradient-stop-1: hsl(0, 0%, 8%);
+  --color-loading-skeleton-gradient-stop-2: hsl(0, 0%, 4%);
 
   .react-select__menu {
     background-color: var(--color-foreground);

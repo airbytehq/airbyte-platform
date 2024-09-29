@@ -6,11 +6,16 @@ package io.airbyte.config.helpers;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.ConnectorPackageInfo;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistryEntryGeneratedFields;
+import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.SourceFileInfo;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
@@ -19,8 +24,10 @@ import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,6 +44,11 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    final ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
+        .orElse(null);
+
     return new StandardSourceDefinition()
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
@@ -46,6 +58,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
   }
@@ -58,6 +71,11 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    final ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
+        .orElse(null);
+
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
@@ -66,6 +84,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements());
   }
 
@@ -78,6 +97,17 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    final Date lastModified = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
+        .map(SourceFileInfo::getMetadataLastModified)
+        .orElse(null);
+
+    final String cdkVersion = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getPackageInfo)
+        .map(ConnectorPackageInfo::getCdkVersion)
+        .orElse(null);
+
     validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
         .withActorDefinitionId(def.getSourceDefinitionId())
@@ -89,8 +119,12 @@ public class ConnectorRegistryConverters {
         .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
+        .withInternalSupportLevel(Optional.ofNullable(def.getAbInternal()).map(AbInternal::getSl).orElse(100L))
         .withReleaseStage(def.getReleaseStage())
-        .withSuggestedStreams(def.getSuggestedStreams());
+        .withLastPublished(lastModified)
+        .withCdkVersion(cdkVersion)
+        .withSuggestedStreams(def.getSuggestedStreams())
+        .withLanguage(def.getLanguage());
   }
 
   /**
@@ -101,6 +135,17 @@ public class ConnectorRegistryConverters {
     if (def == null) {
       return null;
     }
+
+    final Date lastModified = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
+        .map(SourceFileInfo::getMetadataLastModified)
+        .orElse(null);
+
+    final String cdkVersion = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getPackageInfo)
+        .map(ConnectorPackageInfo::getCdkVersion)
+        .orElse(null);
 
     validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
@@ -114,9 +159,11 @@ public class ConnectorRegistryConverters {
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
-        .withNormalizationConfig(def.getNormalizationConfig())
-        .withSupportsDbt(def.getSupportsDbt())
-        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());
+        .withInternalSupportLevel(Optional.ofNullable(def.getAbInternal()).map(AbInternal::getSl).orElse(100L))
+        .withLastPublished(lastModified)
+        .withCdkVersion(cdkVersion)
+        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes())
+        .withLanguage(def.getLanguage());
   }
 
   /**

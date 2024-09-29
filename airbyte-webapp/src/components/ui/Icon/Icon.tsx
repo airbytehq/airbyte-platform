@@ -4,10 +4,12 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import AIStarsIcon from "./icons/aiStarsIcon.svg?react";
 import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
 import BellIcon from "./icons/bellIcon.svg?react";
+import CactusIcon from "./icons/cactusIcon.svg?react";
 import CalendarCheckIcon from "./icons/calendarCheckIcon.svg?react";
 import CalendarIcon from "./icons/calendarIcon.svg?react";
 import CaretDownIcon from "./icons/caretDownIcon.svg?react";
@@ -56,7 +58,9 @@ import FileIcon from "./icons/fileIcon.svg?react";
 import FilesIcon from "./icons/filesIcon.svg?react";
 import FlashIcon from "./icons/flashIcon.svg?react";
 import FolderIcon from "./icons/folderIcon.svg?react";
+import FolderOpenIcon from "./icons/folderOpenIcon.svg?react";
 import GearIcon from "./icons/gearIcon.svg?react";
+import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
@@ -70,12 +74,21 @@ import IntegrationsIcon from "./icons/integrationsIcon.svg?react";
 import KeyCircleIcon from "./icons/keyCircleIcon.svg?react";
 import LayersIcon from "./icons/layersIcon.svg?react";
 import LensIcon from "./icons/lensIcon.svg?react";
+import LicenseIcon from "./icons/licenseIcon.svg?react";
 import LightbulbIcon from "./icons/lightbulbIcon.svg?react";
 import LinkIcon from "./icons/linkIcon.svg?react";
 import LoadingIcon from "./icons/loadingIcon.svg?react";
 import LocationIcon from "./icons/locationIcon.svg?react";
 import LockIcon from "./icons/lockIcon.svg?react";
 import MenuIcon from "./icons/menuIcon.svg?react";
+import MetricSuccessHighIcon from "./icons/metricSuccessHighIcon.svg?react";
+import MetricSuccessLowIcon from "./icons/metricSuccessLowIcon.svg?react";
+import MetricSuccessMedIcon from "./icons/metricSuccessMedIcon.svg?react";
+import MetricSuccessNoneIcon from "./icons/metricSuccessNoneIcon.svg?react";
+import MetricUsageHighIcon from "./icons/metricUsageHighIcon.svg?react";
+import MetricUsageLowIcon from "./icons/metricUsageLowIcon.svg?react";
+import MetricUsageMedIcon from "./icons/metricUsageMedIcon.svg?react";
+import MetricUsageNoneIcon from "./icons/metricUsageNoneIcon.svg?react";
 import MinusCircleIcon from "./icons/minusCircleIcon.svg?react";
 import MinusIcon from "./icons/minusIcon.svg?react";
 import ModificationIcon from "./icons/modificationIcon.svg?react";
@@ -145,6 +158,7 @@ const colorMap: Record<IconColor, string> = {
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
   foreground: styles[`icon--foreground`],
+  magic: styles[`icon--magic`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -157,10 +171,12 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   addCircle: AddCircleIcon,
+  aiStars: AIStarsIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   bell: BellIcon,
+  cactus: CactusIcon,
   calendar: CalendarIcon,
   calendarCheck: CalendarCheckIcon,
   caretDown: CaretDownIcon,
@@ -209,7 +225,9 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   files: FilesIcon,
   flash: FlashIcon,
   folder: FolderIcon,
+  folderOpen: FolderOpenIcon,
   gear: GearIcon,
+  github: GithubIcon,
   globe: GlobeIcon,
   google: GoogleIcon,
   grid: GridIcon,
@@ -223,12 +241,21 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   keyCircle: KeyCircleIcon,
   layers: LayersIcon,
   lens: LensIcon,
+  license: LicenseIcon,
   lightbulb: LightbulbIcon,
   link: LinkIcon,
   loading: LoadingIcon,
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
+  metricSuccessHigh: MetricSuccessHighIcon,
+  metricSuccessLow: MetricSuccessLowIcon,
+  metricSuccessMed: MetricSuccessMedIcon,
+  metricSuccessNone: MetricSuccessNoneIcon,
+  metricUsageHigh: MetricUsageHighIcon,
+  metricUsageLow: MetricUsageLowIcon,
+  metricUsageMed: MetricUsageMedIcon,
+  metricUsageNone: MetricUsageNoneIcon,
   minus: MinusIcon,
   minusCircle: MinusCircleIcon,
   modification: ModificationIcon,

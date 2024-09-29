@@ -54,6 +54,8 @@ data class Workload(
   var deadline: OffsetDateTime? = null,
   @Nullable
   var autoId: UUID? = null,
+  @Nullable
+  var signalInput: String? = null,
 ) {
   @VisibleForTesting
   constructor(
@@ -66,6 +68,7 @@ data class Workload(
     geography: String,
     mutexKey: String,
     type: WorkloadType,
+    signalInput: String,
   ) : this(
     id = id,
     dataplaneId = dataplaneId,
@@ -82,6 +85,7 @@ data class Workload(
     terminationSource = null,
     terminationReason = null,
     autoId = UUID.randomUUID(),
+    signalInput = signalInput,
   )
 }
 

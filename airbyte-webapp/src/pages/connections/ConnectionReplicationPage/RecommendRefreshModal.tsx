@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
-import { LabeledSwitch } from "components";
+import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
@@ -12,37 +12,48 @@ interface RecommendedRefreshWarningProps {
   onComplete: (withRefresh: boolean) => void;
 }
 export const RecommendRefreshModal: React.FC<RecommendedRefreshWarningProps> = ({ onCancel, onComplete }) => {
-  const [withRefresh, setWithRefresh] = useState(true);
-  const { formatMessage } = useIntl();
+  const [shouldRefresh, setShouldRefresh] = useState("saveWithRefresh");
+
   return (
     <>
       <ModalBody>
         <Text>
           <FormattedMessage id="connection.refreshDataHint" />
         </Text>
-        <Box pt="md">
-          <Text color="grey400" size="sm">
-            <FormattedMessage id="connection.refreshDataHint.description" />
-          </Text>
-        </Box>
-        <p>
-          <LabeledSwitch
-            name="refresh"
-            checked={withRefresh}
-            onChange={(ev) => setWithRefresh(ev.target.checked)}
-            label={formatMessage({
-              id: "connection.saveWithRefresh",
-            })}
-            checkbox
-            data-testid="refreshModal-refresh-checkbox"
+        <Box pt="lg">
+          <RadioButtonTiles
+            light
+            direction="column"
+            options={[
+              {
+                value: "saveWithRefresh",
+                label: <FormattedMessage id="connection.saveWithRefresh" />,
+                description: "",
+                "data-testid": "resetModal-reset-checkbox",
+              },
+              {
+                value: "saveWithoutRefresh",
+                label: <FormattedMessage id="connection.saveWithoutRefresh" />,
+                description: (
+                  <Text color="grey400" italicized>
+                    <FormattedMessage id="connection.saveWithoutRefresh.description" />
+                  </Text>
+                ),
+              },
+            ]}
+            selectedValue={shouldRefresh}
+            onSelectRadioButton={(value) => {
+              setShouldRefresh(value);
+            }}
+            name="shouldRefresh"
           />
-        </p>
+        </Box>
       </ModalBody>
       <ModalFooter>
         <Button onClick={onCancel} variant="secondary" data-testid="refreshModal-cancel">
           <FormattedMessage id="form.cancel" />
         </Button>
-        <Button onClick={() => onComplete(withRefresh)} data-testid="refreshModal-save">
+        <Button onClick={() => onComplete(shouldRefresh === "saveWithRefresh")} data-testid="refreshModal-save">
           <FormattedMessage id="connection.save" />
         </Button>
       </ModalFooter>

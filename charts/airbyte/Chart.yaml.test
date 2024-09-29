@@ -41,6 +41,10 @@ dependencies:
     name: temporal
     repository: "file://../airbyte-temporal"
     version: "*"
+  - condition: temporal-ui.enabled
+    name: temporal-ui
+    repository: "file://../airbyte-temporal-ui"
+    version: "*"
   - condition: webapp.enabled
     name: webapp
     repository: "file://../airbyte-webapp"
@@ -48,10 +52,6 @@ dependencies:
   - condition: server.enabled
     name: server
     repository: "file://../airbyte-server"
-    version: "*"
-  - condition: airbyte-api-server.enabled
-    name: airbyte-api-server
-    repository: "file://../airbyte-api-server"
     version: "*"
   - condition: worker.enabled
     name: worker
@@ -81,6 +81,10 @@ dependencies:
     name: connector-builder-server
     repository: "file://../airbyte-connector-builder-server"
     version: "*"
+  - condition: connector-rollout-worker.enabled
+    name: connector-rollout-worker
+    repository: "file://../airbyte-connector-rollout-worker"
+    version: "*"
   - condition: keycloak.enabled
     name: keycloak
     repository: "file://../airbyte-keycloak"
@@ -88,4 +92,8 @@ dependencies:
   - condition: keycloak-setup.enabled
     name: keycloak-setup
     repository: "file://../airbyte-keycloak-setup"
+    version: "*"
+  - condition: featureflag-server.enabled
+    name: featureflag-server
+    repository: "file://../airbyte-featureflag-server"
     version: "*"

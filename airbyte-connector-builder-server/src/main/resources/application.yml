@@ -50,7 +50,11 @@ micronaut:
       sensitive: false
 
 airbyte:
-  # connector-builder-server: uncomment when there are connector server specific environment variables we need to specify
+  connector-builder-server:
+    github:
+      airbyte-pat-token: ${BUILDER_GITHUB_AIRBYTE_PAT_TOKEN:}
+    ai-assist:
+      url-base: ${AI_ASSIST_URL_BASE:}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

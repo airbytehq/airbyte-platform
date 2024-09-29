@@ -1,4 +1,4 @@
-import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Text } from "components/ui/Text";
 
 import { useSourceDefinitionList, useDestinationDefinitionList } from "core/api";

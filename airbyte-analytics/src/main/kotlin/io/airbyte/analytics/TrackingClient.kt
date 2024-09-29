@@ -79,14 +79,7 @@ interface TrackingClient {
   )
 }
 
-const val AIRBYTE_ANALYTIC_SOURCE_HEADER = "X-Airbyte-Analytic-Source"
-const val AIRBYTE_DEPLOYMENT_ID = "deployment_id"
-const val AIRBYTE_DEPLOYMENT_MODE = "deployment_mode"
 const val AIRBYTE_ROLE = "airbyte_role"
-const val AIRBYTE_SOURCE = "airbyte_source"
-const val AIRBYTE_TRACKED_AT = "tracked_at"
-const val AIRBYTE_VERSION_KEY = "airbyte_version"
-const val CUSTOMER_ID_KEY = "user_id"
 const val INSTALLATION_ID = "installation_id"
 const val UNKNOWN = "unknown"
 
@@ -128,7 +121,6 @@ class SegmentTrackingClient(
         // deployment
         put(AIRBYTE_VERSION_KEY, deployment.getDeploymentVersion())
         put("deployment_mode", deployment.getDeploymentMode())
-        put("deployment_env", deployment.getDeploymentEnvironment())
         put("deployment_id", deployment.getDeploymentId().toString())
 
         // workspace (includes info that in the future we would store in an organization)
@@ -392,8 +384,6 @@ class Deployment(private val deploymentMetadata: DeploymentMetadataRead) {
   fun getDeploymentMode(): String = deploymentMetadata.mode
 
   fun getDeploymentId(): UUID = deploymentMetadata.id
-
-  fun getDeploymentEnvironment(): String = deploymentMetadata.environment
 
   fun getDeploymentVersion(): String = deploymentMetadata.version
 }

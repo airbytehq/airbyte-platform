@@ -1,3 +1,9 @@
-<svg fill="none" viewBox="0 0 24 24" data-icon="loadingIcon" role="img">
-    <path fill="currentColor" d="M21.6 9a1 1 0 0 0-.78 1.18 9 9 0 1 1-7-7 1.02 1.02 0 0 0 .4-2A10.8 10.8 0 0 0 12 1a11 11 0 1 0 10.78 8.8.998.998 0 0 0-1.18-.8Z"/>
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" data-icon="loadingIcon" role="img">
+    <path d="M21.6 9a1 1 0 0 0-.78 1.18 9 9 0 1 1-7-7 1.02 1.02 0 0 0 .4-2A10.8 10.8 0 0 0 12 1a11 11 0 1 0 10.78 8.8.998.998 0 0 0-1.18-.8Z" fill="url(#gradient_fill)"/>
+    <defs>
+        <linearGradient id="gradient_fill" x1="1" y1="12" x2="23" y2="12" gradientUnits="userSpaceOnUse">
+            <stop stop-color="var(--start-color, currentColor)"/>
+            <stop offset="1" stop-color="var(--stop-color, currentColor)"/>
+        </linearGradient>
+    </defs>
 </svg>

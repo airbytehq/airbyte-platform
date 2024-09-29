@@ -10,7 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.config.FailureReason;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage.Type;
@@ -37,7 +36,7 @@ class AirbyteMessageTrackerTest {
   @BeforeEach
   void setup() {
     this.messageTracker =
-        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), "airbyte/source-image", "airbyte/destination-image");
+        new AirbyteMessageTracker(syncStatsTracker, false, false, "airbyte/source-image", "airbyte/destination-image");
   }
 
   @Test

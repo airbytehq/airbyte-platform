@@ -4,20 +4,22 @@ export const intentToRbacQuery = {
   // organization
   ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "MEMBER" },
   UpdateConnectorVersions: { resourceType: "ORGANIZATION", role: "ADMIN" }, // this setting is currently instance-wide, but we've decided to scope to organization permissions for now
-  UploadCustomConnector: { resourceType: "ORGANIZATION", role: "ADMIN" },
   UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
   UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
+  ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
 
   // workspace
+  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
   DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
+  DownloadDiagnostics: { resourceType: "WORKSPACE", role: "READER" },
   UpdateWorkspace: [
     { resourceType: "WORKSPACE", role: "ADMIN" },
     { resourceType: "ORGANIZATION", role: "EDITOR" },
   ],
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
+  UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
-  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
 
   // builder
   CreateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
@@ -33,6 +35,6 @@ export const intentToRbacQuery = {
 
   // connection
   CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
+  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
 } as const;

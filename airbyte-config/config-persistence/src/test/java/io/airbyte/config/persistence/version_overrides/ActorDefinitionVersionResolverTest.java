@@ -17,7 +17,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
@@ -47,10 +46,6 @@ class ActorDefinitionVersionResolverTest {
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "key", "value")));
   private static final String DOCS_URL = "https://airbyte.io/docs/";
-  private static final NormalizationDestinationDefinitionConfig NORMALIZATION_CONFIG = new NormalizationDestinationDefinitionConfig()
-      .withNormalizationRepository("airbyte/normalization")
-      .withNormalizationTag("tag")
-      .withNormalizationIntegrationType("bigquery");
   private static final AllowedHosts ALLOWED_HOSTS = new AllowedHosts().withHosts(List.of("https://airbyte.io"));
   private static final SuggestedStreams SUGGESTED_STREAMS = new SuggestedStreams().withStreams(List.of("users"));
   private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
@@ -62,9 +57,7 @@ class ActorDefinitionVersionResolverTest {
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withAllowedHosts(ALLOWED_HOSTS)
-      .withSupportsDbt(true)
-      .withNormalizationConfig(NORMALIZATION_CONFIG);
+      .withAllowedHosts(ALLOWED_HOSTS);
 
   private static final ConnectorRegistrySourceDefinition REGISTRY_DEF = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(ACTOR_DEFINITION_ID)

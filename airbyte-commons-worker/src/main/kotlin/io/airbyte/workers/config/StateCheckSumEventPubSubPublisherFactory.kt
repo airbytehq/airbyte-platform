@@ -28,9 +28,9 @@ class StateCheckSumEventPubSubPublisherFactory {
   ): Supplier<Publisher> {
     val batchingSettings =
       BatchingSettings.newBuilder()
-        .setElementCountThreshold(Math.min(messageCountBatchSize.toLong(), MAX_BATCH_SIZE))
-        .setRequestByteThreshold(Math.min(requestBytesThreshold.toLong(), MAX_BYTES_THRESHOLD))
-        .setDelayThreshold(Duration.ofMillis(Math.min(publishDelayThreshold.toLong(), MAX_DELAY_THRESHOLD)))
+        .setElementCountThreshold(messageCountBatchSize.toLong().coerceAtMost(MAX_BATCH_SIZE))
+        .setRequestByteThreshold(requestBytesThreshold.toLong().coerceAtMost(MAX_BYTES_THRESHOLD))
+        .setDelayThreshold(Duration.ofMillis(publishDelayThreshold.toLong().coerceAtMost(MAX_DELAY_THRESHOLD)))
         .build()
 
     return Supplier {

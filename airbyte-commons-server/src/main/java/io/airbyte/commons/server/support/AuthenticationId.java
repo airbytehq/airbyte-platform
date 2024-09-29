@@ -10,7 +10,6 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNEC
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
@@ -34,7 +33,6 @@ public enum AuthenticationId {
   CONNECTION_IDS(AuthenticationFields.CONNECTION_IDS_FIELD_NAME, CONNECTION_IDS_HEADER),
 
   DESTINATION_ID_(AuthenticationFields.DESTINATION_ID_FIELD_NAME, DESTINATION_ID_HEADER),
-  EMAIL(AuthenticationFields.EMAIL_FIELD_NAME, EMAIL_HEADER),
   JOB_ID(AuthenticationFields.JOB_ID_FIELD_NAME, JOB_ID_HEADER),
   JOB_ID_ALT(AuthenticationFields.JOB_ID_ALT_FIELD_NAME, JOB_ID_HEADER),
   OPERATION_ID(AuthenticationFields.OPERATION_ID_FIELD_NAME, OPERATION_ID_HEADER),

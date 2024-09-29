@@ -66,7 +66,7 @@ class KeycloakSetupTest {
     when(httpClient.toBlocking().exchange(any(HttpRequest.class), eq(String.class)))
         .thenThrow(new HttpClientResponseException("Error", HttpResponse.serverError()));
 
-    assertThrows(HttpClientResponseException.class, () -> keycloakSetup.run());
+    assertThrows(HttpClientResponseException.class, keycloakSetup::run);
 
     verify(keycloakServer).getKeycloakServerUrl();
     verify(httpClient.toBlocking()).exchange(any(HttpRequest.class), eq(String.class));

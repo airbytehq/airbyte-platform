@@ -8,9 +8,9 @@ import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
@@ -26,11 +26,16 @@ import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -42,6 +47,8 @@ class ClaimedProcessor(
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
   @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
   private val claimProcessorTracker: ClaimProcessorTracker,
+  @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration = 5.seconds.toJavaDuration(),
+  @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration = 60.seconds.toJavaDuration(),
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -54,22 +61,7 @@ class ClaimedProcessor(
         listOf(WorkloadStatus.CLAIMED),
       )
 
-    val workloadList: WorkloadListResponse =
-      Failsafe.with(
-        RetryPolicy.builder<Any>()
-          .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
-          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
-          .abortOn { exception ->
-            when (exception) {
-              // This makes us to retry only on 5XX errors
-              is ServerException -> exception.statusCode / 100 != 5
-              else -> true
-            }
-          }
-          .build(),
-      )
-        .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
-
+    val workloadList = getWorkloadList(workloadListRequest)
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
     claimProcessorTracker.trackNumberOfClaimsToResume(workloadList.workloads.size)
 
@@ -101,5 +93,27 @@ class ClaimedProcessor(
     val commonTags = hashMapOf<String, Any>()
     commonTags[DATA_PLANE_ID_TAG] = dataplaneId
     ApmTraceUtils.addTagsToTrace(commonTags)
+  }
+
+  private fun getWorkloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse {
+    return Failsafe.with(
+      RetryPolicy.builder<Any>()
+        .withBackoff(backoffDuration, backoffMaxDelay)
+        .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+        .withMaxAttempts(-1)
+        .abortOn { exception ->
+          when (exception) {
+            // This makes us to retry only on 5XX errors
+            is ServerException -> exception.statusCode / 100 != 5
+
+            // We want to retry on most network errors
+            is SocketException -> false
+            is SocketTimeoutException -> false
+            else -> true
+          }
+        }
+        .build(),
+    )
+      .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
   }
 }

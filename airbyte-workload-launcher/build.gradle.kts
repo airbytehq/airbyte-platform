@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
@@ -33,20 +31,21 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
   implementation(platform(libs.micronaut.platform))
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-micronaut-temporal"))
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-storage"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-micronaut-temporal"))
+  implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
@@ -67,25 +66,20 @@ dependencies {
   testImplementation(libs.kotlin.test.runner.junit5)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(project(":airbyte-json-validation"))
+  testImplementation(project(":oss:airbyte-json-validation"))
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
-}
-
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
+  testImplementation(libs.jakarta.ws.rs.api)
 }
 
 airbyte {
   application {
     mainClass.set("io.airbyte.workload.launcher.ApplicationKt")
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
         "MICRONAUT_ENVIRONMENTS" to "test"
       )

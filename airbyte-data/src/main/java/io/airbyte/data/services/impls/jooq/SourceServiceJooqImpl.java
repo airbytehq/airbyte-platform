@@ -597,6 +597,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardSourceDefinition.getSourceDefinitionId()))
             .execute();
 
@@ -622,6 +625,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .execute();
       }
     });
@@ -705,6 +711,48 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   /**
+   * Delete source: tombstone source AND delete secrets
+   *
+   * @param name Source name
+   * @param workspaceId workspace ID
+   * @param sourceId source ID
+   * @param spec spec for the destination
+   * @throws JsonValidationException if the config is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
+  @Override
+  public void tombstoneSource(
+                              final String name,
+                              final UUID workspaceId,
+                              final UUID sourceId,
+                              final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException {
+    // 1. Delete secrets from config
+    final SourceConnection sourceConnection = getSourceConnection(sourceId);
+    final JsonNode config = sourceConnection.getConfiguration();
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(workspaceId);
+    RuntimeSecretPersistence secretPersistence = null;
+    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+    }
+    secretsRepositoryWriter.deleteFromConfig(
+        config,
+        spec.getConnectionSpecification(),
+        secretPersistence);
+
+    // 2. Tombstone source and void config
+    final SourceConnection newSourceConnection = new SourceConnection()
+        .withName(name)
+        .withSourceDefinitionId(sourceConnection.getSourceDefinitionId())
+        .withWorkspaceId(workspaceId)
+        .withSourceId(sourceId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    writeSourceConnectionNoSecrets(newSourceConnection);
+  }
+
+  /**
    * Write a source with its secrets to the appropriate persistence. Secrets go to secrets store and
    * the rest of the object (with pointers to the secrets store) get saved in the db.
    *
@@ -728,7 +776,6 @@ public class SourceServiceJooqImpl implements SourceService {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
-
     final JsonNode partialConfig;
     if (previousSourceConnection.isPresent()) {
       partialConfig = secretsRepositoryWriter.updateFromConfig(

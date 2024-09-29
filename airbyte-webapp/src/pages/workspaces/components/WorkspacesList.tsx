@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { FormattedMessage } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -9,6 +10,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { WorkspaceRead } from "core/api/types/AirbyteClient";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
+import { trackTiming } from "core/utils/datadog";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 
@@ -24,6 +26,9 @@ export const WorkspacesList: React.FC<WorkspacesListProps> = ({
   hasNextPage,
   isLoading,
 }) => {
+  useEffectOnce(() => {
+    trackTiming("CloudWorkspacesList");
+  });
   const { ref, inView } = useInView();
 
   useEffect(() => {

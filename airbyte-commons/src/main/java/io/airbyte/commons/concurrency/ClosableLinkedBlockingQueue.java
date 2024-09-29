@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.concurrency;
 
-import java.util.OptionalInt;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -16,17 +16,17 @@ import org.slf4j.LoggerFactory;
 public class ClosableLinkedBlockingQueue<T> implements ClosableQueue<T> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ClosableLinkedBlockingQueue.class);
-  private static final int DEFAULT_POLL_TIME_OUT_DURATION_SECONDS = 5;
-  private final LinkedBlockingQueue<T> queue;
+  public static final int DEFAULT_POLL_TIME_OUT_DURATION_SECONDS = 5;
+  private final BlockingQueue<T> queue;
 
   private final AtomicBoolean closed;
   private final ReadWriteLock closedLock;
   private final int timeOutDuration;
 
-  public ClosableLinkedBlockingQueue(int maxQueueSize, OptionalInt pollTimeOutDurationInSeconds) {
+  public ClosableLinkedBlockingQueue(int maxQueueSize, int pollTimeOutDurationInSeconds) {
     LOGGER.info("Using ClosableLinkedBlockingQueue");
     this.queue = new LinkedBlockingQueue<>(maxQueueSize);
-    this.timeOutDuration = pollTimeOutDurationInSeconds.orElse(DEFAULT_POLL_TIME_OUT_DURATION_SECONDS);
+    this.timeOutDuration = pollTimeOutDurationInSeconds;
     this.closed = new AtomicBoolean();
     this.closedLock = new ReentrantReadWriteLock();
   }

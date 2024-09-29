@@ -7,10 +7,10 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STREAM_RESET;
 import static org.jooq.impl.DSL.noCondition;
 
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamResetRecord;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;

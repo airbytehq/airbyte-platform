@@ -1,18 +1,19 @@
-import { createColumnHelper } from "@tanstack/react-table";
-import React from "react";
+import { CellContext, ColumnDefTemplate, createColumnHelper } from "@tanstack/react-table";
+import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Link } from "components/ui/Link";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { RoutePaths } from "pages/routePaths";
 
-import { ConnectionStatusCell } from "./components/ConnectionStatusCell";
-import { ConnectorNameCell } from "./components/ConnectorNameCell";
+import { ConnectionStatus } from "./components/ConnectionStatus";
+import { ConnectorName } from "./components/ConnectorName";
+import { EntityWarningsCell } from "./components/EntityWarningsCell";
 import { FrequencyCell } from "./components/FrequencyCell";
-import { LastSyncCell } from "./components/LastSyncCell";
-import { SchemaChangeCell } from "./components/SchemaChangeCell";
+import { LastSync } from "./components/LastSync";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
@@ -30,6 +31,29 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
 
+  const EntityNameCell = useMemo<ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>>>(
+    () =>
+      // eslint-disable-next-line react/function-component-definition -- using function as it provides the component's DisplayName
+      function EntityNameCell(props) {
+        return (
+          <Link
+            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+            variant="primary"
+            className={styles.cellContent}
+          >
+            <ConnectorName
+              value={props.cell.getValue()}
+              actualName={props.row.original.connection.source?.sourceName ?? ""}
+              icon={props.row.original.entityIcon}
+              enabled={props.row.original.enabled}
+              hideIcon={entity !== "connection"}
+            />
+          </Link>
+        );
+      },
+    [createLink, entity]
+  );
+
   const columns = React.useMemo(
     () => [
       columnHelper.display({
@@ -44,19 +68,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           responsive: true,
           noPadding: true,
         },
-        cell: (props) => (
-          <Link
-            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-            variant="primary"
-            className={styles.cellContent}
-          >
-            <ConnectionStatusCell
-              status={props.row.original.lastSyncStatus}
-              value={props.cell.getValue()}
-              enabled={props.row.original.enabled}
-            />
-          </Link>
-        ),
+        cell: NameCell,
         sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("entityName", {
@@ -70,21 +82,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           responsive: true,
           noPadding: true,
         },
-        cell: (props) => (
-          <Link
-            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-            variant="primary"
-            className={styles.cellContent}
-          >
-            <ConnectorNameCell
-              value={props.cell.getValue()}
-              actualName={props.row.original.connection.source?.sourceName ?? ""}
-              icon={props.row.original.entityIcon}
-              enabled={props.row.original.enabled}
-              hideIcon={entity !== "connection"}
-            />
-          </Link>
-        ),
+        cell: EntityNameCell,
         sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("connectorName", {
@@ -96,20 +94,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           responsive: true,
           noPadding: true,
         },
-        cell: (props) => (
-          <Link
-            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-            variant="primary"
-            className={styles.cellContent}
-          >
-            <ConnectorNameCell
-              value={props.cell.getValue()}
-              actualName={props.row.original.connection.destination?.destinationName ?? ""}
-              icon={props.row.original.connectorIcon}
-              enabled={props.row.original.enabled}
-            />
-          </Link>
-        ),
+        cell: ConnectorNameCell,
         sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("scheduleData", {
@@ -118,31 +103,11 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         meta: {
           noPadding: true,
         },
-        cell: (props) => (
-          <Link
-            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-            variant="primary"
-            className={styles.cellContent}
-          >
-            <FrequencyCell
-              value={props.cell.getValue()}
-              enabled={props.row.original.enabled}
-              scheduleType={props.row.original.scheduleType}
-            />
-          </Link>
-        ),
+        cell: FrequencyCell,
       }),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
-        cell: (props) => (
-          <Link
-            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-            variant="primary"
-            className={styles.cellContent}
-          >
-            <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
-          </Link>
-        ),
+        cell: LastSyncCell,
         meta: {
           thClassName: styles.width20,
           noPadding: true,
@@ -154,34 +119,25 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         meta: {
           thClassName: styles.thEnabled,
         },
-        cell: (props) => (
-          <StateSwitchCell
-            connectionId={props.row.original.connectionId}
-            enabled={props.cell.getValue()}
-            schemaChange={props.row.original.schemaChange}
-          />
-        ),
+        cell: StateSwitchCell,
         enableSorting: false,
       }),
-      columnHelper.accessor("schemaChange", {
+      columnHelper.accessor("connection", {
         header: "",
         meta: {
           thClassName: styles.thConnectionSettings,
         },
-        cell: (props) => (
-          <SchemaChangeCell
-            connectionId={props.row.original.connectionId}
-            schemaChange={props.row.original.schemaChange}
-          />
-        ),
+        cell: EntityWarningsCell,
         enableSorting: false,
       }),
     ],
-    [columnHelper, createLink, entity]
+    [columnHelper, entity, EntityNameCell]
   );
 
+  const customScrollParent = useContext(ScrollParentContext);
   return (
     <Table
+      rowId="connectionId"
       variant={variant}
       columns={columns}
       data={data}
@@ -189,8 +145,60 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnVisibility={{ "stream-status": streamCentricUIEnabled }}
       className={styles.connectionsTable}
       initialSortBy={[{ id: "entityName", desc: false }]}
+      virtualized={!!customScrollParent}
+      virtualizedProps={{
+        customScrollParent: customScrollParent ?? undefined,
+      }}
     />
   );
 };
 
 export default ConnectionTable;
+
+const NameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>> = (props) => {
+  const createLink = useCurrentWorkspaceLink();
+  return (
+    <Link
+      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+      variant="primary"
+      className={styles.cellContent}
+    >
+      <ConnectionStatus
+        status={props.row.original.lastSyncStatus}
+        value={props.cell.getValue()}
+        enabled={props.row.original.enabled}
+      />
+    </Link>
+  );
+};
+
+const ConnectorNameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>> = (props) => {
+  const createLink = useCurrentWorkspaceLink();
+  return (
+    <Link
+      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+      variant="primary"
+      className={styles.cellContent}
+    >
+      <ConnectorName
+        value={props.cell.getValue()}
+        actualName={props.row.original.connection.destination?.destinationName ?? ""}
+        icon={props.row.original.connectorIcon}
+        enabled={props.row.original.enabled}
+      />
+    </Link>
+  );
+};
+
+const LastSyncCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, number | null | undefined>> = (props) => {
+  const createLink = useCurrentWorkspaceLink();
+  return (
+    <Link
+      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+      variant="primary"
+      className={styles.cellContent}
+    >
+      <LastSync timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
+    </Link>
+  );
+};

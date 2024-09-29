@@ -1,9 +1,12 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
+
+import { trackTiming } from "core/utils/datadog";
 
 import styles from "./CreditsUsage.module.scss";
 import { useCreditsContext } from "./CreditsUsageContext";
@@ -13,11 +16,15 @@ import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 export const CreditsUsage: React.FC = () => {
-  const { freeAndPaidUsageByTimeChunk, hasFreeUsage } = useCreditsContext();
+  const { freeAndPaidUsageByTimeChunk, hasFreeUsage, freeAndPaidUsageByConnection } = useCreditsContext();
+
+  useEffectOnce(() => {
+    trackTiming("CreditUsage");
+  });
 
   return (
     <Card className={styles.card}>
-      <Box pt="xl">
+      <Box pt="xl" px="lg">
         <CreditsUsageFilters />
       </Box>
       {freeAndPaidUsageByTimeChunk.length > 0 ? (
@@ -36,7 +43,7 @@ export const CreditsUsage: React.FC = () => {
                 <FormattedMessage id="credits.usagePerConnection" />
               </Heading>
             </Box>
-            <UsagePerConnectionTable />
+            <UsagePerConnectionTable freeAndPaidUsageByConnection={freeAndPaidUsageByConnection} />
           </Box>
         </>
       ) : (

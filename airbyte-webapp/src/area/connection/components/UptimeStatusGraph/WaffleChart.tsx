@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { ChartOffset } from "recharts/types/util/types";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
-// Rough idea for the data structure we'll get from API
 export interface ChartStream {
   streamNamespace?: string;
   streamName: string;
-  status: ConnectionStatusIndicatorStatus;
+  status: StreamStatusType;
 }
 export interface UptimeDayEntry {
   date: number;
@@ -40,30 +39,28 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   isTooltipActive: boolean;
 }
 
-type WaffleColor = "green" | "darkBlue" | "red" | "black" | "empty";
-const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColor => {
+type WaffleColor = "green" | "red" | "yellow" | "blue" | "empty";
+const getCellColor = (streamStatus: StreamStatusType): WaffleColor => {
   switch (streamStatus) {
-    case ConnectionStatusIndicatorStatus.OnTime:
-    case ConnectionStatusIndicatorStatus.OnTrack:
+    case StreamStatusType.Synced:
       return "green";
 
-    case ConnectionStatusIndicatorStatus.Late:
-      return "darkBlue";
+    case StreamStatusType.Incomplete:
+      return "yellow";
 
-    case ConnectionStatusIndicatorStatus.Error:
+    case StreamStatusType.Failed:
       return "red";
 
-    case ConnectionStatusIndicatorStatus.ActionRequired:
-      return "black";
+    case StreamStatusType.Queued:
+    case StreamStatusType.Syncing:
+    case StreamStatusType.Refreshing:
+    case StreamStatusType.RateLimited:
+      return "blue";
 
-    case ConnectionStatusIndicatorStatus.Disabled:
-    case ConnectionStatusIndicatorStatus.Pending:
-    case ConnectionStatusIndicatorStatus.Paused:
-    case ConnectionStatusIndicatorStatus.Queued:
-    case ConnectionStatusIndicatorStatus.QueuedForNextSync:
-    case ConnectionStatusIndicatorStatus.Syncing:
-    case ConnectionStatusIndicatorStatus.Clearing:
-    case ConnectionStatusIndicatorStatus.Refreshing:
+    case StreamStatusType.Pending:
+    case StreamStatusType.Paused:
+    case StreamStatusType.QueuedForNextSync:
+    case StreamStatusType.Clearing:
       return "empty";
   }
 };
@@ -104,10 +101,15 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
       const computeCellOperation = (
         columnIndex: number,
         rowIndex: number,
-        status: ConnectionStatusIndicatorStatus,
+        status: StreamStatusType,
         skipRecurse = false
-      ): CellOperation => {
+      ): CellOperation | null => {
         const cellOffset = rowIndex * cellHeight;
+
+        if (columnIndex >= orderedTooltipTicks.length) {
+          return null;
+        }
+
         const xCoordinate = orderedTooltipTicks[columnIndex].coordinate;
 
         const myOperation = {
@@ -127,6 +129,10 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
           // vertical correction
           if (CELL_VERTICAL_GAP > 0 && rowIndex < streamsCount - 1) {
             const siblingOperationY = computeCellOperation(columnIndex, rowIndex + 1, status, true);
+            if (!siblingOperationY) {
+              return null;
+            }
+
             const gapY = siblingOperationY.y - (myOperation.y + myOperation.height);
             const extraGapY = CELL_VERTICAL_GAP - gapY;
             myOperation.height -= extraGapY;
@@ -159,7 +165,12 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
             const { status } = streams[j];
 
             const operation = computeCellOperation(i, rowOffset + j, status);
-            if (status === ConnectionStatusIndicatorStatus.OnTime) {
+
+            if (!operation) {
+              continue;
+            }
+
+            if (status === StreamStatusType.Synced) {
               ontimeOperations.push(operation);
             } else {
               otherOperations.push(operation);
@@ -176,10 +187,12 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
 
         // tooltip highlight
         if (isTooltipActive && activeTooltipIndex >= 0) {
-          const coordinates = computeCellOperation(activeTooltipIndex, 0, ConnectionStatusIndicatorStatus.OnTime);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
-          ctx.restore();
+          const coordinates = computeCellOperation(activeTooltipIndex, 0, StreamStatusType.Synced);
+          if (coordinates) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
+            ctx.restore();
+          }
         }
       }
     }

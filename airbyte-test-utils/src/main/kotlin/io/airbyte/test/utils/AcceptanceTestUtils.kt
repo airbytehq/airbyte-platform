@@ -32,7 +32,7 @@ private val logger = KotlinLogging.logger {}
 object AcceptanceTestUtils {
   private const val JITTER_MAX_INTERVAL_SECS: Int = 10
   private const val MAX_TRIES: Int = 3
-  private const val DEFAULT_TIMEOUT: Long = 30L
+  private const val DEFAULT_TIMEOUT: Long = 60L
 
   // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
   private const val IS_ENTERPRISE: String = "IS_ENTERPRISE"
@@ -141,29 +141,26 @@ object AcceptanceTestUtils {
     streamFilter: Optional<Predicate<AirbyteStreamAndConfiguration>> = Optional.empty(),
   ): AirbyteCatalog {
     val updatedStreams: List<AirbyteStreamAndConfiguration> =
-      originalCatalog?.let { orig ->
-        orig.streams.stream().map { s: AirbyteStreamAndConfiguration ->
-          val config = s.config
-          val newConfig =
-            AirbyteStreamConfiguration(
-              replacementSourceSyncMode.orElse(config!!.syncMode),
-              replacementDestinationSyncMode.orElse(config.destinationSyncMode),
-              replacementCursorFields.orElse(config.cursorField),
-              replacementPrimaryKeys.orElse(config.primaryKey),
-              config.aliasName,
-              replacementSelected.orElse(config.selected),
-              config.suggested,
-              replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
-              replacementSelectedFields.orElse(config.selectedFields),
-              replacementMinimumGenerationId.orElse(config.minimumGenerationId),
-              replacementGenerationId.orElse(config.generationId),
-              replacementSyncId.orElse(config.syncId),
-            )
-          AirbyteStreamAndConfiguration(s.stream, newConfig)
-        }
-          .filter(streamFilter.orElse { true })
-          .toList()
-      } ?: emptyList()
+      originalCatalog?.streams?.stream()?.map { s: AirbyteStreamAndConfiguration ->
+        val config = s.config
+        val newConfig =
+          AirbyteStreamConfiguration(
+            replacementSourceSyncMode.orElse(config!!.syncMode),
+            replacementDestinationSyncMode.orElse(config.destinationSyncMode),
+            replacementCursorFields.orElse(config.cursorField),
+            replacementPrimaryKeys.orElse(config.primaryKey),
+            config.aliasName,
+            replacementSelected.orElse(config.selected),
+            config.suggested,
+            replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
+            replacementSelectedFields.orElse(config.selectedFields),
+            config.hashedFields,
+            replacementMinimumGenerationId.orElse(config.minimumGenerationId),
+            replacementGenerationId.orElse(config.generationId),
+            replacementSyncId.orElse(config.syncId),
+          )
+        AirbyteStreamAndConfiguration(s.stream, newConfig)
+      }?.filter(streamFilter.orElse { true })?.toList() ?: emptyList()
     return AirbyteCatalog(updatedStreams)
   }
 
@@ -180,12 +177,12 @@ object AcceptanceTestUtils {
             append(" body: ${buffer.readUtf8()}")
           }
         }
-      logger.info(requestLogMessage)
+      logger.info { requestLogMessage }
 
       val response: Response = chain.proceed(request)
       // we don't log the response body because it can be very large which can heavily increase
       // the test duration + it doesn't add a lot of information
-      logger.info("Response: ${response.code} ${request.url} ")
+      logger.info { "Response: ${response.code} ${request.url} " }
 
       return response
     }

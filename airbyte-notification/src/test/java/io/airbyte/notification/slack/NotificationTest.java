@@ -19,10 +19,10 @@ import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-public class NotificationTest {
+class NotificationTest {
 
   @Test
-  public void testTextSerialization() throws JsonProcessingException {
+  void testTextSerialization() throws JsonProcessingException {
     Notification notification = new Notification();
     notification.setText("test content");
 
@@ -34,7 +34,7 @@ public class NotificationTest {
   }
 
   @Test
-  public void testBlockSerialization() throws JsonProcessingException {
+  void testBlockSerialization() throws JsonProcessingException {
     Notification notification = new Notification();
     notification.setText("A text node");
 
@@ -84,7 +84,7 @@ public class NotificationTest {
   }
 
   @Test
-  public void testDataNode() throws JsonProcessingException {
+  void testDataNode() throws JsonProcessingException {
 
     UUID workspaceId = UUID.fromString("b510e39b-e9e2-4833-9a3a-963e51d35fb4");
     UUID connectionId = UUID.fromString("64d901a1-2520-4d91-93c8-9df438668ff0");

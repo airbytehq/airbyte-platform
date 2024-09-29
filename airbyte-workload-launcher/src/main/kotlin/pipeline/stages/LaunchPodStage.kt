@@ -11,14 +11,11 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
-import io.airbyte.workload.launcher.pods.PodClient
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.workload.launcher.pods.KubePodClient
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Launches the pods for the workload, serializing and passing through input
@@ -27,7 +24,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("launch")
 open class LaunchPodStage(
-  private val launcher: PodClient,
+  private val launcher: KubePodClient,
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
 ) : LaunchStage(metricPublisher, dataplaneId) {
@@ -42,10 +39,13 @@ open class LaunchPodStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    val payload = input.payload!!
-
-    when (payload) {
-      is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
+    when (val payload = input.payload!!) {
+      is SyncPayload ->
+        if (payload.input.isReset) {
+          launcher.launchReset(payload.input, input.msg)
+        } else {
+          launcher.launchReplication(payload.input, input.msg)
+        }
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
       is SpecPayload -> launcher.launchSpec(payload.input, input.msg)

@@ -8,18 +8,20 @@ import { useEffectOnce, useMount } from "react-use";
 import { CreateConnectionFormControls } from "components/connection/ConnectionForm/CreateConnectionFormControls";
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { SyncCatalogCard } from "components/connection/ConnectionForm/SyncCatalogCard";
-import { DESTINATION_ID_PARAM } from "components/connection/CreateConnection/SelectDestination";
-import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/SelectSource";
+import { DESTINATION_ID_PARAM } from "components/connection/CreateConnection/DefineDestination";
+import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { ScrollParent } from "components/ui/ScrollParent";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -28,7 +30,8 @@ import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
-import { SyncCatalogCardNext } from "../../ConnectionForm/SyncCatalogCardNext";
+import { ScrollableContainer } from "../../../ScrollableContainer";
+import { SyncCatalogTable } from "../../ConnectionForm/SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
 export const SimplifiedConnectionConfiguration: React.FC = () => {
@@ -58,7 +61,10 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
+
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
@@ -69,15 +75,25 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <>
-      <Card
-        title={formatMessage({ id: "connectionForm.selectSyncMode" })}
-        helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
-      >
-        <SimplifiedSchemaQuestionnaire />
-      </Card>
-      {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-    </>
+    <ScrollParent props={{ className: styles.container }}>
+      <FlexContainer direction="column" gap="lg">
+        <Card
+          title={formatMessage({ id: "connectionForm.selectSyncMode" })}
+          helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
+        >
+          <SimplifiedSchemaQuestionnaire />
+        </Card>
+        {useSyncCatalogV2 ? (
+          <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+            <Box mb="xl" data-testid="catalog-tree-table-body">
+              <SyncCatalogTable />
+            </Box>
+          </Card>
+        ) : (
+          <SyncCatalogCard />
+        )}
+      </FlexContainer>
+    </ScrollParent>
   );
 };
 
@@ -96,12 +112,14 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   });
 
   return (
-    <SimplifiedConnectionsSettingsCard
-      title={formatMessage({ id: "connectionForm.configureConnection" })}
-      source={source}
-      destination={destination}
-      isCreating
-    />
+    <ScrollableContainer className={styles.container}>
+      <SimplifiedConnectionsSettingsCard
+        title={formatMessage({ id: "connectionForm.configureConnection" })}
+        source={source}
+        destination={destination}
+        isCreating
+      />
+    </ScrollableContainer>
   );
 };
 
@@ -129,48 +147,50 @@ const FirstNav: React.FC = () => {
   });
 
   return (
-    <FlexContainer justifyContent="space-between">
-      <Link
-        to={{
-          pathname: createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`),
-          search: `?${SOURCE_ID_PARAM}=${source.sourceId}`,
-        }}
-        className={classNames(styles.linkText)}
-      >
-        <FormattedMessage id="connectionForm.backToDefineDestination" />
-      </Link>
-      <div>
-        {errorMessage && !canProceed /* if the error message applies to this view */ && (
-          <Box as="span" mr="lg">
-            <Text color="red" size="lg" as="span">
-              {errorMessage}
-            </Text>
-          </Box>
-        )}
-        {canProceed ? (
-          <Link
-            to={{
-              pathname: createLink(
-                `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/${ConnectionRoutePaths.ConfigureContinued}`
-              ),
-              search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
-            }}
-            className={classNames(styles.nextLink)}
-            onClick={() => {
-              // we're navigating to the next step which retains the creation form's state
-              clearFormChange(CREATE_CONNECTION_FORM_ID);
-            }}
-            data-testid="next-creation-page"
-          >
-            <FormattedMessage id="connectionForm.nextButton" />
-          </Link>
-        ) : (
-          <Button disabled data-testid="next-creation-page">
-            <FormattedMessage id="connectionForm.nextButton" />
-          </Button>
-        )}
-      </div>
-    </FlexContainer>
+    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
+      <FlexContainer justifyContent="space-between">
+        <Link
+          to={{
+            pathname: createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`),
+            search: `?${SOURCE_ID_PARAM}=${source.sourceId}`,
+          }}
+          variant="button"
+        >
+          <FormattedMessage id="connectionForm.backToDefineDestination" />
+        </Link>
+        <div>
+          {errorMessage && !canProceed /* if the error message applies to this view */ && (
+            <Box as="span" mr="lg">
+              <Text color="red" size="lg" as="span">
+                {errorMessage}
+              </Text>
+            </Box>
+          )}
+          {canProceed ? (
+            <Link
+              to={{
+                pathname: createLink(
+                  `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/${ConnectionRoutePaths.ConfigureContinued}`
+                ),
+                search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
+              }}
+              className={classNames(styles.nextLink)}
+              onClick={() => {
+                // we're navigating to the next step which retains the creation form's state
+                clearFormChange(CREATE_CONNECTION_FORM_ID);
+              }}
+              data-testid="next-creation-page"
+            >
+              <FormattedMessage id="connectionForm.nextButton" />
+            </Link>
+          ) : (
+            <Button disabled data-testid="next-creation-page">
+              <FormattedMessage id="connectionForm.nextButton" />
+            </Button>
+          )}
+        </div>
+      </FlexContainer>
+    </Box>
   );
 };
 
@@ -181,23 +201,25 @@ const SecondNav: React.FC = () => {
   const { clearFormChange } = useFormChangeTrackerService();
 
   return (
-    <FlexContainer justifyContent="space-between">
-      <Link
-        to={{
-          pathname: createLink(
-            `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`
-          ),
-          search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
-        }}
-        className={classNames(styles.linkText)}
-        onClick={() => {
-          // we're navigating to the previous step which retains the creation form's state
-          clearFormChange(CREATE_CONNECTION_FORM_ID);
-        }}
-      >
-        <FormattedMessage id="connectionForm.backToSetupSchema" />
-      </Link>
-      <CreateConnectionFormControls />
-    </FlexContainer>
+    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
+      <FlexContainer justifyContent="space-between">
+        <Link
+          to={{
+            pathname: createLink(
+              `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`
+            ),
+            search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
+          }}
+          variant="button"
+          onClick={() => {
+            // we're navigating to the previous step which retains the creation form's state
+            clearFormChange(CREATE_CONNECTION_FORM_ID);
+          }}
+        >
+          <FormattedMessage id="connectionForm.backToSetupSchema" />
+        </Link>
+        <CreateConnectionFormControls />
+      </FlexContainer>
+    </Box>
   );
 };

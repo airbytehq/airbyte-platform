@@ -9,11 +9,11 @@ dependencies {
 
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(libs.okhttp)
   implementation("org.apache.httpcomponents:httpclient:4.5.13")
   implementation("org.commonmark:commonmark:0.21.0")

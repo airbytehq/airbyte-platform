@@ -1,10 +1,16 @@
-import { Listbox } from "@headlessui/react";
+import {
+  Listbox,
+  ListboxOption as OriginalListboxOption,
+  ListboxButton as OriginalListboxButton,
+  ListboxOptions as OriginalListboxOptions,
+} from "@headlessui/react";
 import { Float, FloatProps } from "@headlessui-float/react";
 import classNames from "classnames";
+import debounce from "lodash/debounce";
 import isEqual from "lodash/isEqual";
-import React, { ComponentPropsWithoutRef, useMemo } from "react";
+import React, { ComponentPropsWithoutRef, useCallback, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
-import { IndexLocationWithAlign, Virtuoso } from "react-virtuoso";
+import { IndexLocationWithAlign, Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
 import { Text } from "components/ui/Text";
 
@@ -90,7 +96,7 @@ export interface ListBoxProps<T> {
   onFocus?: () => void;
 }
 
-const MIN_OPTIONS_FOR_VIRTUALIZATION = 30;
+export const MIN_OPTIONS_FOR_VIRTUALIZATION = 30;
 
 export const ListBox = <T,>({
   className,
@@ -113,14 +119,17 @@ export const ListBox = <T,>({
   footerOption,
   onFocus,
 }: ListBoxProps<T>) => {
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const selectedOption = options.find((option) => isEqual(option.value, selectedValue));
+  const searchTerm = useRef("");
 
   const onOnSelect = (value: T) => {
     onSelect(value);
   };
 
   const ListBoxOption: React.FC<Option<T>> = ({ label, value, icon, disabled, ...restOptionProps }, index) => (
-    <Listbox.Option
+    <OriginalListboxOption
+      as="li"
       key={typeof label === "string" ? label : index}
       value={value}
       disabled={disabled}
@@ -146,7 +155,7 @@ export const ListBox = <T,>({
           </Text>
         </FlexContainer>
       )}
-    </Listbox.Option>
+    </OriginalListboxOption>
   );
 
   const isVirtualized = useMemo(() => options.length > MIN_OPTIONS_FOR_VIRTUALIZATION, [options.length]);
@@ -158,6 +167,33 @@ export const ListBox = <T,>({
     const index = options.findIndex((option) => isEqual(option.value, selectedValue));
     return index === -1 ? undefined : { index, align: "center" };
   }, [isVirtualized, options, selectedValue]);
+
+  const searchVirtualizedList = useCallback(() => {
+    const foundOptionIndex = options.findIndex((option) => {
+      if (option.disabled) {
+        return false;
+      }
+      return String(option.value).toLocaleLowerCase().startsWith(searchTerm.current.toLocaleLowerCase());
+    });
+    if (foundOptionIndex > -1 && virtuosoRef.current) {
+      virtuosoRef.current?.scrollToIndex(foundOptionIndex);
+      onSelect(options[foundOptionIndex].value);
+    }
+  }, [options, onSelect]);
+
+  const debouncedClearSearchTerm = useMemo(() => debounce(() => (searchTerm.current = ""), 350), []);
+
+  const handleKeydownForVirtualizedList: React.KeyboardEventHandler<HTMLUListElement> = useCallback(
+    (e) => {
+      // We don't want e.g. "Shift" being added to the search term, only single characters
+      if (e.key.length === 1) {
+        searchTerm.current += e.key;
+      }
+      searchVirtualizedList();
+      debouncedClearSearchTerm();
+    },
+    [debouncedClearSearchTerm, searchVirtualizedList]
+  );
 
   return (
     <div
@@ -176,7 +212,7 @@ export const ListBox = <T,>({
             elementResize: false, // this will prevent render in wrong place after multiple open/close actions
           }}
         >
-          <Listbox.Button
+          <OriginalListboxButton
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
             onClick={(e) => e.stopPropagation()}
             {...(testId && {
@@ -186,14 +222,19 @@ export const ListBox = <T,>({
             onFocus={onFocus}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
-          </Listbox.Button>
-          <Listbox.Options
+          </OriginalListboxButton>
+          <OriginalListboxOptions
+            as="ul"
+            modal={false}
+            onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
             className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth }, optionsMenuClassName)}
           >
             {options.length && isVirtualized ? (
               <Virtuoso<Option<T>>
                 style={{ height: "300px" }} // $height-long-listbox-options-list
                 data={options}
+                ref={virtuosoRef}
+                increaseViewportBy={{ top: 100, bottom: 100 }}
                 itemContent={(index, option) => <ListBoxOption key={index} {...option} />}
                 {...(initialTopMostItemIndex && { initialTopMostItemIndex })} // scroll to selected value
               />
@@ -201,11 +242,11 @@ export const ListBox = <T,>({
               options.map(ListBoxOption)
             )}
             {footerOption && (
-              <Listbox.Option value={undefined} className={classNames(styles.option, optionClassName)}>
+              <OriginalListboxOption value={undefined} className={classNames(styles.option, optionClassName)}>
                 {footerOption}
-              </Listbox.Option>
+              </OriginalListboxOption>
             )}
-          </Listbox.Options>
+          </OriginalListboxOptions>
         </Float>
       </Listbox>
     </div>

@@ -1,13 +1,17 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -22,6 +26,8 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.Optional
+import kotlin.jvm.optionals.getOrElse
 
 private val logger = KotlinLogging.logger { }
 
@@ -35,7 +41,7 @@ open class WorkloadMonitor(
   @Property(name = "airbyte.workload.monitor.non-sync-workload-timeout") private val nonSyncWorkloadTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.sync-workload-timeout") private val syncWorkloadTimeout: Duration,
   private val metricClient: MetricClient,
-  private val timeProvider: (ZoneId) -> OffsetDateTime = OffsetDateTime::now,
+  private val timeProvider: Optional<(ZoneId) -> OffsetDateTime>,
 ) {
   companion object {
     const val CHECK_CLAIMS = "workload-monitor-claim"
@@ -43,6 +49,7 @@ open class WorkloadMonitor(
     const val CHECK_NON_SYNC_TIMEOUT = "workload-monitor-non-sync-timeout"
     const val CHECK_START = "workload-monitor-start"
     const val CHECK_SYNC_TIMEOUT = "workload-monitor-sync-timeout"
+    val DEFAULT_TIME_PROVIDER: (ZoneId) -> OffsetDateTime = OffsetDateTime::now
   }
 
   @Trace
@@ -55,7 +62,7 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.not-started-check-rate}")
   open fun cancelNotStartedWorkloads() {
     logger.info { "Checking for not started workloads." }
-    val oldestStartedTime = timeProvider(ZoneOffset.UTC)
+    val oldestStartedTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val notStartedWorkloads =
       workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
         ExpiredDeadlineWorkloadListRequest(
@@ -63,7 +70,11 @@ open class WorkloadMonitor(
           status = listOf(WorkloadStatus.CLAIMED),
         ),
       )
-    failWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    failWorkloads(
+      notStartedWorkloads.workloads,
+      "Airbyte could not start the process within time limit. The workload was claimed but never started.",
+      CHECK_START,
+    )
   }
 
   @Trace
@@ -76,7 +87,7 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.claim-check-rate}")
   open fun cancelNotClaimedWorkloads() {
     logger.info { "Checking for not claimed workloads." }
-    val oldestClaimTime = timeProvider(ZoneOffset.UTC)
+    val oldestClaimTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val notClaimedWorkloads =
       workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
         ExpiredDeadlineWorkloadListRequest(
@@ -85,7 +96,11 @@ open class WorkloadMonitor(
         ),
       )
 
-    failWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+    failWorkloads(
+      notClaimedWorkloads.workloads,
+      "Airbyte could not start the process within time limit. The workload was never claimed.",
+      CHECK_CLAIMS,
+    )
   }
 
   @Trace
@@ -98,7 +113,7 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.heartbeat-check-rate}")
   open fun cancelNotHeartbeatingWorkloads() {
     logger.info { "Checking for non heartbeating workloads." }
-    val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC)
+    val oldestHeartbeatTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val nonHeartbeatingWorkloads =
       workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
         ExpiredDeadlineWorkloadListRequest(
@@ -107,7 +122,12 @@ open class WorkloadMonitor(
         ),
       )
 
-    failWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+    failWorkloads(
+      nonHeartbeatingWorkloads.workloads,
+      "Airbyte could not track the sync progress. " +
+        "Sync process exited without reporting status.",
+      CHECK_HEARTBEAT,
+    )
   }
 
   @Trace
@@ -123,7 +143,7 @@ open class WorkloadMonitor(
     val nonHeartbeatingWorkloads =
       workloadApiClient.workloadApi.workloadListOldNonSync(
         LongRunningWorkloadRequest(
-          createdBefore = timeProvider(ZoneOffset.UTC).minus(nonSyncWorkloadTimeout),
+          createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(nonSyncWorkloadTimeout),
         ),
       )
 
@@ -143,7 +163,7 @@ open class WorkloadMonitor(
     val nonHeartbeatingWorkloads =
       workloadApiClient.workloadApi.workloadListOldSync(
         LongRunningWorkloadRequest(
-          createdBefore = timeProvider(ZoneOffset.UTC).minus(syncWorkloadTimeout),
+          createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(syncWorkloadTimeout),
         ),
       )
 

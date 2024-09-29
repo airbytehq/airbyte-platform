@@ -8,9 +8,8 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
-import io.airbyte.workers.process.AsyncKubePodStatus;
+import io.micronaut.context.annotation.Value;
 import io.micronaut.runtime.Micronaut;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
@@ -27,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * This app uses default logging which is directly captured by the calling Temporal worker. In the
  * future this will need to independently interact with cloud storage.
  */
-@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.DoNotTerminateVM", "PMD.AvoidFieldNameMatchingTypeName"})
+@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.DoNotTerminateVM", "PMD.AvoidFieldNameMatchingTypeName", "PMD.UnusedLocalVariable"})
 @Singleton
 public class Application {
 
@@ -49,14 +48,11 @@ public class Application {
 
   private final String application;
   private final JobOrchestrator<?> jobOrchestrator;
-  private final AsyncStateManager asyncStateManager;
 
-  public Application(@Named("application") final String application,
-                     final JobOrchestrator<?> jobOrchestrator,
-                     final AsyncStateManager asyncStateManager) {
+  public Application(@Value("${airbyte.application}") final String application,
+                     final JobOrchestrator<?> jobOrchestrator) {
     this.application = application;
     this.jobOrchestrator = jobOrchestrator;
-    this.asyncStateManager = asyncStateManager;
   }
 
   /**
@@ -74,11 +70,9 @@ public class Application {
         .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
         .build()) {
 
-      asyncStateManager.write(AsyncKubePodStatus.INITIALIZING);
-      asyncStateManager.write(AsyncKubePodStatus.SUCCEEDED, jobOrchestrator.runJob().orElse(""));
+      final String result = jobOrchestrator.runJob().orElse("");
     } catch (final Throwable t) {
       log.error("Killing orchestrator because of an Exception", t);
-      asyncStateManager.write(AsyncKubePodStatus.FAILED);
       return 1;
     }
 

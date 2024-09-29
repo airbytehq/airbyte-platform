@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
-import { HeadTitle } from "components/common/HeadTitle";
 import { FormPageContent } from "components/ConnectorBlocks";
 import { DestinationForm } from "components/destination/DestinationForm";
+import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -56,8 +56,11 @@ export const CreateDestinationPage: React.FC = () => {
     { label: formatMessage({ id: "destinations.newDestination" }) },
   ];
 
+  const location = useLocation();
+  // save previous path on mount so that it remains unchanged even if search params are added on this page
+  const [prevPath] = useState<string>(location.state?.prevPath || `../${DestinationPaths.SelectDestinationNew}`);
   const onGoBack = () => {
-    navigate(`../${DestinationPaths.SelectDestinationNew}`);
+    navigate(prevPath);
   };
 
   return (

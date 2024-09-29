@@ -5,7 +5,6 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.FailureReason
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
-import java.lang.String
 import kotlin.time.Duration
 import kotlin.time.toKotlinDuration
 

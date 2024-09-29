@@ -5,7 +5,6 @@
 package io.airbyte.bootloader;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -48,7 +47,6 @@ public class Bootloader {
   private final DatabaseMigrator configsDatabaseMigrator;
   private final DatabaseInitializer configsDatabaseInitializer;
   private final AirbyteVersion currentAirbyteVersion;
-  private final FeatureFlags featureFlags;
   private final DatabaseInitializer jobsDatabaseInitializer;
   private final DatabaseMigrator jobsDatabaseMigrator;
   private final JobPersistence jobPersistence;
@@ -64,7 +62,6 @@ public class Bootloader {
                     @Named("configsDatabaseInitializer") final DatabaseInitializer configsDatabaseInitializer,
                     @Named("configsDatabaseMigrator") final DatabaseMigrator configsDatabaseMigrator,
                     final AirbyteVersion currentAirbyteVersion,
-                    final FeatureFlags featureFlags,
                     @Named("jobsDatabaseInitializer") final DatabaseInitializer jobsDatabaseInitializer,
                     @Named("jobsDatabaseMigrator") final DatabaseMigrator jobsDatabaseMigrator,
                     final JobPersistence jobPersistence,
@@ -78,7 +75,6 @@ public class Bootloader {
     this.configsDatabaseInitializer = configsDatabaseInitializer;
     this.configsDatabaseMigrator = configsDatabaseMigrator;
     this.currentAirbyteVersion = currentAirbyteVersion;
-    this.featureFlags = featureFlags;
     this.jobsDatabaseInitializer = jobsDatabaseInitializer;
     this.jobsDatabaseMigrator = jobsDatabaseMigrator;
     this.jobPersistence = jobPersistence;

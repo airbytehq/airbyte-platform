@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal;
 
 import static io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.NON_RUNNING_JOB_ID;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -23,6 +24,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
@@ -33,7 +35,6 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.temporal.api.common.v1.WorkflowType;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
@@ -67,6 +68,7 @@ import org.apache.commons.lang3.time.StopWatch;
  */
 @Slf4j
 @Singleton
+@SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.CompareObjectsWithEquals"})
 public class TemporalClient {
 
   /**
@@ -137,8 +139,8 @@ public class TemporalClient {
           serviceStubsWrapped.blockingStubListClosedWorkflowExecutions(workflowExecutionsRequest);
       final WorkflowType connectionManagerWorkflowType = WorkflowType.newBuilder().setName(ConnectionManagerWorkflow.class.getSimpleName()).build();
       workflowExecutionInfos.addAll(listOpenWorkflowExecutionsRequest.getExecutionsList().stream()
-          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == connectionManagerWorkflowType
-              || workflowExecutionInfo.getStatus() == executionStatus)
+          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == (connectionManagerWorkflowType)
+              || workflowExecutionInfo.getStatus() == (executionStatus))
           .flatMap((workflowExecutionInfo -> extractConnectionIdFromWorkflowId(workflowExecutionInfo.getExecution().getWorkflowId()).stream()))
           .collect(Collectors.toSet()));
       token = listOpenWorkflowExecutionsRequest.getNextPageToken();
@@ -194,9 +196,7 @@ public class TemporalClient {
     if (!workflowId.startsWith("connection_manager_")) {
       return Optional.empty();
     }
-    return Optional.ofNullable(StringUtils.removeStart(workflowId, "connection_manager_"))
-        .map(
-            stringUUID -> UUID.fromString(stringUUID));
+    return Optional.of(StringUtils.removeStart(workflowId, "connection_manager_")).map(UUID::fromString);
   }
 
   /**
@@ -399,15 +399,21 @@ public class TemporalClient {
                                                             final @Nullable UUID workspaceId,
                                                             final JobGetSpecConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
-
+    // Since SPEC happens before a connector is created, it is expected for a SPEC job to not have a
+    // workspace id unless it is a custom connector.
+    //
+    // This differs from CHECK/DISCOVER/REPLICATION which always have a workspace id thus requiring,
+    // downstream FF checks to null check the workspace before adding the context or failing. Thus, we
+    // default the workspace to simplify this process.
+    final var resolvedWorkspaceId = workspaceId == null ? ANONYMOUS : workspaceId;
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
-        .withWorkspaceId(workspaceId)
+        .withWorkspaceId(resolvedWorkspaceId)
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector());
     return execute(jobRunConfig,
-        () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC).run(jobRunConfig, launcherConfig));
+        () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC, jobId).run(jobRunConfig, launcherConfig));
 
   }
 
@@ -444,7 +450,7 @@ public class TemporalClient {
         .withActorContext(context);
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
   }
 
   /**
@@ -475,10 +481,10 @@ public class TemporalClient {
         .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
-        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
+        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true);
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
   }
 
   /**
@@ -536,12 +542,12 @@ public class TemporalClient {
     return new TemporalResponse<>(operationOutput, metadata);
   }
 
-  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
+  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType, jobId));
   }
 
-  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
+  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue, jobId));
   }
 
   /**

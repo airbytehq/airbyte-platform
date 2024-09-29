@@ -9,6 +9,7 @@ import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -16,7 +17,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class SimpleAirbyteDestination implements AirbyteDestination {
 
-  private final LinkedBlockingQueue<AirbyteMessage> messages = new LinkedBlockingQueue<>();
+  private final BlockingQueue<AirbyteMessage> messages = new LinkedBlockingQueue<>();
   private volatile boolean isFinished = false;
 
   @Override

@@ -14,9 +14,9 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
 import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { trackError } from "core/utils/datadog";
 import { isFulfilled } from "core/utils/promises";
 import { useIntent } from "core/utils/rbac";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
@@ -28,14 +28,13 @@ import { notificationSettingsToFormValues } from "./notificationSettingsToFormVa
 
 export const NotificationSettingsForm: React.FC = () => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
-  const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications", false);
+  const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications");
   const updateNotificationSettings = useUpdateNotificationSettings();
   const { notificationSettings } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
   const { workspaceId, organizationId } = useCurrentWorkspace();
   const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 

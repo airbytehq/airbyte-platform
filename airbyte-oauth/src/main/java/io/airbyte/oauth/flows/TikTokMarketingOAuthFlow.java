@@ -51,12 +51,6 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
     super(httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
-  public TikTokMarketingOAuthFlow(final HttpClient httpClient,
-                                  final Supplier<String> stateSupplier,
-                                  final TokenRequestContentType tokenReqContentType) {
-    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
-  }
-
   @Override
   protected Map<String, Object> completeOAuthFlow(final String clientId,
                                                   final String clientSecret,

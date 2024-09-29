@@ -7,3 +7,4 @@ type: string
 enum:
   - user
   - breaking_change
+  - release_candidate

@@ -1,11 +1,12 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
-import { HeadTitle } from "components/common/HeadTitle";
+import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
@@ -18,6 +19,7 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const loginRedirectString = searchParams.get("loginRedirect");
   const isAcceptingInvitation = loginRedirectString?.includes("accept-invite");
+  const { state } = useLocation();
 
   useTrackPage(PageTrackingCodes.LOGIN);
 
@@ -33,6 +35,11 @@ export const LoginPage: React.FC = () => {
             <Heading as="h2" size="md" color="darkBlue">
               <FormattedMessage id="login.acceptInvite.subtitle" />
             </Heading>
+          </Box>
+        )}
+        {state?.errorMessage && typeof state.errorMessage === "string" && (
+          <Box mt="lg">
+            <Message type="warning" text={state.errorMessage} />
           </Box>
         )}
       </FlexItem>

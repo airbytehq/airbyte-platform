@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends AbstractConfigsDatabaseTest {
 
   private static final String ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE = "actor_definition_workspace_grant";

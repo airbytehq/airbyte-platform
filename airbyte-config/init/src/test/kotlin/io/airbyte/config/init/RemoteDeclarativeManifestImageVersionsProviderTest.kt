@@ -2,6 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.config.init
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.justRun
@@ -33,12 +34,12 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
                 "next": null,
                 "previous": null,
                 "results": [
-                  {"name": "0.90.0"},
-                  {"name": "1.0.0"},
-                  {"name": "1.0.1"},
-                  {"name": "2.0.0"},
-                  {"name": "2.0.1-dev123456"},
-                  {"name": "3.0.0"}
+                  {"name": "0.90.0", "digest": "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33"},
+                  {"name": "1.0.0", "digest": "sha256:a54aad18cf460173f753fe938e254a667dac97b703fc05cf6de8c839caf62ef4"},
+                  {"name": "1.0.1", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "2.0.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "2.0.1-dev123456", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "3.0.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"}
                 ]
               }
               """,
@@ -46,11 +47,11 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
     val expectedLatestVersions =
-      mapOf(
-        0 to "0.90.0",
-        1 to "1.0.1",
-        2 to "2.0.0",
-        3 to "3.0.0",
+      listOf(
+        DeclarativeManifestImageVersion(0, "0.90.0", "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33"),
+        DeclarativeManifestImageVersion(1, "1.0.1", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
+        DeclarativeManifestImageVersion(2, "2.0.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
+        DeclarativeManifestImageVersion(3, "3.0.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
       )
     assertEquals(expectedLatestVersions, latestMajorVersions)
 
@@ -68,7 +69,7 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
             "next": "https://hub.docker.com/v2/repositories/airbyte/source-declarative-manifest/tags?page_size=1&page=2",
             "previous": null,
             "results": [
-              {"name": "1.0.1"}
+              {"name": "1.0.1", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"}
             ]
           }
         """,
@@ -80,7 +81,7 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
             "next": "https://hub.docker.com/v2/repositories/airbyte/source-declarative-manifest/tags?page_size=1&page=3",
             "previous": "https://hub.docker.com/v2/repositories/airbyte/source-declarative-manifest/tags?page_size=1",
             "results": [
-              {"name": "1.0.0"}
+              {"name": "1.0.0", "digest": "sha256:a54aad18cf460173f753fe938e254a667dac97b703fc05cf6de8c839caf62ef4"}
             ]
           }
         """,
@@ -92,7 +93,7 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
             "next": null,
             "previous": "https://hub.docker.com/v2/repositories/airbyte/source-declarative-manifest/tags?page_size=1&page=2",
             "results": [
-              {"name": "0.90.0"}
+              {"name": "0.90.0", "digest": "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33"}
             ]
           }
         """,
@@ -100,13 +101,42 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
     val expectedLatestVersions =
-      mapOf(
-        0 to "0.90.0",
-        1 to "1.0.1",
+      listOf(
+        DeclarativeManifestImageVersion(1, "1.0.1", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
+        DeclarativeManifestImageVersion(0, "0.90.0", "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33"),
       )
     assertEquals(expectedLatestVersions, latestMajorVersions)
 
     verify(exactly = 3) { okHttpClient.newCall(any()).execute() }
+    confirmVerified(okHttpClient)
+  }
+
+  @Test
+  fun `test versions are compared correctly via semver and not string comparison`() {
+    every { okHttpClient.newCall(any()).execute() } returns
+      successfulResponse(
+        """
+              {
+                "count": 8,
+                "next": null,
+                "previous": null,
+                "results": [
+                  {"name": "3.0.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "3.9.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "3.10.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"}
+                ]
+              }
+              """,
+      )
+
+    val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
+    val expectedLatestVersions =
+      listOf(
+        DeclarativeManifestImageVersion(3, "3.10.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
+      )
+    assertEquals(expectedLatestVersions, latestMajorVersions)
+
+    verify(exactly = 1) { okHttpClient.newCall(any()).execute() }
     confirmVerified(okHttpClient)
   }
 
@@ -125,7 +155,7 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
       )
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
-    assertEquals(emptyMap<Int, String>(), latestMajorVersions)
+    assertEquals(emptyList<DeclarativeManifestImageVersion>(), latestMajorVersions)
 
     verify(exactly = 1) { okHttpClient.newCall(any()).execute() }
     confirmVerified(okHttpClient)

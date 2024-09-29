@@ -54,10 +54,9 @@ public class RbacRoleHelper {
     }
     // We need to add all underlying granted roles based on the actual user roles. For example,
     // org_admin role will add all org AND workspace level roles.
-    final Set<String> allRoles = new HashSet<>();
-    allRoles.addAll(roles);
+    final Set<String> allRoles = new HashSet<>(roles);
     roles.stream()
-        .filter(userRole -> userRole != AuthRoleConstants.NONE)
+        .filter(userRole -> !AuthRoleConstants.NONE.equals(userRole))
         .map(userRole -> PermissionHelper.getGrantedPermissions(Permission.PermissionType.valueOf(userRole)))
         .flatMap(Set::stream)
         .map(PermissionType::name)

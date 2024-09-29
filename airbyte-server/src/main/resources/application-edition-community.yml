@@ -1,0 +1,50 @@
+## This file configures authentication for the Community edition of Airbyte. It is loaded by the
+# EditionPropertySourceLoader when AIRBYTE_EDITION is set to "community".
+micronaut:
+  security:
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
+    endpoints:
+      login:
+        enabled: true
+        path: /api/login
+      logout:
+        enabled: true
+        path: /api/logout
+      oauth:
+        path: /api/oauth/access_token
+    authentication: cookie
+    redirect:
+      enabled: false
+    token:
+      cookie:
+        enabled: true
+        cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
+        cookie-secure: ${AB_COOKIE_SECURE:true}
+      refresh:
+        cookie:
+          enabled: true
+          cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
+          cookie-secure: ${AB_COOKIE_SECURE:true}
+          cookie-max-age: P30D
+      generator:
+        access-token:
+          ## Warning: if this is ever exposed to users to customize, the frontend will need to be updated
+          expiration: 180 # 3  mins
+      jwt:
+        enabled: true
+        signatures:
+          secret:
+            generator:
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
+        generator:
+          refresh-token:
+            enabled: true
+            secret: ${AB_JWT_SIGNATURE_SECRET:}
+
+airbyte:
+  edition: community
+  auth:
+    instanceAdmin:
+      password: ${AB_INSTANCE_ADMIN_PASSWORD:}
+      clientId: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
+      clientSecret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}

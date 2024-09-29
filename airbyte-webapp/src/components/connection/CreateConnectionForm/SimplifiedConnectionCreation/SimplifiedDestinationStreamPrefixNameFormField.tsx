@@ -29,13 +29,13 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
             label={
               <FlexContainer direction="column" gap="sm">
                 <Text bold>
-                  <FormattedMessage id="form.prefixNext" />
+                  <FormattedMessage id="form.prefix" />
                   &nbsp;
                   <Text as="span" size="sm" color="grey" italicized>
                     <FormattedMessage id="form.optional" />
                   </Text>
                 </Text>
-                <Text size="sm" color="grey" italicized>
+                <Text size="sm" color="grey">
                   <FormattedMessage id="form.prefix.subtitle" />
                 </Text>
               </FlexContainer>

@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -55,9 +54,7 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -376,22 +373,16 @@ public class SourceHandler {
     }
 
     final var spec = getSpecFromSourceId(source.getSourceId());
-    final JsonNode fullConfig;
+
+    // Delete secrets and config in this source and mark it tombstoned.
     try {
-      fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
+      sourceService.tombstoneSource(
+          source.getName(),
+          source.getWorkspaceId(),
+          source.getSourceId(), spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-
-    // persist
-    persistSourceConnection(
-        source.getName(),
-        source.getSourceDefinitionId(),
-        source.getWorkspaceId(),
-        source.getSourceId(),
-        true,
-        fullConfig,
-        spec);
   }
 
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
@@ -422,7 +413,7 @@ public class SourceHandler {
     return sourceRead;
   }
 
-  private SourceRead buildSourceRead(final UUID sourceId)
+  public SourceRead buildSourceRead(final UUID sourceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
     final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceId);
@@ -515,8 +506,6 @@ public class SourceHandler {
     final ActorDefinitionVersionWithOverrideStatus sourceVersionWithOverrideStatus = actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
 
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
-
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
 
@@ -528,20 +517,19 @@ public class SourceHandler {
         .sourceDefinitionId(sourceConnection.getSourceDefinitionId())
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
-        .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()))
+        .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
   protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
-    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
     return new SourceSnippetRead()
         .sourceId(source.getSourceId())
         .name(source.getName())
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
         .sourceName(sourceDefinition.getName())
-        .icon(iconUrlFeatureFlag ? sourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
+        .icon(sourceDefinition.getIconUrl());
   }
 
   @VisibleForTesting

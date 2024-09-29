@@ -5,13 +5,12 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.hydrateWithStats;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
@@ -40,30 +39,30 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.WorkflowStateConverter;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.JobService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
@@ -86,6 +85,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class JobHistoryHandler {
 
   private final ConnectionService connectionService;
@@ -100,13 +100,9 @@ public class JobHistoryHandler {
   private final AirbyteVersion airbyteVersion;
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
-
-  private static final Set<JobConfigType> CONFIG_TYPE_SUPPORTING_PROGRESS =
-      Set.of(JobConfigType.SYNC, JobConfigType.REFRESH, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR);
+  private final JobService jobService;
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
-                           final WorkerEnvironment workerEnvironment,
-                           final LogConfigs logConfigs,
                            final ConnectionService connectionService,
                            final SourceHandler sourceHandler,
                            final SourceDefinitionsHandler sourceDefinitionsHandler,
@@ -114,9 +110,12 @@ public class JobHistoryHandler {
                            final DestinationDefinitionsHandler destinationDefinitionsHandler,
                            final AirbyteVersion airbyteVersion,
                            final TemporalClient temporalClient,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final LogClientManager logClientManager,
+                           final JobService jobService) {
     this.featureFlagClient = featureFlagClient;
-    jobConverter = new JobConverter(workerEnvironment, logConfigs, featureFlagClient);
+    this.jobService = jobService;
+    jobConverter = new JobConverter(logClientManager);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
     this.connectionService = connectionService;
@@ -126,21 +125,6 @@ public class JobHistoryHandler {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.airbyteVersion = airbyteVersion;
     this.temporalClient = temporalClient;
-  }
-
-  @Deprecated(forRemoval = true)
-  public JobHistoryHandler(final JobPersistence jobPersistence,
-                           final WorkerEnvironment workerEnvironment,
-                           final LogConfigs logConfigs,
-                           final ConnectionService connectionService,
-                           final SourceHandler sourceHandler,
-                           final SourceDefinitionsHandler sourceDefinitionsHandler,
-                           final DestinationHandler destinationHandler,
-                           final DestinationDefinitionsHandler destinationDefinitionsHandler,
-                           final AirbyteVersion airbyteVersion,
-                           final FeatureFlagClient featureFlagClient) {
-    this(jobPersistence, workerEnvironment, logConfigs, connectionService, sourceHandler, sourceDefinitionsHandler, destinationHandler,
-        destinationDefinitionsHandler, airbyteVersion, null, featureFlagClient);
   }
 
   @SuppressWarnings("UnstableApiUsage")
@@ -160,7 +144,7 @@ public class JobHistoryHandler {
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
 
-    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    final Map<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
     if (configId != null) {
       tags.put(MetricTags.CONNECTION_ID, configId);
     }
@@ -173,9 +157,9 @@ public class JobHistoryHandler {
           request.getIncludingJobId(),
           pageSize);
     } else {
-      jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
+      jobs = jobService.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+          CollectionUtils.isEmpty(request.getStatuses()) ? Collections.emptyList() : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
@@ -216,7 +200,7 @@ public class JobHistoryHandler {
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
 
-    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    final Map<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
     if (configId != null) {
       tags.put(MetricTags.CONNECTION_ID, configId);
     }
@@ -377,7 +361,7 @@ public class JobHistoryHandler {
   }
 
   public ConnectionSyncProgressRead getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
-    final List<Job> jobs = jobPersistence.getRunningSyncJobForConnections(List.of(connectionIdRequestBody.getConnectionId()));
+    final List<Job> jobs = jobPersistence.getRunningJobForConnection(connectionIdRequestBody.getConnectionId());
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream()
         .map(JobConverter::getJobWithAttemptsRead)
@@ -385,8 +369,7 @@ public class JobHistoryHandler {
 
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)), jobPersistence);
 
-    if (jobReads.isEmpty() || jobReads.getFirst() == null
-        || !CONFIG_TYPE_SUPPORTING_PROGRESS.contains(jobReads.getFirst().getJob().getConfigType())) {
+    if (jobReads.isEmpty() || jobReads.getFirst() == null) {
       return new ConnectionSyncProgressRead().connectionId(connectionIdRequestBody.getConnectionId()).streams(Collections.emptyList());
     }
     final JobWithAttemptsRead runningJob = jobReads.getFirst();
@@ -409,7 +392,7 @@ public class JobHistoryHandler {
       streamToTrackPerConfigType.put(JobConfigType.REFRESH, streamsToRefresh);
       streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams.stream().filter(s -> !streamsToRefresh.contains(s)).toList());
     } else if (runningJobConfigType.equals(JobConfigType.RESET_CONNECTION) || runningJobConfigType.equals(JobConfigType.CLEAR)) {
-      streamToTrackPerConfigType.put(JobConfigType.CLEAR, runningJob.getJob().getResetConfig().getStreamsToReset());
+      streamToTrackPerConfigType.put(runningJobConfigType, runningJob.getJob().getResetConfig().getStreamsToReset());
     }
 
     final List<StreamSyncProgressReadItem> finalStreamsWithStats = streamToTrackPerConfigType.entrySet().stream()
@@ -438,7 +421,7 @@ public class JobHistoryHandler {
     return new ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.getConnectionId())
         .jobId(runningJob.getJob().getId())
-        .syncStartedAt(runningJob.getJob().getStartedAt())
+        .syncStartedAt(runningJob.getJob().getCreatedAt())
         .bytesEmitted(aggregatedStats == null ? null : aggregatedStats.getBytesEmitted())
         .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
         .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())
@@ -453,12 +436,6 @@ public class JobHistoryHandler {
 
   public List<JobStatusSummary> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getLastSyncJobForConnections(connectionIds);
-  }
-
-  public AttemptNormalizationStatusReadList getAttemptNormalizationStatuses(final JobIdRequestBody jobIdRequestBody) throws IOException {
-    return new AttemptNormalizationStatusReadList()
-        .attemptNormalizationStatuses(jobPersistence.getAttemptNormalizationStatusesForJob(jobIdRequestBody.getId()).stream()
-            .map(JobConverter::convertAttemptNormalizationStatus).collect(Collectors.toList()));
   }
 
   public List<JobRead> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException {

@@ -8,10 +8,12 @@ import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
-import { useGetOrCreateUser, useUpdateUser } from "core/api";
+import { HttpProblem, useGetOrCreateUser, useUpdateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
 import { config } from "core/config";
+import { useFormatError } from "core/errors";
 import { AuthContext, AuthContextApi } from "core/services/auth";
+import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 /**
  * The ID of the client in Keycloak that should be used by the webapp.
@@ -25,6 +27,8 @@ const KEYCLOAK_IDP_HINT = "default";
  * The realm name that is used for all default (non-SSO) cloud users.
  */
 const AIRBYTE_CLOUD_REALM = "_airbyte-cloud-users";
+
+export const SSO_LOGIN_REQUIRED_STATE = "ssoLoginRequired";
 
 interface KeycloakAuthState {
   airbyteUser: UserRead | null;
@@ -88,11 +92,16 @@ export function initializeUserManager() {
   // If there's no active redirect, so we can check for an existing session based on an entry in local storage
   // The local storage key looks like this: oidc.user:https://example.com/auth/realms/<realm>:<client-id>
   const localStorageKeys = Object.keys(window.localStorage);
-  const realmAndClientId = localStorageKeys.find((key) => key.startsWith("oidc.user:"));
-  if (realmAndClientId) {
-    const match = realmAndClientId.match(/^oidc.user:.*\/(?<realm>[^:]+):(?<clientId>.+)$/);
-    if (match?.groups) {
-      return createUserManager(match.groups.realm);
+
+  // Look for a localStorage entry that matches the current backend we're connecting to
+  const existingLocalStorageEntry = localStorageKeys.find((key) =>
+    key.startsWith(`oidc.user:${config.keycloakBaseUrl}`)
+  );
+
+  if (existingLocalStorageEntry) {
+    const realmAndClientId = existingLocalStorageEntry.match(/^oidc.user:.*\/(?<realm>[^:]+):(?<clientId>.+)$/);
+    if (realmAndClientId?.groups) {
+      return createUserManager(realmAndClientId.groups.realm);
     }
   }
 
@@ -100,14 +109,30 @@ export function initializeUserManager() {
   return createUserManager(AIRBYTE_CLOUD_REALM);
 }
 
+// During local development there may be multiple oidc sessions present in local storage when switching between environments. Clearing them avoids initializing the userManager with the wrong realm.
+function clearLocalStorageOidcSessions() {
+  const localStorageKeys = Object.keys(window.localStorage);
+  localStorageKeys.forEach((key) => {
+    if (key.startsWith("oidc.user:")) {
+      window.localStorage.removeItem(key);
+    }
+  });
+}
+
 // Removes OIDC params from URL, but doesn't remove other params that might be present
-export function createUriWithoutSsoParams() {
+export function createUriWithoutSsoParams(checkLicense?: boolean) {
   // state, code and session_state are from keycloak. realm is added by us to indicate which realm the user is signing in to.
   const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "realm"];
 
   const searchParams = new URLSearchParams(window.location.search);
 
   SSO_SEARCH_PARAMS.forEach((param) => searchParams.delete(param));
+
+  // Add a searchParam to trigger a license check upon redirect
+  // This should only be passed in as true from EnterpriseAuthService
+  if (checkLicense === true) {
+    searchParams.set("checkLicense", "true");
+  }
 
   return searchParams.toString().length > 0
     ? `${window.location.origin}?${searchParams.toString()}`
@@ -180,6 +205,7 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         error: null,
       };
     case "error":
+      clearLocalStorageOidcSessions();
       return {
         ...state,
         didInitialize: true,
@@ -199,15 +225,31 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const [logoutInProgress, setLogoutInProgress] = useState(false);
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
   const { mutateAsync: updateAirbyteUser } = useUpdateUser();
+  const formatError = useFormatError();
   const navigate = useNavigate();
 
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
   const keycloakAccessTokenRef = useRef<string | null>(null);
 
+  const handleAirbyteUserError = useCallback(
+    async (error: unknown) => {
+      if (HttpProblem.isType(error, "error:auth/sso-required")) {
+        // Navigate to the SSO signin page and set the state to show an info message there
+        navigate(CloudRoutes.Sso, { state: { [SSO_LOGIN_REQUIRED_STATE]: true } });
+        return await userManager.signoutSilent();
+      }
+      if (HttpProblem.isType(error, "error:auth/user-already-exists")) {
+        navigate(CloudRoutes.Login, { state: { errorMessage: formatError(error) } });
+        return await userManager.signoutSilent();
+      }
+      throw error;
+    },
+    [navigate, userManager, formatError]
+  );
+
   // Handle login/logoff that happened in another tab
   useEffect(() => {
     broadcastChannel.onmessage = (event) => {
-      console.log("broadcastChannel.onmessage", event);
       if (event.type === "userUnloaded") {
         console.debug("🔑 Received userUnloaded event from other tab.");
         dispatch({ type: "userUnloaded" });
@@ -239,13 +281,17 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
           clearSsoSearchParams();
           // Otherwise, check if there is a session currently
         } else if ((keycloakUser ??= await userManager.signinSilent())) {
-          // Initialize the access token ref with a value
-          keycloakAccessTokenRef.current = keycloakUser.access_token;
-          const airbyteUser = await getAirbyteUser({
-            authUserId: keycloakUser.profile.sub,
-            getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
-          });
-          dispatch({ type: "userLoaded", airbyteUser, keycloakUser });
+          try {
+            const airbyteUser = await getAirbyteUser({
+              authUserId: keycloakUser.profile.sub,
+              getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
+            });
+            // Initialize the access token ref with a value
+            keycloakAccessTokenRef.current = keycloakUser.access_token;
+            dispatch({ type: "userLoaded", airbyteUser, keycloakUser });
+          } catch (error) {
+            handleAirbyteUserError(error);
+          }
           // Finally, we can assume there is no active session
         } else {
           dispatch({ type: "userUnloaded" });
@@ -254,24 +300,28 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         dispatch({ type: "error", error });
       }
     })();
-  }, [userManager, getAirbyteUser]);
+  }, [userManager, getAirbyteUser, handleAirbyteUserError]);
 
   // Hook in to userManager events
   useEffect(() => {
     const handleUserLoaded = async (keycloakUser: User) => {
-      const airbyteUser = await getAirbyteUser({
-        authUserId: keycloakUser.profile.sub,
-        getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
-      });
+      try {
+        const airbyteUser = await getAirbyteUser({
+          authUserId: keycloakUser.profile.sub,
+          getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
+        });
 
-      // Update the access token ref with the new access token. This happens each time we get a fresh token.
-      keycloakAccessTokenRef.current = keycloakUser.access_token;
+        // Update the access token ref with the new access token. This happens each time we get a fresh token.
+        keycloakAccessTokenRef.current = keycloakUser.access_token;
 
-      // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
-      if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
-        dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
-        // Notify other tabs that this tab got a new user loaded (usually meaning this tab signed in)
-        broadcastChannel.postMessage({ type: "userLoaded", keycloakUser, airbyteUser });
+        // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
+        if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
+          dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
+          // Notify other tabs that this tab got a new user loaded (usually meaning this tab signed in)
+          broadcastChannel.postMessage({ type: "userLoaded", keycloakUser, airbyteUser });
+        }
+      } catch (error: unknown) {
+        handleAirbyteUserError(error);
       }
     };
     userManager.events.addUserLoaded(handleUserLoaded);
@@ -303,7 +353,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
       userManager.events.removeSilentRenewError(handleSilentRenewError);
       userManager.events.removeAccessTokenExpired(handleExpiredToken);
     };
-  }, [userManager, getAirbyteUser, authState]);
+  }, [userManager, getAirbyteUser, authState, handleAirbyteUserError]);
 
   const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
     // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
@@ -358,6 +408,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     if (authState.isAuthenticated) {
       return {
         authType: "cloud",
+        applicationSupport: "multiple",
         inited: true,
         user: authState.airbyteUser,
         emailVerified: authState.keycloakUser?.profile.email_verified ?? false,
@@ -384,6 +435,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     // The context value for an unauthenticated user
     return {
       authType: "cloud",
+      applicationSupport: "none",
       user: null,
       inited: authState.didInitialize,
       emailVerified: false,

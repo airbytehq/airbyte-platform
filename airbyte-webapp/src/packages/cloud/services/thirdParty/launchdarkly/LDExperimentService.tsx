@@ -12,10 +12,10 @@ import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
 import { useI18nContext } from "core/services/i18n";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { useDebugVariable } from "core/utils/debug";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { rejectAfter } from "core/utils/promises";
-import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
 import { ContextKind, ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
 
@@ -69,7 +69,6 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const analyticsService = useAnalyticsService();
   const { locale } = useIntl();
   const { setMessageOverwrite } = useI18nContext();
-  const { trackAction } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
 
   const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {

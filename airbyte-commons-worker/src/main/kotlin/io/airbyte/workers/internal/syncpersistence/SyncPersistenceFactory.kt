@@ -1,6 +1,6 @@
 package io.airbyte.workers.internal.syncpersistence
 
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTrackerFactory
 import io.micronaut.context.ApplicationContext
 import io.micronaut.kotlin.context.createBean
@@ -33,6 +33,6 @@ class SyncPersistenceFactory(
     catalog: ConfiguredAirbyteCatalog,
   ): SyncPersistence {
     val statsTracker = parallelStreamStatsTrackerFactory.get(connectionId, workspaceId, jobId, attemptNumber)
-    return applicationContext.createBean(statsTracker, connectionId, workspaceId, jobId, attemptNumber, catalog)
+    return applicationContext.createBean(statsTracker, connectionId, jobId, attemptNumber, catalog)
   }
 }

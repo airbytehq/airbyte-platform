@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import {
@@ -12,20 +12,25 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
+import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
+import { useQuery } from "hooks/useQuery";
 import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
+import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
-import { GeneralOrganizationSettingsPage } from "./SettingsPage/GeneralOrganizationSettingsPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
+import { LicenseSettingsPage } from "./SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
+import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -67,7 +72,10 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const { applicationSupport } = useAuthService();
+  const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -96,7 +104,7 @@ const MainViewRoutes: React.FC = () => {
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
           <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
             <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
-            {isTokenManagementEnabled && (
+            {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
             {canViewWorkspaceSettings && multiWorkspaceUI && (
@@ -111,8 +119,14 @@ const MainViewRoutes: React.FC = () => {
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
             {multiWorkspaceUI && canViewOrganizationSettings && (
-              <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              <>
+                <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+                {isAccessManagementEnabled && displayOrganizationUsers && (
+                  <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
+                )}
+              </>
             )}
+            {licenseSettings && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
             <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>
@@ -167,25 +181,58 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 };
 
 export const Routing: React.FC = () => {
-  const { inited, user } = useAuthService();
-
+  const { pathname: originalPathname, search, hash } = useLocation();
+  const { inited, loggedOut } = useAuthService();
+  const { initialSetupComplete } = useGetInstanceConfiguration();
   useBuildUpdateCheck();
-  const { search } = useLocation();
 
   useEffectOnce(() => {
     storeUtmFromQuery(search);
   });
 
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const { initialSetupComplete } = useGetInstanceConfiguration();
-
   if (!inited) {
     return null;
   }
 
+  if (loggedOut) {
+    const loginRedirectSearchParam = `${createSearchParams({
+      loginRedirect: `${originalPathname}${search}${hash}`,
+    })}`;
+    const loginRedirectTo =
+      loggedOut && originalPathname === "/"
+        ? { pathname: RoutePaths.Login }
+        : { pathname: RoutePaths.Login, search: loginRedirectSearchParam };
+
+    return (
+      <Routes>
+        {!initialSetupComplete ? (
+          <Route path="*" element={<PreferencesRoutes />} />
+        ) : (
+          <>
+            <Route path={RoutePaths.Login} element={<LoginPage />} />
+            <Route path="*" element={<Navigate to={loginRedirectTo} />} />
+          </>
+        )}
+      </Routes>
+    );
+  }
+
+  return <AuthenticatedRoutes />;
+};
+
+const AuthenticatedRoutes = () => {
+  const { loginRedirect } = useQuery<{ loginRedirect: string }>();
+  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
+  const { initialSetupComplete } = useGetInstanceConfiguration();
+  useEnterpriseLicenseCheck();
+
+  if (loginRedirect) {
+    return <Navigate to={loginRedirect} replace />;
+  }
+
   return (
     <Routes>
-      {user && !initialSetupComplete ? (
+      {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (
         <>

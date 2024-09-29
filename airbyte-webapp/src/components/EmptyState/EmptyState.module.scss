@@ -1,0 +1,11 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$circleSize: 44px;
+
+.circle {
+  width: $circleSize;
+  height: $circleSize;
+  border-radius: 50%;
+  background-color: colors.$blue-40;
+}

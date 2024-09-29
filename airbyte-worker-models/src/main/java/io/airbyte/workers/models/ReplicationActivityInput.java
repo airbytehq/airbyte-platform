@@ -50,8 +50,6 @@ public class ReplicationActivityInput {
   private UUID workspaceId;
   // The id of the connection associated with this sync.
   private UUID connectionId;
-  // Whether normalization should be run in the destination container.
-  private Boolean normalizeInDestinationContainer;
   // The task queue that replication will use.
   private String taskQueue;
   // Whether this 'sync' is performing a logical reset.
@@ -66,10 +64,6 @@ public class ReplicationActivityInput {
   private RefreshSchemaActivityOutput schemaRefreshOutput;
   // Replication context object containing relevant IDs
   private ConnectionContext connectionContext;
-  // Whether to use workload API
-  private Boolean useWorkloadApi;
-  // TODO: remove with another temporal version
-  @Deprecated
-  private Boolean useNewDocStoreApi;
+  private String signalInput;
 
 }

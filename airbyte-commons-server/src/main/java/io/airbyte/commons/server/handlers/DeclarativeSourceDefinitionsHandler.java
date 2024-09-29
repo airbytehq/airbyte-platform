@@ -10,13 +10,18 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.WorkspaceService;
@@ -40,16 +45,19 @@ public class DeclarativeSourceDefinitionsHandler {
   private final ConnectorBuilderService connectorBuilderService;
   private final WorkspaceService workspaceService;
   private final DeclarativeSourceManifestInjector manifestInjector;
+  private final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   @Inject
   public DeclarativeSourceDefinitionsHandler(final DeclarativeManifestImageVersionService declarativeManifestImageVersionService,
                                              final ConnectorBuilderService connectorBuilderService,
                                              final WorkspaceService workspaceService,
-                                             final DeclarativeSourceManifestInjector manifestInjector) {
+                                             final DeclarativeSourceManifestInjector manifestInjector,
+                                             final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
     this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.workspaceService = workspaceService;
     this.manifestInjector = manifestInjector;
+    this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
   public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) throws IOException {
@@ -75,7 +83,7 @@ public class DeclarativeSourceDefinitionsHandler {
     if (requestBody.getSetAsActiveManifest()) {
       connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
           manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest));
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest).getImageVersion());
     } else {
       connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
@@ -89,14 +97,23 @@ public class DeclarativeSourceDefinitionsHandler {
       throw new SourceIsNotDeclarativeException(
           String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
     }
-
     final DeclarativeManifest declarativeManifest = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
         requestBody.getSourceDefinitionId(), requestBody.getVersion());
+    final String imageVersionForManifest = getImageVersionForManifest(declarativeManifest).getImageVersion();
+    final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
+        airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(imageVersionForManifest);
+    if (!isNewConnectorVersionSupported.isValid()) {
+      final String message = isNewConnectorVersionSupported.getMessage() != null ? isNewConnectorVersionSupported.getMessage()
+          : String.format("Declarative manifest can't be updated to version %s because the version "
+              + "is not supported by current platform version",
+              imageVersionForManifest);
+      throw new BadRequestProblem(message, new ProblemMessageData().message(message));
+    }
     connectorBuilderService.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
         declarativeManifest.getVersion(),
         manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
         manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()),
-        getImageVersionForManifest(declarativeManifest));
+        imageVersionForManifest);
   }
 
   private Collection<Long> fetchAvailableManifestVersions(final UUID sourceDefinitionId) throws IOException {
@@ -127,10 +144,10 @@ public class DeclarativeSourceDefinitionsHandler {
         .sorted(Comparator.comparingLong(DeclarativeManifestVersionRead::getVersion)).collect(Collectors.toList()));
   }
 
-  private String getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
+  private DeclarativeManifestImageVersion getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
     final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest.getManifest());
     return declarativeManifestImageVersionService
-        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
+        .getDeclarativeManifestImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

@@ -21,7 +21,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_50_41_004__AddDeadlineColumnToWorkloadTest extends AbstractConfigsDatabaseTest {
+class V0_50_41_004__AddDeadlineColumnToWorkloadTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {
@@ -36,7 +36,7 @@ public class V0_50_41_004__AddDeadlineColumnToWorkloadTest extends AbstractConfi
   }
 
   @Test
-  public void test() {
+  void test() {
     final DSLContext dslContext = getDslContext();
     final Set<String> workloadIndexesBeforeMigration = dslContext.select()
         .from(table("pg_indexes"))

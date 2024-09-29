@@ -4,23 +4,27 @@ import { useLocalStorage as useLocalStorageWithUndefinedBug } from "react-use";
 
 import { BuilderState } from "components/connectorBuilder/types";
 
-import { SupportLevel } from "core/api/types/AirbyteClient";
 import { Theme } from "hooks/theme/useAirbyteTheme";
+
+export interface AssistLocalStorageProject {
+  sessionId: string;
+}
 
 // Represents all the data we store in localStorage across the airbyte app
 interface AirbyteLocalStorage {
   connectorBuilderEditorView: BuilderState["mode"];
   connectorBuilderInputsWarning: boolean;
+  connectorBuilderPublishWarning: boolean;
   connectorBuilderRecordView: "json" | "table";
   connectorBuilderLimitWarning: boolean;
   allowlistIpsOpen: boolean;
   airbyteTheme: Theme;
-  "airbyte_connector-grid-support-level-filter": SupportLevel[];
   "airbyte_connector-grid-show-suggested-connectors": boolean;
   "airbyte_show-dev-tools": boolean;
   "airbyte_workspace-in-title": boolean;
   "airbyte_extended-attempts-stats": boolean;
   "airbyte_connection-additional-details": boolean;
+  "airbyte_ai-assist-projects": Record<string, AssistLocalStorageProject>;
 }
 
 /*

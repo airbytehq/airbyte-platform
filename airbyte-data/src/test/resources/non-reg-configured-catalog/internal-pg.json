@@ -1,0 +1,1650 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "organization",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "pba": { "type": "boolean" },
+            "name": { "type": "string" },
+            "email": { "type": "string" },
+            "user_id": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "org_level_billing": { "type": "boolean" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "organization_email_domain",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "email_domain": { "type": "string" },
+            "organization_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "auth_user",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "user_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "auth_user_id": { "type": "string" },
+            "auth_provider": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_catalog_fetch_event",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "actor_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "config_hash": { "type": "string" },
+            "modified_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "actor_version": { "type": "string" },
+            "actor_catalog_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "connection",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "manual": { "type": "boolean" },
+            "prefix": { "type": "string" },
+            "status": { "type": "string" },
+            "catalog": { "type": "string" },
+            "schedule": { "type": "string" },
+            "geography": { "type": "string" },
+            "source_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "schedule_data": { "type": "string" },
+            "schedule_type": { "type": "string" },
+            "destination_id": { "type": "string" },
+            "breaking_change": { "type": "boolean" },
+            "namespace_format": { "type": "string" },
+            "source_catalog_id": { "type": "string" },
+            "field_selection_data": { "type": "string" },
+            "namespace_definition": { "type": "string" },
+            "resource_requirements": { "type": "string" },
+            "non_breaking_change_preference": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "retry_states",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "job_id": { "type": "number", "airbyte_type": "integer" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "connection_id": { "type": "string" },
+            "total_partial_failures": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "total_complete_failures": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "successive_partial_failures": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "successive_complete_failures": {
+              "type": "number",
+              "airbyte_type": "integer"
+            }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "workload_label",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "key": { "type": "string" },
+            "value": { "type": "string" },
+            "workload_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "airbyte_configs_migrations",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "script": { "type": "string" },
+            "success": { "type": "boolean" },
+            "version": { "type": "string" },
+            "checksum": { "type": "number", "airbyte_type": "integer" },
+            "description": { "type": "string" },
+            "installed_by": { "type": "string" },
+            "installed_on": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_without_timezone"
+            },
+            "execution_time": { "type": "number", "airbyte_type": "integer" },
+            "installed_rank": { "type": "number", "airbyte_type": "integer" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["installed_rank"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["installed_rank"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "schema_management",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "connection_id": { "type": "string" },
+            "backfill_preference": { "type": "string" },
+            "auto_propagation_status": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "airbyte_jobs_migrations",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "script": { "type": "string" },
+            "success": { "type": "boolean" },
+            "version": { "type": "string" },
+            "checksum": { "type": "number", "airbyte_type": "integer" },
+            "description": { "type": "string" },
+            "installed_by": { "type": "string" },
+            "installed_on": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_without_timezone"
+            },
+            "execution_time": { "type": "number", "airbyte_type": "integer" },
+            "installed_rank": { "type": "number", "airbyte_type": "integer" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["installed_rank"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["installed_rank"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_definition",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "icon": { "type": "string" },
+            "name": { "type": "string" },
+            "custom": { "type": "boolean" },
+            "public": { "type": "boolean" },
+            "metrics": { "type": "string" },
+            "icon_url": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "actor_type": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "source_type": { "type": "string" },
+            "default_version_id": { "type": "string" },
+            "resource_requirements": { "type": "string" },
+            "max_seconds_between_messages": {
+              "type": "number",
+              "airbyte_type": "integer"
+            }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "jobs",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "number", "airbyte_type": "integer" },
+            "scope": { "type": "string" },
+            "config": { "type": "string" },
+            "status": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "config_type": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "user_invitation",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "status": { "type": "string" },
+            "scope_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "expires_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_without_timezone"
+            },
+            "scope_type": { "type": "string" },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "invite_code": { "type": "string" },
+            "invited_email": { "type": "string" },
+            "inviter_user_id": { "type": "string" },
+            "permission_type": { "type": "string" },
+            "accepted_by_user_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "declarative_manifest",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "spec": { "type": "string" },
+            "version": { "type": "number", "airbyte_type": "integer" },
+            "manifest": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "description": { "type": "string" },
+            "manifest_backup": { "type": "string" },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["actor_definition_id"], ["version"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["actor_definition_id"], ["version"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_oauth_parameter",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "actor_type": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "workspace_id": { "type": "string" },
+            "configuration": { "type": "string" },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "workspace",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "slug": { "type": "string" },
+            "email": { "type": "string" },
+            "geography": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "customer_id": { "type": "string" },
+            "notifications": { "type": "string" },
+            "organization_id": { "type": "string" },
+            "send_newsletter": { "type": "boolean" },
+            "feedback_complete": { "type": "boolean" },
+            "first_sync_complete": { "type": "boolean" },
+            "display_setup_wizard": { "type": "boolean" },
+            "notification_settings": { "type": "string" },
+            "send_security_updates": { "type": "boolean" },
+            "initial_setup_complete": { "type": "boolean" },
+            "anonymous_data_collection": { "type": "boolean" },
+            "webhook_operation_configs": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_definition_config_injection",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "injection_path": { "type": "string" },
+            "json_to_inject": { "type": "string" },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [
+          ["actor_definition_id"],
+          ["injection_path"]
+        ]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["actor_definition_id"], ["injection_path"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_definition_version",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "spec": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "cdk_version": { "type": "string" },
+            "release_date": { "type": "string", "format": "date" },
+            "supports_dbt": { "type": "boolean" },
+            "allowed_hosts": { "type": "string" },
+            "release_stage": { "type": "string" },
+            "support_level": { "type": "string" },
+            "support_state": { "type": "string" },
+            "last_published": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "docker_image_tag": { "type": "string" },
+            "protocol_version": { "type": "string" },
+            "docker_repository": { "type": "string" },
+            "documentation_url": { "type": "string" },
+            "normalization_tag": { "type": "string" },
+            "suggested_streams": { "type": "string" },
+            "supports_refreshes": { "type": "boolean" },
+            "actor_definition_id": { "type": "string" },
+            "internal_support_level": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "normalization_repository": { "type": "string" },
+            "normalization_integration_type": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "airbyte_metadata",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "key": { "type": "string" },
+            "value": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["key"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["key"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "sso_config",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "keycloak_realm": { "type": "string" },
+            "organization_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "active_declarative_manifest",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "version": { "type": "number", "airbyte_type": "integer" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["actor_definition_id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["actor_definition_id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "operation",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "operator_dbt": { "type": "string" },
+            "workspace_id": { "type": "string" },
+            "operator_type": { "type": "string" },
+            "operator_webhook": { "type": "string" },
+            "operator_normalization": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "workload",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "type": { "type": "string" },
+            "status": { "type": "string" },
+            "auto_id": { "type": "string" },
+            "deadline": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "log_path": { "type": "string" },
+            "geography": { "type": "string" },
+            "mutex_key": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "dataplane_id": { "type": "string" },
+            "input_payload": { "type": "string" },
+            "last_heartbeat_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "termination_reason": { "type": "string" },
+            "termination_source": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "normalization_summaries",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "end_time": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "failures": { "type": "string" },
+            "attempt_id": { "type": "number", "airbyte_type": "integer" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "start_time": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "connector_builder_project",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "workspace_id": { "type": "string" },
+            "manifest_draft": { "type": "string" },
+            "testing_values": { "type": "string" },
+            "actor_definition_id": { "type": "string" },
+            "manifest_draft_backup": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "sync_stats",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "attempt_id": { "type": "number", "airbyte_type": "integer" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "bytes_emitted": { "type": "number", "airbyte_type": "integer" },
+            "bytes_committed": { "type": "number", "airbyte_type": "integer" },
+            "estimated_bytes": { "type": "number", "airbyte_type": "integer" },
+            "records_emitted": { "type": "number", "airbyte_type": "integer" },
+            "estimated_records": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "records_committed": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "source_state_messages_emitted": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "destination_state_messages_emitted": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "max_seconds_before_source_state_message_emitted": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "mean_seconds_before_source_state_message_emitted": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "max_seconds_between_state_message_emitted_and_committed": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "mean_seconds_between_state_message_emitted_and_committed": {
+              "type": "number",
+              "airbyte_type": "integer"
+            }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_definition_workspace_grant",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "scope_id": { "type": "string" },
+            "scope_type": { "type": "string" },
+            "workspace_id": { "type": "string" },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": []
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["scope_id"], ["actor_definition_id"], ["workspace_id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "connection_timeline_event",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "summary": { "type": "string" },
+            "user_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "event_type": { "type": "string" },
+            "connection_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "workspace_service_account",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "hmac_key": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "workspace_id": { "type": "string" },
+            "json_credential": { "type": "string" },
+            "service_account_id": { "type": "string" },
+            "service_account_email": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["workspace_id"], ["service_account_id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["workspace_id"], ["service_account_id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "attempts",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "number", "airbyte_type": "integer" },
+            "job_id": { "type": "number", "airbyte_type": "integer" },
+            "output": { "type": "string" },
+            "status": { "type": "string" },
+            "ended_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "log_path": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "attempt_number": { "type": "number", "airbyte_type": "integer" },
+            "failure_summary": { "type": "string" },
+            "attempt_sync_config": { "type": "string" },
+            "temporal_workflow_id": { "type": "string" },
+            "processing_task_queue": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_definition_breaking_change",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string" },
+            "version": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "scoped_impact": { "type": "string" },
+            "upgrade_deadline": { "type": "string", "format": "date" },
+            "actor_definition_id": { "type": "string" },
+            "migration_documentation_url": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["actor_definition_id"], ["version"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["actor_definition_id"], ["version"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "state",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "type": { "type": "string" },
+            "state": { "type": "string" },
+            "namespace": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_name": { "type": "string" },
+            "connection_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"], ["connection_id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"], ["connection_id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "stream_attempt_metadata",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "attempt_id": { "type": "number", "airbyte_type": "integer" },
+            "stream_name": { "type": "string" },
+            "was_resumed": { "type": "boolean" },
+            "was_backfilled": { "type": "boolean" },
+            "stream_namespace": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "stream_generation",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_name": { "type": "string" },
+            "start_job_id": { "type": "number", "airbyte_type": "integer" },
+            "connection_id": { "type": "string" },
+            "generation_id": { "type": "number", "airbyte_type": "integer" },
+            "stream_namespace": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "stream_refreshes",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_name": { "type": "string" },
+            "refresh_type": { "type": "string" },
+            "connection_id": { "type": "string" },
+            "stream_namespace": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "airbyte_configs",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "number", "airbyte_type": "integer" },
+            "config_id": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "config_blob": { "type": "string" },
+            "config_type": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "airbyte_configs_wrapped_data_migrations",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "script": { "type": "string" },
+            "success": { "type": "boolean" },
+            "version": { "type": "string" },
+            "checksum": { "type": "number", "airbyte_type": "integer" },
+            "description": { "type": "string" },
+            "installed_by": { "type": "string" },
+            "installed_on": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_without_timezone"
+            },
+            "execution_time": { "type": "number", "airbyte_type": "integer" },
+            "installed_rank": { "type": "number", "airbyte_type": "integer" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["installed_rank"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["installed_rank"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "tombstone": { "type": "boolean" },
+            "actor_type": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "workspace_id": { "type": "string" },
+            "configuration": { "type": "string" },
+            "actor_definition_id": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "declarative_manifest_image_version",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "image_version": { "type": "string" },
+            "major_version": { "type": "number", "airbyte_type": "integer" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["major_version"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["major_version"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "notification_configuration",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "enabled": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "connection_id": { "type": "string" },
+            "notification_type": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "actor_catalog",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "catalog": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "modified_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "catalog_hash": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "stream_statuses",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "job_id": { "type": "number", "airbyte_type": "integer" },
+            "job_type": { "type": "string" },
+            "metadata": { "type": "string" },
+            "run_state": { "type": "string" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_name": { "type": "string" },
+            "workspace_id": { "type": "string" },
+            "connection_id": { "type": "string" },
+            "attempt_number": { "type": "number", "airbyte_type": "integer" },
+            "transitioned_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_namespace": { "type": "string" },
+            "incomplete_run_cause": { "type": "string" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "auth_refresh_token",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" },
+            "revoked": { "type": "boolean" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "session_id": { "type": "string" },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["value"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["value"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    },
+    {
+      "stream": {
+        "name": "stream_stats",
+        "namespace": "public",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "attempt_id": { "type": "number", "airbyte_type": "integer" },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "airbyte_type": "timestamp_with_timezone"
+            },
+            "stream_name": { "type": "string" },
+            "bytes_emitted": { "type": "number", "airbyte_type": "integer" },
+            "connection_id": { "type": "string" },
+            "bytes_committed": { "type": "number", "airbyte_type": "integer" },
+            "estimated_bytes": { "type": "number", "airbyte_type": "integer" },
+            "records_emitted": { "type": "number", "airbyte_type": "integer" },
+            "stream_namespace": { "type": "string" },
+            "estimated_records": {
+              "type": "number",
+              "airbyte_type": "integer"
+            },
+            "records_committed": { "type": "number", "airbyte_type": "integer" }
+          }
+        },
+        "is_resumable": true,
+        "default_cursor_field": [],
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "source_defined_primary_key": [["id"]]
+      },
+      "sync_mode": "incremental",
+      "primary_key": [["id"]],
+      "cursor_field": [],
+      "destination_sync_mode": "append_dedup"
+    }
+  ]
+}

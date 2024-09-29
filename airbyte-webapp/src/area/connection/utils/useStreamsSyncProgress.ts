@@ -7,10 +7,9 @@ import { getStreamKey } from "./computeStreamStatus";
 
 export const useStreamsSyncProgress = (
   connectionId: string,
-  isRunning: boolean,
-  showSyncProgress: boolean
+  isRunning: boolean
 ): Map<string, StreamSyncProgressReadItem> => {
-  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(connectionId, showSyncProgress && isRunning);
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(connectionId, isRunning);
 
   const syncProgressMap = useMemo(() => {
     if (isRunning !== true) {

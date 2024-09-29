@@ -60,7 +60,7 @@ open class SourcesController(
     )
 
     val sourceDefinitionId: UUID =
-      sourceCreateRequest?.let { it.definitionId }
+      sourceCreateRequest?.definitionId
         ?: run {
           val configurationJsonNode = sourceCreateRequest?.configuration as ObjectNode
           if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {

@@ -109,14 +109,13 @@ public enum ConfigSchema implements AirbyteConfig {
 
   // worker
   STANDARD_SYNC_INPUT("StandardSyncInput.yaml", StandardSyncInput.class),
-  NORMALIZATION_INPUT("NormalizationInput.yaml", NormalizationInput.class),
-  OPERATOR_DBT_INPUT("OperatorDbtInput.yaml", OperatorDbtInput.class),
   STANDARD_SYNC_OUTPUT("StandardSyncOutput.yaml", StandardSyncOutput.class),
   REPLICATION_OUTPUT("ReplicationOutput.yaml", ReplicationOutput.class),
   STATE("State.yaml", State.class),
   SECRET_PERSISTENCE_CONFIG("SecretPersistenceConfig.yaml", SecretPersistenceConfig.class),
 
   SCOPED_CONFIGURATION("ScopedConfiguration.yaml", ScopedConfiguration.class),
+  CONNECTOR_ROLLOUT("ConnectorRollout.yaml", ConnectorRollout.class),
   USER_INVITATION("UserInvitation.yaml", UserInvitation.class);
 
   static final Path KNOWN_SCHEMAS_ROOT = JsonSchemas.prepareSchemas("types", ConfigSchema.class);

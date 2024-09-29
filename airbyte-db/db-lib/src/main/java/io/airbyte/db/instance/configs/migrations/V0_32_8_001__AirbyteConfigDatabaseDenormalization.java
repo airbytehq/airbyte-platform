@@ -523,9 +523,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
           .set(workspaceId, standardSyncOperation.getWorkspaceId())
           .set(name, standardSyncOperation.getName())
           .set(operatorType, standardSyncOperation.getOperatorType() == null ? null
-              : Enums.toEnum(standardSyncOperation.getOperatorType().value(), OperatorType.class).orElseThrow())
-          .set(operatorNormalization, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorNormalization())))
-          .set(operatorDbt, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorDbt())))
+              : Enums.toEnum(standardSyncOperation.getOperatorType().value(), OperatorType.class).orElse(OperatorType.normalization))
           .set(tombstone, standardSyncOperation.getTombstone() != null && standardSyncOperation.getTombstone())
           .set(createdAt, OffsetDateTime.ofInstant(configWithMetadata.getCreatedAt(), ZoneOffset.UTC))
           .set(updatedAt, OffsetDateTime.ofInstant(configWithMetadata.getUpdatedAt(), ZoneOffset.UTC))

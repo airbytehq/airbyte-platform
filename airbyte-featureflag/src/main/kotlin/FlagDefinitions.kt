@@ -15,11 +15,7 @@ package io.airbyte.featureflag
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
-object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
-
-object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
@@ -36,10 +32,6 @@ object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dat
 object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
-
-object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = true)
-
-object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
 
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
@@ -65,8 +57,6 @@ object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", 
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
-object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
-
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
@@ -88,8 +78,6 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
-
-object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
@@ -123,14 +111,10 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
     }
   }
 
-  object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
-
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 }
-
-object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
@@ -152,13 +136,9 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
-object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
-
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
-object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = false)
-
-object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
+object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
@@ -178,8 +158,26 @@ object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s
 
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
-object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-dangling-secrets", default = false)
-
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
+
+object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
+
+object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
+
+object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
+
+object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
+
+object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
+
+object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
+
+object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
+
+object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
+
+object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
+
+object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)

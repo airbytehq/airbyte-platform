@@ -65,7 +65,7 @@ class ConnectionApiTest extends BaseControllerTest {
 
   @Test
   void testUpdateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(connectionsHandler.updateConnection(Mockito.any()))
+    Mockito.when(connectionsHandler.updateConnection(Mockito.any(), Mockito.any(), Mockito.any()))
         .thenReturn(new ConnectionRead())
         .thenThrow(new ConstraintViolationException(new HashSet<>()))
         .thenThrow(new ConfigNotFoundException("", ""));

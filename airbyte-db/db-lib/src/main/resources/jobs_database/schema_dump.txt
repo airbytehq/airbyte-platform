@@ -30,7 +30,6 @@ create table "public"."attempts" (
   "created_at" timestamp(6) with time zone,
   "updated_at" timestamp(6) with time zone,
   "ended_at" timestamp(6) with time zone,
-  "temporal_workflow_id" varchar(256),
   "failure_summary" jsonb,
   "processing_task_queue" varchar(255),
   "attempt_sync_config" jsonb,
@@ -69,6 +68,15 @@ create table "public"."retry_states" (
   "total_partial_failures" int not null,
   constraint "retry_states_pkey" primary key ("id"),
   constraint "uniq_job_id" unique ("job_id")
+);
+create table "public"."stream_attempt_metadata" (
+  "id" uuid not null,
+  "attempt_id" bigint not null,
+  "stream_namespace" varchar(2147483647),
+  "stream_name" varchar(2147483647) not null,
+  "was_backfilled" boolean not null default false,
+  "was_resumed" boolean not null default false,
+  constraint "stream_attempt_metadata_pkey" primary key ("id")
 );
 create table "public"."stream_stats" (
   "id" uuid not null,
@@ -129,18 +137,25 @@ create unique index "job_attempt_idx" on "public"."attempts"("job_id" asc, "atte
 create index "jobs_config_type_idx" on "public"."jobs"("config_type" asc);
 create index "jobs_scope_idx" on "public"."jobs"("scope" asc);
 create index "jobs_status_idx" on "public"."jobs"("status" asc);
+create index "jobs_updated_at_idx" on "public"."jobs"("updated_at" asc);
 create index "scope_created_at_idx" on "public"."jobs"("scope" asc, "created_at" desc);
 create index "scope_non_terminal_status_idx" on "public"."jobs"("scope" asc, "status" asc)
 where ((status <> ALL (ARRAY['failed'::job_status, 'succeeded'::job_status, 'cancelled'::job_status])));
 create index "normalization_summary_attempt_id_idx" on "public"."normalization_summaries"("attempt_id" asc);
 create index "retry_state_connection_id_idx" on "public"."retry_states"("connection_id" asc);
 create index "retry_state_job_id_idx" on "public"."retry_states"("job_id" asc);
+create index "stream_attempt_metadata__attempt_id_idx" on "public"."stream_attempt_metadata"("attempt_id" asc);
+create unique index "stream_attempt_metadata__attempt_id_name_idx" on "public"."stream_attempt_metadata"("attempt_id" asc, "stream_name" asc)
+where ((stream_namespace IS NULL));
+create unique index "stream_attempt_metadata__attempt_id_name_namespace_idx" on "public"."stream_attempt_metadata"("attempt_id" asc, "stream_namespace" asc, "stream_name" asc)
+where ((stream_namespace IS NOT NULL));
 create index "index" on "public"."stream_stats"("attempt_id" asc);
 create index "stream_status_connection_id_idx" on "public"."stream_statuses"("connection_id" asc);
 create index "stream_status_job_id_idx" on "public"."stream_statuses"("job_id" asc);
 create index "attempt_id_idx" on "public"."sync_stats"("attempt_id" asc);
 alter table "public"."normalization_summaries" add constraint "normalization_summaries_attempt_id_fkey" foreign key ("attempt_id") references "public"."attempts" ("id");
 alter table "public"."retry_states" add constraint "retry_states_job_id_fkey" foreign key ("job_id") references "public"."jobs" ("id");
+alter table "public"."stream_attempt_metadata" add constraint "stream_attempt_metadata_attempt_id_fkey" foreign key ("attempt_id") references "public"."attempts" ("id");
 alter table "public"."stream_stats" add constraint "stream_stats_attempt_id_fkey" foreign key ("attempt_id") references "public"."attempts" ("id");
 alter table "public"."stream_statuses" add constraint "stream_statuses_job_id_fkey" foreign key ("job_id") references "public"."jobs" ("id");
 alter table "public"."sync_stats" add constraint "sync_stats_attempt_id_fkey" foreign key ("attempt_id") references "public"."attempts" ("id");

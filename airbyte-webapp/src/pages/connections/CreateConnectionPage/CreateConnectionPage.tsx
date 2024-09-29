@@ -1,18 +1,17 @@
-import { Suspense } from "react";
+import { MutableRefObject, Suspense, useEffect, useRef } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
-import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
-import { SelectSource } from "components/connection/CreateConnection/SelectSource";
+import { DefineDestination } from "components/connection/CreateConnection/DefineDestination";
+import { DefineSource } from "components/connection/CreateConnection/DefineSource";
+import { HeadTitle } from "components/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useGetDestination, useGetSource } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { trackAction } from "core/utils/datadog";
-import { AppActionCodes } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
@@ -46,18 +45,37 @@ export const CreateConnectionPage: React.FC = () => {
 
 const CurrentStep: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sourceId = searchParams.get("sourceId");
   const destinationId = searchParams.get("destinationId");
   const source = useGetSource(sourceId);
   const destination = useGetDestination(destinationId);
 
+  const sourceRef: MutableRefObject<string | null> = useRef(sourceId);
+  useEffect(() => {
+    if (destinationId) {
+      // don't do anything if destination is already set
+      return;
+    }
+    if (sourceRef.current !== sourceId && sourceId) {
+      // when the sourceId changes remove all params except sourceId
+      const paramKeys = Array.from(searchParams.keys());
+      paramKeys.forEach((key) => {
+        if (key !== "sourceId") {
+          searchParams.delete(key);
+        }
+      });
+      setSearchParams(searchParams);
+    }
+    sourceRef.current = sourceId;
+  }, [sourceId, destinationId, searchParams, setSearchParams]);
+
   if (!source) {
-    return <SelectSource />;
+    return <DefineSource />;
   }
   // source is configured, but destination is not
   if (!destination) {
-    return <SelectDestination />;
+    return <DefineDestination />;
   }
   // both source and destination are configured, configure the connection now
   if (source && destination) {

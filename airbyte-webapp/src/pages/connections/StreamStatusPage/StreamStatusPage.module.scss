@@ -1,13 +1,10 @@
-.clickableHeader {
-  background-color: inherit;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: inherit;
-  font-weight: inherit;
-  text-transform: inherit;
-  white-space: nowrap;
+@use "scss/variables";
+
+.container {
+  grid-area: connection-page-content;
+  overflow-y: auto;
   display: flex;
-  align-items: center;
-  padding: 0;
+  gap: variables.$spacing-md;
+  flex-direction: column;
+  padding: variables.$spacing-xl;
 }

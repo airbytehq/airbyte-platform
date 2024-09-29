@@ -6,7 +6,7 @@ package io.airbyte.config.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.config.Permission.PermissionType;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -87,7 +87,7 @@ public class PermissionHelper {
    * Returns the full set of all permission types that grant the target permission type.
    */
   public static Set<PermissionType> getPermissionTypesThatGrantTargetPermission(final PermissionType targetPermission) {
-    final Set<PermissionType> grantingPermissionTypes = new HashSet<>();
+    final Set<PermissionType> grantingPermissionTypes = EnumSet.noneOf(PermissionType.class);
     for (final Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
       if (entry.getValue().contains(targetPermission)) {
         grantingPermissionTypes.add(entry.getKey());

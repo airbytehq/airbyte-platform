@@ -6,9 +6,9 @@ package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +33,7 @@ public class AirbyteMessageExtractor {
 
   public static List<List<String>> getPks(final Optional<ConfiguredAirbyteStream> catalogStream) {
     return catalogStream
-        .map(stream -> stream.getPrimaryKey())
+        .map(ConfiguredAirbyteStream::getPrimaryKey)
         .orElse(new ArrayList<>());
   }
 

@@ -1,24 +1,28 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import dayjs from "dayjs";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedDate, FormattedMessage } from "react-intl";
 
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { MaskedText } from "components/ui/Text/MaskedText";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListApplications } from "core/api";
 import { ApplicationRead } from "core/api/types/AirbyteClient";
+import { useAuthService } from "core/services/auth";
+import { links } from "core/utils/links";
 
 import styles from "./ApplicationSettingsView.module.scss";
 import { CreateApplicationControl } from "./CreateApplicationControl";
 import { DeleteApplicationControl } from "./DeleteApplicationControl";
 import { GenerateTokenControl } from "./GenerateTokenControl";
+
 export const ApplicationSettingsView = () => {
+  const { applicationSupport } = useAuthService();
   const { applications } = useListApplications();
   const columnHelper = useMemo(() => createColumnHelper<ApplicationRead>(), []);
 
@@ -57,7 +61,9 @@ export const ApplicationSettingsView = () => {
       columnHelper.accessor("createdAt", {
         header: () => <FormattedMessage id="settings.applications.table.createdAt" />,
         cell: (props) => (
-          <Text color="grey400">{dayjs.unix(props.row.original.createdAt).format("MMM DD, YYYY h:mmA")}</Text>
+          <Text color="grey400">
+            <FormattedDate value={props.row.original.createdAt * 1000} dateStyle="medium" timeStyle="short" />
+          </Text>
         ),
         sortingFn: "basic",
       }),
@@ -71,41 +77,47 @@ export const ApplicationSettingsView = () => {
                 clientId={props.row.original.clientId}
                 clientSecret={props.row.original.clientSecret}
               />
-              <DeleteApplicationControl
-                applicationId={props.row.original.id}
-                applicationName={props.row.original.name}
-              />
+              {applicationSupport === "multiple" && (
+                <DeleteApplicationControl
+                  applicationId={props.row.original.id}
+                  applicationName={props.row.original.name}
+                />
+              )}
             </FlexContainer>
           );
         },
         meta: { thClassName: styles.actionsColumn },
       }),
     ];
-  }, [columnHelper]);
+  }, [columnHelper, applicationSupport]);
 
   return (
     <>
-      <FlexContainer direction="row" justifyContent="space-between">
-        <FlexContainer gap="none">
+      <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+        <FlexItem>
           <Heading as="h1">
             <FormattedMessage id="settings.applications" />
           </Heading>
-          <InfoTooltip>
-            <Text inverseColor align="center">
-              <FormattedMessage id="settings.applications.tooltip" />
+          <Box pt="sm">
+            <Text color="grey" size="sm">
+              <FormattedMessage id="settings.applications.helptext" />
+              {applicationSupport === "multiple" && (
+                <FormattedMessage id="settings.applications.helptext.permissions" />
+              )}
+              <ExternalLink href={links.apiAccess}>
+                <FormattedMessage id="ui.learnMore" />
+              </ExternalLink>
             </Text>
-          </InfoTooltip>
-        </FlexContainer>
-        <CreateApplicationControl />
+          </Box>
+        </FlexItem>
+        {applicationSupport === "multiple" && <CreateApplicationControl />}
       </FlexContainer>
       <Box py="lg">
         {applications.length ? (
           <Table columns={columns} data={applications} />
         ) : (
-          <Box p="lg">
-            <Text color="grey400" italicized>
-              <FormattedMessage id="settings.applications.table.empty" />
-            </Text>
+          <Box p="xl" m="xl">
+            <EmptyState text={<FormattedMessage id="settings.applications.table.empty" />} icon="grid" />
           </Box>
         )}
       </Box>

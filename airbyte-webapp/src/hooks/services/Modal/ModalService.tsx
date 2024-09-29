@@ -45,6 +45,7 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
             onCancel={
               modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })
             }
+            allowNavigation={modalOptions.allowNavigation}
           >
             <modalOptions.content
               onCancel={() => resultSubjectRef.current?.next({ type: "canceled" })}

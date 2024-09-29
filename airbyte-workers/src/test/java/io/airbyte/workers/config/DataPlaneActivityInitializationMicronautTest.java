@@ -11,12 +11,6 @@ import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivityImpl;
-import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationActivityImpl;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
@@ -26,11 +20,12 @@ import io.airbyte.workers.temporal.sync.WebhookOperationActivityImpl;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest(environments = {WorkerMode.DATA_PLANE})
+@MicronautTest(environments = {WorkerMode.DATA_PLANE, Environment.KUBERNETES})
 @Property(name = "airbyte.internal-api.base-path",
           value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",
@@ -64,15 +59,6 @@ class DataPlaneActivityInitializationMicronautTest {
   ConfigFetchActivity configFetchActivity;
 
   @Inject
-  DbtTransformationActivity dbtTransformationActivity;
-
-  @Inject
-  NormalizationActivity normalizationActivity;
-
-  @Inject
-  NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
-
-  @Inject
   RefreshSchemaActivity refreshSchemaActivity;
 
   @Inject
@@ -84,21 +70,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Test
   void testConfigFetchActivity() {
     assertEquals(ConfigFetchActivityImpl.class, configFetchActivity.getClass());
-  }
-
-  @Test
-  void testDbtTransformationActivity() {
-    assertEquals(DbtTransformationActivityImpl.class, dbtTransformationActivity.getClass());
-  }
-
-  @Test
-  void testNormalizationActivity() {
-    assertEquals(NormalizationActivityImpl.class, normalizationActivity.getClass());
-  }
-
-  @Test
-  void testNormalizationSummaryCheckActivity() {
-    assertEquals(NormalizationSummaryCheckActivityImpl.class, normalizationSummaryCheckActivity.getClass());
   }
 
   @Test

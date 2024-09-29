@@ -3,13 +3,13 @@ import { useIntl } from "react-intl";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
-import { MainPageWithScroll } from "components/common/MainPageWithScroll/MainPageWithScroll";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm/CreateConnectionForm";
+import { HeadTitle } from "components/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
+import styles from "./ConfigureConnectionPage.module.scss";
 import { CreateConnectionTitleBlock } from "../CreateConnectionPage/CreateConnectionTitleBlock";
 
 export const ConfigureConnectionPage = () => {
@@ -40,17 +40,14 @@ export const ConfigureConnectionPage = () => {
   ];
 
   return (
-    <MainPageWithScroll
-      headTitle={<HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />}
-      pageTitle={
-        <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-          <CreateConnectionTitleBlock />
-        </PageHeaderWithNavigation>
-      }
-    >
+    <div className={styles.container}>
+      <HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />
+      <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+        <CreateConnectionTitleBlock />
+      </PageHeaderWithNavigation>
       <Suspense fallback={<LoadingPage />}>
         <CreateConnectionForm />
       </Suspense>
-    </MainPageWithScroll>
+    </div>
   );
 };

@@ -1,6 +1,8 @@
 package io.airbyte.config.init
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.version.Version
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
@@ -17,27 +19,37 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     private val log = LoggerFactory.getLogger(RemoteDeclarativeManifestImageVersionsProvider::class.java)
   }
 
-  override fun getLatestDeclarativeManifestImageVersions(): Map<Int, String> {
+  override fun getLatestDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {
     val repository = "airbyte/source-declarative-manifest"
-    val tags = getTagsForRepository(repository)
+    val items = getTagsAndShasForRepository(repository)
 
-    val semverStandardVersionTags = tags.filter { it.matches(Regex("""^\d+\.\d+\.\d+$""")) }.toList()
+    val semverStandardVersionTags = items.filter { (imageVersion, _) -> imageVersion.matches(Regex("""^\d+\.\d+\.\d+$""")) }
+    val semverStandardDeclarativeManifestImageVersions =
+      semverStandardVersionTags.map { (imageVersion, imageSha) ->
+        DeclarativeManifestImageVersion(getMajorVersion(imageVersion), imageVersion, imageSha)
+      }
+
+    val semverComparator =
+      Comparator<DeclarativeManifestImageVersion> { v1, v2 ->
+        Version(v1.imageVersion).versionCompareTo(Version(v2.imageVersion))
+      }
     val latestVersionsByMajor =
-      semverStandardVersionTags
-        .groupBy { it.split(".")[0].toInt() }
-        .mapValues { (_, versionsByMajor) -> versionsByMajor.maxBy { it } }
-
-    log.info("Latest versions for $repository: $latestVersionsByMajor")
+      semverStandardDeclarativeManifestImageVersions
+        .groupBy { it.majorVersion }
+        .map { entry -> entry.value.maxWith(semverComparator) }
+    log.info("Latest versions for $repository: ${latestVersionsByMajor.map { it.imageVersion }}")
     return latestVersionsByMajor
   }
 
-  private fun getTagsForRepository(repository: String): List<String> {
-    val tags = mutableListOf<String>()
+  private fun getTagsAndShasForRepository(
+    @Suppress("SameParameterValue") repository: String,
+  ): Map<String, String> {
+    val tagsAndShas = mutableMapOf<String, String>()
 
     // 100 is max allowed page size for DockerHub
     var nextUrl: String? = "https://hub.docker.com/v2/repositories/$repository/tags?page_size=100"
 
-    log.info("Fetching image tags for $repository...")
+    log.info("Fetching image tags and SHAs for $repository...")
     while (nextUrl != null) {
       val request = Request.Builder().url(nextUrl).build()
       okHttpClient.newCall(request).execute().use { response ->
@@ -47,11 +59,19 @@ class RemoteDeclarativeManifestImageVersionsProvider(
           )
         }
         val body = Jsons.deserialize(response.body!!.string())
-        tags.addAll(body.get("results").elements().asSequence().mapNotNull { it.get("name").asText() })
+        body.get("results").elements().forEach { result ->
+          val tag = result.get("name").asText()
+          val sha = result.get("digest").asText()
+          tagsAndShas[tag] = sha
+        }
         nextUrl = if (!body.get("next").isNull) body.get("next").asText() else null
       }
     }
-    log.info("DockerHub tags for $repository: $tags")
-    return tags
+    log.info("DockerHub tags and SHAs for $repository: $tagsAndShas")
+    return tagsAndShas
+  }
+
+  private fun getMajorVersion(version: String): Int {
+    return version.split(".")[0].toInt()
   }
 }

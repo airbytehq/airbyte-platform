@@ -16,6 +16,7 @@ import {
 } from "../generated/AirbyteClient";
 import { SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
 import {
+  ConsumptionTimeWindow,
   WorkspaceCreate,
   WorkspaceRead,
   WorkspaceReadList,
@@ -33,6 +34,8 @@ export const workspaceKeys = {
   listAccessUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "listAccessUsers", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
+  usage: (workspaceId: string, timeWindow: ConsumptionTimeWindow) =>
+    [...workspaceKeys.all, "usage", workspaceId, timeWindow] as const,
 };
 
 export const useCurrentWorkspace = () => {

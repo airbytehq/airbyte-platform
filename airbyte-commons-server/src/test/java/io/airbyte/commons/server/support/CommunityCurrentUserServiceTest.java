@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -29,7 +29,8 @@ import org.mockito.Mockito;
 @Requires(env = {Environment.TEST})
 @Property(name = "micronaut.security.enabled",
           value = "false")
-public class CommunityCurrentUserServiceTest {
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class CommunityCurrentUserServiceTest {
 
   @MockBean(UserPersistence.class)
   UserPersistence mockUserPersistence() {
@@ -48,15 +49,15 @@ public class CommunityCurrentUserServiceTest {
     // @RequestScope work on the CommunityCurrentUserService
     ServerRequestContext.with(HttpRequest.GET("/"), () -> {
       try {
-        final User expectedUser = new User().withUserId(UserPersistence.DEFAULT_USER_ID);
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(UserPersistence.DEFAULT_USER_ID);
         when(userPersistence.getDefaultUser()).thenReturn(Optional.ofNullable(expectedUser));
 
         // First call - should fetch default user from userPersistence
-        final User user1 = currentUserService.getCurrentUser();
+        final AuthenticatedUser user1 = currentUserService.getCurrentUser();
         Assertions.assertEquals(expectedUser, user1);
 
         // Second call - should use cached user
-        final User user2 = currentUserService.getCurrentUser();
+        final AuthenticatedUser user2 = currentUserService.getCurrentUser();
         Assertions.assertEquals(expectedUser, user2);
 
         // Verify that getDefaultUser is called only once

@@ -9,6 +9,7 @@ global:
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
+    type: internal
     secretName: ""
     secretValue: ""
 

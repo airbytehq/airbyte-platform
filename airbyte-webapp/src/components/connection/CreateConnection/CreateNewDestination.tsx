@@ -10,10 +10,11 @@ import { Button } from "components/ui/Button";
 
 import { useSuggestedDestinations } from "area/connector/utils";
 import { useCreateDestination, useDestinationDefinitionList } from "core/api";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
-import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";
+import { BackToDefineSourceButton } from "./BackToDefineSourceButton";
+import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./DefineDestination";
 
 export const DESTINATION_DEFINITION_PARAM = "destinationDefinitionId";
 
@@ -24,7 +25,6 @@ export const CreateNewDestination: React.FC = () => {
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   const { destinationDefinitions } = useDestinationDefinitionList();
-  const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createDestination } = useCreateDestination();
 
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -61,31 +61,33 @@ export const CreateNewDestination: React.FC = () => {
 
   if (selectedDestinationDefinitionId) {
     return (
-      <Box px="md">
-        <PageContainer centered>
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-          <DestinationForm
-            selectedDestinationDefinitionId={selectedDestinationDefinitionId}
-            destinationDefinitions={destinationDefinitions}
-            onSubmit={onCreateDestination}
-          />
-        </PageContainer>
-      </Box>
+      <PageContainer centered>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
+        <DestinationForm
+          selectedDestinationDefinitionId={selectedDestinationDefinitionId}
+          destinationDefinitions={destinationDefinitions}
+          onSubmit={onCreateDestination}
+          leftFooterSlot={<BackToDefineSourceButton />}
+        />
+      </PageContainer>
     );
   }
 
   return (
-    <SelectConnector
-      connectorDefinitions={destinationDefinitions}
-      connectorType="destination"
-      onSelectConnectorDefinition={(destinationDefinitionId) =>
-        onSelectDestinationDefinitionId(destinationDefinitionId)
-      }
-      suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
-    />
+    <>
+      <SelectConnector
+        connectorDefinitions={destinationDefinitions}
+        connectorType="destination"
+        onSelectConnectorDefinition={(destinationDefinitionId) =>
+          onSelectDestinationDefinitionId(destinationDefinitionId)
+        }
+        suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
+      />
+      <BackToDefineSourceButton />
+    </>
   );
 };

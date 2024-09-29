@@ -6,7 +6,7 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
 import io.airbyte.config.WorkloadType
-import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
@@ -22,6 +22,7 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
@@ -42,6 +43,7 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
@@ -71,6 +73,7 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
@@ -91,6 +94,7 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)

@@ -2,31 +2,14 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { ExternalLink } from "components/ui/Link";
 
-import {
-  useSourceDefinitionVersion,
-  useDestinationDefinitionVersion,
-  useGetSourceDefinitionSpecification,
-  useGetDestinationDefinitionSpecification,
-  useSourceDefinition,
-  useDestinationDefinition,
-  HttpProblem,
-} from "core/api";
-import {
-  ActorDefinitionVersionRead,
-  DestinationDefinitionRead,
-  DestinationDefinitionSpecificationRead,
-  SourceDefinitionRead,
-  SourceDefinitionSpecificationRead,
-  WebBackendConnectionRead,
-} from "core/api/types/AirbyteClient";
+import { HttpProblem } from "core/api";
+import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { FormError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
-
-import { useExperiment } from "../Experiment";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
@@ -44,13 +27,6 @@ interface ConnectionServiceProps {
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  sourceDefinition: SourceDefinitionRead;
-  sourceDefinitionVersion: ActorDefinitionVersionRead;
-  sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
-  destDefinition: DestinationDefinitionRead;
-  destDefinitionVersion: ActorDefinitionVersionRead;
-  destDefinitionSpecification: DestinationDefinitionSpecificationRead;
-  initialValues: FormConnectionFormValues;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
@@ -63,25 +39,9 @@ const useConnectionForm = ({
   schemaError,
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
-  const {
-    source: { sourceId, sourceDefinitionId },
-    destination: { destinationId, destinationDefinitionId },
-  } = connection;
-
   const formatError = useFormatError();
-
-  const sourceDefinition = useSourceDefinition(sourceDefinitionId);
-  const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(connection.source.sourceId);
-
-  const destDefinition = useDestinationDefinition(destinationDefinitionId);
-  const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
-
-  const initialValues = useInitialFormValues(connection, destDefinitionVersion, destDefinitionSpecification, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
@@ -99,29 +59,43 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
-        const validationErrorMessage = isSimplifiedCreation
-          ? "connectionForm.validation.creationError"
-          : "connectionForm.validation.error";
+        const hasHashCollisionError =
+          errors?.syncCatalog?.streams?.message === "connectionForm.streams.hashFieldCollision";
+
+        const hasPrimaryKeyOrCursorError = (field: "primaryKey" | "cursorField") =>
+          errors?.syncCatalog?.streams &&
+          Object.entries(
+            errors?.syncCatalog?.streams as FieldErrors<FormConnectionFormValues["syncCatalog"]["streams"]>
+          ).some(([_, streamNode]) => streamNode?.config?.[field]?.message === `connectionForm.${field}.required`);
+
+        const pkError = hasPrimaryKeyOrCursorError("primaryKey");
+        const cursorError = hasPrimaryKeyOrCursorError("cursorField");
+
+        const validationErrorMessage =
+          pkError && cursorError
+            ? "form.error.pkAndCursor.required"
+            : pkError
+            ? "form.error.pk.missing"
+            : cursorError
+            ? "form.error.cursor.missing"
+            : "connectionForm.validation.creationError";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
+          id: hasNoStreamsSelectedError
+            ? "connectionForm.streams.required"
+            : hasHashCollisionError
+            ? "connectionForm.streams.hashFieldCollision"
+            : validationErrorMessage,
         });
       }
 
       return null;
     },
-    [submitError, formatError, formatMessage, isSimplifiedCreation]
+    [submitError, formatError, formatMessage]
   );
 
   return {
     connection,
     mode,
-    sourceDefinition,
-    sourceDefinitionVersion,
-    sourceDefinitionSpecification,
-    destDefinition,
-    destDefinitionVersion,
-    destDefinitionSpecification,
-    initialValues,
     schemaError,
     refreshSchema,
     setSubmitError,

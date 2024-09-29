@@ -28,15 +28,14 @@ import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.State;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
@@ -98,9 +97,7 @@ class JobCreationAndStatusUpdateActivityTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
       .withFailures(Collections.singletonList(

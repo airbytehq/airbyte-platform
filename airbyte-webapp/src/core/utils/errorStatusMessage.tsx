@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { FailureOrigin, FailureReason } from "core/api/types/AirbyteClient";
 import { I18nError } from "core/errors";
+import { TimelineFailureReason } from "pages/connections/ConnectionTimelinePage/types";
 
 export class FormError extends Error {
   status?: number;
@@ -35,7 +36,7 @@ export const generateMessageFromError = (
   );
 };
 
-interface FailureUiDetails {
+export interface FailureUiDetails {
   type: "error" | "warning";
   typeLabel: string;
   origin: FailureReason["failureOrigin"];
@@ -43,7 +44,7 @@ interface FailureUiDetails {
   secondaryMessage?: string;
 }
 
-export const getFailureType = (failure: FailureReason): "error" | "warning" => {
+export const getFailureType = (failure: FailureReason | TimelineFailureReason): "error" | "warning" => {
   const isConfigError = failure.failureType === "config_error";
   const isSourceError = failure.failureOrigin === FailureOrigin.source;
   const isDestinationError = failure.failureOrigin === FailureOrigin.destination;
@@ -52,7 +53,7 @@ export const getFailureType = (failure: FailureReason): "error" | "warning" => {
 };
 
 export const failureUiDetailsFromReason = <
-  T extends FailureReason | undefined | null,
+  T extends FailureReason | TimelineFailureReason | undefined | null,
   RetVal = T extends FailureReason ? FailureUiDetails : null,
 >(
   reason: T,

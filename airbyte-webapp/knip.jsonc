@@ -19,7 +19,7 @@
 
     // Ignore oauth-callback.html script
     "src/area/connector/utils/oauthCallback.ts",
-    
+
     // Debug utility meant to be used only temporary for local debugging
     "src/core/utils/useMemoDebug.ts"
   ],
@@ -27,7 +27,9 @@
     // Knip doesn't detect the import to this from a SASS file
     "normalize.css",
     // Knip does not detect the pure `/// <reference />` import for this
-    "@types/segment-analytics"
+    "@types/segment-analytics",
+    // Knip does not detect its usage by the `react-inline-svg-unique-id` plugin
+    "@inline-svg-unique-id/react"
   ],
   "include": ["files", "dependencies"]
 }

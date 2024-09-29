@@ -8,6 +8,7 @@ describe("pruneUnsupportedModes", () => {
     [SyncMode.incremental, DestinationSyncMode.append_dedup],
     [SyncMode.full_refresh, DestinationSyncMode.append],
     [SyncMode.full_refresh, DestinationSyncMode.overwrite],
+    [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
   ];
 
   it("returns all modes when they are supported", () => {
@@ -15,7 +16,12 @@ describe("pruneUnsupportedModes", () => {
       pruneUnsupportedModes(
         allModes,
         [SyncMode.incremental, SyncMode.full_refresh],
-        [DestinationSyncMode.append, DestinationSyncMode.append_dedup, DestinationSyncMode.overwrite]
+        [
+          DestinationSyncMode.append,
+          DestinationSyncMode.append_dedup,
+          DestinationSyncMode.overwrite,
+          DestinationSyncMode.overwrite_dedup,
+        ]
       )
     ).toEqual(allModes);
   });

@@ -177,7 +177,6 @@ secrets: {}
 ## Example:
 # env_vars:
 #   AIRBYTE_VERSION: 0.40.4
-
 env_vars: {}
 
 debug:

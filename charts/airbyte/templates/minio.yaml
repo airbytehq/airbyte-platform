@@ -44,20 +44,20 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-airbyte-secrets
-                  key: DEFAULT_MINIO_ACCESS_KEY
+                  key: MINIO_ACCESS_KEY_ID 
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-airbyte-secrets
-                  key: DEFAULT_MINIO_SECRET_KEY
+                  key: MINIO_SECRET_ACCESS_KEY
           ports:
             - containerPort: 9000
           resources:
             requests:
-              memory: "256Mi"
+              memory: "1024Mi"
               cpu: "200m"
             limits:
-              memory: "256Mi"
+              memory: "1024Mi"
               cpu: "200m"
           # Mount the volume into the pod
           securityContext:
@@ -159,12 +159,12 @@ spec:
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_ACCESS_KEY
+              key: MINIO_ACCESS_KEY_ID
         - name: MINIO_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_SECRET_KEY
+              key: MINIO_SECRET_ACCESS_KEY
         {{- end }}
         - name: MINIO_ENDPOINT
           valueFrom:

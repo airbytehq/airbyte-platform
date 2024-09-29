@@ -16,12 +16,14 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.Callable;
+import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Creates and deletes GCP CloudSQL databases.
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public class CloudSqlDatabaseProvisioner {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CloudSqlDatabaseProvisioner.class);
@@ -72,7 +74,7 @@ public class CloudSqlDatabaseProvisioner {
     int pollAttempts = 0;
     while (pollAttempts < maxPollAttempts) {
       Operation operation = sqlAdmin.operations().get(projectId, operationName).execute();
-      if (operation.getStatus().equals(SQL_OPERATION_DONE_STATUS)) {
+      if (SQL_OPERATION_DONE_STATUS.equals(operation.getStatus())) {
         return;
       }
       Thread.sleep(1000);
@@ -92,15 +94,15 @@ public class CloudSqlDatabaseProvisioner {
     while (attempts < maxApiCallAttempts) {
       try {
         return callable.call();
-      } catch (Exception e) {
-        if (e instanceof GoogleJsonResponseException && ((GoogleJsonResponseException) e).getStatusCode() == 409) {
+      } catch (GoogleJsonResponseException e) {
+        if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
           attempts++;
           LOGGER.info("Attempt " + attempts + " failed with 409 error");
           LOGGER.info("Exception thrown by API: " + e.getMessage());
           Thread.sleep(1000);
-        } else {
-          throw new RuntimeException(e);
         }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
     throw new RuntimeException("Max retries exceeded. Could not complete operation.");

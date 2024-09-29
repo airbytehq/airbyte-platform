@@ -28,7 +28,7 @@ class JobsDatabaseInitializerTest extends CommonDatabaseInitializerTest {
     final var initialSchema = MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH);
     final var initializer = new JobsDatabaseInitializer(databaseAvailabilityCheck, dslContext, initialSchema);
 
-    Assertions.assertDoesNotThrow(() -> initializer.initialize());
+    Assertions.assertDoesNotThrow(initializer::initialize);
     assertTrue(initializer.hasTable(dslContext, initializer.getTableNames().get().stream().findFirst().get()));
   }
 
@@ -39,7 +39,7 @@ class JobsDatabaseInitializerTest extends CommonDatabaseInitializerTest {
     dslContext.execute(initialSchema);
     final var initializer = new JobsDatabaseInitializer(databaseAvailabilityCheck, dslContext, initialSchema);
 
-    Assertions.assertDoesNotThrow(() -> initializer.initialize());
+    Assertions.assertDoesNotThrow(initializer::initialize);
     assertTrue(initializer.hasTable(dslContext, initializer.getTableNames().get().stream().findFirst().get()));
   }
 
@@ -51,14 +51,14 @@ class JobsDatabaseInitializerTest extends CommonDatabaseInitializerTest {
     doThrow(new DatabaseCheckException("test")).when(databaseAvailabilityCheck).check();
 
     final var initializer = new JobsDatabaseInitializer(databaseAvailabilityCheck, dslContext, initialSchema);
-    Assertions.assertThrows(DatabaseInitializationException.class, () -> initializer.initialize());
+    Assertions.assertThrows(DatabaseInitializationException.class, initializer::initialize);
   }
 
   @Test
   void testInitializationNullAvailabilityCheck() throws IOException {
     final var initialSchema = MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH);
     final var initializer = new JobsDatabaseInitializer(null, dslContext, initialSchema);
-    Assertions.assertThrows(DatabaseInitializationException.class, () -> initializer.initialize());
+    Assertions.assertThrows(DatabaseInitializationException.class, initializer::initialize);
   }
 
   @Test
@@ -66,7 +66,7 @@ class JobsDatabaseInitializerTest extends CommonDatabaseInitializerTest {
     final var databaseAvailabilityCheck = mock(JobsDatabaseAvailabilityCheck.class);
     final var initialSchema = MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH);
     final var initializer = new JobsDatabaseInitializer(databaseAvailabilityCheck, null, initialSchema);
-    Assertions.assertThrows(DatabaseInitializationException.class, () -> initializer.initialize());
+    Assertions.assertThrows(DatabaseInitializationException.class, initializer::initialize);
   }
 
 }

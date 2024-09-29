@@ -10,12 +10,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -34,7 +35,9 @@ class NamespacingMapperTest {
   private static final String NAMESPACE_FORMAT = "output";
   private static final String DESTINATION_NAMESPACE = "destination_namespace";
 
-  private static final ConfiguredAirbyteCatalog CATALOG = CatalogHelpers.createConfiguredAirbyteCatalog(
+  private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
+
+  private static final ConfiguredAirbyteCatalog CATALOG = catalogHelpers.createConfiguredAirbyteCatalog(
       STREAM_NAME,
       INPUT_NAMESPACE,
       Field.of(FIELD_NAME, JsonSchemaType.STRING));
@@ -71,7 +74,7 @@ class NamespacingMapperTest {
         new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME,
         INPUT_NAMESPACE,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
@@ -108,7 +111,7 @@ class NamespacingMapperTest {
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     assertEquals(originalCatalog, CATALOG);
     originalCatalog.getStreams().get(0).getStream().withNamespace(null);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME,
         null,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
@@ -128,11 +131,6 @@ class NamespacingMapperTest {
     expectedMessage.getRecord().withNamespace(null);
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
 
-    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
-        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
-        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
-    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(originalStreamStatusMessage);
-
     assertEquals(expectedMessage, actualMessage);
   }
 
@@ -142,7 +140,7 @@ class NamespacingMapperTest {
         new NamespacingMapper(NamespaceDefinitionType.DESTINATION, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME,
         null,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
@@ -175,7 +173,7 @@ class NamespacingMapperTest {
 
     final String expectedNamespace = INPUT_NAMESPACE + "_suffix";
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME, expectedNamespace,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
     final ConfiguredAirbyteCatalog actualCatalog = mapper.mapCatalog(CATALOG);
@@ -211,7 +209,7 @@ class NamespacingMapperTest {
 
     final String expectedNamespace = NAMESPACE_FORMAT;
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME, expectedNamespace,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
     final ConfiguredAirbyteCatalog actualCatalog = mapper.mapCatalog(CATALOG);
@@ -248,7 +246,7 @@ class NamespacingMapperTest {
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     assertEquals(originalCatalog, CATALOG);
     originalCatalog.getStreams().get(0).getStream().withNamespace(null);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         OUTPUT_PREFIX + STREAM_NAME,
         null,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));
@@ -308,7 +306,7 @@ class NamespacingMapperTest {
         new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, null, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
-    final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
+    final ConfiguredAirbyteCatalog expectedCatalog = catalogHelpers.createConfiguredAirbyteCatalog(
         STREAM_NAME,
         INPUT_NAMESPACE,
         Field.of(FIELD_NAME, JsonSchemaType.STRING));

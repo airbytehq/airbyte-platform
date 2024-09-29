@@ -30,4 +30,7 @@ public class PersistFailureSyncWorkflow implements SyncWorkflow {
     throw new ActivityFailure("persist failed", 1L, 1L, ACTIVITY_TYPE_PERSIST, "someId", RetryState.RETRY_STATE_UNSPECIFIED, "someIdentity", CAUSE);
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

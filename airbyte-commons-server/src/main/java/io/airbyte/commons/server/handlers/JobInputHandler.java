@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;
@@ -20,8 +20,6 @@ import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.ConfigReplacer;
 import io.airbyte.commons.converters.StateConverter;
-import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.helper.NormalizationInDestinationHelper;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
@@ -33,6 +31,7 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -54,20 +53,14 @@ import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.NormalizationInDestination;
+import io.airbyte.featureflag.UseAsyncReplicate;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
@@ -91,7 +84,6 @@ public class JobInputHandler {
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
-  private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ConfigInjector configInjector;
@@ -105,7 +97,6 @@ public class JobInputHandler {
   @SuppressWarnings("ParameterName")
   public JobInputHandler(final JobPersistence jobPersistence,
                          final ConfigRepository configRepository,
-                         final FeatureFlags featureFlags,
                          final FeatureFlagClient featureFlagClient,
                          final OAuthConfigSupplier oAuthConfigSupplier,
                          final ConfigInjector configInjector,
@@ -115,7 +106,6 @@ public class JobInputHandler {
                          final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
-    this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.configInjector = configInjector;
@@ -181,19 +171,6 @@ public class JobInputHandler {
           destination.getConfiguration());
       attemptSyncConfig.setDestinationConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()));
 
-      final List<Context> normalizationInDestinationContext = List.of(
-          new DestinationDefinition(destination.getDestinationDefinitionId()),
-          new Workspace(destination.getWorkspaceId()));
-
-      final var normalizationInDestinationMinSupportedVersion = featureFlagClient.stringVariation(
-          NormalizationInDestination.INSTANCE, new Multi(normalizationInDestinationContext));
-      final var shouldNormalizeInDestination = NormalizationInDestinationHelper
-          .shouldNormalizeInDestination(config.getOperationSequence(),
-              config.getDestinationDockerImage(),
-              normalizationInDestinationMinSupportedVersion);
-
-      reportNormalizationInDestinationMetrics(shouldNormalizeInDestination, config, connectionId);
-
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attempt,
@@ -209,13 +186,15 @@ public class JobInputHandler {
           config,
           destinationVersion,
           attemptSyncConfig.getDestinationConfiguration(),
-          NormalizationInDestinationHelper.getAdditionalEnvironmentVariables(shouldNormalizeInDestination));
+          Map.of());
 
       final List<Context> featureFlagContext = new ArrayList<>();
       featureFlagContext.add(new Workspace(config.getWorkspaceId()));
       if (standardSync.getConnectionId() != null) {
         featureFlagContext.add(new Connection(standardSync.getConnectionId()));
       }
+
+      final boolean useAsyncReplicate = featureFlagClient.boolVariation(UseAsyncReplicate.INSTANCE, new Multi(featureFlagContext));
 
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
@@ -232,9 +211,9 @@ public class JobInputHandler {
           .withSyncResourceRequirements(config.getSyncResourceRequirements())
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
-          .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
           .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType))
-          .withConnectionContext(connectionContext);
+          .withConnectionContext(connectionContext)
+          .withUseAsyncReplicate(useAsyncReplicate);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -396,18 +375,6 @@ public class JobInputHandler {
     return Optional.of(StateMessageHelper.getState(internalState));
   }
 
-  private void reportNormalizationInDestinationMetrics(final boolean shouldNormalizeInDestination,
-                                                       final JobSyncConfig config,
-                                                       final UUID connectionId) {
-    if (shouldNormalizeInDestination) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_DESTINATION_CONTAINER, 1,
-          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    } else if (NormalizationInDestinationHelper.normalizationStepRequired(config.getOperationSequence())) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_NORMALIZATION_CONTAINER, 1,
-          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    }
-  }
-
   private IntegrationLauncherConfig getSourceIntegrationLauncherConfig(final long jobId,
                                                                        final int attempt,
                                                                        final UUID connectionId,
@@ -442,13 +409,6 @@ public class JobInputHandler {
                                                                             final Map<String, String> additionalEnviornmentVariables)
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
-    final String destinationNormalizationDockerImage = destinationVersion.getNormalizationConfig() != null
-        ? destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
-            + destinationVersion.getNormalizationConfig().getNormalizationTag()
-        : null;
-    final String normalizationIntegrationType =
-        destinationVersion.getNormalizationConfig() != null ? destinationVersion.getNormalizationConfig().getNormalizationIntegrationType()
-            : null;
 
     return new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
@@ -458,9 +418,6 @@ public class JobInputHandler {
         .withDockerImage(config.getDestinationDockerImage())
         .withProtocolVersion(config.getDestinationProtocolVersion())
         .withIsCustomConnector(config.getIsDestinationCustomConnector())
-        .withNormalizationDockerImage(destinationNormalizationDockerImage)
-        .withSupportsDbt(destinationVersion.getSupportsDbt())
-        .withNormalizationIntegrationType(normalizationIntegrationType)
         .withAllowedHosts(configReplacer.getAllowedHosts(destinationVersion.getAllowedHosts(), destinationConfiguration))
         .withAdditionalEnvironmentVariables(additionalEnviornmentVariables);
   }

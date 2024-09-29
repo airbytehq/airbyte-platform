@@ -10,11 +10,13 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.BreakingChanges
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
-import io.airbyte.config.ConnectorReleases
+import io.airbyte.config.ConnectorReleasesDestination
+import io.airbyte.config.ConnectorReleasesSource
 import io.airbyte.config.VersionBreakingChange
 import io.airbyte.config.helpers.ConnectorRegistryConverters
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
@@ -35,22 +37,26 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
+import java.util.stream.Stream
 
 /**
  * Test suite for the [ApplyDefinitionsHelper] class.
  */
 internal class ApplyDefinitionsHelperTest {
-  private var definitionsProvider: DefinitionsProvider = mockk()
-  private var jobPersistence: JobPersistence = mockk()
-  private var actorDefinitionService: ActorDefinitionService = mockk()
-  private var sourceService: SourceService = mockk()
-  private var destinationService: DestinationService = mockk()
-  private var metricClient: MetricClient = mockk()
-  private var supportStateUpdater: SupportStateUpdater = mockk()
+  private val definitionsProvider: DefinitionsProvider = mockk()
+  private val jobPersistence: JobPersistence = mockk()
+  private val actorDefinitionService: ActorDefinitionService = mockk()
+  private val sourceService: SourceService = mockk()
+  private val destinationService: DestinationService = mockk()
+  private val metricClient: MetricClient = mockk()
+  private val supportStateUpdater: SupportStateUpdater = mockk()
+  private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
+  private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
   private lateinit var applyDefinitionsHelper: ApplyDefinitionsHelper
 
   @BeforeEach
@@ -64,13 +70,17 @@ internal class ApplyDefinitionsHelperTest {
         destinationService,
         metricClient,
         supportStateUpdater,
+        actorDefinitionVersionResolver,
+        airbyteCompatibleConnectorsValidator,
       )
 
     every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
     every { actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap } returns emptyMap()
     every { definitionsProvider.getDestinationDefinitions() } returns emptyList()
     every { definitionsProvider.getSourceDefinitions() } returns emptyList()
+    every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
     every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
+    every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns Optional.empty()
     mockVoidReturningFunctions()
   }
 
@@ -100,18 +110,21 @@ internal class ApplyDefinitionsHelperTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @MethodSource("updateScenario")
   @Throws(
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
     io.airbyte.data.exceptions.ConfigNotFoundException::class,
   )
-  fun `a new connector should always be written`(updateAll: Boolean) {
+  fun `a new connector should always be written`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES)
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3)
 
-    applyDefinitionsHelper.apply(updateAll)
+    applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
 
     verify {
@@ -146,14 +159,17 @@ internal class ApplyDefinitionsHelperTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @MethodSource("updateScenario")
   @Throws(
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
     io.airbyte.data.exceptions.ConfigNotFoundException::class,
   )
-  fun `an existing connector that is not in use should always be updated`(updateAll: Boolean) {
+  fun `an existing connector that is not in use should always be updated`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
     mockSeedInitialDefinitions()
     every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
 
@@ -161,7 +177,7 @@ internal class ApplyDefinitionsHelperTest {
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
 
-    applyDefinitionsHelper.apply(updateAll)
+    applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
 
     verify {
@@ -195,22 +211,47 @@ internal class ApplyDefinitionsHelperTest {
     confirmVerified(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [false, true])
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
-  )
-  fun `updateAll should affect whether existing connectors in use have their versions updated`(updateAll: Boolean) {
+  @Test
+  fun `reImport should refresh the existing definition`() {
     mockSeedInitialDefinitions()
     every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
 
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
 
-    applyDefinitionsHelper.apply(updateAll)
+    val versionDefinition1 =
+      ActorDefinitionVersion()
+        .withDockerRepository("1")
+
+    every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns
+      Optional.of(versionDefinition1)
+
+    applyDefinitionsHelper.apply(false, true)
+
+    verify {
+      sourceService.writeConnectorMetadata(any(), eq(versionDefinition1), any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenario")
+  @Throws(
+    IOException::class,
+    JsonValidationException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `updateAll should affect whether existing connectors in use have their versions updated`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
+    mockSeedInitialDefinitions()
+    every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
+
+    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
+    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
+
+    applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
 
     if (updateAll) {
@@ -240,7 +281,7 @@ internal class ApplyDefinitionsHelperTest {
           )
         }
       }
-    } else {
+    } else if (!reImport) {
       verify { sourceService.updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2)) }
       verify {
         destinationService.updateStandardDestinationDefinition(
@@ -262,14 +303,17 @@ internal class ApplyDefinitionsHelperTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @MethodSource("updateScenario")
   @Throws(
     JsonValidationException::class,
     IOException::class,
     ConfigNotFoundException::class,
     io.airbyte.data.exceptions.ConfigNotFoundException::class,
   )
-  fun `new definitions that are incompatible with the protocol version range should not be written`(updateAll: Boolean) {
+  fun `new definitions that are incompatible with the protocol version range should not be written`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
     every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
     val postgresWithOldProtocolVersion = Jsons.clone(SOURCE_POSTGRES).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
     val s3withOldProtocolVersion = Jsons.clone(DESTINATION_S3).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
@@ -277,7 +321,7 @@ internal class ApplyDefinitionsHelperTest {
     every { definitionsProvider.sourceDefinitions } returns listOf(postgresWithOldProtocolVersion, SOURCE_POSTGRES_2)
     every { definitionsProvider.destinationDefinitions } returns listOf(s3withOldProtocolVersion, DESTINATION_S3_2)
 
-    applyDefinitionsHelper.apply(updateAll)
+    applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
 
     listOf("airbyte/source-postgres", "airbyte/destination-s3").forEach {
@@ -305,6 +349,89 @@ internal class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(s3withOldProtocolVersion),
+      )
+    }
+    verify {
+      sourceService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2),
+      )
+    }
+    verify {
+      destinationService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2),
+      )
+    }
+    verify { supportStateUpdater.updateSupportStates() }
+    listOf("airbyte/source-postgres", "airbyte/destination-s3").forEach {
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+          1,
+          MetricAttribute("status", "ok"),
+          MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+          MetricAttribute("docker_repository", it),
+          MetricAttribute("docker_image_tag", UPDATED_CONNECTOR_VERSION),
+        )
+      }
+    }
+    confirmVerified(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient)
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenario")
+  @Throws(
+    JsonValidationException::class,
+    IOException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `new definitions that are incompatible with the airbyte version range should not be written`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
+    every {
+      airbyteCompatibleConnectorsValidator.validate(POSTGRES_ID.toString(), "0.1.0")
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "Postgres source 0.1.0 can't be updated")
+    every {
+      airbyteCompatibleConnectorsValidator.validate(S3_ID.toString(), "0.1.0")
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "S3 Destination 0.1.0 can't be updated")
+    every { airbyteCompatibleConnectorsValidator.validate(any(), "0.2.0") } returns ConnectorPlatformCompatibilityValidationResult(true, null)
+
+    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES, SOURCE_POSTGRES_2)
+    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3, DESTINATION_S3_2)
+
+    applyDefinitionsHelper.apply(updateAll, reImport)
+    verifyActorDefinitionServiceInteractions()
+
+    listOf("airbyte/source-postgres", "airbyte/destination-s3").forEach {
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+          1,
+          MetricAttribute("status", "failed"),
+          MetricAttribute("outcome", DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION.toString()),
+          MetricAttribute("docker_repository", it),
+          MetricAttribute("docker_image_tag", INITIAL_CONNECTOR_VERSION),
+        )
+      }
+    }
+
+    verify(exactly = 0) {
+      sourceService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES),
+      )
+    }
+    verify(exactly = 0) {
+      destinationService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3),
       )
     }
     verify {
@@ -429,7 +556,14 @@ internal class ApplyDefinitionsHelperTest {
     private const val PROTOCOL_VERSION = "2.0.0"
 
     private val POSTGRES_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")
-    private val registryBreakingChanges: BreakingChanges =
+    private val sourceRegistryBreakingChanges: BreakingChanges =
+      BreakingChanges().withAdditionalProperty(
+        BREAKING_CHANGE_VERSION,
+        VersionBreakingChange()
+          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"),
+      )
+
+    private val destinationRegistryBreakingChanges: BreakingChanges =
       BreakingChanges().withAdditionalProperty(
         BREAKING_CHANGE_VERSION,
         VersionBreakingChange()
@@ -452,7 +586,7 @@ internal class ApplyDefinitionsHelperTest {
         .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
         .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres/new")
         .withSpec(ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
-        .withReleases(ConnectorReleases().withBreakingChanges(registryBreakingChanges))
+        .withReleases(ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges))
 
     private val S3_ID: UUID = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362")
     private val DESTINATION_S3: ConnectorRegistryDestinationDefinition =
@@ -471,6 +605,16 @@ internal class ApplyDefinitionsHelperTest {
         .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
         .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3/new")
         .withSpec(ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
-        .withReleases(ConnectorReleases().withBreakingChanges(registryBreakingChanges))
+        .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationRegistryBreakingChanges))
+
+    @JvmStatic
+    fun updateScenario(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(true, true),
+        Arguments.of(true, false),
+        Arguments.of(false, false),
+        Arguments.of(false, true),
+      )
+    }
   }
 }

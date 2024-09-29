@@ -1,12 +1,18 @@
 package io.airbyte.workload.handler
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.SignalInput
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
+import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -22,7 +28,8 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
-  private val featureFlagClient: FeatureFlagClient,
+  private val airbyteApi: AirbyteApiClient,
+  private val metricClient: CustomMetricPublisher,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
@@ -67,6 +74,7 @@ class WorkloadHandlerImpl(
     type: WorkloadType,
     autoId: UUID,
     deadline: OffsetDateTime,
+    signalInput: String?,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -88,6 +96,7 @@ class WorkloadHandlerImpl(
         type = type.toDomain(),
         autoId = autoId,
         deadline = deadline,
+        signalInput = signalInput,
       )
     workloadRepository.save(domainWorkload).toApi()
 
@@ -105,7 +114,7 @@ class WorkloadHandlerImpl(
             failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId")
           } catch (_: InvalidStatusTransitionException) {
             // This edge case happens if the workload reached a terminal state through another path.
-            // This would be unusual but not actionable so we're logging a message rather than failing the call.
+            // This would be unusual but not actionable, so we're logging a message rather than failing the call.
             logger.info { "${it.id} was completed before being superseded by $workloadId" }
           }
         }
@@ -148,7 +157,7 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.PENDING, WorkloadStatus.LAUNCHED, WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.PENDING, WorkloadStatus.LAUNCHED, WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.CANCELLED,
@@ -156,6 +165,8 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
+        sendSignal(workload.signalInput)
+      }
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${workload.status}",
@@ -171,7 +182,7 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.FAILURE,
@@ -179,6 +190,8 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
+        sendSignal(workload.signalInput)
+      }
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Tried to fail a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
@@ -190,12 +203,14 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.SUCCESS,
           null,
         )
+        sendSignal(workload.signalInput)
+      }
       WorkloadStatus.SUCCESS ->
         logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -306,5 +321,47 @@ class WorkloadHandlerImpl(
       )
 
     return domainWorkloads.map { it.toApi() }
+  }
+
+  private fun sendSignal(signalPayload: String?) {
+    val signalInput =
+      if (signalPayload == null) {
+        null
+      } else {
+        try {
+          Jsons.deserialize(signalPayload, io.airbyte.config.SignalInput::class.java)
+        } catch (e: Exception) {
+          logger.error(e) { "Failed to deserialize signal payload: $signalPayload" }
+          metricClient.count(
+            OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+          )
+          return
+        }
+      }
+    if (signalInput != null) {
+      try {
+        airbyteApi.signalApi.signal(
+          SignalInput(
+            workflowType = signalInput.workflowType,
+            workflowId = signalInput.workflowId,
+          ),
+        )
+        metricClient.count(
+          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+        )
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
+        metricClient.count(
+          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+          MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
+        )
+      }
+    }
   }
 }

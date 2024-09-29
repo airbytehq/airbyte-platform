@@ -17,6 +17,7 @@ import org.keycloak.admin.client.resource.RealmResource;
  * removing, and updating configuration settings.
  */
 @Singleton
+@SuppressWarnings("PMD.UseStringBufferForStringAppends")
 public class ConfigurationMapService {
 
   public static final String HTTPS_PREFIX = "https://";

@@ -6,16 +6,20 @@ package io.airbyte.commons.license;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Date;
+import java.util.Optional;
 
 /**
  * An immutable representation of an Airbyte License.
  */
-public record AirbyteLicense(LicenseType type) {
+public record AirbyteLicense(LicenseType type, Optional<Date> expirationDate, Optional<Integer> maxNodes, Optional<Integer> maxEditors) {
 
   public enum LicenseType {
 
     PRO("pro"),
-    INVALID("invalid");
+    INVALID("invalid"),
+    TRIAL("trial"),
+    ENTERPRISE("enterprise");
 
     private final String value;
 

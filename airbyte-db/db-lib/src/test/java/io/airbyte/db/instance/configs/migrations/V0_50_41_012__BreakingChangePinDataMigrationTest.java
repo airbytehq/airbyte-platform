@@ -32,7 +32,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class V0_50_41_012__BreakingChangePinDataMigrationTest extends AbstractConfigsDatabaseTest {
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.JUnitTestsShouldIncludeAssert"})
+class V0_50_41_012__BreakingChangePinDataMigrationTest extends AbstractConfigsDatabaseTest {
 
   private V0_50_41_012__BreakingChangePinDataMigration migration;
 

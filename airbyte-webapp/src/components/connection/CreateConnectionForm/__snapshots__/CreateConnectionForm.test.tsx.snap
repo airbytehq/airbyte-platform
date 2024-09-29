@@ -3,11 +3,13 @@
 exports[`CreateConnectionForm should render 1`] = `
 <body>
   <div>
-    <form>
-      <fieldset
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <form
         class="<removed-for-snapshot-test>"
       >
-        <div
+        <fieldset
           class="<removed-for-snapshot-test>"
         >
           <div
@@ -19,902 +21,976 @@ exports[`CreateConnectionForm should render 1`] = `
               <div
                 class="<removed-for-snapshot-test>"
               >
-                <h5
-                  class="<removed-for-snapshot-test>"
-                >
-                  Select sync mode
-                </h5>
-              </div>
-              <p
-                class="<removed-for-snapshot-test>"
-                data-type="text"
-              >
-                Tell us how you want your data moved and we'll select the right sync mode for your streams.
-              </p>
-            </div>
-            <div
-              class="<removed-for-snapshot-test>"
-            >
-              <div
-                class="<removed-for-snapshot-test>"
-              >
                 <div
                   class="<removed-for-snapshot-test>"
                 >
                   <div
                     class="<removed-for-snapshot-test>"
                   >
-                    <label
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              How do you want data to be delivered to the destination?
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                      </div>
-                    </label>
-                  </div>
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
                     <div
                       class="<removed-for-snapshot-test>"
                     >
-                      <input
-                        checked=""
+                      <h5
                         class="<removed-for-snapshot-test>"
-                        data-testid="radio-button-tile-delivery-replicateSource"
-                        id="delivery-replicateSource"
-                        name="delivery"
-                        type="radio"
-                        value="replicateSource"
-                      />
-                      <label
-                        class="<removed-for-snapshot-test>"
-                        for="delivery-replicateSource"
                       >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <svg
-                            height="16"
-                            role="img"
-                            width="16"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-                              fill="#615EFF"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                        <div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              Replicate Source 
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                Recommended
-                              </span>
-                            </p>
-                          </div>
-                          <p
-                            class="<removed-for-snapshot-test>"
-                            data-type="text"
-                          >
-                            Maintain an up-to-date copy of your source data in the destination.
-                          </p>
-                        </div>
-                      </label>
+                        Select sync mode
+                      </h5>
                     </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <input
-                        class="<removed-for-snapshot-test>"
-                        data-testid="radio-button-tile-delivery-appendChanges"
-                        id="delivery-appendChanges"
-                        name="delivery"
-                        type="radio"
-                        value="appendChanges"
-                      />
-                      <label
-                        class="<removed-for-snapshot-test>"
-                        for="delivery-appendChanges"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <svg
-                            height="16"
-                            role="img"
-                            width="16"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <g
-                              fill="#E8E8ED"
-                            >
-                              <path
-                                d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
-                              />
-                              <path
-                                d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
-                                fill-rule="evenodd"
-                              />
-                            </g>
-                          </svg>
-                        </div>
-                        <div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              Append Historical Changes
-                            </p>
-                          </div>
-                          <p
-                            class="<removed-for-snapshot-test>"
-                            data-type="text"
-                          >
-                            Track changes to your data over time. Changes are appended to the destination.
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <label
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  Do you want all your source data copied every sync?
-                                </p>
-                              </div>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
-                          </div>
-                        </label>
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <input
-                            class="<removed-for-snapshot-test>"
-                            data-testid="radio-button-tile-delectedRecords-incremental"
-                            id="delectedRecords-incremental"
-                            name="delectedRecords"
-                            type="radio"
-                            value="incremental"
-                          />
-                          <label
-                            class="<removed-for-snapshot-test>"
-                            for="delectedRecords-incremental"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <svg
-                                height="16"
-                                role="img"
-                                width="16"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <g
-                                  fill="#E8E8ED"
-                                >
-                                  <path
-                                    d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
-                                  />
-                                  <path
-                                    d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
-                                    fill-rule="evenodd"
-                                  />
-                                </g>
-                              </svg>
-                            </div>
-                            <div>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  Append New Rows and Updates Only
-                                </p>
-                              </div>
-                              <p
-                                class="<removed-for-snapshot-test>"
-                                data-type="text"
-                              >
-                                Add a new entry each time a record is created or modified.
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <input
-                            checked=""
-                            class="<removed-for-snapshot-test>"
-                            data-testid="radio-button-tile-delectedRecords-full_refresh"
-                            id="delectedRecords-full_refresh"
-                            name="delectedRecords"
-                            type="radio"
-                            value="full_refresh"
-                          />
-                          <label
-                            class="<removed-for-snapshot-test>"
-                            for="delectedRecords-full_refresh"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <svg
-                                height="16"
-                                role="img"
-                                width="16"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-                                  fill="#615EFF"
-                                  fill-rule="evenodd"
-                                />
-                              </svg>
-                            </div>
-                            <div>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  Append Full Snapshots
-                                </p>
-                              </div>
-                              <p
-                                class="<removed-for-snapshot-test>"
-                                data-type="text"
-                              >
-                                Append a full copy of your source data every sync.
-                              </p>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                  >
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                      data-icon="warning-outline"
-                                      data-testid="mocksvg"
-                                    />
-                                    This option potentially increases costs and sync times
-                                  </div>
-                                </p>
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="<removed-for-snapshot-test>"
-          >
-            <div
-              class="<removed-for-snapshot-test>"
-            >
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <h2
-                    class="<removed-for-snapshot-test>"
-                  >
-                    Select streams
-                  </h2>
-                  <button
-                    class="<removed-for-snapshot-test>"
-                    data-testid="refresh-source-schema-btn"
-                    type="button"
-                  >
-                    <div
-                      class="<removed-for-snapshot-test>"
-                      data-icon="sync"
-                      data-testid="mocksvg"
-                    />
-                    <span
-                      class="<removed-for-snapshot-test>"
-                    >
-                      Refresh source schema
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                    data-testid="input-container"
-                  >
-                    <input
-                      class="<removed-for-snapshot-test>"
-                      data-testid="input"
-                      placeholder="Search stream name"
-                    />
-                  </div>
-                </div>
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <label
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <input
-                      aria-checked="false"
-                      class="<removed-for-snapshot-test>"
-                      data-testid="hideDisableStreams-switch"
-                      id="toggle-disabled-streams"
-                      type="checkbox"
-                      value=""
-                    />
-                    <span
-                      class="<removed-for-snapshot-test>"
-                    />
-                  </label>
-                  <label
-                    for="toggle-disabled-streams"
-                  >
                     <p
                       class="<removed-for-snapshot-test>"
                       data-type="text"
                     >
-                      Hide disabled streams
+                      Tell us how you want your data moved and we'll select the right sync mode for your streams.
                     </p>
-                  </label>
+                  </div>
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <label
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      How do you want data to be delivered to the destination?
+                                    </div>
+                                  </div>
+                                </div>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                />
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <input
+                              checked=""
+                              class="<removed-for-snapshot-test>"
+                              data-testid="radio-button-tile-delivery-replicateSource"
+                              id="delivery-replicateSource"
+                              name="delivery"
+                              type="radio"
+                              value="replicateSource"
+                            />
+                            <label
+                              class="<removed-for-snapshot-test>"
+                              for="delivery-replicateSource"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <svg
+                                  height="16"
+                                  role="img"
+                                  width="16"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
+                                    fill="#615EFF"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </div>
+                              <div>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <p
+                                    class="<removed-for-snapshot-test>"
+                                    data-type="text"
+                                  >
+                                    Replicate Source 
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      Recommended
+                                    </span>
+                                  </p>
+                                </div>
+                                <p
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  Maintain an up-to-date copy of your source data in the destination.
+                                </p>
+                              </div>
+                            </label>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <input
+                              class="<removed-for-snapshot-test>"
+                              data-testid="radio-button-tile-delivery-appendChanges"
+                              id="delivery-appendChanges"
+                              name="delivery"
+                              type="radio"
+                              value="appendChanges"
+                            />
+                            <label
+                              class="<removed-for-snapshot-test>"
+                              for="delivery-appendChanges"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <svg
+                                  height="16"
+                                  role="img"
+                                  width="16"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <g
+                                    fill="#E8E8ED"
+                                  >
+                                    <path
+                                      d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
+                                    />
+                                    <path
+                                      d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
+                                      fill-rule="evenodd"
+                                    />
+                                  </g>
+                                </svg>
+                              </div>
+                              <div>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <p
+                                    class="<removed-for-snapshot-test>"
+                                    data-type="text"
+                                  >
+                                    Append Historical Changes
+                                  </p>
+                                </div>
+                                <p
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  Track changes to your data over time. Changes are appended to the destination.
+                                </p>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <div
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <label
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Do you want all your source data copied every sync?
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    />
+                                  </div>
+                                </label>
+                              </div>
+                            </div>
+                            <div
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <input
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="radio-button-tile-delectedRecords-incremental"
+                                  id="delectedRecords-incremental"
+                                  name="delectedRecords"
+                                  type="radio"
+                                  value="incremental"
+                                />
+                                <label
+                                  class="<removed-for-snapshot-test>"
+                                  for="delectedRecords-incremental"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <svg
+                                      height="16"
+                                      role="img"
+                                      width="16"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <g
+                                        fill="#E8E8ED"
+                                      >
+                                        <path
+                                          d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
+                                        />
+                                        <path
+                                          d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
+                                          fill-rule="evenodd"
+                                        />
+                                      </g>
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        Append New Rows and Updates Only
+                                      </p>
+                                    </div>
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Add a new entry each time a record is created or modified.
+                                    </p>
+                                  </div>
+                                </label>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <input
+                                  checked=""
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="radio-button-tile-delectedRecords-full_refresh"
+                                  id="delectedRecords-full_refresh"
+                                  name="delectedRecords"
+                                  type="radio"
+                                  value="full_refresh"
+                                />
+                                <label
+                                  class="<removed-for-snapshot-test>"
+                                  for="delectedRecords-full_refresh"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <svg
+                                      height="16"
+                                      role="img"
+                                      width="16"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
+                                        fill="#615EFF"
+                                        fill-rule="evenodd"
+                                      />
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        Append Full Snapshots
+                                      </p>
+                                    </div>
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Append a full copy of your source data every sync.
+                                    </p>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="warning-outline"
+                                            data-testid="mocksvg"
+                                          />
+                                          This option potentially increases costs and sync times
+                                        </div>
+                                      </p>
+                                    </div>
+                                  </div>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div
                   class="<removed-for-snapshot-test>"
-                  data-testid="catalog-tree-table-body"
                 >
                   <div
                     class="<removed-for-snapshot-test>"
-                    data-testid="catalog-tree-table-header"
                   >
                     <div
                       class="<removed-for-snapshot-test>"
-                    >
-                      <label
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <input
-                          aria-checked="mixed"
-                          class="<removed-for-snapshot-test>"
-                          data-testid="all-streams-sync-switch"
-                          id="all-streams-sync-switch"
-                          type="checkbox"
-                          value=""
-                        />
-                        <span
-                          class="<removed-for-snapshot-test>"
-                        />
-                      </label>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Sync
-                      </p>
-                    </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Namespace
-                        <button
-                          class="<removed-for-snapshot-test>"
-                          type="button"
-                        >
-                          <span
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-icon="gear"
-                              data-testid="mocksvg"
-                            />
-                          </span>
-                        </button>
-                      </p>
-                    </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Stream
-                        <button
-                          class="<removed-for-snapshot-test>"
-                          type="button"
-                        >
-                          <span
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-icon="gear"
-                              data-testid="mocksvg"
-                            />
-                          </span>
-                        </button>
-                      </p>
-                    </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Sync mode
-                        <span
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <span
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <span
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <div
-                                class="<removed-for-snapshot-test>"
-                                data-icon="info-outline"
-                                data-testid="mocksvg"
-                              />
-                            </span>
-                          </span>
-                        </span>
-                      </p>
-                    </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      />
-                    </div>
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Fields
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    data-testid="virtuoso-scroller"
-                    data-virtuoso-scroller="true"
-                    style="height: 40vh; outline: none; overflow-y: auto; position: relative;"
-                    tabindex="0"
-                  >
-                    <div
-                      data-viewport-type="element"
-                      style="width: 100%; height: 100%; position: absolute; top: 0px;"
                     >
                       <div
-                        data-testid="virtuoso-item-list"
-                        style="box-sizing: border-box; padding-top: 0px; padding-bottom: 0px; margin-top: 0px;"
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <h2
+                          class="<removed-for-snapshot-test>"
+                        >
+                          Select streams
+                        </h2>
+                        <button
+                          class="<removed-for-snapshot-test>"
+                          data-testid="refresh-source-schema-btn"
+                          type="button"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                            data-icon="sync"
+                            data-testid="mocksvg"
+                          />
+                          <span
+                            class="<removed-for-snapshot-test>"
+                          >
+                            Refresh source schema
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
                       >
                         <div
-                          data-index="0"
-                          data-item-index="0"
-                          data-known-size="50"
+                          class="<removed-for-snapshot-test>"
                         >
                           <div
                             class="<removed-for-snapshot-test>"
-                            data-testid="catalog-tree-table-row-no-namespace-another_stream"
+                            data-testid="input-container"
                           >
-                            <div
+                            <input
                               class="<removed-for-snapshot-test>"
-                              data-noexpand="true"
+                              data-testid="input"
+                              placeholder="Search stream name"
+                            />
+                          </div>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <label
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <input
+                              aria-checked="false"
+                              class="<removed-for-snapshot-test>"
+                              data-testid="hideDisableStreams-switch"
+                              id="toggle-disabled-streams"
+                              type="checkbox"
+                              value=""
+                            />
+                            <span
+                              class="<removed-for-snapshot-test>"
+                            />
+                          </label>
+                          <label
+                            for="toggle-disabled-streams"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
                             >
-                              <label
+                              Hide disabled streams
+                            </p>
+                          </label>
+                        </div>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="catalog-tree-table-body"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                          data-testid="catalog-tree-table-header"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <label
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <input
+                                aria-checked="mixed"
                                 class="<removed-for-snapshot-test>"
-                              >
-                                <input
-                                  aria-checked="true"
-                                  checked=""
-                                  class="<removed-for-snapshot-test>"
-                                  data-testid="selected-switch"
-                                  type="checkbox"
-                                  value=""
-                                />
-                                <span
-                                  class="<removed-for-snapshot-test>"
-                                />
-                              </label>
-                              <div
+                                data-testid="all-streams-sync-switch"
+                                id="all-streams-sync-switch"
+                                type="checkbox"
+                                value=""
+                              />
+                              <span
                                 class="<removed-for-snapshot-test>"
                               />
-                            </div>
-                            <div
+                            </label>
+                            <p
                               class="<removed-for-snapshot-test>"
-                              data-testid="destination-namespace-cell"
+                              data-type="text"
                             >
-                              <span
+                              Sync
+                            </p>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              Namespace
+                              <button
                                 class="<removed-for-snapshot-test>"
+                                type="button"
                               >
-                                <p
+                                <span
                                   class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  &lt;destination schema&gt;
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="destination-stream-name-cell"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  another_stream
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <div
-                                data-testid="sync-mode-select"
-                              >
-                                <button
-                                  aria-expanded="false"
-                                  aria-haspopup="listbox"
-                                  class="<removed-for-snapshot-test>"
-                                  data-headlessui-state=""
-                                  data-testid="sync-mode-select-listbox-button"
-                                  id="headlessui-listbox-button-:r0:"
-                                  type="button"
                                 >
                                   <div
                                     class="<removed-for-snapshot-test>"
-                                    data-error="false"
-                                    data-testid="pill-select-button"
+                                    data-icon="gear"
+                                    data-testid="mocksvg"
+                                  />
+                                </span>
+                              </button>
+                            </p>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              Stream
+                              <button
+                                class="<removed-for-snapshot-test>"
+                                type="button"
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-icon="gear"
+                                    data-testid="mocksvg"
+                                  />
+                                </span>
+                              </button>
+                            </p>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              Sync mode
+                              <span
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
                                   >
                                     <div
+                                      class="<removed-for-snapshot-test>"
+                                      data-icon="info-outline"
+                                      data-testid="mocksvg"
+                                    />
+                                  </span>
+                                </span>
+                              </span>
+                            </p>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            />
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              Fields
+                            </p>
+                          </div>
+                        </div>
+                        <div
+                          data-virtuoso-scroller="true"
+                          style="position: relative; height: 150px;"
+                        >
+                          <div
+                            data-viewport-type="window"
+                            style="width: 100%; height: 100%; position: absolute; top: 0px;"
+                          >
+                            <div
+                              data-testid="virtuoso-item-list"
+                              style="box-sizing: border-box; padding-top: 0px; padding-bottom: 0px; margin-top: 0px;"
+                            >
+                              <div
+                                data-index="0"
+                                data-item-index="0"
+                                data-known-size="50"
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="catalog-tree-table-row-no-namespace-another_stream"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-noexpand="true"
+                                  >
+                                    <label
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <input
+                                        aria-checked="true"
+                                        checked=""
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="selected-switch"
+                                        type="checkbox"
+                                        value=""
+                                      />
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                    </label>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    />
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-testid="destination-namespace-cell"
+                                  >
+                                    <span
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <p
                                         class="<removed-for-snapshot-test>"
                                         data-type="text"
                                       >
-                                        Full refresh | Overwrite
+                                        &lt;destination schema&gt;
                                       </p>
-                                    </div>
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                      data-icon="caret-down"
-                                      data-testid="mocksvg"
-                                    />
+                                    </span>
                                   </div>
-                                </button>
-                                <div
-                                  style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
-                                />
-                              </div>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <div
-                                class="<removed-for-snapshot-test>"
-                                data-testid="field-selection-status"
-                              >
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-testid="field-selection-status-selected-count"
-                                    data-type="text"
-                                  >
-                                    All
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          data-index="1"
-                          data-item-index="1"
-                          data-known-size="50"
-                        >
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            data-testid="catalog-tree-table-row-no-namespace-pokemon"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-noexpand="true"
-                            >
-                              <label
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <input
-                                  aria-checked="true"
-                                  checked=""
-                                  class="<removed-for-snapshot-test>"
-                                  data-testid="selected-switch"
-                                  type="checkbox"
-                                  value=""
-                                />
-                                <span
-                                  class="<removed-for-snapshot-test>"
-                                />
-                              </label>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              />
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="destination-namespace-cell"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  &lt;destination schema&gt;
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="destination-stream-name-cell"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  pokemon
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <div
-                                data-testid="sync-mode-select"
-                              >
-                                <button
-                                  aria-expanded="false"
-                                  aria-haspopup="listbox"
-                                  class="<removed-for-snapshot-test>"
-                                  data-headlessui-state=""
-                                  data-testid="sync-mode-select-listbox-button"
-                                  id="headlessui-listbox-button-:r1:"
-                                  type="button"
-                                >
                                   <div
                                     class="<removed-for-snapshot-test>"
-                                    data-error="false"
-                                    data-testid="pill-select-button"
+                                    data-testid="destination-stream-name-cell"
                                   >
-                                    <div
+                                    <span
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <p
                                         class="<removed-for-snapshot-test>"
                                         data-type="text"
                                       >
-                                        Full refresh | Overwrite
+                                        another_stream
                                       </p>
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      data-testid="sync-mode-select"
+                                    >
+                                      <button
+                                        aria-expanded="false"
+                                        aria-haspopup="listbox"
+                                        class="<removed-for-snapshot-test>"
+                                        data-headlessui-state=""
+                                        data-testid="sync-mode-select-listbox-button"
+                                        id="headlessui-listbox-button-:r2:"
+                                        type="button"
+                                      >
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-error="false"
+                                          data-testid="pill-select-button"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                          >
+                                            <p
+                                              class="<removed-for-snapshot-test>"
+                                              data-type="text"
+                                            >
+                                              Full refresh | Overwrite + Deduped
+                                            </p>
+                                          </div>
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="caret-down"
+                                            data-testid="mocksvg"
+                                          />
+                                        </div>
+                                      </button>
+                                      <div
+                                        style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      />
                                     </div>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
                                     <div
                                       class="<removed-for-snapshot-test>"
-                                      data-icon="caret-down"
-                                      data-testid="mocksvg"
-                                    />
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="primary-key-cell"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Primary key
+                                        </span>
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            missing
+                                          </p>
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
-                                </button>
-                                <div
-                                  style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
-                                />
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                      data-testid="field-selection-status"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-testid="field-selection-status-selected-count"
+                                          data-type="text"
+                                        >
+                                          All
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
                               <div
-                                class="<removed-for-snapshot-test>"
-                                data-testid="field-selection-status"
+                                data-index="1"
+                                data-item-index="1"
+                                data-known-size="50"
                               >
                                 <div
                                   class="<removed-for-snapshot-test>"
+                                  data-testid="catalog-tree-table-row-no-namespace-pokemon"
                                 >
-                                  <p
+                                  <div
                                     class="<removed-for-snapshot-test>"
-                                    data-testid="field-selection-status-selected-count"
-                                    data-type="text"
+                                    data-noexpand="true"
                                   >
-                                    All
-                                  </p>
+                                    <label
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <input
+                                        aria-checked="true"
+                                        checked=""
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="selected-switch"
+                                        type="checkbox"
+                                        value=""
+                                      />
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                    </label>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    />
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-testid="destination-namespace-cell"
+                                  >
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        &lt;destination schema&gt;
+                                      </p>
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-testid="destination-stream-name-cell"
+                                  >
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        pokemon
+                                      </p>
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      data-testid="sync-mode-select"
+                                    >
+                                      <button
+                                        aria-expanded="false"
+                                        aria-haspopup="listbox"
+                                        class="<removed-for-snapshot-test>"
+                                        data-headlessui-state=""
+                                        data-testid="sync-mode-select-listbox-button"
+                                        id="headlessui-listbox-button-:r5:"
+                                        type="button"
+                                      >
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-error="false"
+                                          data-testid="pill-select-button"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                          >
+                                            <p
+                                              class="<removed-for-snapshot-test>"
+                                              data-type="text"
+                                            >
+                                              Full refresh | Overwrite + Deduped
+                                            </p>
+                                          </div>
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="caret-down"
+                                            data-testid="mocksvg"
+                                          />
+                                        </div>
+                                      </button>
+                                      <div
+                                        style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="primary-key-cell"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Primary key
+                                        </span>
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            missing
+                                          </p>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                      data-testid="field-selection-status"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-testid="field-selection-status-selected-count"
+                                          data-type="text"
+                                        >
+                                          All
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div
+                                data-index="2"
+                                data-item-index="2"
+                                data-known-size="50"
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="catalog-tree-table-row-no-namespace-pokemon2"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-noexpand="true"
+                                  >
+                                    <label
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <input
+                                        aria-checked="false"
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="selected-switch"
+                                        type="checkbox"
+                                        value=""
+                                      />
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                    </label>
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    />
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-testid="destination-namespace-cell"
+                                  >
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        &lt;destination schema&gt;
+                                      </p>
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                    data-testid="destination-stream-name-cell"
+                                  >
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        pokemon2
+                                      </p>
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  />
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  />
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  />
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                        <div
-                          data-index="2"
-                          data-item-index="2"
-                          data-known-size="50"
-                        >
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            data-testid="catalog-tree-table-row-no-namespace-pokemon2"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-noexpand="true"
-                            >
-                              <label
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <input
-                                  aria-checked="false"
-                                  class="<removed-for-snapshot-test>"
-                                  data-testid="selected-switch"
-                                  type="checkbox"
-                                  value=""
-                                />
-                                <span
-                                  class="<removed-for-snapshot-test>"
-                                />
-                              </label>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              />
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="destination-namespace-cell"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  &lt;destination schema&gt;
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="destination-stream-name-cell"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  pokemon2
-                                </p>
-                              </span>
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            />
                           </div>
                         </div>
                       </div>
@@ -923,33 +999,51 @@ exports[`CreateConnectionForm should render 1`] = `
                 </div>
               </div>
             </div>
-          </div>
-          <div
-            class="<removed-for-snapshot-test>"
-          >
-            <a
+            <div
               class="<removed-for-snapshot-test>"
-              href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52"
             >
-              Back to Define destination
-            </a>
-            <div>
-              <a
+              <div
                 class="<removed-for-snapshot-test>"
-                data-testid="next-creation-page"
-                href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52&destinationId=083a53bc-8bc2-4dc0-b05a-4273a96f3b93"
               >
-                Next
-              </a>
+                <a
+                  class="<removed-for-snapshot-test>"
+                  href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52"
+                >
+                  Back to Define destination
+                </a>
+                <div>
+                  <span
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <span
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Primary key missing
+                    </span>
+                  </span>
+                  <button
+                    class="<removed-for-snapshot-test>"
+                    data-testid="next-creation-page"
+                    disabled=""
+                  >
+                    <span
+                      class="<removed-for-snapshot-test>"
+                    >
+                      Next
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </fieldset>
-    </form>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
+        </fieldset>
+      </form>
+    </div>
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -991,10 +1085,10 @@ This should take less than a minute, but may take a few minutes on slow internet
         </p>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;
 
@@ -1013,25 +1107,25 @@ exports[`CreateConnectionForm should render with an error 1`] = `
           <div
             class="<removed-for-snapshot-test>"
           >
-            <button
+            <div
               class="<removed-for-snapshot-test>"
-              type="button"
             >
-              <div
+              <button
                 class="<removed-for-snapshot-test>"
-                data-icon="reset"
-                data-testid="mocksvg"
-              />
-              <span
-                class="<removed-for-snapshot-test>"
+                type="button"
               >
-                Try again
-              </span>
-            </button>
-          </div>
-          <div
-            class="<removed-for-snapshot-test>"
-          >
+                <div
+                  class="<removed-for-snapshot-test>"
+                  data-icon="reset"
+                  data-testid="mocksvg"
+                />
+                <span
+                  class="<removed-for-snapshot-test>"
+                >
+                  Try again
+                </span>
+              </button>
+            </div>
             <div
               class="<removed-for-snapshot-test>"
             >
@@ -1040,27 +1134,31 @@ exports[`CreateConnectionForm should render with an error 1`] = `
               >
                 <div
                   class="<removed-for-snapshot-test>"
-                  data-icon="status-error"
-                  data-testid="mocksvg"
-                />
-              </div>
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <span
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                    data-icon="status-error"
+                    data-testid="mocksvg"
+                  />
+                </div>
+                <div
                   class="<removed-for-snapshot-test>"
                 >
-                  Test Error
-                </span>
+                  <span
+                    class="<removed-for-snapshot-test>"
+                  >
+                    Test Error
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    />
   </div>
+  <div
+    class="<removed-for-snapshot-test>"
+  />
 </body>
 `;

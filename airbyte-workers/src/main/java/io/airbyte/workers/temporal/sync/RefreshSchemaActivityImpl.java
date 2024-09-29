@@ -18,9 +18,7 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -34,6 +32,7 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import jakarta.inject.Singleton;
@@ -52,16 +51,13 @@ import lombok.extern.slf4j.Slf4j;
 public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   private final AirbyteApiClient airbyteApiClient;
-  private final FeatureFlags envVariableFeatureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final PayloadChecker payloadChecker;
 
   public RefreshSchemaActivityImpl(final AirbyteApiClient airbyteApiClient,
-                                   final FeatureFlags envVariableFeatureFlags,
                                    final FeatureFlagClient featureFlagClient,
                                    final PayloadChecker payloadChecker) {
     this.airbyteApiClient = airbyteApiClient;
-    this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.featureFlagClient = featureFlagClient;
     this.payloadChecker = payloadChecker;
   }
@@ -69,19 +65,11 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public boolean shouldRefreshSchema(final UUID sourceCatalogId) {
-    if (!envVariableFeatureFlags.autoDetectSchema()) {
-      return false;
-    }
-
     ApmTraceUtils.addTagsToTrace(Map.of(SOURCE_ID_KEY, sourceCatalogId));
     return !schemaRefreshRanRecently(sourceCatalogId);
   }
 
   private SourceDiscoverSchemaRead discoverSchemaForRefresh(final UUID sourceId, final UUID connectionId) throws IOException {
-    if (!envVariableFeatureFlags.autoDetectSchema()) {
-      return null;
-    }
-
     final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody(sourceId)).getSourceDefinitionId();
 
     final List<Context> featureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
@@ -103,7 +91,6 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     return airbyteApiClient.getSourceApi().discoverSchemaForSource(requestBody);
   }
 
-  @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public void refreshSchema(final UUID sourceId, final UUID connectionId) throws IOException {
     final var sourceDiscoverSchemaRead = discoverSchemaForRefresh(sourceId, connectionId);
@@ -132,11 +119,6 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     final var workspaceId = input.getWorkspaceId();
     final var sourceId = input.getSourceCatalogId();
     final var connectionId = input.getConnectionId();
-    if (!featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(workspaceId))) {
-      // If we don't want to backfill on new columns, fall back to the original schema refresh.
-      refreshSchema(sourceId, connectionId);
-      return new RefreshSchemaActivityOutput(null);
-    }
     final var sourceDiscoverSchemaRead = discoverSchemaForRefresh(sourceId, connectionId);
     if (sourceDiscoverSchemaRead == null) {
       return new RefreshSchemaActivityOutput(null);
@@ -152,8 +134,10 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         connectionId,
         workspaceId);
 
-    final var output = new RefreshSchemaActivityOutput(
-        airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff());
+    final var propagatedDiff = airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff();
+    final var domainDiff = propagatedDiff != null ? CatalogDiffConverter.toDomain(propagatedDiff) : null;
+
+    final var output = new RefreshSchemaActivityOutput(domainDiff);
 
     final var attrs = new MetricAttribute[] {
       new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionId))

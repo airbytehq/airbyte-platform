@@ -9,6 +9,7 @@ import static java.util.stream.Collectors.toMap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
+import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -46,7 +47,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
-import io.airbyte.commons.converters.ProtocolConverters;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
@@ -57,18 +58,21 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.Field;
+import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -97,7 +101,6 @@ public class WebBackendConnectionsHandler {
   private final ConnectionsHandler connectionsHandler;
   private final StateHandler stateHandler;
   private final SourceHandler sourceHandler;
-  private final DestinationDefinitionsHandler destinationDefinitionsHandler;
   private final DestinationHandler destinationHandler;
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
@@ -106,34 +109,38 @@ public class WebBackendConnectionsHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
+  private final ConnectionService connectionService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
+  private final FieldGenerator fieldGenerator;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
                                       final SourceHandler sourceHandler,
-                                      final DestinationDefinitionsHandler destinationDefinitionsHandler,
                                       final DestinationHandler destinationHandler,
                                       final JobHistoryHandler jobHistoryHandler,
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
                                       final ConfigRepository configRepositoryDoNotUse,
+                                      final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                      final FieldGenerator fieldGenerator,
                                       final FeatureFlagClient featureFlagClient) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
-    this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.destinationHandler = destinationHandler;
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+    this.connectionService = connectionService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.fieldGenerator = fieldGenerator;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -155,7 +162,7 @@ public class WebBackendConnectionsHandler {
 
   @SuppressWarnings("LineLength")
   public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
 
     final StandardSyncQuery query = new StandardSyncQuery(
         webBackendConnectionListRequestBody.getWorkspaceId(),
@@ -221,7 +228,7 @@ public class WebBackendConnectionsHandler {
   }
 
   private WebBackendConnectionRead buildWebBackendConnectionRead(final ConnectionRead connectionRead, final Optional<UUID> currentSourceCatalogId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceRead source = getSourceRead(connectionRead.getSourceId());
     final DestinationRead destination = getDestinationRead(connectionRead.getDestinationId());
     final OperationReadList operations = getOperationReadList(connectionRead);
@@ -245,16 +252,25 @@ public class WebBackendConnectionsHandler {
 
     webBackendConnectionRead.setSchemaChange(schemaChange);
 
+    // find any scheduled or past breaking changes to the connectors
+    final ActorDefinitionVersionRead sourceActorDefinitionVersionRead = actorDefinitionVersionHandler
+        .getActorDefinitionVersionForSourceId(new SourceIdRequestBody().sourceId(source.getSourceId()));
+    final ActorDefinitionVersionRead destinationActorDefinitionVersionRead = actorDefinitionVersionHandler
+        .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(destination.getDestinationId()));
+    webBackendConnectionRead.setSourceActorDefinitionVersion(sourceActorDefinitionVersionRead);
+    webBackendConnectionRead.setDestinationActorDefinitionVersion(destinationActorDefinitionVersionRead);
+
     return webBackendConnectionRead;
   }
 
-  private static WebBackendConnectionListItem buildWebBackendConnectionListItem(
-                                                                                final StandardSync standardSync,
-                                                                                final Map<UUID, SourceSnippetRead> sourceReadById,
-                                                                                final Map<UUID, DestinationSnippetRead> destinationReadById,
-                                                                                final Map<UUID, JobStatusSummary> latestJobByConnectionId,
-                                                                                final Map<UUID, JobRead> runningJobByConnectionId,
-                                                                                final Optional<ActorCatalogFetchEvent> latestFetchEvent) {
+  private WebBackendConnectionListItem buildWebBackendConnectionListItem(
+                                                                         final StandardSync standardSync,
+                                                                         final Map<UUID, SourceSnippetRead> sourceReadById,
+                                                                         final Map<UUID, DestinationSnippetRead> destinationReadById,
+                                                                         final Map<UUID, JobStatusSummary> latestJobByConnectionId,
+                                                                         final Map<UUID, JobRead> runningJobByConnectionId,
+                                                                         final Optional<ActorCatalogFetchEvent> latestFetchEvent)
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
 
     final SourceSnippetRead source = sourceReadById.get(standardSync.getSourceId());
     final DestinationSnippetRead destination = destinationReadById.get(standardSync.getDestinationId());
@@ -265,6 +281,12 @@ public class WebBackendConnectionsHandler {
 
     final SchemaChange schemaChange = getSchemaChange(connectionRead, currentCatalogId, latestFetchEvent);
 
+    // find any scheduled or past breaking changes to the connectors
+    final ActorDefinitionVersionRead sourceActorDefinitionVersionRead = actorDefinitionVersionHandler
+        .getActorDefinitionVersionForSourceId(new SourceIdRequestBody().sourceId(source.getSourceId()));
+    final ActorDefinitionVersionRead destinationActorDefinitionVersionRead = actorDefinitionVersionHandler
+        .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(destination.getDestinationId()));
+
     final WebBackendConnectionListItem listItem = new WebBackendConnectionListItem()
         .connectionId(standardSync.getConnectionId())
         .status(ApiPojoConverters.toApiStatus(standardSync.getStatus()))
@@ -274,7 +296,9 @@ public class WebBackendConnectionsHandler {
         .source(source)
         .destination(destination)
         .isSyncing(latestRunningSyncJob.isPresent())
-        .schemaChange(schemaChange);
+        .schemaChange(schemaChange)
+        .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
+        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead);
 
     latestSyncJob.ifPresent(job -> {
       listItem.setLatestSyncJobCreatedAt(job.createdAt());
@@ -363,7 +387,7 @@ public class WebBackendConnectionsHandler {
   // tracking selected streams in any reasonable way. We should update that.
   @Trace
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.getConnectionId().toString()));
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody()
         .connectionId(webBackendConnectionRequestBody.getConnectionId());
@@ -460,9 +484,9 @@ public class WebBackendConnectionsHandler {
    *         catalog
    */
   @VisibleForTesting
-  protected static AirbyteCatalog updateSchemaWithRefreshedDiscoveredCatalog(final AirbyteCatalog originalConfigured,
-                                                                             final AirbyteCatalog originalDiscovered,
-                                                                             final AirbyteCatalog discovered) {
+  protected AirbyteCatalog updateSchemaWithRefreshedDiscoveredCatalog(final AirbyteCatalog originalConfigured,
+                                                                      final AirbyteCatalog originalDiscovered,
+                                                                      final AirbyteCatalog discovered) {
     /*
      * We can't directly use s.getStream() as the key, because it contains a bunch of other fields, so
      * we just define a quick-and-dirty record class.
@@ -495,7 +519,7 @@ public class WebBackendConnectionsHandler {
           outputStreamConfig.setSyncMode(discoveredStreamConfig.getSyncMode());
         }
 
-        if (originalStreamConfig.getCursorField().size() > 0) {
+        if (!originalStreamConfig.getCursorField().isEmpty()) {
           outputStreamConfig.setCursorField(originalStreamConfig.getCursorField());
         } else {
           outputStreamConfig.setCursorField(discoveredStreamConfig.getCursorField());
@@ -506,7 +530,7 @@ public class WebBackendConnectionsHandler {
         final boolean hasSourceDefinedPK = stream.getSourceDefinedPrimaryKey() != null && !stream.getSourceDefinedPrimaryKey().isEmpty();
         if (hasSourceDefinedPK) {
           outputStreamConfig.setPrimaryKey(stream.getSourceDefinedPrimaryKey());
-        } else if (originalStreamConfig.getPrimaryKey().size() > 0) {
+        } else if (!originalStreamConfig.getPrimaryKey().isEmpty()) {
           outputStreamConfig.setPrimaryKey(originalStreamConfig.getPrimaryKey());
         } else {
           outputStreamConfig.setPrimaryKey(discoveredStreamConfig.getPrimaryKey());
@@ -517,6 +541,17 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
 
+        // Add hashed field configs that are still present in the schema
+        if (originalStreamConfig.getHashedFields() != null && !originalStreamConfig.getHashedFields().isEmpty()) {
+          final List<String> discoveredFields =
+              fieldGenerator.getFieldsFromSchema(stream.getJsonSchema()).stream().map(Field::getName).toList();
+          for (final SelectedFieldInfo hashedField : originalStreamConfig.getHashedFields()) {
+            if (discoveredFields.contains(hashedField.getFieldPath().getFirst())) {
+              outputStreamConfig.addHashedFieldsItem(hashedField);
+            }
+          }
+        }
+
         if (outputStreamConfig.getFieldSelectionEnabled()) {
           // TODO(mfsiega-airbyte): support nested fields.
           // If field selection is enabled, populate the selected fields.
@@ -526,8 +561,8 @@ public class WebBackendConnectionsHandler {
           final Set<String> originallySelected = new HashSet<>(
               originalConfiguredStream.getConfig().getSelectedFields().stream().map((field) -> field.getFieldPath().get(0)).toList());
           originalDiscoveredStream.getStream().getJsonSchema().findPath("properties").fieldNames()
-              .forEachRemaining((name) -> originallyDiscovered.add(name));
-          stream.getJsonSchema().findPath("properties").fieldNames().forEachRemaining((name) -> refreshDiscovered.add(name));
+              .forEachRemaining(originallyDiscovered::add);
+          stream.getJsonSchema().findPath("properties").fieldNames().forEachRemaining(refreshDiscovered::add);
           // We include a selected field if it:
           // (is in the newly discovered schema) AND (it was either originally selected OR not in the
           // originally discovered schema at all)
@@ -554,7 +589,7 @@ public class WebBackendConnectionsHandler {
   }
 
   public WebBackendConnectionRead webBackendCreateConnection(final WebBackendConnectionCreate webBackendConnectionCreate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final List<UUID> operationIds = createOperations(webBackendConnectionCreate);
 
     final ConnectionCreate connectionCreate = toConnectionCreate(webBackendConnectionCreate, operationIds);
@@ -597,7 +632,7 @@ public class WebBackendConnectionsHandler {
             source.getSourceId());
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
-                CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
+                CatalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
         breakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
@@ -605,7 +640,7 @@ public class WebBackendConnectionsHandler {
     // before doing any updates, fetch the existing catalog so that it can be diffed
     // with the final catalog to determine which streams might need to be reset.
     final ConfiguredAirbyteCatalog oldConfiguredCatalog =
-        configRepositoryDoNotUse.getConfiguredCatalogForConnection(connectionId);
+        connectionService.getConfiguredCatalogForConnection(connectionId);
 
     final List<UUID> newAndExistingOperationIds = createOrUpdateOperations(originalConnectionRead, webBackendConnectionPatch);
 
@@ -614,10 +649,10 @@ public class WebBackendConnectionsHandler {
     final ConnectionUpdate connectionPatch = toConnectionPatch(webBackendConnectionPatch, newAndExistingOperationIds, breakingChange);
 
     // persist the update and set the connectionRead to the updated form.
-    final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
+    final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch, null, false);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
-    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead, source.getWorkspaceId());
+    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
      * have all streams that were present at the time. It will have no configuration set.
@@ -643,8 +678,7 @@ public class WebBackendConnectionsHandler {
   private void resetStreamsIfNeeded(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
-                                    final ConnectionRead oldConnectionRead,
-                                    final UUID workspaceId)
+                                    final ConnectionRead oldConnectionRead)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
@@ -654,15 +688,16 @@ public class WebBackendConnectionsHandler {
           CatalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
       final AirbyteCatalog upToDateAirbyteCatalog = updatedConnectionRead.getSyncCatalog();
       final CatalogDiff catalogDiff =
-          connectionsHandler.getDiff(apiExistingCatalog, upToDateAirbyteCatalog, CatalogConverter.toConfiguredProtocol(upToDateAirbyteCatalog));
+          connectionsHandler.getDiff(apiExistingCatalog, upToDateAirbyteCatalog,
+              CatalogConverter.toConfiguredInternal(upToDateAirbyteCatalog), connectionId);
       final List<StreamDescriptor> apiStreamsToReset = getStreamsToReset(catalogDiff);
       final Set<StreamDescriptor> changedConfigStreamDescriptors =
           connectionsHandler.getConfigurationDiff(apiExistingCatalog, upToDateAirbyteCatalog);
       final Set<StreamDescriptor> allStreamToReset = new HashSet<>();
       allStreamToReset.addAll(apiStreamsToReset);
       allStreamToReset.addAll(changedConfigStreamDescriptors);
-      List<io.airbyte.protocol.models.StreamDescriptor> streamsToReset =
-          allStreamToReset.stream().map(ProtocolConverters::streamDescriptorToProtocol).toList();
+      final List<io.airbyte.config.StreamDescriptor> streamsToReset =
+          allStreamToReset.stream().map(ApiConverters::toInternal).toList();
 
       if (!streamsToReset.isEmpty()) {
         final var destinationVersion = actorDefinitionVersionHandler

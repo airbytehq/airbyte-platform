@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -32,9 +33,13 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
+import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Unit tests for {@link ConnectorDefinitionSpecificationHandler}.
@@ -46,18 +51,19 @@ class ConnectorDefinitionSpecificationHandlerTest {
   private JobConverter jobConverter;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
+  private static final String CONNECTOR_URL = "https://google.com";
   private static final String DESTINATION_DOCKER_TAG = "tag";
   private static final String NAME = "name";
   private static final String SOURCE_DOCKER_REPO = "srcimage";
   private static final String SOURCE_DOCKER_TAG = "tag";
 
   private static final ConnectorSpecification CONNECTOR_SPECIFICATION = new ConnectorSpecification()
-      .withDocumentationUrl(Exceptions.toRuntime(() -> new URI("https://google.com")))
-      .withChangelogUrl(Exceptions.toRuntime(() -> new URI("https://google.com")))
+      .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+      .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
       .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()));
 
   private static final ConnectorSpecification CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL = new ConnectorSpecification()
-      .withChangelogUrl(Exceptions.toRuntime(() -> new URI("https://google.com")))
+      .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
       .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()));
 
   @BeforeEach
@@ -203,6 +209,78 @@ class ConnectorDefinitionSpecificationHandlerTest {
     verify(configRepository).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testDestinationSyncModeEnrichment(boolean supportsRefreshes) throws JsonValidationException, IOException, ConfigNotFoundException {
+    final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
+        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withName(NAME)
+        .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
+        .thenReturn(destinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
+        destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
+            .thenReturn(new ActorDefinitionVersion()
+                .withDockerImageTag(DESTINATION_DOCKER_TAG)
+                .withSpec(new ConnectorSpecification()
+                    .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+                    .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+                    .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
+                    .withSupportedDestinationSyncModes(List.of(io.airbyte.protocol.models.DestinationSyncMode.APPEND,
+                        io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)))
+                .withSupportsRefreshes(supportsRefreshes));
+
+    final DestinationDefinitionSpecificationRead response =
+        connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
+
+    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
+        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+    if (supportsRefreshes) {
+      CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
+          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE, DestinationSyncMode.OVERWRITE_DEDUP));
+    } else {
+      CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
+          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE));
+    }
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testDestinationSyncModeEnrichmentWithoutOverwrite(boolean supportsRefreshes)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
+        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withName(NAME)
+        .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
+        .thenReturn(destinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
+        destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
+            .thenReturn(new ActorDefinitionVersion()
+                .withDockerImageTag(DESTINATION_DOCKER_TAG)
+                .withSpec(new ConnectorSpecification()
+                    .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+                    .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+                    .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
+                    .withSupportedDestinationSyncModes(
+                        List.of(io.airbyte.protocol.models.DestinationSyncMode.APPEND, io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP)))
+                .withSupportsRefreshes(supportsRefreshes));
+
+    final DestinationDefinitionSpecificationRead response =
+        connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
+
+    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
+        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+    CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
+        DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP));
   }
 
 }

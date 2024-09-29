@@ -1,16 +1,16 @@
-import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { ExternalLink } from "components/ui/Link";
 
+import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -28,10 +28,12 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  getConnectionEvent,
   clearConnectionStream,
   clearConnection,
   refreshConnectionStream,
   syncConnection,
+  listConnectionEvents,
   webBackendCreateConnection,
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
@@ -40,6 +42,7 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
+  ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -75,6 +78,11 @@ export const connectionsKeys = {
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
   lastJobPerStream: (connectionId: string) => [...connectionsKeys.all, "lastSyncPerStream", connectionId] as const,
+  eventsList: (
+    connectionId: string | undefined,
+    filters: string | Record<string, string | number | string[] | undefined> = {}
+  ) => [...connectionsKeys.all, "eventsList", connectionId, { filters }] as const,
+  event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
 };
 
 export interface ConnectionValues {
@@ -97,6 +105,55 @@ interface CreateConnectionProps {
   sourceCatalogId: string | undefined;
 }
 
+export const useListConnectionEventsInfinite = (
+  connectionEventsRequestBody: ConnectionEventsRequestBody,
+  enabled: boolean = true,
+  pageSize: number = 50
+) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = connectionsKeys.eventsList(connectionEventsRequestBody.connectionId, {
+    eventTypes: connectionEventsRequestBody.eventTypes,
+    createdAtStart: connectionEventsRequestBody.createdAtStart,
+    createdAtEnd: connectionEventsRequestBody.createdAtEnd,
+  });
+
+  return useInfiniteQuery(
+    queryKey,
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await listConnectionEvents(
+          {
+            ...connectionEventsRequestBody,
+            pagination: { pageSize, rowOffset: pageSize * pageParam },
+          },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      enabled,
+      keepPreviousData: true,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.events.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
+};
+
+export const useGetConnectionEvent = (connectionEventId: string | null, connectionId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    connectionsKeys.event(connectionEventId ?? ""),
+    async () => {
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "", connectionId }, requestOptions);
+    },
+    {
+      enabled: !!connectionEventId,
+    }
+  );
+};
+
 export const useGetLastJobPerStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
 
@@ -113,7 +170,7 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
     async () => await getConnectionSyncProgress({ connectionId }, requestOptions),
     {
       enabled,
-      refetchInterval: (data) => (data?.jobId ? 60000 : 5000),
+      refetchInterval: 10000,
     }
   );
 };
@@ -121,7 +178,6 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();
   const formatError = useFormatError();
-  const { trackError } = useAppMonitoringService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const { registerNotification } = useNotificationService();
@@ -275,12 +331,16 @@ export const useGetConnection = (
   );
 };
 
+export const useCurrentConnection = () => {
+  const connectionId = useCurrentConnectionId();
+  return useGetConnection(connectionId);
+};
+
 export const useCreateConnection = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   return useMutation(
     async ({
@@ -317,7 +377,6 @@ export const useCreateConnection = () => {
         enabled_streams: enabledStreams.length,
         enabled_streams_list: JSON.stringify(enabledStreams),
         connection_id: response.connectionId,
-        is_simplified_creation: isSimplifiedCreation,
       });
 
       return response;
@@ -514,7 +573,6 @@ export const useCreateOrUpdateState = () => {
   const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
   const { registerNotification } = useNotificationService();
 
   return useMutation(

@@ -1,7 +1,6 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.general.CachingFeatureFlagClient
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
 import io.micronaut.context.event.ApplicationEventPublisher
@@ -17,14 +16,12 @@ import jakarta.inject.Singleton
 class StreamStatusTrackerFactory(
   private val dataExtractor: AirbyteMessageDataExtractor,
   private val eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>,
-  private val ffClient: CachingFeatureFlagClient,
 ) {
   fun create(ctx: ReplicationContext): StreamStatusTracker {
     return StreamStatusTracker(
       dataExtractor,
       StreamStatusStateStore(),
       eventPublisher,
-      ffClient,
       ctx,
     )
   }

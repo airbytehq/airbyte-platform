@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.auth.support;
 
-import io.airbyte.config.User;
+import io.airbyte.config.AuthenticatedUser;
 import java.util.Optional;
 
 /**
@@ -12,8 +12,8 @@ import java.util.Optional;
  */
 public interface UserAuthenticationResolver {
 
-  User resolveUser(final String expectedAuthUserId);
+  AuthenticatedUser resolveUser(final String expectedAuthUserId);
 
-  Optional<String> resolveSsoRealm();
+  Optional<String> resolveRealm();
 
 }

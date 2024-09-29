@@ -429,6 +429,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withSpec(new ConnectorSpecification()
             .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value1"))).withProtocolVersion(PROTOCOL_VERSION));
   }

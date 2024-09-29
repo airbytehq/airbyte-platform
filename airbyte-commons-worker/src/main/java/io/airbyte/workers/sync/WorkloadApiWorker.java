@@ -4,16 +4,16 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
+import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -25,15 +25,19 @@ import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.exception.WorkloadLauncherException;
+import io.airbyte.workers.exception.WorkloadMonitorException;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.process.Metadata;
+import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.WorkloadConstants;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
@@ -58,11 +62,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Worker implementation that uses workload API instead of starting kube pods directly.
  */
-public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
+public class WorkloadApiWorker implements ReplicationWorker {
 
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
+
+  private static final Set<String> WORKLOAD_MONITOR = Set.of("workload-monitor-start", "workload-monitor-claim", "workload-monitor-heartbeat");
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
@@ -73,6 +79,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
+  private final LogClientManager logClientManager;
 
   private String workloadId = null;
 
@@ -82,7 +89,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
                            final WorkloadClient workloadClient,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final LogClientManager logClientManager) {
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApiClient = workloadApiClient;
@@ -90,11 +98,18 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
+    this.logClientManager = logClientManager;
   }
 
   @Override
   @SuppressWarnings("PMD.AssignmentInOperand")
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
+    final String workloadId = createWorkload(replicationInput, jobRoot);
+    waitForWorkload(workloadId);
+    return getOutput(workloadId);
+  }
+
+  public String createWorkload(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
     workloadId = workloadIdGenerator.generateSyncWorkloadId(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
@@ -116,12 +131,13 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, replicationInput.getWorkspaceId().toString()),
             new WorkloadLabel(Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE)),
         serializedInput,
-        fullLogPath(jobRoot),
+        logClientManager.fullLogPath(jobRoot),
         geo.getValue(),
         WorkloadType.SYNC,
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
-        null);
+        null,
+        replicationInput.getSignalInput());
 
     // Create the workload
     try {
@@ -133,7 +149,16 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         log.info("Workload {} has already been created, reconnecting...", workloadId);
       }
     }
+    return workloadId;
+  }
 
+  public boolean isWorkloadTerminal(final String workloadId) {
+    // TODO handle error
+    final Workload workload = getWorkload(workloadId);
+    return workload.getStatus() != null && TERMINAL_STATUSES.contains(workload.getStatus());
+  }
+
+  public void waitForWorkload(final String workloadId) {
     // Wait until workload reaches a terminal status
     // TODO merge this with WorkloadApiHelper.waitForWorkload. The only difference currently is the
     // progress log.
@@ -165,7 +190,18 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     if (workload.getStatus() == WorkloadStatus.CANCELLED) {
       throw new CancellationException("Replication cancelled by " + workload.getTerminationSource());
     }
+  }
 
+  public void cancelWorkload(final String workloadId) throws IOException {
+    callWithRetry(() -> {
+      workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(
+          workloadId, WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON, "WorkloadApiWorker"));
+      return true;
+    });
+  }
+
+  public ReplicationOutput getOutput(final String workloadId) throws WorkerException {
+    final Workload workload = getWorkload(workloadId);
     final ReplicationOutput output;
     try {
       output = getReplicationOutput(workloadId);
@@ -188,6 +224,10 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         throw new SourceException(workload.getTerminationReason(), e);
       } else if (DESTINATION.equals(workload.getTerminationSource())) {
         throw new DestinationException(workload.getTerminationReason(), e);
+      } else if (WORKLOAD_LAUNCHER.getApplicationName().equals(workload.getTerminationSource())) {
+        throw new WorkloadLauncherException(workload.getTerminationReason());
+      } else if (workload.getTerminationSource() != null && WORKLOAD_MONITOR.contains(workload.getTerminationSource())) {
+        throw new WorkloadMonitorException(workload.getTerminationReason());
       } else {
         throw new WorkerException(workload.getTerminationReason(), e);
       }
@@ -198,7 +238,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   public void cancel() {
     try {
       if (workloadId != null) {
-        workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+        cancelWorkload(workloadId);
       }
     } catch (final IOException e) {
       throw new RuntimeException(e);

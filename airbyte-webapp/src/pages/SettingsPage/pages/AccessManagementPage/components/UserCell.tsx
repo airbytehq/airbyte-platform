@@ -16,7 +16,7 @@ export const UserCell: React.FC<{ name?: string; email: string; isCurrentUser: b
     <FlexContainer direction="row" alignItems="center">
       <InitialBadge inputString={nameToDisplay} hashingString={uniqueId} />
       <FlexContainer direction="column" gap="xs">
-        <FlexContainer direction="row">
+        <FlexContainer direction="row" alignItems="center">
           <Text size="sm">{nameToDisplay}</Text>
           {isCurrentUser && (
             <Badge variant="grey">

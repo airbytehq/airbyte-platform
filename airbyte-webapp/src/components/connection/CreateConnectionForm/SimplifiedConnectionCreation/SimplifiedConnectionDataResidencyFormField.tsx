@@ -7,6 +7,7 @@ import { FormConnectionFormValues } from "components/connection/ConnectionForm/f
 import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
 import { StandaloneDataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { ControlLabels } from "components/LabeledControl";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { InputContainer } from "./InputContainer";
@@ -24,9 +25,14 @@ export const SimplfiedConnectionDataResidencyFormField: React.FC<{ disabled: boo
           <ControlLabels
             htmlFor={controlId}
             label={
-              <Text bold>
-                <FormattedMessage id="connection.geographyTitle" />
-              </Text>
+              <FlexContainer direction="column" gap="sm">
+                <Text bold>
+                  <FormattedMessage id="connection.geographyTitle" />
+                </Text>
+                <Text size="sm" color="grey">
+                  <FormattedMessage id="connection.geographyDescription" />
+                </Text>
+              </FlexContainer>
             }
           />
           <InputContainer>

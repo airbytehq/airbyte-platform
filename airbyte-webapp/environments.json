@@ -1,0 +1,55 @@
+{
+  "oss-k8s": {
+    "name": "Local K8s",
+    "group": "OSS Community",
+    "envFile": ".env.development-k8s",
+    "description": "Local Kubernetes cluster via `make deploy.oss`"
+  },
+  "enterprise-local": {
+    "name": "Local K8s",
+    "group": "Enterprise",
+    "envFile": ".env.development-k8s",
+    "description": "Local Kubernetes cluster via `make deploy.enterprise`"
+  },
+  "cloud": {
+    "name": "frontend-dev",
+    "group": "Cloud",
+    "cloudEnv": "frontend-dev",
+    "description": "Develop against frontend-dev. Requires VPN to be active."
+  },
+  "cloud-local": {
+    "name": "Local Cloud K8s",
+    "group": "Cloud",
+    "cloudEnv": "local-dev-k8s",
+    "description": "Local Kubernetes cluster via `make deploy`"
+  },
+  "dev": {
+    "name": "dev",
+    "group": "Cloud",
+    "cloudEnv": "dev",
+    "description": "Develop against dev. Requires VPN to be active."
+  },
+  "dev-1": {
+    "name": "dev-1",
+    "group": "Cloud",
+    "cloudEnv": "dev-1",
+    "description": "Develop against dev-1. Requires VPN to be active."
+  },
+  "dev-2": {
+    "name": "dev-2",
+    "group": "Cloud",
+    "cloudEnv": "dev-2",
+    "description": "Develop against dev-2. Requires VPN to be active."
+  },
+  "dev-3": {
+    "name": "dev-3",
+    "group": "Cloud",
+    "cloudEnv": "dev-3",
+    "description": "Develop against dev-3. Requires VPN to be active."
+  },
+  "stage": {
+    "name": "stage",
+    "group": "Cloud",
+    "cloudEnv": "stage"
+  }
+}

@@ -1,3 +1,6 @@
+import type { Root as MdastRoot, Node as MdastNode } from "mdast";
+import type { Pluggable } from "unified";
+
 import classNames from "classnames";
 import path from "path-browserify";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -6,11 +9,13 @@ import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
 
 import { LoadingPage } from "components";
+import { ConnectorQualityMetrics } from "components/connector/ConnectorQualityMetrics";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Markdown } from "components/ui/Markdown";
+import mdStyles from "components/ui/Markdown/Markdown.module.scss";
 
 import {
   GITHUB_DOCS_DESTINATIONS_URL,
@@ -21,6 +26,7 @@ import {
   REMOTE_DOCS_SOURCES_URL,
   useConnectorDocumentation,
 } from "core/api";
+import { ConnectorDefinition } from "core/domain/connector";
 import { isCloudApp } from "core/utils/app";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { useGetActorIdFromParams } from "core/utils/useGetActorIdFromParams";
@@ -30,6 +36,22 @@ import styles from "./DocumentationPanel.module.scss";
 
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
+
+const removeFirstHeading: Pluggable = () => {
+  // Remove the first heading from the markdown content, as it is already displayed in the header
+  return (tree: MdastRoot) => {
+    let headingRemoved = false;
+    tree.children = tree.children.filter((node: MdastNode) => {
+      if (node.type === "heading" && !headingRemoved) {
+        headingRemoved = true;
+        return false;
+      }
+      return true;
+    });
+  };
+};
+
+const remarkPlugins = [removeFirstHeading];
 
 export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string => {
   // Remove any empty lines between <FieldAnchor> tags and their content, as this causes
@@ -112,6 +134,20 @@ const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ fie
   );
 };
 
+const ConnectorDocumentationHeader: React.FC<{ selectedConnectorDefinition: ConnectorDefinition }> = ({
+  selectedConnectorDefinition,
+}) => {
+  const { name } = selectedConnectorDefinition;
+  return (
+    <FlexContainer direction="column" justifyContent="space-between" className={styles.connectorDocumentationHeader}>
+      <div className={mdStyles.markdown}>
+        <Heading as="h1">{name}</Heading>
+      </div>
+      <ConnectorQualityMetrics connectorDefinition={selectedConnectorDefinition} />
+    </FlexContainer>
+  );
+};
+
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
@@ -180,7 +216,15 @@ export const DocumentationPanel: React.FC = () => {
           </Button>
         </ExternalLink>
       </FlexContainer>
-      <Markdown className={styles.content} content={docsContent} options={markdownOptions} />
+      <ConnectorDocumentationHeader selectedConnectorDefinition={selectedConnectorDefinition} />
+      <Markdown
+        className={styles.content}
+        content={docsContent}
+        options={markdownOptions}
+        remarkPlugins={remarkPlugins}
+      />
     </FlexContainer>
   );
 };
+
+export default DocumentationPanel;

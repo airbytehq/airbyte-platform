@@ -3,6 +3,7 @@
  */
 package io.airbyte.config.init.config
 
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider
 import io.airbyte.config.init.DeclarativeSourceUpdater
 import io.airbyte.config.specs.DefinitionsProvider
@@ -51,8 +52,14 @@ class SeedBeanFactory {
     @Named("remoteDeclarativeManifestImageVersionsProvider") declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
+    airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
   ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, declarativeManifestImageVersionService, actorDefinitionService)
+    return DeclarativeSourceUpdater(
+      declarativeManifestImageVersionsProvider,
+      declarativeManifestImageVersionService,
+      actorDefinitionService,
+      airbyteCompatibleConnectorsValidator,
+    )
   }
 
   @Singleton
@@ -61,8 +68,14 @@ class SeedBeanFactory {
     @Named("localDeclarativeManifestImageVersionsProvider") declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
+    airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
   ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, declarativeManifestImageVersionService, actorDefinitionService)
+    return DeclarativeSourceUpdater(
+      declarativeManifestImageVersionsProvider,
+      declarativeManifestImageVersionService,
+      actorDefinitionService,
+      airbyteCompatibleConnectorsValidator,
+    )
   }
 
   @Singleton

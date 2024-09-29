@@ -37,21 +37,16 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 			name:       "airbyte-worker",
 			valuesPath: "worker",
 		},
-		{
-			kind:       "Deployment",
-			name:       "airbyte-workload-api-server",
-			valuesPath: "workload-api-server",
-		},
-		{
-			kind:       "Deployment",
-			name:       "airbyte-workload-launcher",
-			valuesPath: "workload-launcher",
-		},
-		{
-			kind:       "Deployment",
-			name:       "airbyte-airbyte-api-server",
-			valuesPath: "airbyte-api-server",
-		},
+		//{
+		//	kind:       "Deployment",
+		//	name:       "airbyte-workload-api-server",
+		//	valuesPath: "workload-api-server",
+		//},
+// 		{
+// 			kind:       "Deployment",
+// 			name:       "airbyte-workload-launcher",
+// 			valuesPath: "workload-launcher",
+// 		},
 		{
 			kind:       "Deployment",
 			name:       "airbyte-cron",
@@ -100,8 +95,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 			t.Run(fmt.Sprintf("verify nodeSelectors are set for %s: %s", c.kind, c.name), func(t *testing.T) {
 				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
-				helmOpts.SetValues["workload-launcher.enabled"] = "true"
+				//helmOpts.SetValues["workload-api-server.enabled"] = "true"
+// 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 				for k, v := range nodeSelector {
 					helmOpts.SetValues[c.valuesPath+".nodeSelector."+k] = v
 				}
@@ -168,8 +163,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 			t.Run(fmt.Sprintf("verify tolerations are set for %s: %s", c.kind, c.name), func(t *testing.T) {
 				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
-				helmOpts.SetValues["workload-launcher.enabled"] = "true"
+				//helmOpts.SetValues["workload-api-server.enabled"] = "true"
+// 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 				for i, tol := range tolerations {
 					helmOpts.SetValues[c.valuesPath+fmt.Sprintf(".tolerations[%d]", i)+".Key"] = tol.Key
 					helmOpts.SetValues[c.valuesPath+fmt.Sprintf(".tolerations[%d]", i)+".Operator"] = string(tol.Operator)
@@ -253,8 +248,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 			t.Run(fmt.Sprintf("verify affinities are set for %s: %s", c.kind, c.name), func(t *testing.T) {
 				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
-				helmOpts.SetValues["workload-launcher.enabled"] = "true"
+				//helmOpts.SetValues["workload-api-server.enabled"] = "true"
+// 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 
 				data, err := json.Marshal(affinity)
 				if err != nil {

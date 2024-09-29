@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { Suspense, useCallback, useRef } from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
@@ -17,11 +17,11 @@ import { JobWithAttempts } from "area/connection/types/jobs";
 import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
 import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { useCurrentConnection, useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
+import { trackError } from "core/utils/datadog";
 import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -49,8 +49,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
   const { name: workspaceName } = useCurrentWorkspace();
-  const { trackError } = useAppMonitoringService();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
 
   useEffectOnce(() => {
     if (attemptLink.jobId === String(jobWithAttempts.job.id)) {
@@ -65,19 +64,25 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         size: "full",
         title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
         content: () => (
-          <Suspense
-            fallback={
-              <div className={styles.jobHistoryItem__modalLoading}>
-                <Spinner />
-              </div>
-            }
-          >
-            <JobLogsModal jobId={jobWithAttempts.job.id} initialAttemptId={initialAttemptId} />
-          </Suspense>
+          <DefaultErrorBoundary>
+            <Suspense
+              fallback={
+                <div className={styles.jobHistoryItem__modalLoading}>
+                  <Spinner />
+                </div>
+              }
+            >
+              <JobLogsModal
+                connectionId={connection.connectionId}
+                jobId={jobWithAttempts.job.id}
+                initialAttemptId={initialAttemptId}
+              />
+            </Suspense>
+          </DefaultErrorBoundary>
         ),
       });
     },
-    [connection.name, formatMessage, jobWithAttempts.job.id, openModal]
+    [connection.connectionId, connection.name, formatMessage, jobWithAttempts.job.id, openModal]
   );
 
   const handleClick = (optionClicked: DropdownMenuOptionType) => {
@@ -185,15 +190,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         </Box>
         <Box pr="lg" className={styles.jobHistoryItem__timestamp}>
           <Text>
-            <FormattedTimeParts value={getJobCreatedAt(jobWithAttempts) * 1000} hour="numeric" minute="2-digit">
-              {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-            </FormattedTimeParts>
-            <FormattedDate
-              value={getJobCreatedAt(jobWithAttempts) * 1000}
-              month="2-digit"
-              day="2-digit"
-              year="numeric"
-            />
+            <FormattedDate value={getJobCreatedAt(jobWithAttempts) * 1000} dateStyle="medium" timeStyle="short" />
           </Text>
         </Box>
       </FlexContainer>

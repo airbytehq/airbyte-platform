@@ -50,7 +50,7 @@ properties:
     description: the configured airbyte catalog
     type: object
     # necessary because the configuration declaration is in a separate package.
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+    existingJavaType: io.airbyte.config.ConfiguredAirbyteCatalog
   state:
     description: optional state of the previous run. this object is defined per integration.
     existingJavaType: io.airbyte.config.State
@@ -65,10 +65,6 @@ properties:
     description: The id of the connection associated with this sync
     type: string
     format: uuid
-  normalizeInDestinationContainer:
-    description: whether normalization should be run in the destination container
-    type: boolean
-    default: false
   isReset:
     description: whether this 'sync' is performing a logical reset
     type: boolean
@@ -81,4 +77,11 @@ properties:
     "$ref": IntegrationLauncherConfig.yaml
   taskQueue:
     description: the temporal task queue this replication will use
+    type: string
+  destinationSupportsRefreshes:
+    description: whether the destination supports refreshes
+    type: boolean
+    default: false
+  signalInput:
+    description: Signal input for the sync
     type: string

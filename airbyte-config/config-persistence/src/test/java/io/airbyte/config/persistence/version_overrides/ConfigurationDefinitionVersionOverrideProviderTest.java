@@ -15,13 +15,11 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConfigOriginType;
 import io.airbyte.config.ConfigResourceType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigScopeType;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
@@ -32,9 +30,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectorVersionKey;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -47,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+@SuppressWarnings({"PMD.LiteralsFirstInComparisons", "PMD.AvoidDuplicateLiterals"})
 class ConfigurationDefinitionVersionOverrideProviderTest {
 
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
@@ -67,10 +63,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withProtocolVersion("0.2.0")
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "theSpec", "goesHere")));
-  private static final NormalizationDestinationDefinitionConfig NORMALIZATION_CONFIG = new NormalizationDestinationDefinitionConfig()
-      .withNormalizationRepository("airbyte/normalization")
-      .withNormalizationTag("tag")
-      .withNormalizationIntegrationType("bigquery");
   private static final ActorDefinitionVersion DEFAULT_VERSION = new ActorDefinitionVersion()
       .withVersionId(UUID.randomUUID())
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -81,9 +73,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withAllowedHosts(ALLOWED_HOSTS)
-      .withSupportsDbt(true)
-      .withNormalizationConfig(NORMALIZATION_CONFIG);
+      .withAllowedHosts(ALLOWED_HOSTS);
   private static final ActorDefinitionVersion OVERRIDE_VERSION = new ActorDefinitionVersion()
       .withVersionId(UUID.randomUUID())
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -94,15 +84,11 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withAllowedHosts(ALLOWED_HOSTS)
-      .withSupportsDbt(true)
-      .withNormalizationConfig(NORMALIZATION_CONFIG);
+      .withAllowedHosts(ALLOWED_HOSTS);
 
   private WorkspaceService mWorkspaceService;
   private ActorDefinitionService mActorDefinitionService;
   private ScopedConfigurationService mScopedConfigurationService;
-  private FeatureFlagClient mFeatureFlagClient;
-  private MetricClient mMetricClient;
   private ConfigurationDefinitionVersionOverrideProvider overrideProvider;
 
   @BeforeEach
@@ -110,8 +96,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     mWorkspaceService = mock(WorkspaceService.class);
     mActorDefinitionService = mock(ActorDefinitionService.class);
     mScopedConfigurationService = mock(ScopedConfigurationService.class);
-    mFeatureFlagClient = mock(TestClient.class);
-    mMetricClient = mock(MetricClient.class);
     overrideProvider = new ConfigurationDefinitionVersionOverrideProvider(mWorkspaceService, mActorDefinitionService, mScopedConfigurationService);
 
     when(mWorkspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
@@ -127,7 +111,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
                 .thenReturn(Optional.empty());
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
     assertTrue(optResult.isEmpty());
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
@@ -161,7 +145,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
 
     assertTrue(optResult.isPresent());
     assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
@@ -201,7 +185,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null);
 
     assertTrue(optResult.isPresent());
     assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
@@ -240,7 +224,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         .thenThrow(new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, versionId));
 
     assertThrows(RuntimeException.class,
-        () -> overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION));
+        () -> overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID));
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -274,10 +258,8 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
 
     when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
 
-    final ActorDefinitionVersion defaultVersion = withMismatchedVersions ? DEFAULT_VERSION : OVERRIDE_VERSION;
-
     final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, defaultVersion);
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
 
     assertTrue(optResult.isPresent());
     assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());

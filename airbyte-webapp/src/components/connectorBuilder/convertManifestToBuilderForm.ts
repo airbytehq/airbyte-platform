@@ -83,6 +83,7 @@ import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
+  builderFormValues.description = resolvedManifest.description;
 
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {
@@ -91,8 +92,9 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
-  assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
-  builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
+  const firstStreamRetriever: SimpleRetriever = streams[0].retriever;
+  assertType<HttpRequester>(firstStreamRetriever.requester, "HttpRequester", streams[0].name);
+  builderFormValues.global.urlBase = firstStreamRetriever.requester.url_base;
 
   const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
 
@@ -113,12 +115,14 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       index.toString(),
       streamNameToIndex,
       serializedStreamToName,
-      streams[0].retriever.requester.url_base,
-      streams[0].retriever.requester.authenticator,
+      firstStreamRetriever.requester.url_base,
+      firstStreamRetriever.requester.authenticator,
       builderMetadata,
       resolvedManifest.spec
     )
   );
+
+  builderFormValues.assist = builderMetadata?.assist ?? {};
 
   builderFormValues.global.authenticator = convertOrDumpAsString(
     streams[0].retriever.requester.authenticator,
@@ -342,6 +346,7 @@ const manifestStreamToBuilder = (
             }),
           })
         : undefined,
+    testResults: metadata?.testedStreams?.[streamName],
   };
 };
 
@@ -524,7 +529,7 @@ export function manifestSubstreamPartitionRouterToBuilder(
 
   const parentStreamConfig = filterKnownFields(
     substreamPartitionRouter.parent_stream_configs[0],
-    ["type", "parent_key", "partition_field", "request_option", "stream"],
+    ["type", "parent_key", "partition_field", "request_option", "stream", "incremental_dependency"],
     `${partitionRouter.type}.parent_stream_configs`,
     streamName
   );
@@ -572,6 +577,7 @@ export function manifestSubstreamPartitionRouterToBuilder(
       partition_field: parentStreamConfig.partition_field,
       parentStreamReference: parentStreamId,
       request_option: parentStreamConfig.request_option,
+      incremental_dependency: parentStreamConfig.incremental_dependency,
     },
   ];
 }

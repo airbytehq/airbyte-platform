@@ -30,6 +30,7 @@ import org.quartz.CronExpression;
  * Helper class to handle connection schedules, including validation and translating between API and
  * config.
  */
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class ConnectionScheduleHelper {
 
   /**

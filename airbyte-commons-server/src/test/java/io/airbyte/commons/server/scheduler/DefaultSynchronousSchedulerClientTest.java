@@ -98,6 +98,7 @@ class DefaultSynchronousSchedulerClientTest {
       .withReleaseStage(ReleaseStage.BETA);
   private static final String SOURCE_DOCKER_IMAGE = "source-airbyte:1.2.3";
   private static final ReleaseStage SOURCE_RELEASE_STAGE = ReleaseStage.BETA;
+  private static final Long SOURCE_INTERNAL_SUPPORT_LEVEL = null;
 
   private TemporalClient temporalClient;
   private JobTracker jobTracker;
@@ -154,7 +155,8 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(discoveredCatalogId);
       when(function.get()).thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
 
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+      final ConnectorJobReportingContext jobContext =
+          new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
       final SynchronousResponse<UUID> response = schedulerClient
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
@@ -182,7 +184,8 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobOutput failedJobOutput = new ConnectorJobOutput().withFailureReason(failureReason);
       when(function.get()).thenReturn(new TemporalResponse<>(failedJobOutput, createMetadata(false)));
 
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+      final ConnectorJobReportingContext jobContext =
+          new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
       final SynchronousResponse<UUID> response = schedulerClient
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
@@ -206,7 +209,8 @@ class DefaultSynchronousSchedulerClientTest {
       final Supplier<TemporalResponse<ConnectorJobOutput>> function = mock(Supplier.class);
       final Function<ConnectorJobOutput, UUID> mapperFunction = ConnectorJobOutput::getDiscoverCatalogId;
       when(function.get()).thenThrow(new RuntimeException());
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+      final ConnectorJobReportingContext jobContext =
+          new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
       assertThrows(
           RuntimeException.class,
           () -> schedulerClient.execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function,

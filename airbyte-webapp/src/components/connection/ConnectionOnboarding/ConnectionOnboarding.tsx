@@ -20,7 +20,7 @@ import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
 import { ConnectionOnboardingConnectorLink } from "./ConnectionOnboardingConnectorLink";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
-import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
+import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/DefineSource";
 
 interface ConnectionOnboardingProps {
   onCreate: (sourceConnectorTypeId?: string) => void;
@@ -84,8 +84,8 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
   const [highlightedSource, setHighlightedSource] = useState<HighlightIndex>(1);
   const [highlightedDestination, setHighlightedDestination] = useState<HighlightIndex>(0);
 
-  const sourceIds = useExperiment("connection.onboarding.sources", "").split(",");
-  const destinationIds = useExperiment("connection.onboarding.destinations", "").split(",");
+  const sourceIds = useExperiment("connection.onboarding.sources").split(",");
+  const destinationIds = useExperiment("connection.onboarding.destinations").split(",");
 
   const createConnectionPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
   const createDestinationBasePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}`;

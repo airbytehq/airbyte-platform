@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.UnusedPrivateField")
 class PerfSourceFactory {
 
   record PerfAirbyteSource(SourceHelper helper) implements AirbyteSource {

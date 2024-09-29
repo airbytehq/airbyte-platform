@@ -200,16 +200,16 @@ const errorTypeGeneration = (inputSpec: string): Options => {
 
 // IMPORTANT: Whenever you change/add OpenAPI specs here, make sure to also adjust the outsideWebappDependencies list in build.gradle.kts
 export default defineConfig({
-  api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall", [
+  api: createApi("../airbyte-api/server-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall", [
     // Required to exclude, due to us not being able to convert JSON parameters
     "/public/v1/oauth/callback",
   ]),
-  cloudApi: createApi("../airbyte-api/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
+  cloudApi: createApi("../airbyte-api/commons/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
   connectorBuilder: createApi(
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",
     "connectorBuilderApiCall"
   ),
   connectorManifest: createApi("./src/services/connectorBuilder/connector_manifest_openapi.yaml", "ConnectorManifest"),
-  apiErrorTypes: errorTypeGeneration("../airbyte-api/src/main/openapi/api-problems.yaml"),
+  apiErrorTypes: errorTypeGeneration("../airbyte-api/problems-api/src/main/openapi/api-problems.yaml"),
 });

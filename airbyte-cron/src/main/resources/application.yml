@@ -12,6 +12,8 @@ micronaut:
       expire-after-access: 10m
     remote-definitions-provider:
       expire-after-write: 15s
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   metrics:

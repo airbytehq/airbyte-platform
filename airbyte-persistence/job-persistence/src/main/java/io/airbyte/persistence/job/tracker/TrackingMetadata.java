@@ -10,10 +10,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -23,8 +24,6 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -160,8 +159,6 @@ public class TrackingMetadata {
     }
     final StandardSyncSummary syncSummary = jobOutput.getSync().getStandardSyncSummary();
     final SyncStats totalStats = syncSummary.getTotalStats();
-    final NormalizationSummary normalizationSummary = jobOutput.getSync().getNormalizationSummary();
-
     if (syncSummary.getStartTime() != null) {
       metadata.put("sync_start_time", syncSummary.getStartTime());
     }
@@ -216,16 +213,6 @@ public class TrackingMetadata {
       metadata.put("destination_write_end_time", totalStats.getDestinationWriteEndTime());
     }
 
-    if (normalizationSummary != null) {
-      if (normalizationSummary.getStartTime() != null) {
-        metadata.put("normalization_start_time", normalizationSummary.getStartTime());
-
-      }
-      if (normalizationSummary.getEndTime() != null) {
-        metadata.put("normalization_end_time", normalizationSummary.getEndTime());
-      }
-    }
-
     final List<FailureReason> failureReasons = failureReasonsList(attempts);
     if (!failureReasons.isEmpty()) {
       metadata.put("failure_reasons", failureReasonsListAsJson(failureReasons).toString());
@@ -263,7 +250,7 @@ public class TrackingMetadata {
    */
   public static JsonNode failureReasonAsJson(final FailureReason failureReason) {
     // we want the json to always include failureOrigin and failureType, even when they are null
-    final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
+    final Map<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", failureReason.getFailureOrigin());
     linkedHashMap.put("failureType", failureReason.getFailureType());
     linkedHashMap.put("internalMessage", failureReason.getInternalMessage());

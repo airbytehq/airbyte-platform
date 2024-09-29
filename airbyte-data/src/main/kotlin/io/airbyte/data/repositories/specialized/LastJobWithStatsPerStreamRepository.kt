@@ -15,18 +15,31 @@ interface LastJobWithStatsPerStreamRepository : GenericRepository<StreamWithLast
    */
   @Query(
     """
-      SELECT
-          max(job_id) as job_id,
+      WITH statuses_with_fallbacks AS (
+        SELECT
+          job_id,
           stream_namespace,
-          stream_name
-      FROM
-          stream_statuses ss 
-      WHERE
+          stream_name,
+          -- when the associated job is no longer running, compute a terminal run_state from the job's status
+          CASE
+            WHEN j.status in ('pending', 'running', 'incomplete') THEN ss.run_state
+            WHEN ss.run_state not in ('complete', 'incomplete') and j.status = 'succeeded' THEN 'complete'
+            WHEN ss.run_state not in ('complete', 'incomplete') THEN 'incomplete'
+            ELSE ss.run_state
+          END as run_state
+        FROM
+          stream_statuses ss
+        JOIN jobs j ON j.id = ss.job_id
+        WHERE
           connection_id = :connectionId
-          and run_state in ('complete', 'incomplete')
+      )
+      SELECT
+        MAX(job_id) as job_id, stream_namespace, stream_name
+      FROM statuses_with_fallbacks
+      WHERE run_state IN ('complete', 'incomplete')
       GROUP BY
-          stream_namespace,
-          stream_name;
+        stream_namespace,
+        stream_name
     """,
     readOnly = true,
   )

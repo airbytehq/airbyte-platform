@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/mixins";
 
 .link {
   color: colors.$grey-400;
@@ -15,5 +16,27 @@
     &:hover {
       color: colors.$blue-300;
     }
+  }
+
+  &--button {
+    @include mixins.base-button;
+
+    // secondary
+    color: colors.$grey-400;
+    border: 1px solid colors.$grey-300;
+    width: fit-content;
+
+    &:hover {
+      border-color: colors.$grey-400;
+      color: colors.$grey-500;
+    }
+
+    &:active {
+      border-color: colors.$grey-500;
+      color: colors.$grey-500;
+    }
+
+    // custom background (secondary button has no background)
+    background-color: colors.$foreground;
   }
 }

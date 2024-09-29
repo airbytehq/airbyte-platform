@@ -19,7 +19,6 @@ echo "Tag" $TAG
 
 docker login -u "$DOCKER_HUB_USERNAME" -p "$DOCKER_HUB_PASSWORD"
 VERSION=$TAG ./gradlew build
-# VERSION=$TAG docker compose -f docker-compose.build.yaml push
 
 # For running on Mac
 #sed -i .bak 's/default/'$NAMESPACE'/g' kube/overlays/dev/kustomization.yaml
@@ -78,4 +77,4 @@ kubectl port-forward svc/echo-server-svc 6000:8080 --namespace=$NAMESPACE &
 sleep 10s
 
 echo "Running e2e tests via gradle..."
-KUBE=true IS_GKE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"
+KUBE=true IS_GKE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew :oss:airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"

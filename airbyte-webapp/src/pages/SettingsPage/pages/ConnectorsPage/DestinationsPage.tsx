@@ -1,26 +1,16 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import React, { useMemo, useRef } from "react";
 
-import { useDestinationDefinitionList, useUpdateDestinationDefinition, useDestinationList } from "core/api";
+import { useDestinationDefinitionList, useDestinationList } from "core/api";
 import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
-import { useFormatError } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useNotificationService } from "hooks/services/Notification";
 
 import ConnectorsView from "./components/ConnectorsView";
 
 const DestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_DESTINATION);
 
-  const formatError = useFormatError();
-  const { formatMessage } = useIntl();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { destinations } = useDestinationList();
-
-  const { mutateAsync: updateDestinationDefinition } = useUpdateDestinationDefinition();
-  const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
-
-  const { registerNotification } = useNotificationService();
 
   const idToDestinationDefinition = useMemo(
     () =>
@@ -32,40 +22,6 @@ const DestinationsPage: React.FC = () => {
   );
   const definitionMap = useRef(idToDestinationDefinition);
   definitionMap.current = idToDestinationDefinition;
-
-  const onUpdateVersion = useCallback(
-    async ({ id, version }: { id: string; version: string }) => {
-      try {
-        setUpdatingDefinitionId(id);
-        await updateDestinationDefinition({
-          destinationDefinitionId: id,
-          dockerImageTag: version,
-        });
-        registerNotification({
-          id: `destination.update.success.${id}.${version}`,
-          text: (
-            <FormattedMessage
-              id="admin.upgradeConnector.success"
-              values={{ name: definitionMap.current.get(id)?.name, version }}
-            />
-          ),
-          type: "success",
-        });
-      } catch (error) {
-        registerNotification({
-          id: `destination.update.error.${id}.${version}`,
-          text: `${formatMessage(
-            { id: "admin.upgradeConnector.error" },
-            { name: definitionMap.current.get(id)?.name, version }
-          )}: ${formatError(error)}`,
-          type: "error",
-        });
-      } finally {
-        setUpdatingDefinitionId(undefined);
-      }
-    },
-    [formatError, formatMessage, registerNotification, updateDestinationDefinition]
-  );
 
   const usedDestinationDefinitions: DestinationDefinitionRead[] = useMemo(() => {
     const usedDestinationDefinitionIds = new Set<string>(
@@ -81,10 +37,8 @@ const DestinationsPage: React.FC = () => {
   return (
     <ConnectorsView
       type="destinations"
-      onUpdateVersion={onUpdateVersion}
       usedConnectorsDefinitions={usedDestinationDefinitions}
       connectorsDefinitions={destinationDefinitions}
-      updatingDefinitionId={updatingDefinitionId}
     />
   );
 };

@@ -15,6 +15,7 @@ import java.util.List;
 /**
  * Client for trigger notifications (regardless of notification type e.g. slack or email).
  */
+@SuppressWarnings("PMD.ConfusingArgumentToVarargsMethod")
 public abstract class NotificationClient {
 
   public NotificationClient() {}

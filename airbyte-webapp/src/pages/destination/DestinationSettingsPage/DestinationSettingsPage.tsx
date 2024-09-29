@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -15,6 +16,7 @@ import {
   useUpdateDestination,
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { trackTiming } from "core/utils/datadog";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
@@ -37,6 +39,10 @@ export const DestinationSettingsPage: React.FC = () => {
   const { clearFormChange } = useFormChangeTrackerService();
 
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM_SETTINGS);
+
+  useEffectOnce(() => {
+    trackTiming("DestinationSettingsPage");
+  });
 
   const onSubmitForm = async (values: ConnectorCardValues) => {
     await updateDestination({

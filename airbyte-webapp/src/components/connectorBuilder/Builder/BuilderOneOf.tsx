@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
@@ -8,6 +8,7 @@ import { ListBox } from "components/ui/ListBox";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { getLabelAndTooltip } from "./manifestHelpers";
+import { useWatchWithPreview } from "../preview";
 
 interface OneOfType {
   type: string;
@@ -43,7 +44,7 @@ export const BuilderOneOf = <T extends OneOfType>({
   const { setValue, unregister } = useFormContext();
   const fieldName = `${path}.type`;
   // Use value from useWatch instead of from useController, since the former will respect updates made to parent paths from setValue
-  const fieldValue = useWatch({ name: fieldName });
+  const { fieldValue, isPreview } = useWatchWithPreview({ name: fieldName });
 
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -75,6 +76,7 @@ export const BuilderOneOf = <T extends OneOfType>({
           }))}
           placement="bottom-end"
           adaptiveWidth={false}
+          isDisabled={isPreview}
           selectedValue={selectedOption ?? options[0]}
           onSelect={(selectedOption: OneOfOption<T>) => {
             if (selectedOption.default.type === fieldValue) {

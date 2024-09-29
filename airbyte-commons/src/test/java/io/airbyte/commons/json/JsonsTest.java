@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class JsonsTest {
@@ -270,11 +268,10 @@ class JsonsTest {
   @Test
   void testFlatten__noArrays() {
     final JsonNode json = Jsons.deserialize("{ \"abc\": { \"def\": \"ghi\" }, \"jkl\": true, \"pqr\": 1 }");
-    final Map<String, Object> expected = Stream.of(new Object[][] {
-      {"abc.def", GHI},
-      {JKL, true},
-      {PQR, 1},
-    }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
+    final Map<String, Object> expected = Map.of(
+        "abc.def", GHI,
+        JKL, true,
+        PQR, 1);
     assertEquals(expected, Jsons.flatten(json, false));
   }
 
@@ -282,11 +279,10 @@ class JsonsTest {
   void testFlatten__withArraysNoApplyFlatten() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    final Map<String, Object> expected = Stream.of(new Object[][] {
-      {ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]"},
-      {JKL, true},
-      {PQR, 1},
-    }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
+    final Map<String, Object> expected = Map.of(
+        ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]",
+        JKL, true,
+        PQR, 1);
     assertEquals(expected, Jsons.flatten(json, false));
   }
 
@@ -294,11 +290,10 @@ class JsonsTest {
   void testFlatten__checkBackwardCompatiblity() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    final Map<String, Object> expected = Stream.of(new Object[][] {
-      {ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]"},
-      {JKL, true},
-      {PQR, 1},
-    }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
+    final Map<String, Object> expected = Map.of(
+        ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]",
+        JKL, true,
+        PQR, 1);
     assertEquals(expected, Jsons.flatten(json));
   }
 
@@ -306,12 +301,11 @@ class JsonsTest {
   void testFlatten__withArraysApplyFlatten() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    final Map<String, Object> expected = Stream.of(new Object[][] {
-      {"abc.[0].def", "ghi"},
-      {"abc.[1].fed", "ihg"},
-      {JKL, true},
-      {PQR, 1},
-    }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
+    final Map<String, Object> expected = Map.of(
+        "abc.[0].def", "ghi",
+        "abc.[1].fed", "ihg",
+        JKL, true,
+        PQR, 1);
     assertEquals(expected, Jsons.flatten(json, true));
   }
 
@@ -320,12 +314,11 @@ class JsonsTest {
     final JsonNode json = Jsons
         .deserialize(
             "{ \"abc\": [{ \"def\": {\"ghi\": [\"xyz\"] }}, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    final Map<String, Object> expected = Stream.of(new Object[][] {
-      {"abc.[0].def.ghi.[0]", "xyz"},
-      {"abc.[1].fed", "ihg"},
-      {JKL, true},
-      {PQR, 1},
-    }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
+    final Map<String, Object> expected = Map.of(
+        "abc.[0].def.ghi.[0]", "xyz",
+        "abc.[1].fed", "ihg",
+        JKL, true,
+        PQR, 1);
     assertEquals(expected, Jsons.flatten(json, true));
   }
 

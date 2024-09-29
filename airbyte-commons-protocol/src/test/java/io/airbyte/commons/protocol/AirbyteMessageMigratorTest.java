@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.airbyte.commons.protocol.migrations.AirbyteMessageMigration;
 import io.airbyte.commons.version.Version;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

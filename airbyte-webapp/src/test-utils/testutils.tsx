@@ -3,13 +3,7 @@ import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult
 import React, { Suspense } from "react";
 import { MemoryRouter } from "react-router-dom";
 
-import {
-  ConnectionStatus,
-  DestinationRead,
-  NamespaceDefinitionType,
-  SourceRead,
-  WebBackendConnectionRead,
-} from "core/api/types/AirbyteClient";
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -50,19 +44,19 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   features = defaultOssFeatures,
   route,
 }) => (
-  <I18nProvider locale="en">
-    <NotificationService>
-      <FeatureService features={features}>
-        <ModalServiceProvider>
-          <ConfirmationModalService>
-            <QueryClientProvider client={new QueryClient()}>
-              <MemoryRouter initialEntries={route ? [route] : undefined}>{children}</MemoryRouter>
-            </QueryClientProvider>
-          </ConfirmationModalService>
-        </ModalServiceProvider>
-      </FeatureService>
-    </NotificationService>
-  </I18nProvider>
+  <MemoryRouter initialEntries={route ? [route] : undefined}>
+    <I18nProvider locale="en">
+      <NotificationService>
+        <FeatureService features={features}>
+          <ModalServiceProvider>
+            <ConfirmationModalService>
+              <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+            </ConfirmationModalService>
+          </ModalServiceProvider>
+        </FeatureService>
+      </NotificationService>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,29 +96,4 @@ export const mockDestination: DestinationRead = {
   workspaceId: "test-workspace-id",
   destinationDefinitionId: "test-destination-definition-id",
   connectionConfiguration: undefined,
-};
-
-export const mockConnection: WebBackendConnectionRead = {
-  connectionId: "test-connection",
-  name: "test connection",
-  prefix: "test",
-  sourceId: "test-source",
-  destinationId: "test-destination",
-  status: ConnectionStatus.active,
-  schedule: undefined,
-  syncCatalog: {
-    streams: [],
-  },
-  namespaceDefinition: NamespaceDefinitionType.source,
-  namespaceFormat: "",
-  operationIds: [],
-  source: mockSource,
-  destination: mockDestination,
-  operations: [],
-  catalogId: "",
-  isSyncing: false,
-  schemaChange: "no_change",
-  notifySchemaChanges: true,
-  notifySchemaChangesByEmail: false,
-  nonBreakingChangesPreference: "ignore",
 };

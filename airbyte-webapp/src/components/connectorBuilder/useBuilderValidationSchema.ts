@@ -125,6 +125,7 @@ export const useBuilderValidationSchema = () => {
                 parentStreamReference: yup.string().required(REQUIRED_ERROR),
                 partition_field: yup.string().required(REQUIRED_ERROR),
                 request_option: nonPathRequestOptionSchema,
+                incremental_dependency: yup.boolean().default(false),
               })
             )
             .notRequired()

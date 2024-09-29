@@ -3,22 +3,24 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
+$card-header-fixed-height: 77px;
+
 .cardHeader {
+  position: sticky;
+  top: calc(-1 * variables.$spacing-xl);
+  height: $card-header-fixed-height;
+  z-index: z-indices.$tableStickyHeader;
   border-bottom: variables.$border-thin solid colors.$grey-100;
+  background-color: colors.$foreground;
+  border-top-left-radius: variables.$border-radius-lg;
+  border-top-right-radius: variables.$border-radius-lg;
 }
 
 .clickableHeader {
-  background-color: inherit;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: inherit;
-  font-weight: inherit;
-  text-transform: inherit;
-  white-space: nowrap;
+  all: unset;
   display: flex;
   align-items: center;
-  padding: 0;
+  cursor: pointer;
 
   .icon {
     margin-left: variables.$spacing-sm;
@@ -30,6 +32,11 @@
 }
 
 .tableContainer {
+  .table thead {
+    // remove gap in sticky table header since it respects the padding of its containing block
+    top: calc(-1 * variables.$spacing-xl + $card-header-fixed-height);
+  }
+
   .syncing {
     background: none;
     @include mixins.striped-background(colors.$dark-blue-30, 30px);

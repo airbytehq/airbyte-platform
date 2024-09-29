@@ -70,3 +70,12 @@ Define imageTag
     {{- printf "%s" .Chart.AppVersion }}
 {{- end }}
 {{- end }}
+{{- define "featureflag-server.imageTag" -}}
+{{- if .Values.image.tag }}
+    {{- printf "%s" .Values.image.tag }}
+{{- else if ((.Values.global.image).tag) }}
+    {{- printf "%s" .Values.global.image.tag }}
+{{- else }}
+    {{- printf "%s" .Chart.AppVersion }}
+{{- end }}
+{{- end }}

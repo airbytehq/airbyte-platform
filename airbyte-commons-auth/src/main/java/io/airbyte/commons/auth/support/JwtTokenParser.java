@@ -6,7 +6,10 @@ package io.airbyte.commons.auth.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.AuthProvider;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +41,13 @@ public class JwtTokenParser {
     final String jwtPayload = tokenParts[1];
 
     return jwtPayload;
+  }
+
+  public static Map<String, Object> tokenToAttributes(final String jwtToken) {
+    final String rawJwtPayload = getJwtPayloadToken(jwtToken);
+    final String jwtPayloadDecoded = new String(Base64.getUrlDecoder().decode(rawJwtPayload), StandardCharsets.UTF_8);
+    final JsonNode jwtPayloadNode = Jsons.deserialize(jwtPayloadDecoded);
+    return convertJwtPayloadToUserAttributes(jwtPayloadNode);
   }
 
   /**
@@ -74,8 +84,8 @@ public class JwtTokenParser {
         // speakeasy generated jwt tokens contain the auth user id under the userId field
         jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("user_id"));
       }
-      if (jwtNode.containsKey("firebase")) {
-        jwtMap.put(JWT_FIREBASE, jwtNode.get("firebase"));
+      if (jwtNode.containsKey(JWT_FIREBASE)) {
+        jwtMap.put(JWT_FIREBASE, jwtNode.get(JWT_FIREBASE));
       }
     }
 
@@ -114,7 +124,7 @@ public class JwtTokenParser {
   }
 
   private static AuthProvider resolveAuthProvider(final Map<String, Object> jwtNode) {
-    if (jwtNode.containsKey("firebase")) {
+    if (jwtNode.containsKey(JWT_FIREBASE)) {
       return AuthProvider.GOOGLE_IDENTITY_PLATFORM;
     }
     if (resolveSsoRealm(jwtNode) != null) {
