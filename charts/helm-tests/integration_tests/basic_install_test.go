@@ -1,13 +1,11 @@
-//go:build install
-
-package test
+package integration
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
 
-	"github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests/pkg/cluster"
+	"github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests/tests"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/logger"
@@ -17,7 +15,7 @@ import (
 )
 
 func TestBasicInstallWithDefaultValues(t *testing.T) {
-	cls := cluster.NewKindCluster()
+	cls := NewKindCluster()
 	err := cls.Provision()
 	require.NoError(t, err, "failure provisioning KIND cluster")
 	defer cls.Deprovision()
@@ -49,7 +47,7 @@ func TestBasicInstallWithDefaultValues(t *testing.T) {
 }
 
 func TestBasicEnterpriseInstallWithDefaultValues(t *testing.T) {
-	cls := cluster.NewKindCluster()
+	cls := NewKindCluster()
 	err := cls.Provision()
 	require.NoError(t, err, "failure provisioning KIND cluster")
 	defer cls.Deprovision()
@@ -70,7 +68,7 @@ func TestBasicEnterpriseInstallWithDefaultValues(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("should fail to install if required values are missing", func(t *testing.T) {
-		helmOpts := baseHelmOptionsForEnterprise()
+		helmOpts := tests.BaseHelmOptionsForEnterprise()
 		helmOpts.KubectlOptions = &k8s.KubectlOptions{
 			Namespace: releaseNamespace,
 		}
@@ -100,7 +98,7 @@ func TestBasicEnterpriseInstallWithDefaultValues(t *testing.T) {
 		require.NoError(t, err)
 		defer k8sClient.CoreV1().Secrets(releaseName).Delete(context.Background(), "airbyte-config-secrets", metav1.DeleteOptions{})
 
-		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts := tests.BaseHelmOptionsForEnterpriseWithValues()
 		helmOpts.KubectlOptions = &k8s.KubectlOptions{
 			Namespace: releaseNamespace,
 		}
@@ -110,12 +108,16 @@ func TestBasicEnterpriseInstallWithDefaultValues(t *testing.T) {
 	})
 
 	t.Run("should install successfully with airbyte.yml as a file", func(t *testing.T) {
-		helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml()
-		helmOpts.KubectlOptions = &k8s.KubectlOptions{
+		opts := tests.BaseHelmOptions()
+		opts.SetValues["global.edition"] = "enterprise"
+		opts.SetFiles = map[string]string{
+			"global.airbyteYml": "../tests/fixtures/airbyte.yaml",
+		}
+		opts.KubectlOptions = &k8s.KubectlOptions{
 			Namespace: releaseNamespace,
 		}
-		err = helm.InstallE(t, helmOpts, chartPath, releaseName)
-		defer helm.DeleteE(t, helmOpts, releaseName, true)
+		err = helm.InstallE(t, opts, chartPath, releaseName)
+		defer helm.DeleteE(t, opts, releaseName, true)
 		require.NoError(t, err)
 	})
 }

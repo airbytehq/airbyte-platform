@@ -1,4 +1,4 @@
-package cluster
+package integration
 
 // ClusterProvider is an interface for implementing a cluster provider.
 type ClusterProvider interface {
