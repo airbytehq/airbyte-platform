@@ -7,8 +7,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCreateSourceDefForkedBuilderProject, useGetBuilderProjectIdByDefinitionId } from "core/api";
-import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
+import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ForkInBuilderButton.module.scss";
@@ -27,13 +26,14 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
 
   const { mutateAsync: createForkedProject, isLoading: isForking } = useCreateSourceDefForkedBuilderProject();
   const forkAndOpenInBuilder = useCallback(() => {
-    createForkedProject(sourceDefinition.sourceDefinitionId).then((result) => {
-      window.open(createProjectEditLink(result.builderProjectId), "_blank");
-    });
+    createForkedProject(sourceDefinition.sourceDefinitionId).then(
+      (result: ConnectorBuilderProjectIdWithWorkspaceId) => {
+        window.open(createProjectEditLink(result.builderProjectId), "_blank");
+      }
+    );
   }, [createForkedProject, createProjectEditLink, sourceDefinition]);
 
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
-  if (!sourceDefinition || !isContributeEditsEnabled) {
+  if (!sourceDefinition) {
     return null;
   }
 
