@@ -1007,7 +1007,7 @@ workload-launcher:
 ## @section Rollout Worker Parameters
 
 connector-rollout-worker:
-  enabled: false
+  enabled: true
   # -- Number of connector rollout worker replicas
   replicaCount: 1
 

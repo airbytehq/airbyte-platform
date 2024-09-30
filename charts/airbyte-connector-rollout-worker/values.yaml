@@ -82,7 +82,7 @@ global:
         ##   jobs.kube.images.curl [string] curl image used by the job pod
         curl: ""
 
-enabled: false
+enabled: true
 ##  connector-rollout-worker.replicaCount Number of connector-rollout-worker replicas
 replicaCount: 1
 
