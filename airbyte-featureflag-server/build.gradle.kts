@@ -3,6 +3,10 @@ plugins {
   id("io.airbyte.gradle.docker")
 }
 
+configurations.all {
+  exclude(group="org.apache.logging.log4j")
+}
+
 dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.v3.swagger.annotations)
@@ -18,7 +22,6 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.kotlin)
-  implementation(libs.log4j.impl)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
@@ -29,6 +32,10 @@ dependencies {
   implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-storage"))
+
+  runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)

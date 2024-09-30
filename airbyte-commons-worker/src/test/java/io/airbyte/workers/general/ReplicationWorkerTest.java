@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_JOB_LOG_PATH_MDC_KEY;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_WORKSPACE_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
@@ -46,6 +47,7 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LocalLogMdcHelper;
 import io.airbyte.commons.logging.LogMdcHelper;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.FailureReason;
@@ -310,6 +312,9 @@ abstract class ReplicationWorkerTest {
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
+
+    MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, jobRoot.toString());
+    MDC.put(LoggingHelper.LOG_SOURCE_MDC_KEY, LoggingHelper.platformLogSource());
   }
 
   @AfterEach
@@ -698,6 +703,7 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testLogMaskRegex() throws IOException {
+    MDC.clear();
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
     MDC.put(DEFAULT_WORKSPACE_MDC_KEY, jobRoot.toString());
 

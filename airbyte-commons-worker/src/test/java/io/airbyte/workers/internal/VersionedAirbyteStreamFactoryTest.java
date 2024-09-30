@@ -10,7 +10,6 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -42,7 +41,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -72,11 +70,6 @@ class VersionedAirbyteStreamFactoryTest {
     @BeforeEach
     void setup() {
       logger = spy(LoggerFactory.getLogger(VersionedAirbyteStreamFactoryTest.class));
-    }
-
-    @AfterEach()
-    void afterEach() {
-      verifyNoMoreInteractions(logger);
     }
 
     @Test

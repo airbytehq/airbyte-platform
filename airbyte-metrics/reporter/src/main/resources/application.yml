@@ -35,6 +35,11 @@ endpoints:
 
 logger:
   levels:
-    io.airbyte.bootloader: DEBUG
-# Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG
