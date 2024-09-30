@@ -37,7 +37,6 @@ class DoRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : Do
         input.rolloutId,
         input.actorIds,
         ConnectorRolloutStrategy.MANUAL,
-        input.updatedBy,
       )
 
     return try {
