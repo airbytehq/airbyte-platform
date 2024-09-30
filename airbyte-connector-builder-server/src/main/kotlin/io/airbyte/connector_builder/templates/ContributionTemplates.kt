@@ -62,6 +62,24 @@ class ContributionTemplates {
     } ?: emptyList()
   }
 
+  fun getAllowedHosts(streams: List<Map<String, Any>>): List<String> {
+    val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
+
+    val hosts =
+      streams.mapNotNull { stream ->
+        val retriever = stream["retriever"] as? Map<String, Any>
+        val requester = retriever?.get("requester") as? Map<String, Any>
+        val baseUrl = requester?.get("url_base") as? String
+
+        baseUrl?.let { url ->
+          hostnameRegex.find(url)?.groupValues?.getOrNull(1)
+        }
+      }
+
+    // Since the requester is on every stream, we only need unique hostnames
+    return hosts.distinct()
+  }
+
   /**
    * Converts a primary key to a string representation.
    *
@@ -133,12 +151,15 @@ class ContributionTemplates {
     contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
   ): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
+    val allowedHosts = getAllowedHosts(manifestParser.streams)
+
     // TODO: Ensure metadata is correctly formatted
     // TODO: Merge metadata with existing metadata if it exists
     val context =
       mapOf(
         // TODO: Parse Allowed Hosts from manifest
-        "allowedHosts" to listOf("*"),
+        "allowedHosts" to allowedHosts,
         "connectorImageName" to contributionInfo.connectorImageName,
         "baseImage" to contributionInfo.baseImage,
         "actorDefinitionId" to contributionInfo.actorDefinitionId,
