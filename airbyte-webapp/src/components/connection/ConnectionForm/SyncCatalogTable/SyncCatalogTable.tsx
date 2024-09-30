@@ -214,17 +214,18 @@ export const SyncCatalogTable: FC = () => {
     }),
     columnHelper.display({
       id: "hashing",
+      header: () => (
+        <FlexContainer alignItems="center" gap="none">
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="connectionForm.hashing.title" />
+          </Text>
+          <InfoTooltip>
+            <FormattedMessage id="connectionForm.hashing.info" />
+          </InfoTooltip>
+        </FlexContainer>
+      ),
       cell: ({ row }) =>
-        isNamespaceRow(row) ? (
-          <FlexContainer alignItems="center" gap="none">
-            <Text size="sm" color="grey500">
-              <FormattedMessage id="connectionForm.hashing.title" />
-            </Text>
-            <InfoTooltip>
-              <FormattedMessage id="connectionForm.hashing.info" />
-            </InfoTooltip>
-          </FlexContainer>
-        ) : isStreamRow(row) ? null : (
+        isNamespaceRow(row) || isStreamRow(row) ? null : (
           <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ),
       meta: {
