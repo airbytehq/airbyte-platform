@@ -49,6 +49,7 @@ import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -77,6 +78,7 @@ public class SourceHandler {
 
   private final Supplier<UUID> uuidGenerator;
   private final ConfigRepository configRepository;
+  private final CatalogService catalogService;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final JsonSchemaValidator validator;
   private final ConnectionsHandler connectionsHandler;
@@ -93,6 +95,7 @@ public class SourceHandler {
 
   @VisibleForTesting
   public SourceHandler(final ConfigRepository configRepository,
+                       final CatalogService catalogService,
                        final SecretsRepositoryReader secretsRepositoryReader,
                        final JsonSchemaValidator integrationSchemaValidation,
                        final ConnectionsHandler connectionsHandler,
@@ -108,6 +111,7 @@ public class SourceHandler {
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                        final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.configRepository = configRepository;
+    this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
@@ -253,7 +257,7 @@ public class SourceHandler {
   public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalogWithUpdatedAt(final SourceIdRequestBody sourceIdRequestBody)
       throws IOException {
     final Optional<io.airbyte.config.ActorCatalogWithUpdatedAt> actorCatalog =
-        configRepository.getMostRecentSourceActorCatalog(sourceIdRequestBody.getSourceId());
+        catalogService.getMostRecentSourceActorCatalog(sourceIdRequestBody.getSourceId());
     if (actorCatalog.isEmpty()) {
       return new ActorCatalogWithUpdatedAt();
     } else {
@@ -394,7 +398,7 @@ public class SourceHandler {
   }
 
   private UUID writeActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request) throws IOException {
-    return configRepository.writeActorCatalogFetchEvent(
+    return catalogService.writeActorCatalogFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
         request.getConnectorVersion(),

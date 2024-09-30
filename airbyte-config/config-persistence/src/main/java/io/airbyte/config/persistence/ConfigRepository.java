@@ -7,9 +7,6 @@ package io.airbyte.config.persistence;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorCatalog;
-import io.airbyte.config.ActorCatalogFetchEvent;
-import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -25,14 +22,12 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
@@ -133,7 +128,6 @@ public class ConfigRepository {
                                               int rowOffset) {}
 
   private final ActorDefinitionService actorDefinitionService;
-  private final CatalogService catalogService;
   private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final DestinationService destinationService;
@@ -144,7 +138,6 @@ public class ConfigRepository {
   @SuppressWarnings("ParameterName")
   @VisibleForTesting
   public ConfigRepository(final ActorDefinitionService actorDefinitionService,
-                          final CatalogService catalogService,
                           final ConnectionService connectionService,
                           final ConnectorBuilderService connectorBuilderService,
                           final DestinationService destinationService,
@@ -152,7 +145,6 @@ public class ConfigRepository {
                           final SourceService sourceService,
                           final WorkspaceService workspaceService) {
     this.actorDefinitionService = actorDefinitionService;
-    this.catalogService = catalogService;
     this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
     this.destinationService = destinationService;
@@ -1259,120 +1251,6 @@ public class ConfigRepository {
         .stream()
         .map(record -> new DestinationAndDefinition(record.destination(), record.definition()))
         .toList();
-  }
-
-  /**
-   * Get actor catalog.
-   *
-   * @param actorCatalogId actor catalog id
-   * @return actor catalog
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public ActorCatalog getActorCatalogById(final UUID actorCatalogId)
-      throws IOException, ConfigNotFoundException {
-    try {
-      return catalogService.getActorCatalogById(actorCatalogId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get most actor catalog for source.
-   *
-   * @param actorId actor id
-   * @param actorVersion actor definition version used to make this actor
-   * @param configHash config hash for actor
-   * @return actor catalog for config has and actor version
-   * @throws IOException - error while interacting with db
-   */
-  @Deprecated
-  public Optional<ActorCatalog> getActorCatalog(final UUID actorId,
-                                                final String actorVersion,
-                                                final String configHash)
-      throws IOException {
-    return catalogService.getActorCatalog(actorId, actorVersion, configHash);
-  }
-
-  /**
-   * Get most recent actor catalog for source.
-   *
-   * @param sourceId source id
-   * @return current actor catalog with updated at
-   * @throws IOException - error while interacting with db
-   */
-  @Deprecated
-  public Optional<ActorCatalogWithUpdatedAt> getMostRecentSourceActorCatalog(final UUID sourceId) throws IOException {
-    return catalogService.getMostRecentSourceActorCatalog(sourceId);
-  }
-
-  /**
-   * Get most recent actor catalog for source.
-   *
-   * @param sourceId source id
-   * @return current actor catalog
-   * @throws IOException - error while interacting with db
-   */
-  @Deprecated
-  public Optional<ActorCatalog> getMostRecentActorCatalogForSource(final UUID sourceId) throws IOException {
-    return catalogService.getMostRecentActorCatalogForSource(sourceId);
-  }
-
-  /**
-   * Get most recent actor catalog fetch event for source.
-   *
-   * @param sourceId source id
-   * @return last actor catalog fetch event
-   * @throws IOException - error while interacting with db
-   */
-  @Deprecated
-  public Optional<ActorCatalogFetchEvent> getMostRecentActorCatalogFetchEventForSource(final UUID sourceId) throws IOException {
-    return catalogService.getMostRecentActorCatalogFetchEventForSource(sourceId);
-  }
-
-  /**
-   * Get most recent actor catalog fetch event for sources.
-   *
-   * @param sourceIds source ids
-   * @return map of source id to the last actor catalog fetch event
-   * @throws IOException - error while interacting with db
-   */
-  @SuppressWarnings({"unused", "SqlNoDataSourceInspection"})
-  @Deprecated
-  public Map<UUID, ActorCatalogFetchEvent> getMostRecentActorCatalogFetchEventForSources(final List<UUID> sourceIds) throws IOException {
-    return catalogService.getMostRecentActorCatalogFetchEventForSources(sourceIds);
-  }
-
-  /**
-   * Stores source catalog information.
-   * <p>
-   * This function is called each time the schema of a source is fetched. This can occur because the
-   * source is set up for the first time, because the configuration or version of the connector
-   * changed or because the user explicitly requested a schema refresh. Schemas are stored separately
-   * and de-duplicated upon insertion. Once a schema has been successfully stored, a call to
-   * getActorCatalog(actorId, connectionVersion, configurationHash) will return the most recent schema
-   * stored for those parameters.
-   *
-   * @param catalog - catalog that was fetched.
-   * @param actorId - actor the catalog was fetched by
-   * @param connectorVersion - version of the connector when catalog was fetched
-   * @param configurationHash - hash of the config of the connector when catalog was fetched
-   * @return The identifier (UUID) of the fetch event inserted in the database
-   * @throws IOException - error while interacting with db
-   */
-  @Deprecated
-  public UUID writeActorCatalogFetchEvent(final AirbyteCatalog catalog,
-                                          final UUID actorId,
-                                          final String connectorVersion,
-                                          final String configurationHash)
-      throws IOException {
-    return catalogService.writeActorCatalogFetchEvent(
-        catalog,
-        actorId,
-        connectorVersion,
-        configurationHash);
   }
 
   /**

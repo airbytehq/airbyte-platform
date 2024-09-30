@@ -112,6 +112,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
@@ -263,6 +264,7 @@ class SchedulerHandlerTest {
   private NotificationHelper notificationHelper;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private LogClientManager logClientManager;
+  private CatalogService catalogService;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -282,6 +284,7 @@ class SchedulerHandlerTest {
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
+    catalogService = mock(CatalogService.class);
     when(configRepository.getStandardSync(any())).thenReturn(new StandardSync().withStatus(StandardSync.Status.ACTIVE));
     when(configRepository.getStandardDestinationDefinition(any())).thenReturn(SOME_DESTINATION_DEFINITION);
     when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(SOME_DESTINATION_DEFINITION);
@@ -318,6 +321,7 @@ class SchedulerHandlerTest {
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
+        catalogService,
         secretsRepositoryWriter,
         synchronousSchedulerClient,
         configurationUpdate,
@@ -760,7 +764,8 @@ class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testDiscoverSchemaForSourceFromSourceId(final boolean enabled) throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaForSourceFromSourceId(final boolean enabled)
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId());
@@ -773,7 +778,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(UUID.randomUUID());
-    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog);
     when(discoverResponse.getMetadata()).thenReturn(metadata);
     when(metadata.isSucceeded()).thenReturn(true);
 
@@ -794,7 +799,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(configRepository.getActorCatalog(any(), any(), any())).thenReturn(Optional.empty());
+    when(catalogService.getActorCatalog(any(), any(), any())).thenReturn(Optional.empty());
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
@@ -805,7 +810,7 @@ class SchedulerHandlerTest {
     assertNotNull(actual.getJobInfo());
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(configRepository).getSourceConnection(source.getSourceId());
-    verify(configRepository).getActorCatalog(eq(request.getSourceId()), eq(SOURCE_DOCKER_TAG), any());
+    verify(catalogService).getActorCatalog(eq(request.getSourceId()), eq(SOURCE_DOCKER_TAG), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
     verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH);
   }
@@ -813,7 +818,7 @@ class SchedulerHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testDiscoverSchemaForSourceFromSourceIdCachedCatalog(final boolean enabled)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId());
@@ -837,7 +842,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(thisCatalogId);
-    when(configRepository.getActorCatalog(any(), any(), any())).thenReturn(Optional.of(actorCatalog));
+    when(catalogService.getActorCatalog(any(), any(), any())).thenReturn(Optional.of(actorCatalog));
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
@@ -846,8 +851,8 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogId(), discoverResponse.getOutput());
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(configRepository).getSourceConnection(source.getSourceId());
-    verify(configRepository).getActorCatalog(eq(request.getSourceId()), any(), any());
-    verify(configRepository, never()).writeActorCatalogFetchEvent(any(), any(), any(), any());
+    verify(catalogService).getActorCatalog(eq(request.getSourceId()), any(), any());
+    verify(catalogService, never()).writeActorCatalogFetchEvent(any(), any(), any(), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
     verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), anyBoolean(), any(), any());
   }
@@ -855,7 +860,7 @@ class SchedulerHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testDiscoverSchemaForSourceFromSourceIdDisableCache(final boolean enabled)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).disableCache(true);
@@ -883,7 +888,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
@@ -899,7 +904,8 @@ class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testDiscoverSchemaForSourceFromSourceIdFailed(final boolean enabled) throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaForSourceFromSourceIdFailed(final boolean enabled)
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId());
@@ -934,7 +940,7 @@ class SchedulerHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void whenDiscoverPostprocessInTemporalEnabledDiffAndDisablingIsNotPerformed(final boolean enabled)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId1 = UUID.randomUUID();
@@ -989,7 +995,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
     when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
@@ -1009,7 +1015,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1055,7 +1061,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
@@ -1070,7 +1076,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlag()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1118,7 +1124,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
@@ -1134,7 +1140,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn()
-      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1181,7 +1187,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
@@ -1199,7 +1205,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlagNoDiff()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1241,7 +1247,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
     when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
@@ -1260,7 +1266,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @Test
   void testDiscoverSchemaForSourceMultipleConnectionsFeatureFlagOn()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID connectionId2 = UUID.randomUUID();
@@ -1332,7 +1338,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
     when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.ACTIVE));
 
@@ -1349,7 +1355,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionUpdateNonSuccessResponse() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaFromSourceIdWithConnectionUpdateNonSuccessResponse()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
         .connectionId(UUID.randomUUID()).notifySchemaChange(true);
@@ -1385,7 +1392,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testDiscoverSchemaForSourceFromSourceCreate() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testDiscoverSchemaForSourceFromSourceCreate()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
         .withConfiguration(SOURCE.getConfiguration())
@@ -1406,7 +1414,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(UUID.randomUUID());
-    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId());
@@ -1436,7 +1444,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testDiscoverSchemaForSourceFromSourceCreateFailed() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testDiscoverSchemaForSourceFromSourceCreateFailed()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
         .withConfiguration(SOURCE.getConfiguration());
@@ -1651,7 +1660,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeAddStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testAutoPropagateSchemaChangeAddStream()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Verify that if auto propagation is fully enabled, a new stream can be added.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
 
@@ -1693,7 +1703,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeUpdateStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testAutoPropagateSchemaChangeUpdateStream()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Verify that if auto propagation is fully enabled, an existing stream can be modified.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
 
@@ -1732,7 +1743,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeRemoveStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testAutoPropagateSchemaChangeRemoveStream()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Verify that if auto propagation is fully enabled, an existing stream can be removed.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
 
@@ -1771,7 +1783,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeColumnsOnly() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testAutoPropagateSchemaChangeColumnsOnly()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Verify that if auto propagation is set to PROPAGATE_COLUMNS, then column changes are applied but
     // a new stream is ignored.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1812,7 +1825,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeWithIgnoreMode() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testAutoPropagateSchemaChangeWithIgnoreMode()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1847,7 +1861,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateSchemaChangeEarlyExits() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testAutoPropagateSchemaChangeEarlyExits()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     SourceAutoPropagateChange request = getMockedSourceAutoPropagateChange().sourceId(null);
     schedulerHandler.applySchemaChangeForSource(request);
     verifyNoInteractions(connectionsHandler);
@@ -1867,7 +1882,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testSchemaPropagatedEmptyDiff() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testSchemaPropagatedEmptyDiff()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -1919,7 +1935,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testEmptyDiffIsAlwaysPropagated() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testEmptyDiffIsAlwaysPropagated()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Verify that if auto propagation is fully enabled, a new stream can be added.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1977,7 +1994,7 @@ class SchedulerHandlerTest {
   }
 
   private UUID mockSuccessfulDiscoverJob(final SourceConnection source, final ActorDefinitionVersion sourceVersion)
-      throws ConfigNotFoundException, IOException {
+      throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newSourceCatalogId = UUID.randomUUID();
     final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
     final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
@@ -1987,7 +2004,7 @@ class SchedulerHandlerTest {
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(newSourceCatalogId);
-    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
+    when(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog);
     when(discoverResponse.getMetadata()).thenReturn(metadata);
     when(metadata.isSucceeded()).thenReturn(true);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))

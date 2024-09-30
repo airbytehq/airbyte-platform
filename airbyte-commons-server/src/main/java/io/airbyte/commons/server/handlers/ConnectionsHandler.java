@@ -117,6 +117,7 @@ import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason;
@@ -181,6 +182,7 @@ public class ConnectionsHandler {
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
+  private final CatalogService catalogService;
   private final Supplier<UUID> uuidGenerator;
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
@@ -207,6 +209,7 @@ public class ConnectionsHandler {
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
+                            final CatalogService catalogService,
                             @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                             final WorkspaceHelper workspaceHelper,
                             final TrackingClient trackingClient,
@@ -228,6 +231,7 @@ public class ConnectionsHandler {
                             final StatePersistence statePersistence) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
+    this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
@@ -859,7 +863,7 @@ public class ConnectionsHandler {
   }
 
   public CatalogDiff getDiff(final ConnectionRead connectionRead, final AirbyteCatalog discoveredCatalog)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
     final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
@@ -927,12 +931,12 @@ public class ConnectionsHandler {
   }
 
   public Optional<AirbyteCatalog> getConnectionAirbyteCatalog(final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSync connection = configRepository.getStandardSync(connectionId);
     if (connection.getSourceCatalogId() == null) {
       return Optional.empty();
     }
-    final ActorCatalog catalog = configRepository.getActorCatalogById(connection.getSourceCatalogId());
+    final ActorCatalog catalog = catalogService.getActorCatalogById(connection.getSourceCatalogId());
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(connection.getSourceId());
     final SourceConnection sourceConnection = configRepository.getSourceConnection(connection.getSourceId());
     final ActorDefinitionVersion sourceVersion =
@@ -1369,7 +1373,7 @@ public class ConnectionsHandler {
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog(), false);
   }
 
@@ -1379,7 +1383,7 @@ public class ConnectionsHandler {
                                                          final UUID catalogId,
                                                          final AirbyteCatalog catalog,
                                                          final Boolean autoApply)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     LOGGER.info("Applying schema change for connection '{}' only", connectionId);
     final ConnectionRead connection = buildConnectionRead(connectionId);
@@ -1525,7 +1529,7 @@ public class ConnectionsHandler {
    * diff, conditionally disables and auto-propagates schema changes.
    */
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
 
     final var autoPropResult =
@@ -1578,7 +1582,7 @@ public class ConnectionsHandler {
    * breaking changes then disable the connection if necessary.
    */
   public SourceDiscoverSchemaRead diffCatalogAndConditionallyDisable(final UUID connectionId, final UUID discoveredCatalogId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final var connectionRead = getConnection(connectionId);
     final var source = configRepository.getSourceConnection(connectionRead.getSourceId());
     final var sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -1598,9 +1602,9 @@ public class ConnectionsHandler {
   }
 
   private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)
-      throws ConfigNotFoundException, IOException {
+      throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
-    final ActorCatalog catalog = configRepository.getActorCatalogById(catalogId);
+    final ActorCatalog catalog = catalogService.getActorCatalogById(catalogId);
     final io.airbyte.protocol.models.AirbyteCatalog persistenceCatalog = Jsons.object(
         catalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);

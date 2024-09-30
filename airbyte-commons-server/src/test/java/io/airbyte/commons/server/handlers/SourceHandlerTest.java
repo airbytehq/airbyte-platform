@@ -55,6 +55,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -110,11 +111,13 @@ class SourceHandlerTest {
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private CatalogService catalogService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
     configRepository = mock(ConfigRepository.class);
+    catalogService = mock(CatalogService.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     validator = mock(JsonSchemaValidator.class);
     connectionsHandler = mock(ConnectionsHandler.class);
@@ -154,6 +157,7 @@ class SourceHandlerTest {
     sourceConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
 
     sourceHandler = new SourceHandler(configRepository,
+        catalogService,
         secretsRepositoryReader,
         validator,
         connectionsHandler,
@@ -519,10 +523,10 @@ class SourceHandlerTest {
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(configRepository.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(catalogService.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(configRepository).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
+    verify(catalogService).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

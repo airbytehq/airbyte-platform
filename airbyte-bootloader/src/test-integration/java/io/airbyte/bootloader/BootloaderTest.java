@@ -38,7 +38,6 @@ import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
@@ -178,7 +177,6 @@ class BootloaderTest {
         secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
@@ -287,7 +285,6 @@ class BootloaderTest {
         mock(SecretPersistenceConfigService.class));
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
@@ -402,7 +399,6 @@ class BootloaderTest {
         scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         new DestinationServiceJooqImpl(configDatabase,

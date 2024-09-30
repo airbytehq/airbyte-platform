@@ -69,6 +69,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -109,6 +110,7 @@ public class WebBackendConnectionsHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
+  private final CatalogService catalogService;
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
@@ -124,6 +126,7 @@ public class WebBackendConnectionsHandler {
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
                                       final ConfigRepository configRepositoryDoNotUse,
+                                      CatalogService catalogService,
                                       final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                       final FieldGenerator fieldGenerator,
@@ -138,6 +141,7 @@ public class WebBackendConnectionsHandler {
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+    this.catalogService = catalogService;
     this.connectionService = connectionService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.fieldGenerator = fieldGenerator;
@@ -184,7 +188,7 @@ public class WebBackendConnectionsHandler {
     // right status filtering for this.
     final Map<UUID, JobRead> runningJobByConnectionId = getRunningJobByConnectionId(connectionIds);
     final Map<UUID, ActorCatalogFetchEvent> newestFetchEventsByActorId =
-        configRepositoryDoNotUse.getMostRecentActorCatalogFetchEventForSources(sourceIds);
+        catalogService.getMostRecentActorCatalogFetchEventForSources(sourceIds);
 
     final List<WebBackendConnectionListItem> connectionItems = Lists.newArrayList();
 
@@ -246,7 +250,7 @@ public class WebBackendConnectionsHandler {
     });
 
     final Optional<ActorCatalogFetchEvent> mostRecentFetchEvent =
-        configRepositoryDoNotUse.getMostRecentActorCatalogFetchEventForSource(connectionRead.getSourceId());
+        catalogService.getMostRecentActorCatalogFetchEventForSource(connectionRead.getSourceId());
 
     final SchemaChange schemaChange = getSchemaChange(connectionRead, currentSourceCatalogId, mostRecentFetchEvent);
 
@@ -461,7 +465,7 @@ public class WebBackendConnectionsHandler {
   }
 
   private Optional<SourceDiscoverSchemaRead> getRefreshedSchema(final UUID sourceId, final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDiscoverSchemaRequestBody discoverSchemaReadReq = new SourceDiscoverSchemaRequestBody()
         .sourceId(sourceId)
         .disableCache(true)
@@ -618,7 +622,7 @@ public class WebBackendConnectionsHandler {
       // Get the most recent actor catalog fetched for this connection's source and the newly updated sync
       // catalog
       final Optional<ActorCatalog> mostRecentActorCatalog =
-          configRepositoryDoNotUse.getMostRecentActorCatalogForSource(originalConnectionRead.getSourceId());
+          catalogService.getMostRecentActorCatalogForSource(originalConnectionRead.getSourceId());
       final AirbyteCatalog newAirbyteCatalog = webBackendConnectionPatch.getSyncCatalog();
       // Get the diff between these two catalogs to check for breaking changes
       if (mostRecentActorCatalog.isPresent()) {

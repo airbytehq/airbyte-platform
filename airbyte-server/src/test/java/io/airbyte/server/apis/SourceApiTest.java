@@ -106,7 +106,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDiscoverSchemaForSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDiscoverSchemaForSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(schedulerHandler.discoverSchemaForSourceFromSourceId(Mockito.any()))
         .thenReturn(new SourceDiscoverSchemaRead())
         .thenThrow(new ConfigNotFoundException("", ""));

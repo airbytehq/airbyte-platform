@@ -105,7 +105,6 @@ public class DatabaseBeanFactory {
                                            final WorkspaceService workspaceService) {
     return new ConfigRepository(
         actorDefinitionService,
-        catalogService,
         connectionService,
         connectorBuilderService,
         destinationService,
