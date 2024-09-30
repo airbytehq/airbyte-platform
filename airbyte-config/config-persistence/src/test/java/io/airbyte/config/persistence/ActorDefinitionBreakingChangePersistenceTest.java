@@ -28,7 +28,6 @@ import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -142,10 +141,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
                 secretPersistenceConfigService,
                 connectionService,
                 actorDefinitionVersionUpdater),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
             new SourceServiceJooqImpl(database,
                 featureFlagClient,

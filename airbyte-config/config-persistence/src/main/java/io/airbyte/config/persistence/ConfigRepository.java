@@ -15,10 +15,8 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
-import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
@@ -31,7 +29,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -140,7 +137,6 @@ public class ConfigRepository {
   private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final DestinationService destinationService;
-  private final OAuthService oAuthService;
   private final OperationService operationService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
@@ -152,7 +148,6 @@ public class ConfigRepository {
                           final ConnectionService connectionService,
                           final ConnectorBuilderService connectorBuilderService,
                           final DestinationService destinationService,
-                          final OAuthService oAuthService,
                           final OperationService operationService,
                           final SourceService sourceService,
                           final WorkspaceService workspaceService) {
@@ -161,7 +156,6 @@ public class ConfigRepository {
     this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
     this.destinationService = destinationService;
-    this.oAuthService = oAuthService;
     this.operationService = operationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
@@ -1211,57 +1205,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get source oauth parameter.
-   *
-   * @param workspaceId workspace id
-   * @param sourceDefinitionId source definition id
-   * @return source oauth parameter
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(final UUID workspaceId, final UUID sourceDefinitionId)
-      throws IOException {
-    return oAuthService.getSourceOAuthParamByDefinitionIdOptional(workspaceId, sourceDefinitionId);
-  }
-
-  /**
-   * Write source oauth param.
-   *
-   * @param sourceOAuthParameter source oauth param
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public void writeSourceOAuthParam(final SourceOAuthParameter sourceOAuthParameter) throws IOException {
-    oAuthService.writeSourceOAuthParam(sourceOAuthParameter);
-  }
-
-  /**
-   * Get destination oauth parameter.
-   *
-   * @param workspaceId workspace id
-   * @param destinationDefinitionId destination definition id
-   * @return oauth parameters if present
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(final UUID workspaceId,
-                                                                                            final UUID destinationDefinitionId)
-      throws IOException {
-    return oAuthService.getDestinationOAuthParamByDefinitionIdOptional(workspaceId, destinationDefinitionId);
-  }
-
-  /**
-   * Write destination oauth param.
-   *
-   * @param destinationOAuthParameter destination oauth parameter
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public void writeDestinationOAuthParam(final DestinationOAuthParameter destinationOAuthParameter) throws IOException {
-    oAuthService.writeDestinationOAuthParam(destinationOAuthParameter);
-  }
-
-  /**
    * Pair of source and its associated definition.
    * <p>
    * Data-carrier records to hold combined result of query for a Source or Destination and its
@@ -1729,18 +1672,6 @@ public class ConfigRepository {
   public Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange)
       throws IOException {
     return connectionService.listEarlySyncJobs(freeUsageInterval, jobsFetchRange);
-  }
-
-  @Deprecated
-  public Optional<SourceOAuthParameter> getSourceOAuthParameterOptional(final UUID workspaceId, final UUID sourceDefinitionId)
-      throws IOException {
-    return oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
-  }
-
-  @Deprecated
-  public Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(final UUID workspaceId, final UUID sourceDefinitionId)
-      throws IOException {
-    return oAuthService.getDestinationOAuthParameterOptional(workspaceId, sourceDefinitionId);
   }
 
 }

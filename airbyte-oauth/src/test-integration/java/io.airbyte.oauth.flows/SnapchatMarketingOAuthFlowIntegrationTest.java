@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class SnapchatMarketingOAuthFlowIntegrationTest extends OAuthFlowIntegrat
   }
 
   @Override
-  protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
+  protected OAuthFlowImplementation getFlowImplementation(final OAuthService oauthService, final HttpClient httpClient) {
     return new SnapchatMarketingOAuthFlow(httpClient);
   }
 
@@ -63,8 +63,8 @@ public class SnapchatMarketingOAuthFlowIntegrationTest extends OAuthFlowIntegrat
             .put("client_id", credentialsJson.get("client_id").asText())
             .put("client_secret", credentialsJson.get("client_secret").asText())
             .build()));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
-    final String url = getFlowImplementation(configRepository, httpClient).getSourceConsentUrl(workspaceId, definitionId, getRedirectUrl(),
+    when(oauthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    final String url = getFlowImplementation(oauthService, httpClient).getSourceConsentUrl(workspaceId, definitionId, getRedirectUrl(),
         Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     waitForResponse(20);

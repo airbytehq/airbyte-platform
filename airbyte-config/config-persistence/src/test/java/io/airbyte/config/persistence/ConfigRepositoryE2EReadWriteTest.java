@@ -44,6 +44,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -99,6 +100,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   private static final String CONFIG_HASH = "ConfigHash";
 
   private ConfigRepository configRepository;
+  private OAuthService oauthService;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
@@ -129,10 +131,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
                 secretPersistenceConfigService,
                 connectionService,
                 actorDefinitionVersionUpdater),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
             new SourceServiceJooqImpl(database,
                 featureFlagClient,
@@ -148,6 +146,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
                 secretPersistenceConfigService)));
     OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
+    oauthService = spy(new OAuthServiceJooqImpl(database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretPersistenceConfigService));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }
@@ -177,10 +179,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     }
 
     for (final SourceOAuthParameter oAuthParameter : MockData.sourceOauthParameters()) {
-      configRepository.writeSourceOAuthParam(oAuthParameter);
+      oauthService.writeSourceOAuthParam(oAuthParameter);
     }
     for (final DestinationOAuthParameter oAuthParameter : MockData.destinationOauthParameters()) {
-      configRepository.writeDestinationOAuthParam(oAuthParameter);
+      oauthService.writeDestinationOAuthParam(oAuthParameter);
     }
 
     database.transaction(ctx -> ctx.truncate(ACTOR_DEFINITION_WORKSPACE_GRANT).execute());
@@ -640,7 +642,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetDestinationOAuthByDefinitionId() throws IOException {
 
     final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(0);
-    final Optional<DestinationOAuthParameter> result = configRepository.getDestinationOAuthParamByDefinitionIdOptional(
+    final Optional<DestinationOAuthParameter> result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(
         destinationOAuthParameter.getWorkspaceId(), destinationOAuthParameter.getDestinationDefinitionId());
     assertTrue(result.isPresent());
     assertEquals(destinationOAuthParameter, result.get());
@@ -651,17 +653,17 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629");
     final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(0);
     Optional<DestinationOAuthParameter> result =
-        configRepository.getDestinationOAuthParamByDefinitionIdOptional(destinationOAuthParameter.getWorkspaceId(), missingId);
+        oauthService.getDestinationOAuthParamByDefinitionIdOptional(destinationOAuthParameter.getWorkspaceId(), missingId);
     assertFalse(result.isPresent());
 
-    result = configRepository.getDestinationOAuthParamByDefinitionIdOptional(missingId, destinationOAuthParameter.getDestinationDefinitionId());
+    result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(missingId, destinationOAuthParameter.getDestinationDefinitionId());
     assertFalse(result.isPresent());
   }
 
   @Test
   void testGetSourceOAuthByDefinitionId() throws IOException {
     final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(0);
-    final Optional<SourceOAuthParameter> result = configRepository.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(),
+    final Optional<SourceOAuthParameter> result = oauthService.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(),
         sourceOAuthParameter.getSourceDefinitionId());
     assertTrue(result.isPresent());
     assertEquals(sourceOAuthParameter, result.get());
@@ -672,10 +674,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629");
     final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(0);
     Optional<SourceOAuthParameter> result =
-        configRepository.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(), missingId);
+        oauthService.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(), missingId);
     assertFalse(result.isPresent());
 
-    result = configRepository.getSourceOAuthParamByDefinitionIdOptional(missingId, sourceOAuthParameter.getSourceDefinitionId());
+    result = oauthService.getSourceOAuthParamByDefinitionIdOptional(missingId, sourceOAuthParameter.getSourceDefinitionId());
     assertFalse(result.isPresent());
   }
 

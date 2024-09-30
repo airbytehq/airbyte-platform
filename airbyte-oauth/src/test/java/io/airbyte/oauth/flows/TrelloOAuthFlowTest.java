@@ -19,7 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -35,10 +35,10 @@ class TrelloOAuthFlowTest {
 
   private UUID workspaceId;
   private UUID definitionId;
-  private ConfigRepository configRepository;
   private TrelloOAuthFlow trelloOAuthFlow;
   private HttpTransport transport;
   private SourceOAuthParameter sourceOAuthParameter;
+  private OAuthService oauthService;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException {
@@ -64,14 +64,14 @@ class TrelloOAuthFlowTest {
       }
 
     };
-    configRepository = mock(ConfigRepository.class);
+    oauthService = mock(OAuthService.class);
     sourceOAuthParameter = new SourceOAuthParameter()
         .withSourceDefinitionId(definitionId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", "test_client_id")
             .put("client_secret", "test_client_secret")
             .build()));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oauthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     trelloOAuthFlow = new TrelloOAuthFlow(transport);
   }
 

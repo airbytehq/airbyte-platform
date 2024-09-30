@@ -33,7 +33,6 @@ import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
@@ -105,10 +104,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
             secretPersistenceConfigService,
             connectionService,
             actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,
@@ -937,10 +932,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
             secretPersistenceConfigService,
             connectionService,
             actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,

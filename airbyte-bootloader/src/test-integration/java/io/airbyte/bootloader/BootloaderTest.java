@@ -42,7 +42,6 @@ import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -183,10 +182,6 @@ class BootloaderTest {
         connectionService,
         connectorBuilderService,
         destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
         new OperationServiceJooqImpl(configDatabase),
         sourceService,
         workspaceService);
@@ -296,10 +291,6 @@ class BootloaderTest {
         connectionService,
         connectorBuilderService,
         destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
         new OperationServiceJooqImpl(configDatabase),
         sourceService,
         workspaceService);
@@ -421,10 +412,6 @@ class BootloaderTest {
             mock(SecretPersistenceConfigService.class),
             connectionService,
             actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
         new OperationServiceJooqImpl(configDatabase),
         new SourceServiceJooqImpl(configDatabase,
             featureFlagClient,

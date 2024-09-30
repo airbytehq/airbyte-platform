@@ -16,8 +16,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,11 +43,11 @@ public class GoogleAdsOAuthFlowIntegrationTest {
   private static final String REDIRECT_URL = "http://localhost/code";
   private static final Path CREDENTIALS_PATH = Path.of("secrets/google_ads.json");
 
-  private ConfigRepository configRepository;
   private GoogleAdsOAuthFlow googleAdsOAuthFlow;
   private HttpServer server;
   private ServerHandler serverHandler;
   private HttpClient httpClient;
+  private OAuthService oAuthService;
 
   @BeforeEach
   public void setup() throws IOException {
@@ -56,7 +55,7 @@ public class GoogleAdsOAuthFlowIntegrationTest {
       throw new IllegalStateException(
           "Must provide path to a oauth credentials file.");
     }
-    configRepository = mock(ConfigRepository.class);
+    oAuthService = mock(OAuthService.class);
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     googleAdsOAuthFlow = new GoogleAdsOAuthFlow(httpClient);
 
@@ -73,7 +72,7 @@ public class GoogleAdsOAuthFlowIntegrationTest {
   }
 
   @Test
-  public void testFullGoogleOAuthFlow() throws InterruptedException, ConfigNotFoundException, IOException, JsonValidationException {
+  public void testFullGoogleOAuthFlow() throws InterruptedException, IOException, JsonValidationException {
     int limit = 20;
     final UUID workspaceId = UUID.randomUUID();
     final UUID definitionId = UUID.randomUUID();
@@ -87,7 +86,7 @@ public class GoogleAdsOAuthFlowIntegrationTest {
             .put("client_id", credentialsJson.get("credentials").get("client_id").asText())
             .put("client_secret", credentialsJson.get("credentials").get("client_secret").asText())
             .build())));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     final String url = googleAdsOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
         sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
