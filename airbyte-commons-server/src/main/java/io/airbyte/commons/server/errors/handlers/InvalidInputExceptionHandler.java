@@ -7,7 +7,6 @@ package io.airbyte.commons.server.errors.handlers;
 import io.airbyte.api.model.generated.InvalidInputExceptionInfo;
 import io.airbyte.api.model.generated.InvalidInputProperty;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.errors.KnownException;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
@@ -22,6 +21,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.core.util.Throwables;
 
 /**
  * https://www.baeldung.com/jersey-bean-validation#custom-exception-handler. handles exceptions
@@ -53,7 +53,7 @@ public class InvalidInputExceptionHandler implements ExceptionHandler<Constraint
     final InvalidInputExceptionInfo exceptionInfo = new InvalidInputExceptionInfo()
         .exceptionClassName(cve.getClass().getName())
         .message("Some properties contained invalid input.")
-        .exceptionStack(KnownException.getStackTraceAsList(cve));
+        .exceptionStack(Throwables.toStringList(cve));
 
     final List<InvalidInputProperty> props = new ArrayList<InvalidInputProperty>();
     for (final ConstraintViolation<?> cv : cve.getConstraintViolations()) {

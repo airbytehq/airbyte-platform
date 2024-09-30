@@ -3,10 +3,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
@@ -27,6 +23,8 @@ dependencies {
   implementation(libs.commons.io)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
+  // TODO remove this, it"s used for String.isEmpty check)
+  implementation(libs.bundles.log4j)
 
   testImplementation(libs.mockk)
   testRuntimeOnly(libs.junit.jupiter.engine)

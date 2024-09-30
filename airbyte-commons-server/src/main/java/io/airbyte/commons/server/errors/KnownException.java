@@ -4,12 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
-import com.google.common.base.Throwables;
 import io.airbyte.api.model.generated.KnownExceptionInfo;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import org.apache.logging.log4j.core.util.Throwables;
 
 /**
  * Exception wrapper to handle formatting API exception outputs nicely.
@@ -48,11 +45,6 @@ public abstract class KnownException extends RuntimeException {
     return KnownException.infoFromThrowable(this, details);
   }
 
-  public static List<String> getStackTraceAsList(final Throwable throwable) {
-    final String[] stackTrace = Throwables.getStackTraceAsString(throwable).split("\n");
-    return Stream.of(stackTrace).collect(Collectors.toList());
-  }
-
   public static KnownExceptionInfo infoFromThrowableWithMessage(final Throwable t, final String message) {
     return infoFromThrowableWithMessage(t, message, null); // Call the other static method with null details
   }
@@ -69,11 +61,11 @@ public abstract class KnownException extends RuntimeException {
     final KnownExceptionInfo exceptionInfo = new KnownExceptionInfo()
         .exceptionClassName(t.getClass().getName())
         .message(message)
-        .exceptionStack(getStackTraceAsList(t));
+        .exceptionStack(Throwables.toStringList(t));
 
     if (t.getCause() != null) {
       exceptionInfo.rootCauseExceptionClassName(t.getCause().getClass().getName());
-      exceptionInfo.rootCauseExceptionStack(getStackTraceAsList(t.getCause()));
+      exceptionInfo.rootCauseExceptionStack(Throwables.toStringList(t.getCause()));
     }
 
     if (details != null) {

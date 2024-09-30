@@ -21,7 +21,6 @@ import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.slack.Field;
 import io.airbyte.notification.slack.Notification;
 import io.airbyte.notification.slack.Section;
-import io.micronaut.core.util.StringUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,6 +29,7 @@ import java.net.http.HttpResponse;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,7 +222,7 @@ public class SlackNotificationClient extends NotificationClient {
             notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
 
     final String webhookUrl = config.getWebhook();
-    if (!StringUtils.isEmpty(webhookUrl)) {
+    if (!Strings.isEmpty(webhookUrl)) {
       return notifyJson(slackNotification.toJsonNode());
     }
     return false;
@@ -334,7 +334,7 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   private boolean notifyJson(final JsonNode node) throws IOException, InterruptedException {
-    if (StringUtils.isEmpty(config.getWebhook())) {
+    if (Strings.isEmpty(config.getWebhook())) {
       return false;
     }
     final ObjectMapper mapper = new ObjectMapper();
@@ -367,7 +367,7 @@ public class SlackNotificationClient extends NotificationClient {
    */
   public boolean notifyTest(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
-    if (!StringUtils.isEmpty(webhookUrl)) {
+    if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;

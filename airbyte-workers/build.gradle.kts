@@ -30,7 +30,6 @@ val jdbc by configurations.creating
 configurations.all {
   // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
   exclude(group = "com.zaxxer", module = "HikariCP-java7")
-  exclude(group="org.apache.logging.log4j")
 }
 
 dependencies {
@@ -74,10 +73,10 @@ dependencies {
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
   implementation(project(":oss:airbyte-commons-protocol"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-worker"))
@@ -99,7 +98,6 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
-  runtimeOnly(libs.bundles.logback)
 
   testCompileOnly(libs.lombok)
   testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
