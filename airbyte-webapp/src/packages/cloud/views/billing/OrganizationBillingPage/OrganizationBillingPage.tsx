@@ -70,6 +70,7 @@ export const OrganizationBillingPage: React.FC = () => {
               }
             />
           )}
+          <BillingBanners />
           <Box py="2xl">
             <EmptyState
               text={formatMessage({ id: "settings.organization.billing.notSetUp" })}

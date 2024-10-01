@@ -14,6 +14,14 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ViewOrganizationTrialStatus:
+    name: View organization trial status
+    description: Ability to see the trial status of an organization
+    roles:
+      - ORGANIZATION_READER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ManageOrganizationBilling:
     name: Manage organization billing
     description: View and edit billing information for the organization

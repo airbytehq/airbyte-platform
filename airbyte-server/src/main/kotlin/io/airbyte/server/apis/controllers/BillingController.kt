@@ -54,7 +54,7 @@ open class BillingController : BillingApi {
     @Body event: JsonNode,
   ): Unit = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @RequiresIntent(Intent.ViewOrganizationTrialStatus)
   @Post("/trial_status")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationTrialStatus(
