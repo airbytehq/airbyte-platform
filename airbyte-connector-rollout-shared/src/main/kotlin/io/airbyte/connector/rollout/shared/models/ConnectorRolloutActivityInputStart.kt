@@ -7,4 +7,5 @@ data class ConnectorRolloutActivityInputStart(
   var dockerImageTag: String,
   var actorDefinitionId: UUID,
   var rolloutId: UUID,
+  var updatedBy: UUID? = null,
 )

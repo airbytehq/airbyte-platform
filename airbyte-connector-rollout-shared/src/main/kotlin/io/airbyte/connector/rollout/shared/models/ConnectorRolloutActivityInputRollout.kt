@@ -8,4 +8,5 @@ data class ConnectorRolloutActivityInputRollout(
   var actorDefinitionId: UUID,
   var rolloutId: UUID,
   var actorIds: List<UUID>,
+  var updatedBy: UUID? = null,
 )

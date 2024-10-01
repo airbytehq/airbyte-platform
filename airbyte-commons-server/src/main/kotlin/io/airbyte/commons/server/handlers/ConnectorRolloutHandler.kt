@@ -70,6 +70,11 @@ open class ConnectorRolloutHandler
         .hasBreakingChanges(connectorRollout.hasBreakingChanges)
         .rolloutStrategy(rolloutStrategy)
         .maxStepWaitTimeMins(connectorRollout.maxStepWaitTimeMins?.toInt())
+        .updatedAt(connectorRollout.updatedAt?.let { unixTimestampToOffsetDateTime(it) })
+        .createdAt(connectorRollout.createdAt?.let { unixTimestampToOffsetDateTime(it) })
+        .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
+        .errorMsg(connectorRollout.errorMsg)
+        .failedReason(connectorRollout.failedReason)
         .updatedBy(
           connectorRollout.rolloutStrategy?.let { strategy ->
             connectorRollout.updatedBy?.let { updatedBy ->
@@ -150,6 +155,7 @@ open class ConnectorRolloutHandler
       dockerRepository: String,
       actorDefinitionId: UUID,
       dockerImageTag: String,
+      updatedBy: UUID,
     ): ConnectorRollout {
       val actorDefinitionVersion =
         actorDefinitionService.getActorDefinitionVersion(
@@ -185,6 +191,7 @@ open class ConnectorRolloutHandler
             .withActorDefinitionId(actorDefinitionId)
             .withReleaseCandidateVersionId(actorDefinitionVersion.get().versionId)
             .withInitialVersionId(initialVersion.get().versionId)
+            .withUpdatedBy(updatedBy)
             .withState(ConnectorEnumRolloutState.INITIALIZED)
             .withHasBreakingChanges(false)
         connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -358,6 +365,7 @@ open class ConnectorRolloutHandler
           connectorRolloutWorkflowStart.dockerRepository,
           connectorRolloutWorkflowStart.actorDefinitionId,
           connectorRolloutWorkflowStart.dockerImageTag,
+          connectorRolloutWorkflowStart.updatedBy,
         )
       connectorRolloutClient.startWorkflow(
         ConnectorRolloutActivityInputStart(
