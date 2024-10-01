@@ -20,3 +20,10 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ManageOrganizationPaymentConfigs:
+    name: Manage organization payment configs
+    description: Ability to directly interact with organization payment configs
+    # This intent can only be used for instance admin at the moment, since the API it's used on are not all using
+    # POST request bodies, thus our authentication logic might not find the organizationId in the request.
+    roles:
+      - ADMIN

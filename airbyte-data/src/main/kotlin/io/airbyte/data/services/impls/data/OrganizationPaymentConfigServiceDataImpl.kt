@@ -22,4 +22,8 @@ class OrganizationPaymentConfigServiceDataImpl(
       organizationPaymentConfigRepository.save(organizationPaymentConfig.toEntity())
     }
   }
+
+  override fun deletePaymentConfig(organizationId: UUID) {
+    organizationPaymentConfigRepository.deleteById(organizationId)
+  }
 }

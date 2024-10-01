@@ -96,6 +96,7 @@ dependencies {
   testImplementation(libs.mockito.inline)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.bundles.kotest)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)

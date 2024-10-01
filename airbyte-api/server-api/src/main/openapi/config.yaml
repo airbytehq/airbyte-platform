@@ -81,6 +81,8 @@ tags:
     description: Interactions with permission related resources.
   - name: organization
     description: Interactions with organizations.
+  - name: organization_payment_config
+    description: Interactions with organization payment configs
   - name: deployment_metadata
     description: Metadata about the Airbyte deployment
   - name: applications
@@ -4680,6 +4682,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationTrialStatusRead"
+  /v1/organization_payment_config/{organizationId}:
+    get:
+      summary: Get an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: getOrganizationPaymentConfig
+      parameters:
+        - in: path
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "200":
+          description: Successfully retrieved the organization payment config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationPaymentConfigRead"
+    delete:
+      summary: Delete an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: deleteOrganizationPaymentConfig
+      parameters:
+        - in: path
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "204":
+          description: Successfully deleted organization payment config
+        "404":
+          description: Payment config didn't exist
+  /v1/organization_payment_config:
+    post:
+      summary: Create or update an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: updateOrganizationPaymentConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationPaymentConfigUpdateRequestBody"
+      responses:
+        "200":
+          description: Updated the organization payment config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationPaymentConfigRead"
+        "404":
+          description: Couldn't find the organization id
+
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -10842,6 +10911,37 @@ components:
             - The trial status is unknown
         trialEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
+
+    # Organization payment config
+    OrganizationPaymentConfigRead:
+      type: object
+      required:
+        - organizationId
+        - paymentStatus
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum:
+            - uninitialized
+            - okay
+            - grace_period
+            - disabled
+            - locked
+            - manual
+        paymentProviderId:
+          type: string
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        usageCategoryOverwrite:
+          type: string
+          enum:
+            - free
+            - internal
+    OrganizationPaymentConfigUpdateRequestBody:
+      $ref: "#/components/schemas/OrganizationPaymentConfigRead"
 
     # ORGANIZATIONS
     OrganizationId:
