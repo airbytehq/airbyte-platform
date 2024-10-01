@@ -50,7 +50,14 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
       <CheckBox
         checkboxSize="sm"
         checked={config?.selected}
-        onChange={({ target: { checked } }) => updateStreamField(row.original.streamNode!, { selected: checked })}
+        onChange={({ target: { checked } }) =>
+          updateStreamField(row.original.streamNode!, {
+            selected: checked,
+            // enable/disable stream will enable/disable all fields
+            fieldSelectionEnabled: false,
+            selectedFields: [],
+          })
+        }
         data-testid="sync-stream-checkbox"
       />
       <Button

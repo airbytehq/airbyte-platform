@@ -22,7 +22,7 @@ import {
   isCursor as checkIsCursor,
   isPrimaryKey as checkIsPrimaryKey,
 } from "../../../syncCatalog/StreamFieldsTable/StreamFieldsTable";
-import { updateFieldSelected } from "../../../syncCatalog/SyncCatalog/streamConfigHelpers";
+import { getSelectedMandatoryFields, updateFieldSelected } from "../../../syncCatalog/SyncCatalog/streamConfigHelpers";
 import { getFieldPathDisplayName } from "../../../syncCatalog/utils";
 import { SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
@@ -64,13 +64,11 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isHashed = checkIsFieldHashed(field, config);
 
   const isDisabled =
-    !config?.selected ||
-    mode === "readonly" ||
-    (config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
-    (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
-    (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
-    isNestedField;
-  const showTooltip = isDisabled && mode !== "readonly" && config?.selected;
+    config?.selected &&
+    ((config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
+      (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
+      (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)));
+  const showTooltip = isDisabled && mode !== "readonly";
 
   const isFieldSelected = checkIsFieldSelected(field, config);
 
@@ -98,9 +96,15 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
       numberOfFieldsInStream,
     });
 
+    const mandatorySelectedFields = getSelectedMandatoryFields(config);
+
     updateStreamField(row.original.streamNode, {
       ...updatedConfig,
-      selectedFields: !updatedConfig?.fieldSelectionEnabled ? [] : updatedConfig?.selectedFields,
+      // any field selection immediately enables the disabled stream
+      ...(isSelected && !config?.selected && { selected: true }),
+      selectedFields: !updatedConfig?.fieldSelectionEnabled
+        ? []
+        : [...(updatedConfig?.selectedFields ?? []), ...mandatorySelectedFields],
       // remove this field if it was part of hashedFields
       hashedFields: config.hashedFields?.filter((f) => !isEqual(f.fieldPath, fieldPath)),
     });
