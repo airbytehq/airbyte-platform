@@ -111,7 +111,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
-            UUID(0, 0),
           )
         startWorkflow(rolloutClient, startInput)
       }
@@ -133,7 +132,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
-            UUID(0, 0),
             rolloutId!!,
             actorIds!!,
           )
@@ -146,7 +144,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            UUID(0, 0),
             ConnectorRolloutStateTerminal.valueOf(ConnectorRolloutFinalState.SUCCEEDED.toString()),
             null,
             null,
@@ -160,7 +157,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            UUID(0, 0),
             ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
             null,
             null,
@@ -174,7 +170,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            UUID(0, 0),
             ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK,
             null,
             null,
@@ -192,7 +187,6 @@ class ConnectorRolloutCLI : Runnable {
     client: ConnectorRolloutApi,
     input: ConnectorRolloutManualStartRequestBody,
   ) {
-    logFormatted("CLI.startWorkflow using client", client)
     logFormatted("CLI.startWorkflow with input", input)
     logFormatted("CLI Rollout workflows status", client.manualStartConnectorRollout(input))
   }

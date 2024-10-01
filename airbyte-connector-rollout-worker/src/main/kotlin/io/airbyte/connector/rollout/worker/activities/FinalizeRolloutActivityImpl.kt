@@ -47,7 +47,6 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
         ConnectorRolloutStrategy.MANUAL,
         errorMsg,
         failureReason,
-        input.updatedBy,
       )
 
     return try {

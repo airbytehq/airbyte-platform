@@ -85,7 +85,6 @@ internal class ConnectorRolloutHandlerTest {
     val DOCKER_IMAGE_TAG = "0.1"
     val ACTOR_DEFINITION_ID = UUID.randomUUID()
     val RELEASE_CANDIDATE_VERSION_ID = UUID.randomUUID()
-    val UPDATED_BY = UUID.randomUUID()
 
     @JvmStatic
     fun validInsertStates() = listOf(ConnectorEnumRolloutState.CANCELED_ROLLED_BACK)
@@ -608,7 +607,6 @@ internal class ConnectorRolloutHandlerTest {
         dockerRepository = DOCKER_REPOSITORY
         dockerImageTag = DOCKER_IMAGE_TAG
         actorDefinitionId = ACTOR_DEFINITION_ID
-        updatedBy = UPDATED_BY
       }
     val connectorRollout = createMockConnectorRollout(rolloutId)
 
@@ -695,6 +693,7 @@ internal class ConnectorRolloutHandlerTest {
   @Test
   fun `test getOrCreateAndValidateManualStartInput updates rollout when already exists in INITIALIZED state`() {
     val rolloutId = UUID.randomUUID()
+    val dockerRepository = "airbyte/source-faker"
     val dockerImageTag = "0.1"
     val actorDefinitionId = UUID.randomUUID()
     val actorDefinitionVersion = createMockActorDefinitionVersion()
@@ -710,7 +709,7 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(createMockActorDefinitionVersion())
 
-    val result = connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, actorDefinitionId, dockerImageTag, UPDATED_BY)
+    val result = connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, actorDefinitionId, dockerImageTag)
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
@@ -723,6 +722,7 @@ internal class ConnectorRolloutHandlerTest {
   @Test
   fun `test getOrCreateAndValidateManualStartInput throws when initial version is not found`() {
     val rolloutId = UUID.randomUUID()
+    val dockerRepository = "airbyte/source-faker"
     val dockerImageTag = "0.1"
     val actorDefinitionId = UUID.randomUUID()
     val actorDefinitionVersion = createMockActorDefinitionVersion()
@@ -740,10 +740,9 @@ internal class ConnectorRolloutHandlerTest {
 
     assertThrows<InvalidRequest> {
       connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
-        DOCKER_REPOSITORY,
+        dockerRepository,
         actorDefinitionId,
         dockerImageTag,
-        UPDATED_BY,
       )
     }
   }
@@ -763,7 +762,7 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(actorDefinitionVersion)
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
-    connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+    connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
 
     verifyAll {
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
@@ -778,7 +777,7 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.empty()
 
     assertThrows<InvalidRequest> {
-      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
     }
 
     verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
@@ -798,7 +797,7 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
 
     assertThrows<InvalidRequest> {
-      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
     }
 
     verifyAll {

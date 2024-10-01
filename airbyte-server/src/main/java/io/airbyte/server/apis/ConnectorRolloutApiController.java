@@ -34,6 +34,7 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import jakarta.validation.Valid;
 import java.util.UUID;
 
 @Controller("/api/v1/connector_rollout")
@@ -132,7 +133,7 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutListResponse getConnectorRolloutsListAll() {
+  public ConnectorRolloutListResponse getConnectorRolloutsListAll(@Valid Object body) {
     return ApiHelper.execute(() -> {
       final var connectorRollouts = connectorRolloutHandler.listConnectorRollouts();
       return new ConnectorRolloutListResponse().connectorRollouts(connectorRollouts);
