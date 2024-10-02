@@ -7,4 +7,6 @@ interface OrganizationPaymentConfigService {
   fun findByOrganizationId(organizationId: UUID): OrganizationPaymentConfig?
 
   fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig): Unit
+
+  fun deletePaymentConfig(organizationId: UUID): Unit
 }

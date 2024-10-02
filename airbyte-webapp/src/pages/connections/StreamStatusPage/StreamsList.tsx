@@ -13,6 +13,7 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
@@ -30,6 +31,8 @@ import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
 export const StreamsList: React.FC = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
+  const [showBytes, setShowBytes] = useToggle(false);
+
   const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
   const trackCountRef = useRef(0);
@@ -48,23 +51,60 @@ export const StreamsList: React.FC = () => {
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <span data-testid="streams-list-name-cell-content">{props.cell.getValue()}</span>,
-        meta: { responsive: true },
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
-        header: () => <FormattedMessage id="connection.stream.status.table.latestSync" />,
+        header: () => (
+          <FlexContainer alignItems="baseline" gap="none">
+            <FormattedMessage
+              id="connection.stream.status.table.latestSync"
+              values={{
+                denomination: (
+                  <Tooltip
+                    placement="top"
+                    control={
+                      <button className={styles.clickableHeader} onClick={setShowBytes}>
+                        <Text color="grey" size="sm">
+                          {showBytes ? (
+                            <FormattedMessage id="connection.stream.status.table.latestSync.bytes" />
+                          ) : (
+                            <FormattedMessage id="connection.stream.status.table.latestSync.records" />
+                          )}
+                        </Text>
+                      </button>
+                    }
+                  >
+                    <FormattedMessage
+                      id={
+                        showBytes
+                          ? "connection.stream.status.table.latestSync.showRecords"
+                          : "connection.stream.status.table.latestSync.showBytes"
+                      }
+                    />
+                  </Tooltip>
+                ),
+              }}
+            />
+          </FlexContainer>
+        ),
         cell: (props) => {
           return (
             <LatestSyncCell
               recordsLoaded={props.row.original.recordsLoaded}
               recordsExtracted={props.row.original.recordsExtracted}
+              bytesLoaded={props.row.original.bytesLoaded}
+              bytesExtracted={props.row.original.bytesExtracted}
               syncStartedAt={props.row.original.activeJobStartedAt}
               status={props.row.original.status}
               isLoadingHistoricalData={props.row.original.isLoadingHistoricalData}
+              showBytes={showBytes}
             />
           );
         },
-        meta: { responsive: true },
+        meta: {
+          thClassName: styles.latestSyncHeader,
+          responsive: true,
+        },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
@@ -89,7 +129,6 @@ export const StreamsList: React.FC = () => {
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
         ),
-        meta: { responsive: true },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => null,
@@ -105,7 +144,7 @@ export const StreamsList: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, setShowRelativeTime, showRelativeTime]
+    [columnHelper, setShowBytes, setShowRelativeTime, showBytes, showRelativeTime]
   );
 
   const {
@@ -145,8 +184,7 @@ export const StreamsList: React.FC = () => {
           rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
           getRowClassName={(stream) =>
             classNames(styles.row, {
-              [styles["syncing--next"]]:
-                activeStatuses.includes(stream.status) && stream.status !== StreamStatusType.Queued,
+              [styles.syncing]: activeStatuses.includes(stream.status) && stream.status !== StreamStatusType.Queued,
             })
           }
           sorting={false}

@@ -10,18 +10,18 @@ import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImp
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.temporal.client.WorkflowClient
 import io.temporal.worker.Worker
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
+
+private val logger = KotlinLogging.logger {}
 
 @Factory
 class ConnectorRolloutWorkerFactory {
-  private val log = LoggerFactory.getLogger(ConnectorRolloutWorkerFactory::class.java)
-
   @Singleton
   @Named("connectorRolloutWorkerFactory")
   fun connectorRolloutWorkerFactory(
@@ -32,7 +32,7 @@ class ConnectorRolloutWorkerFactory {
     updateRolloutActivityImpl: DoRolloutActivityImpl,
     finalizeRolloutActivityImpl: FinalizeRolloutActivityImpl,
   ): WorkerFactory {
-    log.info("ConnectorRolloutWorkerFactory registering workflow")
+    logger.info { "ConnectorRolloutWorkerFactory registering workflow" }
     val workerFactory = WorkerFactory.newInstance(workflowClient)
     val worker: Worker = workerFactory.newWorker(Constants.TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)

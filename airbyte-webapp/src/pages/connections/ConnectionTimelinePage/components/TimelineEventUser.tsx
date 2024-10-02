@@ -22,9 +22,9 @@ export const UserCancelledDescription: React.FC<UserCancelledDescriptionProps> =
   const messageId =
     jobType === "sync"
       ? `connection.timeline.sync_cancelled.description`
-      : "clear"
+      : jobType === "clear"
       ? `connection.timeline.clear_cancelled.description`
-      : "refresh"
+      : jobType === "refresh"
       ? `connection.timeline.refresh_cancelled.description`
       : null;
 

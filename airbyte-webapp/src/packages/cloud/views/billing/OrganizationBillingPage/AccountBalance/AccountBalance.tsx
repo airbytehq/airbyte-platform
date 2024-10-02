@@ -47,7 +47,7 @@ export const AccountBalance = () => {
                   <Text>
                     <FormattedMessage id="settings.organization.billing.remainingCredits" />
                   </Text>
-                  {balance?.credits?.blocks?.length && <CreditExpiryTooltip creditBlocks={balance.credits.blocks} />}
+                  {!!balance?.credits?.blocks?.length && <CreditExpiryTooltip creditBlocks={balance.credits.blocks} />}
                 </FlexContainer>
 
                 <Text size="lg">

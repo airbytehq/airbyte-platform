@@ -5,22 +5,18 @@ import { Outlet } from "react-router-dom";
 import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useCurrentWorkspace } from "core/api";
-import { useGetCloudWorkspaceAsync, useListCloudWorkspacesInfinite } from "core/api/cloud";
+import { useListCloudWorkspacesInfinite } from "core/api/cloud";
 import { DefaultErrorBoundary } from "core/errors";
+import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner/StatusBanner";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
 import { CloudHelpDropdown } from "./CloudHelpDropdown";
 import styles from "./CloudMainView.module.scss";
-import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 
 const CloudMainView: React.FC<React.PropsWithChildren> = (props) => {
-  const workspace = useCurrentWorkspace();
-  const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
-
   return (
     <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-      {cloudWorkspace && <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />}
+      <StatusBanner />
       <FlexContainer className={styles.mainViewContainer} gap="none">
         <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
         <div className={styles.content}>

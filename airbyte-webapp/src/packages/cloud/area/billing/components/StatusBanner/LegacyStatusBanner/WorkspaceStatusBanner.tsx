@@ -72,7 +72,7 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ cl
         <AlertBanner
           message={workspaceCreditsBannerContent}
           data-testid="workspace-status-banner"
-          color={negativeCreditStatus ? "warning" : "default"}
+          color={negativeCreditStatus ? "warning" : "info"}
         />
       )}
     </>

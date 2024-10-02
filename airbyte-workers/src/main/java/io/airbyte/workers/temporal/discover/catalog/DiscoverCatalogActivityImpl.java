@@ -109,16 +109,12 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
         null,
         null);
 
-    workloadClient.createWorkload(workloadCreateRequest);
-
     final int checkFrequencyInSeconds =
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
 
     final ActivityExecutionContext context = getActivityContext();
-    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds, () -> {
-      context.heartbeat("waiting for workload to complete");
-      return null;
-    });
+
+    workloadClient.runWorkloadWithCancellationHeartbeat(workloadCreateRequest, checkFrequencyInSeconds, context);
 
     return workloadClient.getConnectorJobOutput(
         workloadId,

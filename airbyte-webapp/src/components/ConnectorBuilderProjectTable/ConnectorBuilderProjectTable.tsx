@@ -27,7 +27,6 @@ import { ContributionInfo } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -345,11 +344,6 @@ const BuilderCell: React.FC<React.PropsWithChildren<unknown>> = ({ children }) =
 const ContributionInfoDisplay: React.FC<ContributionInfo> = ({ actorDefinitionId, pullRequestUrl }) => {
   // list instead of fetching definition individually to reuse cached request and avoid 404 for net-new definitions
   const sourceDefinition = useSourceDefinitionList().sourceDefinitionMap.get(actorDefinitionId);
-
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
-  if (!isContributeEditsEnabled) {
-    return null;
-  }
 
   return (
     <FlexContainer direction="row" className={styles.contributionInfo} gap="sm">

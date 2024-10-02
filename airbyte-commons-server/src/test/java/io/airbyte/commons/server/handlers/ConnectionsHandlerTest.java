@@ -153,6 +153,7 @@ import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -279,6 +280,7 @@ class ConnectionsHandlerTest {
   private ConnectionTimelineEventService connectionTimelineEventService;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private StatePersistence statePersistence;
+  private CatalogService catalogService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -366,6 +368,7 @@ class ConnectionsHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     configRepository = mock(ConfigRepository.class);
+    catalogService = mock(CatalogService.class);
     uuidGenerator = mock(Supplier.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
@@ -405,7 +408,9 @@ class ConnectionsHandlerTest {
             featureFlagClient,
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater);
-    sourceHandler = new SourceHandler(configRepository,
+    sourceHandler = new SourceHandler(
+        configRepository,
+        catalogService,
         secretsRepositoryReader,
         jsonSchemaValidator,
         connectionsHandler,
@@ -413,7 +418,11 @@ class ConnectionsHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        workspaceService,
+        secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater);
 
@@ -440,6 +449,7 @@ class ConnectionsHandlerTest {
           streamRefreshesHandler,
           jobPersistence,
           configRepository,
+          catalogService,
           uuidGenerator,
           workspaceHelper,
           trackingClient,
@@ -1861,6 +1871,7 @@ class ConnectionsHandlerTest {
           streamRefreshesHandler,
           jobPersistence,
           configRepository,
+          catalogService,
           uuidGenerator,
           workspaceHelper,
           trackingClient,
@@ -2095,6 +2106,7 @@ class ConnectionsHandlerTest {
           streamRefreshesHandler,
           jobPersistence,
           configRepository,
+          catalogService,
           uuidGenerator,
           workspaceHelper,
           trackingClient,
@@ -2720,7 +2732,7 @@ class ConnectionsHandlerTest {
         .withId(UUID.randomUUID());
 
     @BeforeEach
-    void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+    void setup() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
       airbyteCatalog.getStreams().get(0).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH));
       standardSync = new StandardSync()
           .withConnectionId(CONNECTION_ID)
@@ -2730,7 +2742,7 @@ class ConnectionsHandlerTest {
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
 
-      when(configRepository.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
+      when(catalogService.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(source);
       when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(WORKSPACE);
@@ -2746,6 +2758,7 @@ class ConnectionsHandlerTest {
           streamRefreshesHandler,
           jobPersistence,
           configRepository,
+          catalogService,
           uuidGenerator,
           workspaceHelper,
           trackingClient,
@@ -2768,7 +2781,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testAutoPropagateSchemaChange() throws IOException, ConfigNotFoundException, JsonValidationException {
+    void testAutoPropagateSchemaChange()
+        throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
       // Somehow standardSync is being mutated in the test (the catalog is changed) and verifying that the
       // notification function is called correctly requires the original object.
       final StandardSync originalSync = Jsons.clone(standardSync);
@@ -2816,7 +2830,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testAutoPropagateColumnsOnly() throws JsonValidationException, ConfigNotFoundException, IOException {
+    void testAutoPropagateColumnsOnly()
+        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
       // See test above for why this part is necessary.
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
@@ -2849,7 +2864,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void diffCatalogGeneratesADiffAndUpdatesTheConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+    void diffCatalogGeneratesADiffAndUpdatesTheConnection()
+        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final var catalogWithDiff =
           io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
@@ -2857,7 +2873,7 @@ class ConnectionsHandlerTest {
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
           .withId(UUID.randomUUID());
-      when(configRepository.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
+      when(catalogService.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
 
       final CatalogDiff expectedDiff =
           new CatalogDiff().addTransformsItem(new StreamTransform()
@@ -2881,7 +2897,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void diffCatalogADisablesForBreakingChange() throws JsonValidationException, ConfigNotFoundException, IOException {
+    void diffCatalogADisablesForBreakingChange()
+        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
       try (final MockedStatic<AutoPropagateSchemaChangeHelper> helper = Mockito.mockStatic(AutoPropagateSchemaChangeHelper.class)) {
         helper.when(() -> AutoPropagateSchemaChangeHelper.containsBreakingChange(any())).thenReturn(true);
 
@@ -2896,7 +2913,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void diffCatalogDisablesForNonBreakingChangeIfConfiguredSo() throws IOException, JsonValidationException, ConfigNotFoundException {
+    void diffCatalogDisablesForNonBreakingChangeIfConfiguredSo()
+        throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
       // configure the sync to be disabled on non-breaking change
       standardSync = standardSync.withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.DISABLE);
       when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
@@ -2908,7 +2926,7 @@ class ConnectionsHandlerTest {
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
           .withId(UUID.randomUUID());
-      when(configRepository.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
+      when(catalogService.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
 
       final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
 
@@ -2921,7 +2939,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void postprocessDiscoveredComposesDiffingAndSchemaPropagation() throws JsonValidationException, ConfigNotFoundException, IOException {
+    void postprocessDiscoveredComposesDiffingAndSchemaPropagation()
+        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
       final var catalog = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       final var diffResult = new SourceDiscoverSchemaRead().catalog(catalog);
       final var transform = new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
@@ -2949,6 +2968,7 @@ class ConnectionsHandlerTest {
           streamRefreshesHandler,
           jobPersistence,
           configRepository,
+          catalogService,
           uuidGenerator,
           workspaceHelper,
           trackingClient,

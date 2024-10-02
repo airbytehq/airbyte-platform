@@ -40,10 +40,8 @@ import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
@@ -102,7 +100,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService));
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
@@ -112,10 +109,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
             secretPersistenceConfigService,
             connectionService,
             actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,

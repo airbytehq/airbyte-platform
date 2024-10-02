@@ -229,10 +229,8 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     }
   }
 
-  fun commitFiles(
-    message: String,
-    files: Map<String, String>,
-  ): GHCommit {
+  fun commitFiles(files: Map<String, String>): GHCommit {
+    val message = "Submission for $connectorImageName from Connector Builder"
     val branchSha = getBranchSha(contributionBranchName, forkedRepository)
     val treeBuilder = forkedRepository.createTree().baseTree(branchSha)
 

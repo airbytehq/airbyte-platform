@@ -419,27 +419,27 @@ public class OAuthHandler {
   }
 
   public void setSourceInstancewideOauthParams(final SetInstancewideSourceOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException {
-    final SourceOAuthParameter param = configRepository
+      throws IOException {
+    final SourceOAuthParameter param = oAuthService
         .getSourceOAuthParamByDefinitionIdOptional(null, requestBody.getSourceDefinitionId())
         .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(Jsons.jsonNode(requestBody.getParams()))
         .withSourceDefinitionId(requestBody.getSourceDefinitionId());
     // TODO validate requestBody.getParams() against
     // spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerInputSpecification()
-    configRepository.writeSourceOAuthParam(param);
+    oAuthService.writeSourceOAuthParam(param);
   }
 
   public void setDestinationInstancewideOauthParams(final SetInstancewideDestinationOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException {
-    final DestinationOAuthParameter param = configRepository
+      throws IOException {
+    final DestinationOAuthParameter param = oAuthService
         .getDestinationOAuthParamByDefinitionIdOptional(null, requestBody.getDestinationDefinitionId())
         .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(Jsons.jsonNode(requestBody.getParams()))
         .withDestinationDefinitionId(requestBody.getDestinationDefinitionId());
     // TODO validate requestBody.getParams() against
     // spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerInputSpecification()
-    configRepository.writeDestinationOAuthParam(param);
+    oAuthService.writeDestinationOAuthParam(param);
   }
 
   private JsonNode getOAuthInputConfigurationForConsent(final ConnectorSpecification spec,
@@ -606,14 +606,14 @@ public class OAuthHandler {
 
     final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
 
-    final SourceOAuthParameter param = configRepository
+    final SourceOAuthParameter param = oAuthService
         .getSourceOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
         .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(sanitizedOauthConfiguration)
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId);
 
-    configRepository.writeSourceOAuthParam(param);
+    oAuthService.writeSourceOAuthParam(param);
   }
 
   public void setDestinationWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
@@ -631,14 +631,14 @@ public class OAuthHandler {
 
     final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
 
-    final DestinationOAuthParameter param = configRepository
+    final DestinationOAuthParameter param = oAuthService
         .getDestinationOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
         .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(sanitizedOauthConfiguration)
         .withDestinationDefinitionId(definitionId)
         .withWorkspaceId(workspaceId);
 
-    configRepository.writeDestinationOAuthParam(param);
+    oAuthService.writeDestinationOAuthParam(param);
   }
 
   /**

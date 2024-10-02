@@ -8,7 +8,6 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { BaseActorDefinitionVersionInfo } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./BaseConnectorInfo.module.scss";
 
@@ -27,11 +26,6 @@ export const BaseConnectorInfo: React.FC<BaseConnectorInfoProps> = ({
   name,
   documentationUrl,
 }) => {
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
-  if (!isContributeEditsEnabled) {
-    return null;
-  }
-
   const nameAndVersion = (
     <FormattedMessage
       id="connectorBuilder.listPage.baseConnector.nameAndVersion"

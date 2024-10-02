@@ -26,6 +26,7 @@ class ContributionTemplatesTest {
 
   val newConnectorContributionInfo =
     BuilderContributionInfo(
+      isEdit = false,
       connectorName = "Test Connector",
       connectorImageName = "test",
       actorDefinitionId = "test-uuid",
@@ -86,7 +87,7 @@ class ContributionTemplatesTest {
     val contributionTemplates = ContributionTemplates()
     val jacksonYaml = jacksonSerialize(serialzedYamlContent)
     val manifestParser = ManifestParser(jacksonYaml)
-    val prDescription = contributionTemplates.renderNewContributionPullRequestDescription(newConnectorContributionInfo)
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(newConnectorContributionInfo)
 
     assert(prDescription.contains(newConnectorContributionInfo.connectorName))
     assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
@@ -104,6 +105,17 @@ class ContributionTemplatesTest {
       // Assert that the rendered PR description contains the spec name
       assert(prDescription.contains("| `${prop.key}` |"))
     }
+  }
+
+  @Test
+  fun `test edit PR description`() {
+    val editConnectorContributionInfo = newConnectorContributionInfo.copy(isEdit = true)
+    val contributionTemplates = ContributionTemplates()
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(editConnectorContributionInfo)
+
+    assert(prDescription.contains(editConnectorContributionInfo.connectorName))
+    assert(prDescription.contains(editConnectorContributionInfo.connectorImageName))
+    assert(prDescription.contains(editConnectorContributionInfo.description))
   }
 
   @Test
@@ -178,6 +190,64 @@ class ContributionTemplatesTest {
   }
 
   @Test
+  fun `test getAllowedHosts`() {
+    val contributionTemplates = ContributionTemplates()
+
+    val streams =
+      listOf(
+        mapOf(
+          "name" to "stream1",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://api1.example.com/v1/",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream2",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "http://api2.example.com/v2/{{param}}",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream3",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://api1.example.com/v3/",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream5",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://www.another-api.com/v1/",
+                ),
+            ),
+        ),
+      )
+
+    val expectedHosts =
+      listOf(
+        "api1.example.com",
+        "api2.example.com",
+        "another-api.com",
+      )
+
+    assertEquals(expectedHosts, contributionTemplates.getAllowedHosts(streams))
+  }
+
+  @Test
   fun `test toTemplateStreams`() {
     val contributionTemplates = ContributionTemplates()
     val streams =
@@ -240,7 +310,7 @@ class ContributionTemplatesTest {
     |data:
     |  allowedHosts:
     |    hosts:
-    |      - "*"
+    |      - "api.whatahost.com"
     |  registryOverrides:
     |    oss:
     |      enabled: true

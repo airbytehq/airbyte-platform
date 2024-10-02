@@ -19,6 +19,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -47,13 +48,16 @@ public class OAuthConfigSupplier {
   private final ConfigRepository configRepository;
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final OAuthService oAuthService;
 
   public OAuthConfigSupplier(final ConfigRepository configRepository,
                              final TrackingClient trackingClient,
-                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                             final OAuthService oauthService) {
     this.configRepository = configRepository;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.oAuthService = oauthService;
   }
 
   /**
@@ -83,7 +87,7 @@ public class OAuthConfigSupplier {
       throws IOException {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-      configRepository.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
+      oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceConnectorSpec, sourceConnectorConfig));
       return sourceConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
@@ -108,7 +112,7 @@ public class OAuthConfigSupplier {
       throws IOException {
     try {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-      configRepository.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
+      oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationConnectorSpec,
               destinationConnectorConfig));
       return destinationConnectorConfig;
@@ -135,7 +139,7 @@ public class OAuthConfigSupplier {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
-      configRepository.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
+      oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> {
             if (injectOAuthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceOAuthParameter.getConfiguration(),
                 sourceConnectorConfig)) {
@@ -168,7 +172,7 @@ public class OAuthConfigSupplier {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-      configRepository.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
+      oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> {
             if (injectOAuthParameters(destinationDefinition.getName(), destinationVersion.getSpec(), destinationOAuthParameter.getConfiguration(),
                 destinationConnectorConfig)) {

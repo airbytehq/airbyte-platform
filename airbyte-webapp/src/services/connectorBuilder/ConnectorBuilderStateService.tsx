@@ -423,7 +423,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       }
 
       if (displayedVersion === undefined && version !== undefined) {
-        setPreviousManifestDraft(jsonManifest);
+        setPreviousManifestDraft(resolvedManifest);
       } else if (version === undefined) {
         setPreviousManifestDraft(undefined);
       }
@@ -445,7 +445,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       setDisplayedVersion(version);
       setStateKey((key) => key + 1);
     },
-    [currentProject.name, displayedVersion, getValues, jsonManifest, setStateKey, setValue]
+    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue]
   );
 
   const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();

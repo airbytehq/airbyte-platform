@@ -10,6 +10,7 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.fabric8.kubernetes.api.model.Toleration
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -24,6 +25,7 @@ class ReplicationPodFactory(
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
+  @Named("replicationPodTolerations") private val tolerations: List<Toleration>,
 ) {
   fun create(
     podName: String,
@@ -90,6 +92,7 @@ class ReplicationPodFactory(
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelectors)
+      .withTolerations(tolerations)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()

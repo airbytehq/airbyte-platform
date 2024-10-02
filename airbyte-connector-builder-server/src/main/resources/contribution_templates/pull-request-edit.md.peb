@@ -1,0 +1,16 @@
+## What
+
+This PR updates source {{ connectorName }} ({{ connectorImageName }}).
+
+The contributor provided the following description of the change:
+
+{{ description }}
+
+## Reviewer checklist
+- [ ] Resolve any merge conflicts and validate file diffs (make sure the PR only includes changes intended by the contributor)
+- [ ] After reviewing the changes, run the [`bump-version` Airbyte-CI command](https://github.com/airbytehq/airbyte/blob/master/airbyte-ci/connectors/pipelines/README.md#connectors-bump-version-command) locally to update the version of the connector according to the [versioning guidelines](https://docs.airbyte.io/contributor-guide/versioning-guidelines). Add `breakingChanges` to metadata if necessary.
+- [ ] Ensure connector docs are up to date with any changes
+- [ ] Run `/format-fix` to resolve any formatting errors
+- [ ] Click into the CI workflows that wait for a maintainer to run them, which should trigger CI runs
+
+<!-- DO NOT REMOVE: connector-builder-edit-connector-contribution -->

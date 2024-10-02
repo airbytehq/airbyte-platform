@@ -9,7 +9,7 @@ import { useBillingStatusBanner } from "packages/cloud/area/billing/utils/useBil
 
 export const BillingBanners: React.FC = () => {
   const { formatMessage } = useIntl();
-  const billingBanner = useBillingStatusBanner();
+  const billingBanner = useBillingStatusBanner("billing_page");
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge");
 
   return (

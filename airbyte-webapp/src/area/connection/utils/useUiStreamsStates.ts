@@ -28,6 +28,7 @@ interface BaseUIStreamState {
   dataFreshAsOf?: number;
   recordsExtracted?: number;
   recordsLoaded?: number;
+  bytesExtracted?: number;
   bytesLoaded?: number;
   status: Exclude<StreamStatusType, "rateLimited">;
   isLoadingHistoricalData: boolean;
@@ -86,6 +87,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       dataFreshAsOf: undefined,
       recordsExtracted: undefined,
       recordsLoaded: undefined,
+      bytesExtracted: undefined,
       bytesLoaded: undefined,
       status: StreamStatusType.Pending as StreamStatusType, // cast so TS keeps the wider UIStreamState union instead of narrowing to BaseUIStreamState
       isLoadingHistoricalData,
@@ -102,11 +104,12 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
         uiState.quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
       }
     }
-
     // only pull from syncProgress OR historicalData for the latestSync related data
     if (syncProgressItem) {
       // also, for clear jobs, we should not show anything in this column
       uiState.recordsExtracted = syncProgressItem.recordsEmitted;
+      uiState.bytesExtracted = syncProgressItem.bytesEmitted;
+      uiState.bytesLoaded = syncProgressItem.bytesCommitted;
       uiState.recordsLoaded = syncProgressItem.recordsCommitted;
       uiState.activeJobStartedAt =
         currentJobId === streamStatus?.relevantHistory[0]?.jobId
@@ -123,7 +126,6 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     const lastSuccessfulSync = streamStatus?.relevantHistory?.find(
       (status) => status.jobType === StreamStatusJobType.SYNC && status.runState === StreamStatusRunState.COMPLETE
     );
-
     uiState.dataFreshAsOf =
       // has the stream successfully cleared since it successfully synced? then it's not fresh
       // note: refresh jobs will register as StreamStatusJobType.SYNC, so this includes them (which it should)
@@ -133,6 +135,5 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
 
     return uiState;
   });
-
   return uiStreamStates;
 };

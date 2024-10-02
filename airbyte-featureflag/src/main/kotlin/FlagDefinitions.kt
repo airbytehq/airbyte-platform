@@ -181,3 +181,5 @@ object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-ov
 object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
 
 object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)
+
+object UseFileTransferMode : Temporary<Boolean>(key = "platform.use-file-transfer-mode", default = false)

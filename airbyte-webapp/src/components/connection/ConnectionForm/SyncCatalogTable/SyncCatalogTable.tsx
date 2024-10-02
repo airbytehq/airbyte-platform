@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   getGroupedRowModel,
   getSortedRowModel,
+  Row,
   useReactTable,
 } from "@tanstack/react-table";
 import classnames from "classnames";
@@ -35,7 +36,6 @@ import { FieldCursorCell } from "./components/FieldCursorCell";
 import { FieldHashMapping } from "./components/FieldHashMapping";
 import { FieldPKCell } from "./components/FieldPKCell";
 import { FormControls } from "./components/FormControls";
-import { HeaderNamespaceCell } from "./components/HeaderNamespaceCell";
 import { NamespaceNameCell } from "./components/NamespaceNameCell";
 import { RefreshSchemaControl } from "./components/RefreshSchemaControl";
 import { SelectedFieldsCell } from "./components/SelectedFieldsCell";
@@ -48,8 +48,16 @@ import { SyncModeCell } from "./components/SyncModeCell";
 import { getExpandedRowModel } from "./getExpandedRowModel";
 import { getFilteredRowModel } from "./getFilteredRowModel";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
+import { useNamespaceRowInView } from "./hooks/useNamespaceRowInView";
 import styles from "./SyncCatalogTable.module.scss";
-import { getRowChangeStatus, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
+import {
+  findRow,
+  getNamespaceRowId,
+  getRowChangeStatus,
+  getSyncCatalogRows,
+  isNamespaceRow,
+  isStreamRow,
+} from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../formConfig";
 
 export interface SyncCatalogUIModel {
@@ -119,6 +127,8 @@ export const SyncCatalogTable: FC = () => {
   const [filtering, setFiltering] = useState("");
   const deferredFilteringValue = useDeferredValue(filtering);
 
+  const customScrollParent = useContext(ScrollParentContext);
+
   // Update stream
   const onUpdateStreamConfigWithStreamNode = useCallback(
     (streamNode: SyncStreamFieldWithId, updatedConfig: Partial<AirbyteStreamConfiguration>) => {
@@ -152,15 +162,18 @@ export const SyncCatalogTable: FC = () => {
     }),
     columnHelper.accessor("name", {
       id: "stream.name",
-      header: () => (
-        <HeaderNamespaceCell
-          streams={streams}
-          onStreamsChanged={replace}
-          syncCheckboxDisabled={!!filtering.length}
-          namespaceFormat={watchedNamespaceFormat}
-          namespaceDefinition={watchedNamespaceDefinition}
-        />
-      ),
+      header: () =>
+        stickyRow && (
+          <NamespaceNameCell
+            row={stickyRow}
+            streams={streams}
+            onStreamsChanged={replace}
+            syncCheckboxDisabled={!!filtering.length}
+            namespaceFormat={watchedNamespaceFormat}
+            namespaceDefinition={watchedNamespaceDefinition}
+            columnFilters={columnFilters}
+          />
+        ),
       cell: ({ row, getValue }) => (
         <div
           style={{
@@ -201,17 +214,18 @@ export const SyncCatalogTable: FC = () => {
     }),
     columnHelper.display({
       id: "hashing",
+      header: () => (
+        <FlexContainer alignItems="center" gap="none">
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="connectionForm.hashing.title" />
+          </Text>
+          <InfoTooltip>
+            <FormattedMessage id="connectionForm.hashing.info" />
+          </InfoTooltip>
+        </FlexContainer>
+      ),
       cell: ({ row }) =>
-        isNamespaceRow(row) ? (
-          <FlexContainer alignItems="center" gap="none">
-            <Text size="sm" color="grey500">
-              <FormattedMessage id="connectionForm.hashing.title" />
-            </Text>
-            <InfoTooltip>
-              <FormattedMessage id="connectionForm.hashing.info" />
-            </InfoTooltip>
-          </FlexContainer>
-        ) : isStreamRow(row) ? null : (
+        isNamespaceRow(row) || isStreamRow(row) ? null : (
           <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ),
       meta: {
@@ -361,20 +375,45 @@ export const SyncCatalogTable: FC = () => {
     [initialExpandedState, toggleAllRowsExpanded]
   );
 
+  const [stickyRowIndex, setStickyRowIndex] = useState<number>(0);
+  const stickyIndexes = useMemo(
+    () =>
+      rows.reduce((indexes, row, index) => {
+        if (row.depth === 0) {
+          indexes.push(index);
+        }
+        return indexes;
+      }, [] as number[]),
+    [rows]
+  );
+
+  const stickyRow: Row<SyncCatalogUIModel> | undefined = useMemo(() => {
+    if (!rows.length) {
+      return;
+    }
+
+    const row = rows[stickyRowIndex];
+    // handle index out of bounds in case of collapsing all rows
+    if (!row) {
+      return;
+    }
+
+    if (isNamespaceRow(row)) {
+      return row;
+    }
+    return findRow(rows, getNamespaceRowId(row));
+    /**
+     * adding rows as a dependency will cause a millisecond flicker after toggling  expand/collapse all
+     * we can't remove it since we need to react on any rows change(tab change, filter change, etc)
+     */
+  }, [stickyRowIndex, rows]);
+
   const Table: TableComponents["Table"] = ({ style, ...props }) => (
     <table className={classnames(styles.table)} {...props} style={style} />
   );
 
   const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
-    <thead
-      ref={ref}
-      className={classnames(
-        styles.thead,
-        styles.stickyTableHeader,
-        styles.theadHidden // temporary hide thead until we have a better solution with sticky namespace rows
-      )}
-      {...restProps}
-    />
+    <thead ref={ref} className={classnames(styles.stickyTableHeader)} {...restProps} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -396,6 +435,12 @@ export const SyncCatalogTable: FC = () => {
     const index = props["data-index"];
     const row = rows[index];
     const { rowChangeStatus } = getRowChangeStatus(row);
+    const { ref } = useNamespaceRowInView(index, stickyRowIndex, stickyIndexes, setStickyRowIndex, customScrollParent);
+
+    // the first row is the namespace row, we don't need to render it since header has the same content
+    if (index === 0 && isNamespaceRow(row)) {
+      return null;
+    }
 
     const rowStatusStyle = classnames(styles.tr, {
       [styles.added]: rowChangeStatus === "added" && mode !== "create",
@@ -406,11 +451,16 @@ export const SyncCatalogTable: FC = () => {
     });
 
     return (
-      <tr key={`${row.id}-${row.depth}`} className={rowStatusStyle} {...props}>
+      <tr ref={ref} key={`${row.id}-${row.depth}`} className={rowStatusStyle} {...props}>
         {row.getVisibleCells().map((cell) => {
           const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
           return (
-            <td className={classnames(styles.td, meta?.tdClassName, { [styles.th]: row.depth === 0 })} key={cell.id}>
+            <td
+              className={classnames(styles.td, meta?.tdClassName, {
+                [styles.th]: isNamespaceRow(row),
+              })}
+              key={cell.id}
+            >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </td>
           );
@@ -449,8 +499,6 @@ export const SyncCatalogTable: FC = () => {
       { id: "stream.selected", value: tabId === "enabledStreams" },
     ]);
   };
-
-  const customScrollParent = useContext(ScrollParentContext);
 
   return (
     <>
@@ -499,7 +547,7 @@ export const SyncCatalogTable: FC = () => {
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
         totalCount={rows.length}
-        style={{ minHeight: 80 }} // namespace row height + stream row height
+        style={{ minHeight: 120 }} // header namespace row height + 2 stream rows height
         initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
           Table,
@@ -509,6 +557,11 @@ export const SyncCatalogTable: FC = () => {
         }}
         fixedHeaderContent={headerContent}
         fixedItemHeight={40}
+        atTopStateChange={(atTop) => {
+          if (atTop && stickyRowIndex !== 0) {
+            setStickyRowIndex(0);
+          }
+        }}
         increaseViewportBy={50}
         useWindowScroll
         customScrollParent={customScrollParent ?? undefined}

@@ -98,7 +98,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(actualRequest);
 
     final ArgumentCaptor<SourceOAuthParameter> argument = ArgumentCaptor.forClass(SourceOAuthParameter.class);
-    Mockito.verify(configRepository).writeSourceOAuthParam(argument.capture());
+    Mockito.verify(oauthService).writeSourceOAuthParam(argument.capture());
     assertEquals(Jsons.jsonNode(params), argument.getValue().getConfiguration());
     assertEquals(sourceDefId, argument.getValue().getSourceDefinitionId());
   }
@@ -115,7 +115,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(configRepository.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
+    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
         .thenReturn(Optional.of(new SourceOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -127,7 +127,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(secondRequest);
 
     final ArgumentCaptor<SourceOAuthParameter> argument = ArgumentCaptor.forClass(SourceOAuthParameter.class);
-    Mockito.verify(configRepository, Mockito.times(2)).writeSourceOAuthParam(argument.capture());
+    Mockito.verify(oauthService, Mockito.times(2)).writeSourceOAuthParam(argument.capture());
     final List<SourceOAuthParameter> capturedValues = argument.getAllValues();
     assertEquals(Jsons.jsonNode(firstParams), capturedValues.get(0).getConfiguration());
     assertEquals(Jsons.jsonNode(secondParams), capturedValues.get(1).getConfiguration());
@@ -150,7 +150,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(actualRequest);
 
     final ArgumentCaptor<DestinationOAuthParameter> argument = ArgumentCaptor.forClass(DestinationOAuthParameter.class);
-    Mockito.verify(configRepository).writeDestinationOAuthParam(argument.capture());
+    Mockito.verify(oauthService).writeDestinationOAuthParam(argument.capture());
     assertEquals(Jsons.jsonNode(params), argument.getValue().getConfiguration());
     assertEquals(destinationDefId, argument.getValue().getDestinationDefinitionId());
   }
@@ -167,7 +167,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(configRepository.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
+    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
         .thenReturn(Optional.of(new DestinationOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -179,7 +179,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(secondRequest);
 
     final ArgumentCaptor<DestinationOAuthParameter> argument = ArgumentCaptor.forClass(DestinationOAuthParameter.class);
-    Mockito.verify(configRepository, Mockito.times(2)).writeDestinationOAuthParam(argument.capture());
+    Mockito.verify(oauthService, Mockito.times(2)).writeDestinationOAuthParam(argument.capture());
     final List<DestinationOAuthParameter> capturedValues = argument.getAllValues();
     assertEquals(Jsons.jsonNode(firstParams), capturedValues.get(0).getConfiguration());
     assertEquals(Jsons.jsonNode(secondParams), capturedValues.get(1).getConfiguration());

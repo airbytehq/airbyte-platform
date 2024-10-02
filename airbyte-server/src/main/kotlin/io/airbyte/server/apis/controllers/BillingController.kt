@@ -1,5 +1,6 @@
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.BillingApi
 import io.airbyte.api.model.generated.CustomerPortalRead
 import io.airbyte.api.model.generated.CustomerPortalRequestBody
@@ -24,43 +25,39 @@ open class BillingController : BillingApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getCustomerPortalLink(
     @Body customerPortalRequestBody: CustomerPortalRequestBody,
-  ): CustomerPortalRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): CustomerPortalRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/list_invoices")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listPastInvoices(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): ListInvoicesRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): ListInvoicesRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/payment_information")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getPaymentInformation(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): PaymentInformationRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): PaymentInformationRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/organization_balance")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationBalance(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationBalanceRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): OrganizationBalanceRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/complete_checkout_session")
+  @ExecuteOn(AirbyteTaskExecutors.WEBHOOK)
+  override fun completeCheckoutSession(
+    @Body event: JsonNode,
+  ): Unit = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ViewOrganizationTrialStatus)
   @Post("/trial_status")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationTrialStatus(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationTrialStatusRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): OrganizationTrialStatusRead = throw ApiNotImplementedInOssProblem()
 }

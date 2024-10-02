@@ -1,10 +1,10 @@
 .PHONY:
 test.unit:
-	go test ./tests -tags=template -v
+	go test ./tests/... -v -count=1 -timeout 0s
 
 .PHONY:
 test.integration:
-	go test ./tests -tags=install -v
+	go test ./integration_tests/... -v -count=1 -timeout 0s
 
 .PHONY:
 test.clean:

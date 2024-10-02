@@ -24,6 +24,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
@@ -63,13 +64,15 @@ class OAuthConfigSupplierTest {
   private ActorDefinitionVersion testSourceVersion;
   private ConnectorSpecification testConnectorSpecification;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private OAuthService oAuthService;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
     configRepository = mock(ConfigRepository.class);
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
-    oAuthConfigSupplier = new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper);
+    oAuthService = mock(OAuthService.class);
+    oAuthConfigSupplier = new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper, oAuthService);
     sourceDefinitionId = UUID.randomUUID();
     testSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefinitionId)
@@ -265,7 +268,7 @@ class OAuthConfigSupplierTest {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
         new SourceOAuthParameter()
             .withOauthParameterId(UUID.randomUUID())
             .withSourceDefinitionId(sourceDefinitionId)
@@ -360,7 +363,7 @@ class OAuthConfigSupplierTest {
   }
 
   private void setupOAuthParamMocks(final Map<String, Object> oauthParameters) throws JsonValidationException, IOException {
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
         new SourceOAuthParameter()
             .withOauthParameterId(UUID.randomUUID())
             .withSourceDefinitionId(sourceDefinitionId)

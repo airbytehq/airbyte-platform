@@ -16,6 +16,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
 

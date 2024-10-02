@@ -26,6 +26,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-data"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-featureflag"))

@@ -4,12 +4,10 @@
 
 package io.airbyte.oauth.flows;
 
-import static org.mockito.Mockito.mock;
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -39,7 +37,7 @@ public abstract class OAuthFlowIntegrationTest {
   protected static final int SERVER_LISTENING_PORT = 80;
 
   protected HttpClient httpClient;
-  protected ConfigRepository configRepository;
+  protected OAuthService oauthService;
   protected OAuthFlowImplementation flow;
   protected HttpServer server;
   protected ServerHandler serverHandler;
@@ -52,7 +50,7 @@ public abstract class OAuthFlowIntegrationTest {
     return REDIRECT_URL;
   }
 
-  protected abstract OAuthFlowImplementation getFlowImplementation(ConfigRepository configRepository, HttpClient httpClient);
+  protected abstract OAuthFlowImplementation getFlowImplementation(OAuthService oauthService, HttpClient httpClient);
 
   @BeforeEach
   public void setup() throws IOException {
@@ -60,9 +58,8 @@ public abstract class OAuthFlowIntegrationTest {
       throw new IllegalStateException(
           "Must provide path to a oauth credentials file.");
     }
-    configRepository = mock(ConfigRepository.class);
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-    flow = this.getFlowImplementation(configRepository, httpClient);
+    flow = this.getFlowImplementation(oauthService, httpClient);
 
     server = HttpServer.create(new InetSocketAddress(getServerListeningPort()), 0);
     server.setExecutor(null); // creates a default executor

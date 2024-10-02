@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import io.airbyte.oauth.flows.OAuthFlowIntegrationTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -40,7 +40,7 @@ public class FacebookOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
   }
 
   @Override
-  protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
+  protected OAuthFlowImplementation getFlowImplementation(final OAuthService oauthService, final HttpClient httpClient) {
     return new FacebookMarketingOAuthFlow(httpClient);
   }
 
@@ -69,7 +69,7 @@ public class FacebookOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
             .put("client_id", credentialsJson.get("client_id").asText())
             .put("client_secret", credentialsJson.get("client_secret").asText())
             .build()));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(param));
+    when(oauthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(param));
     final String url =
         flow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null, param.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);

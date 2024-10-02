@@ -35,6 +35,8 @@ import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
+import io.temporal.activity.Activity;
+import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.activity.ActivityOptions;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -116,11 +118,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         null,
         null);
 
-    workloadClient.createWorkload(workloadCreateRequest);
-
     final int checkFrequencyInSeconds =
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
-    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
+
+    final ActivityExecutionContext context = Activity.getExecutionContext();
+
+    workloadClient.runWorkloadWithCancellationHeartbeat(workloadCreateRequest, checkFrequencyInSeconds, context);
 
     final var output = workloadClient.getConnectorJobOutput(
         workloadId,

@@ -468,7 +468,7 @@ components:
           properties:
             status:
               type: integer
-              default: 400
+              default: 404
             type:
               type: string
               default: https://reference.airbyte.com/reference/errors#resource-not-found

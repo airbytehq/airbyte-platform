@@ -84,6 +84,7 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
@@ -135,6 +136,7 @@ public class SchedulerHandler {
 
   private final ConnectionsHandler connectionsHandler;
   private final ConfigRepository configRepository;
+  private final CatalogService catalogService;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SynchronousSchedulerClient synchronousSchedulerClient;
   private final ConfigurationUpdate configurationUpdate;
@@ -159,6 +161,7 @@ public class SchedulerHandler {
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
+                          final CatalogService catalogService,
                           final SecretsRepositoryWriter secretsRepositoryWriter,
                           final SynchronousSchedulerClient synchronousSchedulerClient,
                           final ConfigurationUpdate configurationUpdate,
@@ -183,6 +186,7 @@ public class SchedulerHandler {
                           final NotificationHelper notificationHelper,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.configRepository = configRepository;
+    this.catalogService = catalogService;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.configurationUpdate = configurationUpdate;
@@ -342,7 +346,7 @@ public class SchedulerHandler {
   }
 
   public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceId(final SourceDiscoverSchemaRequestBody req)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = configRepository.getSourceConnection(req.getSourceId());
 
     if (featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(source.getWorkspaceId()))) {
@@ -357,7 +361,7 @@ public class SchedulerHandler {
    */
   public SourceDiscoverSchemaRead discoverAndGloballyDisable(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
                                                              final SourceConnection source)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
@@ -372,7 +376,7 @@ public class SchedulerHandler {
         Charsets.UTF_8)).toString();
     final String connectorVersion = sourceVersion.getDockerImageTag();
     final Optional<ActorCatalog> currentCatalog =
-        configRepository.getActorCatalog(discoverSchemaRequestBody.getSourceId(), connectorVersion, configHash);
+        catalogService.getActorCatalog(discoverSchemaRequestBody.getSourceId(), connectorVersion, configHash);
     final boolean bustActorCatalogCache = discoverSchemaRequestBody.getDisableCache() != null && discoverSchemaRequestBody.getDisableCache();
     if (currentCatalog.isEmpty() || bustActorCatalogCache) {
       final SynchronousResponse<UUID> persistedCatalogId =
@@ -411,7 +415,7 @@ public class SchedulerHandler {
    * Runs discover schema and does not disable other connections.
    */
   public SourceDiscoverSchemaRead discover(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceId = req.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
@@ -428,7 +432,7 @@ public class SchedulerHandler {
     final String connectorVersion = sourceVersion.getDockerImageTag();
 
     final Optional<ActorCatalog> existingCatalog =
-        configRepository.getActorCatalog(req.getSourceId(), connectorVersion, configHash);
+        catalogService.getActorCatalog(req.getSourceId(), connectorVersion, configHash);
 
     // No catalog exists, run discover.
     if (existingCatalog.isEmpty()) {
@@ -456,7 +460,7 @@ public class SchedulerHandler {
                                                                              final ActorDefinitionVersion sourceVersion,
                                                                              final io.airbyte.api.model.generated.WorkloadPriority priority,
                                                                              final UUID connectionId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final boolean isCustomConnector = sourceDef.getCustom();
     // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
     // have higher priority and overwrite
@@ -483,7 +487,7 @@ public class SchedulerHandler {
   }
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     LOGGER.info("Applying schema changes for source '{}' in workspace '{}'",
         sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId());
     if (sourceAutoPropagateChange.getSourceId() == null) {
@@ -557,7 +561,7 @@ public class SchedulerHandler {
   }
 
   public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceCreate(final SourceCoreConfig sourceCreate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.getWorkspaceId(), sourceCreate.getSourceId());
@@ -588,12 +592,12 @@ public class SchedulerHandler {
   }
 
   private SourceDiscoverSchemaRead retrieveDiscoveredSchema(final SynchronousResponse<UUID> response, final ActorDefinitionVersion sourceVersion)
-      throws ConfigNotFoundException, IOException {
+      throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDiscoverSchemaRead sourceDiscoverSchemaRead = new SourceDiscoverSchemaRead()
         .jobInfo(jobConverter.getSynchronousJobRead(response));
 
     if (response.isSuccess()) {
-      final ActorCatalog catalog = configRepository.getActorCatalogById(response.getOutput());
+      final ActorCatalog catalog = catalogService.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
           io.airbyte.protocol.models.AirbyteCatalog.class);
       sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceVersion));
@@ -691,7 +695,7 @@ public class SchedulerHandler {
   // containsBreakingChange parameter, and connectionStatus parameter.
   private void generateCatalogDiffsAndDisableConnectionsIfNeeded(final SourceDiscoverSchemaRead discoveredSchema,
                                                                  final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectionReadList connectionsForSource = connectionsHandler.listConnectionsForSource(discoverSchemaRequestBody.getSourceId(), false);
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
       final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler

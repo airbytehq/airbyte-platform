@@ -108,6 +108,7 @@ import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -162,6 +163,7 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
+  private CatalogService catalogService;
   private ConnectionService connectionService;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
@@ -178,13 +180,14 @@ class WebBackendConnectionsHandlerTest {
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
 
   @BeforeEach
-  void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void setup() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     actorDefinitionVersionHandler = mock(ActorDefinitionVersionHandler.class);
     connectionsHandler = mock(ConnectionsHandler.class);
     stateHandler = mock(StateHandler.class);
     operationsHandler = mock(OperationsHandler.class);
     final JobHistoryHandler jobHistoryHandler = mock(JobHistoryHandler.class);
     configRepository = mock(ConfigRepository.class);
+    catalogService = mock(CatalogService.class);
     connectionService = mock(ConnectionService.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
@@ -218,7 +221,9 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater);
 
-    final SourceHandler sourceHandler = new SourceHandler(configRepository,
+    final SourceHandler sourceHandler = new SourceHandler(
+        configRepository,
+        catalogService,
         secretsRepositoryReader,
         validator,
         connectionsHandler,
@@ -226,7 +231,11 @@ class WebBackendConnectionsHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        workspaceService,
+        secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater);
 
@@ -241,6 +250,7 @@ class WebBackendConnectionsHandlerTest {
         operationsHandler,
         eventRunner,
         configRepository,
+        catalogService,
         connectionService,
         actorDefinitionVersionHelper,
         fieldGenerator,
@@ -518,9 +528,9 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionWithDiscoveryAndNewSchema() throws ConfigNotFoundException,
       IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
-    when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
+    when(catalogService.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
     final SourceDiscoverSchemaRead schemaRead =
         new SourceDiscoverSchemaRead().catalogDiff(expectedWithNewSchema.getCatalogDiff()).catalog(expectedWithNewSchema.getSyncCatalog())
             .breakingChange(false).connectionStatus(ConnectionStatus.ACTIVE);
@@ -536,9 +546,9 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionWithDiscoveryAndNewSchemaBreakingChange() throws ConfigNotFoundException,
       IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
-    when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
+    when(catalogService.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
     final SourceDiscoverSchemaRead schemaRead =
         new SourceDiscoverSchemaRead().catalogDiff(expectedWithNewSchema.getCatalogDiff()).catalog(expectedWithNewSchema.getSyncCatalog())
             .breakingChange(true).connectionStatus(ConnectionStatus.INACTIVE);
@@ -555,9 +565,9 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionWithDiscoveryMissingCatalogUsedToMakeConfiguredCatalog()
       throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
-    when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
+    when(catalogService.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
     final SourceDiscoverSchemaRead schemaRead =
         new SourceDiscoverSchemaRead().catalogDiff(expectedWithNewSchema.getCatalogDiff()).catalog(expectedWithNewSchema.getSyncCatalog())
             .breakingChange(false).connectionStatus(ConnectionStatus.ACTIVE);
@@ -573,7 +583,7 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionWithDiscoveryAndFieldSelectionAddField() throws ConfigNotFoundException,
       IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Mock this because the API uses it to determine whether there was a schema change.
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
 
     // Original configured catalog has two fields, and only one of them is selected.
@@ -626,7 +636,7 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionWithDiscoveryAndFieldSelectionRemoveField() throws ConfigNotFoundException,
       IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Mock this because the API uses it to determine whether there was a schema change.
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
 
     // Original configured catalog has two fields, and both of them are selected.
@@ -681,9 +691,9 @@ class WebBackendConnectionsHandlerTest {
   @Test
   void testWebBackendGetConnectionNoDiscoveryWithNewSchema()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
-    when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
+    when(catalogService.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
     final WebBackendConnectionRead result = testWebBackendGetConnection(false, connectionRead, operationReadList);
     assertEquals(expectedNoDiscoveryWithNewSchema, result);
   }
@@ -692,9 +702,9 @@ class WebBackendConnectionsHandlerTest {
   void testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(connectionsHandler.getConnection(brokenConnectionRead.getConnectionId())).thenReturn(brokenConnectionRead);
-    when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
+    when(catalogService.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
-    when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
+    when(catalogService.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
     final WebBackendConnectionRead result = testWebBackendGetConnection(false, brokenConnectionRead, brokenOperationReadList);
     assertEquals(expectedWithNewSchemaBroken, result);
   }
@@ -1015,7 +1025,7 @@ class WebBackendConnectionsHandlerTest {
     when(eventRunner.resetConnection(any(), any())).thenReturn(successfulResult);
     when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
 
-    when(configRepository.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
+    when(catalogService.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1164,7 +1174,7 @@ class WebBackendConnectionsHandlerTest {
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
 
-    when(configRepository.getMostRecentActorCatalogForSource(sourceId)).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.deserialize(
+    when(catalogService.getMostRecentActorCatalogForSource(sourceId)).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.deserialize(
         "{\"streams\": [{\"name\": \"cat_names\", "
             + "\"namespace\": \"public\", "
             + "\"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));

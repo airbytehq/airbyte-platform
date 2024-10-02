@@ -17,7 +17,7 @@ import com.sun.net.httpserver.HttpServer;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,10 +43,10 @@ public class TrelloOAuthFlowIntegrationTest {
   private static final String REDIRECT_URL = "http://localhost:8000/code";
   private static final Path CREDENTIALS_PATH = Path.of("secrets/trello.json");
 
-  private ConfigRepository configRepository;
   private TrelloOAuthFlow trelloOAuthFlow;
   private HttpServer server;
   private ServerHandler serverHandler;
+  private OAuthService oAuthService;
 
   @BeforeEach
   public void setup() throws IOException {
@@ -54,7 +54,7 @@ public class TrelloOAuthFlowIntegrationTest {
       throw new IllegalStateException(
           "Must provide path to a oauth credentials file.");
     }
-    configRepository = mock(ConfigRepository.class);
+    oAuthService = mock(OAuthService.class);
     trelloOAuthFlow = new TrelloOAuthFlow();
 
     server = HttpServer.create(new InetSocketAddress(8000), 0);
@@ -85,7 +85,7 @@ public class TrelloOAuthFlowIntegrationTest {
             .put("client_id", clientId)
             .put("client_secret", credentialsJson.get("client_secret").asText())
             .build()));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     final String url = trelloOAuthFlow.getSourceConsentUrl(
         workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);

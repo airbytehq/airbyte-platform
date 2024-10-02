@@ -10,6 +10,7 @@ import {
   updateCursorField,
   updateFieldSelected,
   toggleAllFieldsSelected,
+  getSelectedMandatoryFields,
 } from "./streamConfigHelpers";
 
 const FIELD_ONE: SyncSchemaField = {
@@ -402,6 +403,58 @@ describe(`${updateFieldSelected.name}`, () => {
       fieldSelectionEnabled: false,
       selectedFields: [],
     });
+  });
+});
+
+describe(`${getSelectedMandatoryFields.name}`, () => {
+  it("returns an empty array if the stream selected(enabled)", () => {
+    const mandatoryFields = getSelectedMandatoryFields({ ...mockStreamConfiguration, selected: true });
+    expect(mandatoryFields).toEqual([]);
+  });
+
+  it("returns an empty array if sync mode is full_refresh", () => {
+    const mandatoryFields = getSelectedMandatoryFields({
+      ...mockStreamConfiguration,
+      selected: false,
+      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
+      cursorField: FIELD_ONE.path,
+      syncMode: "full_refresh",
+    });
+
+    expect(mandatoryFields).toEqual([]);
+  });
+
+  it("returns the primary key fields if the destinationSyncMode is append_dedup", () => {
+    const mandatoryFields = getSelectedMandatoryFields({
+      ...mockStreamConfiguration,
+      selected: false,
+      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
+      destinationSyncMode: "append_dedup",
+    });
+
+    expect(mandatoryFields).toEqual([{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }]);
+  });
+
+  it("returns the primary key fields if the destinationSyncMode is overwrite_dedup", () => {
+    const mandatoryFields = getSelectedMandatoryFields({
+      ...mockStreamConfiguration,
+      selected: false,
+      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
+      destinationSyncMode: "overwrite_dedup",
+    });
+
+    expect(mandatoryFields).toEqual([{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }]);
+  });
+
+  it("returns the cursor field if the syncMode is incremental", () => {
+    const mandatoryFields = getSelectedMandatoryFields({
+      ...mockStreamConfiguration,
+      selected: false,
+      cursorField: FIELD_ONE.path,
+      syncMode: "incremental",
+    });
+
+    expect(mandatoryFields).toEqual([{ fieldPath: FIELD_ONE.path }]);
   });
 });
 

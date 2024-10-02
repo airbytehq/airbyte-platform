@@ -12,8 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -40,7 +39,7 @@ public class IntercomOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
   }
 
   @Override
-  protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
+  protected OAuthFlowImplementation getFlowImplementation(final OAuthService oauthService, final HttpClient httpClient) {
     return new IntercomOAuthFlow(httpClient);
   }
 
@@ -56,7 +55,7 @@ public class IntercomOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
   }
 
   @Test
-  public void testFullIntercomOAuthFlow() throws InterruptedException, ConfigNotFoundException, IOException, JsonValidationException {
+  public void testFullIntercomOAuthFlow() throws InterruptedException, IOException, JsonValidationException {
     int limit = 20;
     final UUID workspaceId = UUID.randomUUID();
     final UUID definitionId = UUID.randomUUID();
@@ -72,7 +71,7 @@ public class IntercomOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
                     .put("client_id", credentialsJson.get("client_id").asText())
                     .put("client_secret", credentialsJson.get("client_secret").asText())
                     .build())));
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oauthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
 
     final String url = flow.getSourceConsentUrl(
         workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());

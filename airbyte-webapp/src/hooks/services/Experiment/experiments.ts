@@ -46,7 +46,7 @@ export const defaultExperimentValues: Experiments = {
   "connector.suggestedDestinationConnectors": "",
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,
-  "connectorBuilder.contributeEditsToMarketplace": false,
+  "connectorBuilder.contributeEditsToMarketplace": true,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
   "settings.showAdvancedSettings": false,

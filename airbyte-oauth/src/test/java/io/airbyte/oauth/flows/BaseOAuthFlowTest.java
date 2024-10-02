@@ -19,6 +19,7 @@ import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
@@ -45,6 +46,7 @@ public abstract class BaseOAuthFlowTest {
 
   private HttpClient httpClient;
   private ConfigRepository configRepository;
+  private OAuthService oAuthService;
   private BaseOAuthFlow oauthFlow;
 
   private UUID workspaceId;
@@ -64,6 +66,7 @@ public abstract class BaseOAuthFlowTest {
   void setup() throws JsonValidationException, IOException {
     httpClient = mock(HttpClient.class);
     configRepository = mock(ConfigRepository.class);
+    oAuthService = mock(OAuthService.class);
     oauthFlow = getOAuthFlow();
 
     workspaceId = UUID.randomUUID();
@@ -72,12 +75,12 @@ public abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(getOAuthParamConfig());
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(getOAuthParamConfig());
-    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
+    when(oAuthService.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
   }
 
   /**
@@ -244,8 +247,8 @@ public abstract class BaseOAuthFlowTest {
 
   @Test
   void testGetConsentUrlEmptyOAuthParameters() throws JsonValidationException, IOException {
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
-    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
+    when(oAuthService.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
     assertThrows(ResourceNotFoundProblem.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
             null));
@@ -260,12 +263,12 @@ public abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject());
-    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
+    when(oAuthService.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     DestinationOAuthParameter destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject());
-    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
+    when(oAuthService.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
     assertThrows(IllegalArgumentException.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
             sourceOAuthParameter.getConfiguration()));

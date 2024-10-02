@@ -38,11 +38,9 @@ import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -179,14 +177,9 @@ class BootloaderTest {
         secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
         new OperationServiceJooqImpl(configDatabase),
         sourceService,
         workspaceService);
@@ -292,14 +285,9 @@ class BootloaderTest {
         mock(SecretPersistenceConfigService.class));
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
         new OperationServiceJooqImpl(configDatabase),
         sourceService,
         workspaceService);
@@ -411,7 +399,6 @@ class BootloaderTest {
         scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         new DestinationServiceJooqImpl(configDatabase,
@@ -421,10 +408,6 @@ class BootloaderTest {
             mock(SecretPersistenceConfigService.class),
             connectionService,
             actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
         new OperationServiceJooqImpl(configDatabase),
         new SourceServiceJooqImpl(configDatabase,
             featureFlagClient,

@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==5.7.3
+airbyte-cdk==5.8.1
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
@@ -21,7 +21,7 @@ attrs==24.2.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-bracex==2.5
+bracex==2.5.post1
     # via wcmatch
 cachetools==5.5.0
     # via airbyte-cdk
@@ -52,7 +52,7 @@ genson==1.2.2
     # via airbyte-cdk
 h11==0.14.0
     # via httpcore
-httpcore==1.0.5
+httpcore==1.0.6
     # via httpx
 httpx==0.27.2
     # via langsmith
@@ -77,13 +77,13 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.128
+langsmith==0.1.129
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
 nltk==3.8.1
     # via airbyte-cdk
-numpy==1.26.4
+numpy==2.1.1
     # via pandas
 orjson==3.10.7
     # via
@@ -91,7 +91,7 @@ orjson==3.10.7
     #   langsmith
 packaging==23.2
     # via langchain-core
-pandas==2.2.0
+pandas==2.2.2
     # via airbyte-cdk
 pendulum==2.1.2
     # via airbyte-cdk
