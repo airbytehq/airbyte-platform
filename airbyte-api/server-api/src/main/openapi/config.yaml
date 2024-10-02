@@ -5125,12 +5125,6 @@ paths:
   # Connector Rollouts
   /v1/connector_rollout/list_all:
     post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectorRolloutListAllRequestBody"
-
       responses:
         "200":
           content:
@@ -7437,9 +7431,6 @@ components:
           type: string
           format: uuid
 
-    ConnectorRolloutListAllRequestBody:
-      type: object
-
     ConnectorRolloutListByActorDefinitionIdRequestBody:
       type: object
       required:
@@ -7530,6 +7521,9 @@ components:
           type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutStartResponse:
       type: object
@@ -7555,6 +7549,9 @@ components:
             $ref: "#/components/schemas/ActorId"
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutResponse:
       type: object
@@ -7582,6 +7579,9 @@ components:
           type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutFinalizeResponse:
       type: object
@@ -7597,12 +7597,16 @@ components:
         - docker_repository
         - docker_image_tag
         - actor_definition_id
+        - updated_by
       properties:
         docker_repository:
           type: string
         docker_image_tag:
           type: string
         actor_definition_id:
+          type: string
+          format: uuid
+        updated_by:
           type: string
           format: uuid
 
@@ -7613,6 +7617,7 @@ components:
         - docker_image_tag
         - actor_definition_id
         - id
+        - updated_by
         - actor_ids
       properties:
         docker_repository:
@@ -7623,6 +7628,9 @@ components:
           type: string
           format: uuid
         id:
+          type: string
+          format: uuid
+        updated_by:
           type: string
           format: uuid
         actor_ids:
@@ -7637,6 +7645,7 @@ components:
         - docker_image_tag
         - actor_definition_id
         - id
+        - updated_by
         - state
       properties:
         docker_repository:
@@ -7647,6 +7656,9 @@ components:
           type: string
           format: uuid
         id:
+          type: string
+          format: uuid
+        updated_by:
           type: string
           format: uuid
         state:

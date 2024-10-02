@@ -23,7 +23,7 @@ class ConnectorRolloutWorkflowClient {
   fun workflowClient(
     temporalWorkflowServiceFactory: ConnectorRolloutTemporalWorkflowServiceFactory,
     temporalSdkTimeouts: TemporalSdkTimeouts,
-    @Value("\${temporal.cloud.connectorRollout.namespace}") namespace: String?,
+    @Value("\${temporal.cloud.connector-rollout.namespace}") namespace: String?,
     @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
     dataConverter: DataConverter,
   ): WorkflowClientWrapper {
