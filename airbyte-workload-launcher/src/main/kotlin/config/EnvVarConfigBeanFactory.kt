@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.config
 
-import io.airbyte.commons.envvar.EnvVar.CLOUD_STORAGE_APPENDER_THREADS
 import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
 import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
@@ -136,7 +135,6 @@ class EnvVarConfigBeanFactory {
   @Named("loggingEnvVars")
   fun loggingEnvVars(): Map<String, String> {
     return mapOf(
-      CLOUD_STORAGE_APPENDER_THREADS.name to "1",
       LOG_LEVEL.name to LOG_LEVEL.fetch("")!!,
       S3_PATH_STYLE_ACCESS.name to S3_PATH_STYLE_ACCESS.fetch("")!!,
       LOG4J_CONFIGURATION_FILE.name to LOG4J_CONFIGURATION_FILE.fetch("")!!,

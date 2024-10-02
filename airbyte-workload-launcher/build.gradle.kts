@@ -4,10 +4,6 @@ plugins {
   id("io.airbyte.gradle.docker")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -15,6 +11,7 @@ dependencies {
 
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.kubernetes.client)
+  implementation(libs.bundles.log4j)
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.temporal)
   implementation(libs.bundles.temporal.telemetry)
@@ -38,7 +35,6 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
@@ -53,8 +49,8 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
+  runtimeOnly(libs.appender.log4j2)
   runtimeOnly(libs.bundles.bouncycastle)
-  runtimeOnly(libs.bundles.logback)
 
   // Required for secret hydration in OSS
   runtimeOnly(libs.hikaricp)

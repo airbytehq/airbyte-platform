@@ -18,10 +18,6 @@ repositories {
   mavenCentral()
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   // TODO: remove the deps not being used
   compileOnly(libs.lombok)
@@ -33,14 +29,11 @@ dependencies {
   annotationProcessor("info.picocli:picocli-codegen:4.7.4")
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(libs.airbyte.protocol)
 
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.5")
-
-  runtimeOnly(libs.bundles.logback)
 
 }
 

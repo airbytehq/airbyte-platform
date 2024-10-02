@@ -6,7 +6,7 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSearch;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Constructs a query for finding a query.
@@ -28,13 +28,13 @@ public class ConnectionMatcher implements Matchable<ConnectionRead> {
     final ConnectionRead fromSearch = new ConnectionRead();
     fromSearch.connectionId(search.getConnectionId() == null ? query.getConnectionId() : search.getConnectionId());
     fromSearch.destinationId(search.getDestinationId() == null ? query.getDestinationId() : search.getDestinationId());
-    fromSearch.name(StringUtils.isBlank(search.getName()) ? query.getName() : search.getName());
-    fromSearch.namespaceFormat(StringUtils.isBlank(search.getNamespaceFormat()) || "null".equals(search.getNamespaceFormat())
+    fromSearch.name(Strings.isBlank(search.getName()) ? query.getName() : search.getName());
+    fromSearch.namespaceFormat(Strings.isBlank(search.getNamespaceFormat()) || "null".equals(search.getNamespaceFormat())
         ? query.getNamespaceFormat()
         : search.getNamespaceFormat());
     fromSearch.namespaceDefinition(
         search.getNamespaceDefinition() == null ? query.getNamespaceDefinition() : search.getNamespaceDefinition());
-    fromSearch.prefix(StringUtils.isBlank(search.getPrefix()) ? query.getPrefix() : search.getPrefix());
+    fromSearch.prefix(Strings.isBlank(search.getPrefix()) ? query.getPrefix() : search.getPrefix());
     fromSearch.schedule(search.getSchedule() == null ? query.getSchedule() : search.getSchedule());
     fromSearch.scheduleType(search.getScheduleType() == null ? query.getScheduleType() : search.getScheduleType());
     fromSearch.scheduleData(search.getScheduleData() == null ? query.getScheduleData() : search.getScheduleData());

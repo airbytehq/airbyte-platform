@@ -3,9 +3,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
@@ -36,6 +33,7 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.commons.io)
   implementation(libs.bundles.apache)
+  implementation(libs.bundles.log4j)
   implementation(libs.failsafe.okhttp)
   implementation(libs.google.cloud.storage)
   implementation(libs.okhttp)
@@ -96,7 +94,6 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
-  testImplementation(libs.bundles.logback)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testRuntimeOnly(libs.javax.databind)

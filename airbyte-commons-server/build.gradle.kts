@@ -3,10 +3,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
@@ -40,13 +36,12 @@ dependencies {
   implementation(libs.quartz.scheduler)
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
+  implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
-  implementation(libs.apache.commons.lang)
   implementation(libs.kotlin.logging)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)
-  implementation(libs.guava)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
@@ -56,8 +51,8 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-storage"))
+  implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))

@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Constructs a query for finding a query.
@@ -28,13 +28,13 @@ public class DestinationMatcher implements Matchable<DestinationRead> {
     }
 
     final DestinationRead fromSearch = new DestinationRead();
-    fromSearch.name(StringUtils.isBlank(search.getName()) ? query.getName() : search.getName());
+    fromSearch.name(Strings.isBlank(search.getName()) ? query.getName() : search.getName());
     fromSearch.destinationDefinitionId(search.getDestinationDefinitionId() == null ? query.getDestinationDefinitionId()
         : search.getDestinationDefinitionId());
     fromSearch
         .destinationId(search.getDestinationId() == null ? query.getDestinationId() : search.getDestinationId());
     fromSearch.destinationName(
-        StringUtils.isBlank(search.getDestinationName()) ? query.getDestinationName() : search.getDestinationName());
+        Strings.isBlank(search.getDestinationName()) ? query.getDestinationName() : search.getDestinationName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
     fromSearch.icon(query.getIcon());
     fromSearch.isVersionOverrideApplied(query.getIsVersionOverrideApplied());
