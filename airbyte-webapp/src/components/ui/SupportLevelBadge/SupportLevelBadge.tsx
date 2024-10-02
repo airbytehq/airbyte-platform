@@ -6,7 +6,7 @@ import { Badge } from "../Badge";
 import { Tooltip } from "../Tooltip";
 
 interface SupportLevelBadgeProps {
-  supportLevel?: SupportLevel;
+  supportLevel?: SupportLevel | "enterprise";
   custom?: boolean;
   tooltip?: boolean;
   className?: string;
@@ -29,7 +29,10 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   }
 
   const badgeComponent = (
-    <Badge variant={supportLevel === "certified" ? "blue" : "grey"} className={className}>
+    <Badge
+      variant={supportLevel === "certified" ? "blue" : supportLevel === "enterprise" ? "darkBlue" : "grey"}
+      className={className}
+    >
       <FormattedMessage
         id={
           custom
@@ -38,6 +41,8 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
             ? "connector.supportLevel.certified"
             : supportLevel === "community"
             ? "connector.supportLevel.community"
+            : supportLevel === "enterprise"
+            ? "connector.supportLevel.enterprise"
             : "connector.supportLevel.archived"
         }
       />
@@ -54,6 +59,8 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
             ? "connector.supportLevel.certified.description"
             : supportLevel === "community"
             ? "connector.supportLevel.community.description"
+            : supportLevel === "enterprise"
+            ? "connector.supportLevel.enterprise.description"
             : "connector.supportLevel.archived.description"
         }
       />

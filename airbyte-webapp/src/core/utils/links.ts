@@ -60,6 +60,8 @@ export const links = {
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
+  enterpriseTalkToSales:
+    "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=enterprise-connector",
 } as const;
 
 export type OutboundLinks = typeof links;

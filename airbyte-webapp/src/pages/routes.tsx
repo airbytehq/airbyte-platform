@@ -2,6 +2,8 @@ import React, { useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
+import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
+
 import {
   useGetInstanceConfiguration,
   useInvalidateAllWorkspaceScopeOnChange,
@@ -96,6 +98,7 @@ const MainViewRoutes: React.FC = () => {
             <Route index element={<AllSourcesPage />} />
             <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
             <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
+            <Route path={SourcePaths.EnterpriseSource} element={<EnterpriseSourcePage />} />
             <Route path={SourcePaths.Root} element={<SourceItemPage />}>
               <Route index element={<SourceSettingsPage />} />
               <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />

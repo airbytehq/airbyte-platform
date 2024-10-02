@@ -20,6 +20,7 @@ export enum DestinationPaths {
 export enum SourcePaths {
   Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Connections = "connections",
+  EnterpriseSource = "enterprise/:id",
   SelectSourceNew = "new-source",
   SourceNew = "new-source/:sourceDefinitionId",
 }

@@ -3,6 +3,7 @@ import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-
 import { useEffectOnce } from "react-use";
 
 import LoadingPage from "components/LoadingPage";
+import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
@@ -105,6 +106,7 @@ const MainRoutes: React.FC = () => {
           <Route index element={<AllSourcesPage />} />
           <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
           <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
+          <Route path={SourcePaths.EnterpriseSource} element={<EnterpriseSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
             <Route index element={<SourceSettingsPage />} />
             <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />

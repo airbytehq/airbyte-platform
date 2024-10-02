@@ -13,6 +13,7 @@ export const enum Namespace {
   SYNC_QUESTIONNAIRE = "SyncQuestionnaire",
   STREAM_SELECTION = "StreamSelection",
   FORM = "Form",
+  ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
 }
 
 export const enum Action {
