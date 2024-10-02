@@ -6,13 +6,9 @@ import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
 import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
-import { ResourceType, UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
+import { ResourceType, UnifiedUserModel } from "./util";
 
-const useCreateOrUpdateRole = (
-  user: UnifiedWorkspaceUserModel,
-  resourceType: ResourceType,
-  permissionType: PermissionType
-) => {
+const useCreateOrUpdateRole = (user: UnifiedUserModel, resourceType: ResourceType, permissionType: PermissionType) => {
   const { mutateAsync: createPermission } = useCreatePermission();
   const { mutateAsync: updatePermission } = useUpdatePermissions();
   const { workspaceId, organizationId } = useCurrentWorkspace();
@@ -41,7 +37,7 @@ const useCreateOrUpdateRole = (
 };
 
 export const disallowedRoles = (
-  user: UnifiedWorkspaceUserModel | null,
+  user: UnifiedUserModel | null,
   targetResourceType: ResourceType,
   isCurrentUser: boolean
 ): PermissionType[] => {
@@ -85,7 +81,7 @@ export const disallowedRoles = (
 };
 
 interface RoleMenuItemProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   permissionType: PermissionType;
   resourceType: ResourceType;
   onClose: () => void;

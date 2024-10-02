@@ -1,4 +1,9 @@
-import { PermissionType, UserInvitationRead, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import {
+  OrganizationUserRead,
+  PermissionType,
+  UserInvitationRead,
+  WorkspaceUserAccessInfoRead,
+} from "core/api/types/AirbyteClient";
 import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
@@ -45,7 +50,7 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
  * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationRead
  * allows us to handle intentionally missing properties more gracefully.
  */
-export type UnifiedWorkspaceUserModel =
+export type UnifiedUserModel =
   | {
       id: string;
       userEmail: string;
@@ -68,7 +73,7 @@ export type UnifiedWorkspaceUserModel =
 export const unifyWorkspaceUserData = (
   workspaceAccessUsers: WorkspaceUserAccessInfoRead[],
   workspaceInvitations: UserInvitationRead[]
-): UnifiedWorkspaceUserModel[] => {
+): UnifiedUserModel[] => {
   const normalizedUsers = workspaceAccessUsers.map((user) => {
     return {
       id: user.userId,
@@ -91,9 +96,39 @@ export const unifyWorkspaceUserData = (
   return [...normalizedUsers, ...normalizedInvitations];
 };
 
+export const unifyOrganizationUserData = (
+  organizationUsers: OrganizationUserRead[],
+  workspaceInvitations: UserInvitationRead[]
+): UnifiedUserModel[] => {
+  const normalizedUsers = organizationUsers.map((user) => {
+    return {
+      id: user.userId,
+      userEmail: user.email,
+      userName: user.name,
+      organizationPermission: {
+        permissionType: user.permissionType,
+        permissionId: user.permissionId,
+        organizationId: user.organizationId,
+        userId: user.userId,
+      },
+    };
+  });
+
+  const normalizedInvitations = workspaceInvitations.map((invitation) => {
+    return {
+      id: invitation.inviteCode,
+      userEmail: invitation.invitedEmail,
+      invitationStatus: invitation.status,
+      invitationPermissionType: invitation.permissionType,
+    };
+  });
+
+  return [...normalizedUsers, ...normalizedInvitations];
+};
+
 export const getWorkspaceAccessLevel = (
   unifiedWorkspaceUser: Pick<
-    UnifiedWorkspaceUserModel,
+    UnifiedUserModel,
     "workspacePermission" | "organizationPermission" | "invitationPermissionType"
   >
 ): RbacRole => {
@@ -113,4 +148,17 @@ export const getWorkspaceAccessLevel = (
       workspaceRole ? RbacRoleHierarchy.indexOf(workspaceRole) : RbacRoleHierarchy.length
     )
   ];
+};
+
+export const getOrganizationAccessLevel = (
+  unifiedOrganizationUser: Pick<UnifiedUserModel, "organizationPermission" | "invitationPermissionType">
+): RbacRole => {
+  const orgPermissionType =
+    unifiedOrganizationUser.organizationPermission?.permissionType ?? unifiedOrganizationUser.invitationPermissionType;
+
+  const orgRole = orgPermissionType ? partitionPermissionType(orgPermissionType)[1] : undefined;
+
+  // return whatever is the "highest" role ie the lowest index greater than -1.
+  // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
+  return RbacRoleHierarchy[Math.min(orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length)];
 };

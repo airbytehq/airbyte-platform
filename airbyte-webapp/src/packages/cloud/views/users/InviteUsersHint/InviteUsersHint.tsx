@@ -31,8 +31,8 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
-      title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
+      title: formatMessage({ id: "userInvitations.create.modal.title" }, { scopeName: workspace.name }),
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} scope="workspace" />,
       size: "md",
     });
 

@@ -6,7 +6,7 @@ import { Box } from "components/ui/Box";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { PermissionType, ScopeType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 
 import { AddUserFormValues } from "./AddUserModal";
 import styles from "./AddUserModalBody.module.scss";
@@ -18,6 +18,7 @@ interface AddUserModalBodyProps {
   setSelectedRow: (value: string | null) => void;
   deferredSearchValue: string;
   canInviteExternalUsers: boolean;
+  scope: ScopeType;
 }
 
 export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
@@ -27,6 +28,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   setSelectedRow,
   deferredSearchValue,
   canInviteExternalUsers,
+  scope,
 }) => {
   const { getValues, setValue } = useFormContext<AddUserFormValues>();
 
@@ -79,6 +81,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                   selectedRow={selectedRow}
                   setSelectedRow={setSelectedRow}
                   user={user}
+                  scope={scope}
                 />
               </li>
             );
@@ -90,6 +93,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                 email={deferredSearchValue}
                 selectedRow={selectedRow}
                 setSelectedRow={setSelectedRow}
+                scope={scope}
               />
             </li>
           )}

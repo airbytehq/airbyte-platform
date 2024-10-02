@@ -6,6 +6,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ScopeType } from "core/api/types/AirbyteClient";
+
 import { ExistingUserIndicator } from "./ExistingUserIndicator";
 import styles from "./ViewOnlyUserRow.module.scss";
 
@@ -15,6 +17,7 @@ interface ViewOnlyUserRowProps {
   isCurrentUser: boolean;
   isOrgAdmin: boolean;
   highestPermissionType?: "ADMIN" | "EDITOR" | "READER" | "MEMBER";
+  scope: ScopeType;
 }
 export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
   name,
@@ -22,6 +25,7 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
   isCurrentUser,
   isOrgAdmin,
   highestPermissionType,
+  scope,
 }) => {
   return (
     <Box py="md" className={styles.existingUserRow}>
@@ -41,7 +45,7 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
             {email}
           </Text>
         </FlexContainer>
-        {isOrgAdmin && (
+        {isOrgAdmin && scope !== ScopeType.organization && (
           <Tooltip
             control={
               <Badge variant="grey">
@@ -53,8 +57,8 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
             <FormattedMessage id="userInvitations.create.modal.organizationAdminTooltip" />
           </Tooltip>
         )}
-        {!isOrgAdmin && !!highestPermissionType && (
-          <ExistingUserIndicator highestPermissionType={highestPermissionType} />
+        {(!isOrgAdmin || scope !== ScopeType.workspace) && !!highestPermissionType && (
+          <ExistingUserIndicator highestPermissionType={highestPermissionType} scope={scope} />
         )}
       </FlexContainer>
     </Box>

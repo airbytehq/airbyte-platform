@@ -11,22 +11,23 @@ export interface Experiments {
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
   "connection.columnSelection": boolean;
+  "connection.hashingUI": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
+  "connection.syncCatalogV2": boolean;
   "connection.timeline": boolean;
   "connection.timeline.schemaUpdates": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
+  "connectorBuilder.aiAssist.enabled": boolean;
+  "connectorBuilder.contributeEditsToMarketplace": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
+  "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
-  "connection.syncCatalogV2": boolean;
-  "connection.hashingUI": boolean;
-  "connectorBuilder.contributeEditsToMarketplace": boolean;
-  "connectorBuilder.aiAssist.enabled": boolean;
 }
 
 export const defaultExperimentValues: Experiments = {
@@ -49,6 +50,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.contributeEditsToMarketplace": true,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
+  "settings.organizationRbacImprovements": false,
   "settings.showAdvancedSettings": false,
   "upcomingFeaturesPage.url": "",
 };

@@ -13,8 +13,8 @@ import { useIntent } from "core/utils/rbac";
 
 import { GuestBadge } from "./GuestBadge";
 import { RoleManagementMenu } from "./RoleManagementMenu";
-import { ResourceType, UnifiedWorkspaceUserModel, getWorkspaceAccessLevel } from "./useGetAccessManagementData";
 import { UserRoleText } from "./UserRoleText";
+import { ResourceType, UnifiedUserModel, getOrganizationAccessLevel, getWorkspaceAccessLevel } from "./util";
 
 const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "READER" | "EDITOR" }> = ({
   highestPermissionType,
@@ -29,25 +29,34 @@ const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "R
 };
 
 interface RoleManagementCellProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   resourceType: ResourceType;
 }
 
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
+  const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
+  const allowAllRbacRoles = useFeature(FeatureItem.AllowAllRBACRoles);
   const { workspaceId, organizationId } = useCurrentWorkspace();
-  const highestPermissionType = getWorkspaceAccessLevel(user);
+  const workspaceAccessLevel = getWorkspaceAccessLevel(user);
+  const organizationAccessLevel = getOrganizationAccessLevel(user);
   const currentUser = useCurrentUser();
-  const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
+
   const canEditPermissions = useIntent(
     resourceType === "workspace" ? "UpdateWorkspacePermissions" : "UpdateOrganizationPermissions",
     { workspaceId, organizationId }
   );
+
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", {
     organizationId,
   });
-  const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
-  const cannotDemoteUser = resourceType === "workspace" && orgPermissionType === "organization_admin";
-  const shouldHidePopover = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
+  const cannotDemoteUser =
+    resourceType === "workspace" && organizationAccessLevel === "ADMIN" && user.invitationStatus === undefined;
+
+  const showViewOnlyBox =
+    cannotDemoteUser ||
+    !canEditPermissions ||
+    user.id === currentUser.userId ||
+    (resourceType === "organization" && !allowAllRbacRoles); // we should still show this for workspaces so a user can be removed
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions
@@ -55,19 +64,22 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
       : user.id === currentUser.userId && canEditPermissions
       ? "settings.accessManagement.cannotEditOwnPermissions"
       : undefined;
-
   return (
     <FlexContainer gap="xs" alignItems="center">
-      {shouldHidePopover ? (
+      {showViewOnlyBox ? (
         tooltipContent ? (
-          <Tooltip control={<ViewOnlyRoleBox highestPermissionType={highestPermissionType} />}>
+          <Tooltip control={<ViewOnlyRoleBox highestPermissionType={workspaceAccessLevel} />}>
             <FormattedMessage id={tooltipContent} />
           </Tooltip>
         ) : (
-          <ViewOnlyRoleBox highestPermissionType={highestPermissionType} />
+          <ViewOnlyRoleBox highestPermissionType={workspaceAccessLevel} />
         )
       ) : (
-        <RoleManagementMenu user={user} highestPermissionType={highestPermissionType} resourceType={resourceType} />
+        <RoleManagementMenu
+          user={user}
+          highestPermissionType={resourceType === "workspace" ? workspaceAccessLevel : organizationAccessLevel}
+          resourceType={resourceType}
+        />
       )}
       {user.organizationPermission?.permissionType === "organization_admin" && resourceType === "workspace" && (
         <Badge variant="grey">

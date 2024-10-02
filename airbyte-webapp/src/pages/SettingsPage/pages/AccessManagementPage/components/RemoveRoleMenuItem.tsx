@@ -8,10 +8,10 @@ import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
-import { ResourceType, UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
+import { ResourceType, UnifiedUserModel } from "./util";
 
 interface RemoveRoleMenuItemProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   resourceType: ResourceType;
 }
 

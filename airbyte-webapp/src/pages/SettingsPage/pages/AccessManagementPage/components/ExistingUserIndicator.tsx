@@ -5,13 +5,15 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ScopeType } from "core/api/types/AirbyteClient";
 import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 
 interface ExistingUserIndicatorProps {
   highestPermissionType: RbacRole;
+  scope: ScopeType;
 }
 
-export const ExistingUserIndicator: React.FC<ExistingUserIndicatorProps> = ({ highestPermissionType }) => {
+export const ExistingUserIndicator: React.FC<ExistingUserIndicatorProps> = ({ highestPermissionType, scope }) => {
   const roleId =
     highestPermissionType === "ADMIN"
       ? "role.admin"
@@ -33,7 +35,13 @@ export const ExistingUserIndicator: React.FC<ExistingUserIndicatorProps> = ({ hi
       }
       placement="top-start"
     >
-      <FormattedMessage id="userInvitations.create.modal.existingUserTooltip" />
+      <FormattedMessage
+        id={
+          scope === ScopeType.workspace
+            ? "userInvitations.create.modal.workspaceExistingUserTooltip"
+            : "userInvitations.create.modal.organizationExistingUserTooltip"
+        }
+      />
     </Tooltip>
   );
 };
