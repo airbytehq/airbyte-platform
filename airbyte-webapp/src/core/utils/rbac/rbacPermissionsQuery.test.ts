@@ -17,7 +17,6 @@ jest.mock("core/api", () => {
 
       return workspace;
     }),
-    useIsInstanceAdminEnabled: jest.fn(() => true),
   };
 });
 

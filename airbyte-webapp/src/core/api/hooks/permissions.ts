@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
-import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { organizationKeys } from "./organizations";
@@ -13,8 +12,8 @@ import {
   deletePermission,
   updatePermission,
 } from "../generated/AirbyteClient";
-import { PermissionCreate, PermissionRead, PermissionType, PermissionUpdate } from "../generated/AirbyteClient.schemas";
-import { SCOPE_INSTANCE, SCOPE_USER } from "../scopes";
+import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
+import { SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -33,21 +32,9 @@ export const useListPermissionsQuery = (userId: string) => {
 };
 
 export const useListPermissions = (userId: string) => {
-  const data = useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId), {
+  return useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId), {
     staleTime: 60_000,
   });
-
-  const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
-  if (!isInstanceAdminEnabled) {
-    const isInstanceAdminIdx = data.permissions.findIndex(
-      (permission) => permission.permissionType === "instance_admin"
-    );
-    if (isInstanceAdminIdx !== -1) {
-      data.permissions[isInstanceAdminIdx].permissionType = "instance_reader" as PermissionType; // isn't a value in the enum but it is supported by the webapp logic
-    }
-  }
-
-  return data;
 };
 
 export const useUpdatePermissions = () => {
@@ -144,26 +131,4 @@ export const useDeletePermissions = () => {
       });
     },
   });
-};
-
-let currentIsInstanceAdminEnabled = false;
-
-export const useIsInstanceAdminEnabled = () => {
-  const showInstanceAdminWarning = useFeature(FeatureItem.ShowAdminWarningInWorkspace); // we only want to use the "viewonly" mode if we in an env that shows the banner (ie: for now, cloud only)
-  return useSuspenseQuery(
-    [SCOPE_INSTANCE, "isInstanceAdminEnabled"],
-    async () => (showInstanceAdminWarning ? currentIsInstanceAdminEnabled : true),
-    {
-      cacheTime: Infinity,
-    }
-  );
-};
-
-export const useSetIsInstanceAdminEnabled = () => {
-  const queryClient = useQueryClient();
-  return (isEnabled: boolean) => {
-    currentIsInstanceAdminEnabled = isEnabled;
-    queryClient.invalidateQueries([SCOPE_INSTANCE, "isInstanceAdminEnabled"]);
-    queryClient.invalidateQueries(getListPermissionsQueryKey());
-  };
 };
