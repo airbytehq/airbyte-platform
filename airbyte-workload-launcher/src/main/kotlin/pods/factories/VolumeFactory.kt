@@ -17,6 +17,7 @@ class VolumeFactory(
   @Value("\${airbyte.container.orchestrator.secret-mount-path}") private val secretMountPath: String?,
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
+  @Value("\${airbyte.container.orchestrator.staging-folder}") private val stagingFolder: String,
 ) {
   fun config(): VolumeMountPair {
     val volume =
@@ -127,7 +128,25 @@ class VolumeFactory(
     return VolumeMountPair(volume, mount)
   }
 
-  fun replication(): ReplicationVolumes {
+  fun staging(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withNewEmptyDir()
+        .withNewSizeLimit("5G")
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withMountPath(stagingFolder)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  fun replication(useStaging: Boolean): ReplicationVolumes {
     val volumes: MutableList<Volume> = ArrayList()
     val orchVolumeMounts: MutableList<VolumeMount> = ArrayList()
     val sourceVolumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -159,12 +178,23 @@ class VolumeFactory(
       orchVolumeMounts.add(dataPlaneCreds.mount)
     }
 
+    if (useStaging) {
+      val staging = staging()
+      volumes.add(staging.volume)
+      sourceVolumeMounts.add(staging.mount)
+      destVolumeMounts.add(staging.mount)
+    }
+
     return ReplicationVolumes(
       volumes,
       orchVolumeMounts,
       sourceVolumeMounts,
       destVolumeMounts,
     )
+  }
+
+  companion object {
+    const val STAGING_VOLUME_NAME = "airbyte-file-staging"
   }
 }
 

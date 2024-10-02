@@ -124,6 +124,7 @@ airbyte:
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
     secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
     secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
+    staging-folder: ${AIRBYTE_STAGING_DIRECTORY:/staging/files}
   role: ${AIRBYTE_ROLE:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:

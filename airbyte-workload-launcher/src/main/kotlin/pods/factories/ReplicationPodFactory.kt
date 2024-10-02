@@ -4,6 +4,7 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.featureflag.UseFileTransferMode
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -46,8 +47,9 @@ class ReplicationPodFactory(
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
+    val isFileTransfer = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication()
+    val replicationVolumes = volumeFactory.replication(isFileTransfer)
     val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars)
 
     val orchContainer =
@@ -115,8 +117,9 @@ class ReplicationPodFactory(
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
+    val isFileTransfer = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication()
+    val replicationVolumes = volumeFactory.replication(isFileTransfer)
     val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars)
 
     val orchContainer =
