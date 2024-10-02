@@ -23,6 +23,10 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
+configurations.all {
+  exclude(group="org.apache.logging.log4j")
+}
+
 val airbyteProtocol by configurations.creating
 
 dependencies {
@@ -41,17 +45,16 @@ dependencies {
   implementation(libs.sts)
   implementation(libs.kubernetes.client)
   implementation(libs.bundles.datadog)
-  implementation(libs.bundles.log4j)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-commons-converters"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
   implementation(project(":oss:airbyte-commons-worker"))
@@ -63,6 +66,7 @@ dependencies {
   implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

@@ -24,6 +24,7 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.micronaut.core.util.StringUtils;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Helpers to fetch stats / metadata about Airbyte domain models and turn them into flat maps that
@@ -126,7 +126,7 @@ public class TrackingMetadata {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put(metaPrefix + "docker_repository", sourceVersion.getDockerRepository());
     final String imageTag = sourceVersion.getDockerImageTag();
-    if (!Strings.isEmpty(imageTag)) {
+    if (!StringUtils.isEmpty(imageTag)) {
       metadata.put(metaPrefix + "version", imageTag);
     }
     return metadata.build();
@@ -149,7 +149,7 @@ public class TrackingMetadata {
     if (attempts == null || attempts.isEmpty()) {
       return metadata.build();
     }
-    final Attempt lastAttempt = attempts.get(attempts.size() - 1);
+    final Attempt lastAttempt = attempts.getLast();
     if (lastAttempt.getOutput() == null || lastAttempt.getOutput().isEmpty()) {
       return metadata.build();
     }
@@ -216,7 +216,7 @@ public class TrackingMetadata {
     final List<FailureReason> failureReasons = failureReasonsList(attempts);
     if (!failureReasons.isEmpty()) {
       metadata.put("failure_reasons", failureReasonsListAsJson(failureReasons).toString());
-      metadata.put("main_failure_reason", failureReasonAsJson(failureReasons.get(0)).toString());
+      metadata.put("main_failure_reason", failureReasonAsJson(failureReasons.getFirst()).toString());
     }
     return metadata.build();
   }

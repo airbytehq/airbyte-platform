@@ -4,6 +4,10 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
+configurations.all {
+  exclude(group="org.apache.logging.log4j")
+}
+
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
@@ -35,6 +39,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
@@ -47,6 +52,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

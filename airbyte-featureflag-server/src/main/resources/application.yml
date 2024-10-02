@@ -55,3 +55,14 @@ jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
   serialization-inclusion: always
+
+logger:
+  levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+  #   Uncomment to help resolve issues with conditional beans
+  #      io.micronaut.context.condition: DEBUG

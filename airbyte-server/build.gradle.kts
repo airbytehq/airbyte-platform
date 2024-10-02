@@ -5,6 +5,10 @@ plugins {
   id("io.airbyte.gradle.kube-reload")
 }
 
+configurations.all {
+  exclude(group="org.apache.logging.log4j")
+}
+
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
@@ -39,7 +43,6 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(libs.google.cloud.storage)
   implementation(libs.cron.utils)
-  implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.kubernetes.client)
@@ -52,9 +55,9 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-server"))
@@ -75,7 +78,9 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
+  runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
+  runtimeOnly(libs.bundles.logback)
 
   // Required for local database secret hydration)
   runtimeOnly(libs.hikaricp)

@@ -22,9 +22,7 @@ public class LoggingHelper {
 
     BLUE_BACKGROUND("\u001b[44m"), // source
     YELLOW_BACKGROUND("\u001b[43m"), // destination
-    GREEN_BACKGROUND("\u001b[42m"), // normalization
-    CYAN_BACKGROUND("\u001b[46m"), // platform applications
-    PURPLE_BACKGROUND("\u001b[45m"); // dbt
+    CYAN_BACKGROUND("\u001b[46m"); // platform applications
 
     private final String ansi;
 
@@ -47,8 +45,16 @@ public class LoggingHelper {
     return color.getCode() + msg + RESET;
   }
 
+  public static String destinationSource() {
+    return applyColor(Color.YELLOW_BACKGROUND, DESTINATION_LOGGER_PREFIX);
+  }
+
   public static String platformLogSource() {
     return applyColor(Color.CYAN_BACKGROUND, PLATFORM_LOGGER_PREFIX);
+  }
+
+  public static String sourceSource() {
+    return applyColor(Color.BLUE_BACKGROUND, SOURCE_LOGGER_PREFIX);
   }
 
 }

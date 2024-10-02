@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.storage
 
+import com.google.cloud.storage.Bucket
+import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
@@ -17,6 +19,10 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 
 /**
  * Note @MockBean doesn't work in this class for some reason, possible due to a Micronaut 3 problem.
@@ -66,7 +72,11 @@ class GcsStorageClientFactoryTest {
       every { applicationCredentials } returns "mock-app-creds"
     }
 
-  val gcsClient: Storage = mockk()
+  val gcsClient: Storage =
+    mockk {
+      every { get(any<String>(), *anyVararg()) } returns null
+      every { create(any<BucketInfo>()) } returns mockk<Bucket>()
+    }
 
   init {
     mockkStatic(GcsStorageConfig::gcsClient)
@@ -97,7 +107,11 @@ class MinioStorageClientFactoryTest {
       every { endpoint } returns "mock-endpoint"
     }
 
-  val s3Client: S3Client = mockk()
+  val s3Client: S3Client =
+    mockk {
+      every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+      every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+    }
 
   init {
     mockkStatic(MinioStorageConfig::s3Client)
@@ -128,7 +142,11 @@ class S3StorageClientFactoryTest {
       every { region } returns "mock-region"
     }
 
-  val s3Client: S3Client = mockk()
+  val s3Client: S3Client =
+    mockk {
+      every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+      every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+    }
 
   init {
     mockkStatic(S3StorageConfig::s3Client)
