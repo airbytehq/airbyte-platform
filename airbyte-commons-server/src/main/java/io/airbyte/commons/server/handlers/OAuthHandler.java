@@ -129,7 +129,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public OAuthConsentRead getSourceOAuthConsent(final SourceOauthConsentRequest sourceOauthConsentRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, sourceOauthConsentRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         sourceOauthConsentRequest.getSourceDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -195,7 +195,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public OAuthConsentRead getDestinationOAuthConsent(final DestinationOauthConsentRequest destinationOauthConsentRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, destinationOauthConsentRequest.getWorkspaceId(), DESTINATION_DEFINITION_ID_KEY,
         destinationOauthConsentRequest.getDestinationDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -261,7 +261,7 @@ public class OAuthHandler {
   }
 
   public CompleteOAuthResponse completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final CompleteOAuthResponse completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest);
     if (completeOAuthResponse != null && completeSourceOauthRequest.getReturnSecretCoordinate()) {
       return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), completeOAuthResponse);
@@ -273,7 +273,7 @@ public class OAuthHandler {
   @VisibleForTesting
   @SuppressWarnings("PMD.PreserveStackTrace")
   public CompleteOAuthResponse completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -334,7 +334,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeDestinationOAuthRequest.getWorkspaceId(), DESTINATION_DEFINITION_ID_KEY,
         completeDestinationOAuthRequest.getDestinationDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -396,7 +396,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public void revokeSourceOauthTokens(final RevokeSourceOauthTokensRequest revokeSourceOauthTokensRequest)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition =
         configRepository.getStandardSourceDefinition(revokeSourceOauthTokensRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
@@ -582,7 +582,7 @@ public class OAuthHandler {
    * @param requestBody request body
    */
   public void setWorkspaceOverrideOAuthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     switch (requestBody.getActorType()) {
       case SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody);
       case DESTINATION -> setDestinationWorkspaceOverrideOauthParams(requestBody);
@@ -591,7 +591,7 @@ public class OAuthHandler {
   }
 
   public void setSourceWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID definitionId = requestBody.getDefinitionId();
     final StandardSourceDefinition standardSourceDefinition =
         configRepository.getStandardSourceDefinition(definitionId);
@@ -617,7 +617,7 @@ public class OAuthHandler {
   }
 
   public void setDestinationWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID workspaceId = requestBody.getWorkspaceId();
     final UUID definitionId = requestBody.getDefinitionId();
     final StandardDestinationDefinition destinationDefinition =

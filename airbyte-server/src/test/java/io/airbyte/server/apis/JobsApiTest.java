@@ -25,7 +25,7 @@ import org.mockito.Mockito;
 class JobsApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateJob() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCreateJob() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(schedulerHandler.createJob(Mockito.any()))
         .thenReturn(new JobInfoRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -49,7 +49,8 @@ class JobsApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetJobDebugInfo() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testGetJobDebugInfo()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(jobHistoryHandler.getJobDebugInfo(Mockito.any()))
         .thenReturn(new JobDebugInfoRead())
         .thenThrow(new ConfigNotFoundException("", ""));

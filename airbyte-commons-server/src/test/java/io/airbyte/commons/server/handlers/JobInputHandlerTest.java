@@ -97,7 +97,7 @@ class JobInputHandlerTest {
   private ContextBuilder contextBuilder;
 
   @BeforeEach
-  void init() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void init() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);

@@ -12,8 +12,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
@@ -122,16 +120,13 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final ActorDefinitionService actorDefinitionService,
-                                           final CatalogService catalogService,
-                                           final ConnectionService connectionService,
+  public ConfigRepository configRepository(final ConnectionService connectionService,
                                            final ConnectorBuilderService connectorBuilderService,
                                            final DestinationService destinationService,
                                            final OperationService operationService,
                                            final SourceService sourceService,
                                            final WorkspaceService workspaceService) {
     return new ConfigRepository(
-        actorDefinitionService,
         connectionService,
         connectorBuilderService,
         destinationService,

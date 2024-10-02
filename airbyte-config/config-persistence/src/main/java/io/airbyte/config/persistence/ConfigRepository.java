@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -21,7 +20,6 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
@@ -127,7 +125,6 @@ public class ConfigRepository {
                                               int pageSize,
                                               int rowOffset) {}
 
-  private final ActorDefinitionService actorDefinitionService;
   private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final DestinationService destinationService;
@@ -137,14 +134,12 @@ public class ConfigRepository {
 
   @SuppressWarnings("ParameterName")
   @VisibleForTesting
-  public ConfigRepository(final ActorDefinitionService actorDefinitionService,
-                          final ConnectionService connectionService,
+  public ConfigRepository(final ConnectionService connectionService,
                           final ConnectorBuilderService connectorBuilderService,
                           final DestinationService destinationService,
                           final OperationService operationService,
                           final SourceService sourceService,
                           final WorkspaceService workspaceService) {
-    this.actorDefinitionService = actorDefinitionService;
     this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
     this.destinationService = destinationService;
@@ -359,39 +354,6 @@ public class ConfigRepository {
   @Deprecated
   public List<StandardSourceDefinition> listStandardSourceDefinitions(final boolean includeTombstone) throws IOException {
     return sourceService.listStandardSourceDefinitions(includeTombstone);
-  }
-
-  /**
-   * Get actor definition IDs that are in use.
-   *
-   * @return list of IDs
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public Set<UUID> getActorDefinitionIdsInUse() throws IOException {
-    return actorDefinitionService.getActorDefinitionIdsInUse();
-  }
-
-  /**
-   * Get actor definition ids to pair of actor type and protocol version.
-   *
-   * @return map of definition id to pair of actor type and protocol version.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public Map<UUID, Map.Entry<io.airbyte.config.ActorType, Version>> getActorDefinitionToProtocolVersionMap() throws IOException {
-    return actorDefinitionService.getActorDefinitionToProtocolVersionMap();
-  }
-
-  /**
-   * Get a map of all actor definition ids and their default versions.
-   *
-   * @return map of definition id to default version.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public Map<UUID, ActorDefinitionVersion> getActorDefinitionIdsToDefaultVersionsMap() throws IOException {
-    return actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap();
   }
 
   /**
@@ -686,49 +648,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Write actor definition workspace grant.
-   *
-   * @param actorDefinitionId actor definition id
-   * @param scopeId workspace or organization id
-   * @param scopeType ScopeType of either workspace or organization
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    actorDefinitionService.writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId, scopeType);
-  }
-
-  /**
-   * Test if grant exists for actor definition and scope.
-   *
-   * @param actorDefinitionId actor definition id
-   * @param scopeId workspace or organization id
-   * @param scopeType enum of workspace or organization
-   * @return true, if the scope has access. otherwise, false.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    return actorDefinitionService.actorDefinitionWorkspaceGrantExists(actorDefinitionId, scopeId, scopeType);
-  }
-
-  /**
-   * Delete workspace access to actor definition.
-   *
-   * @param actorDefinitionId actor definition id to remove
-   * @param scopeId workspace or organization id
-   * @param scopeType enum of workspace or organization
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    actorDefinitionService.deleteActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId, scopeType);
-  }
-
-  /**
    * Test if workspace id has access to a connector definition.
    *
    * @param actorDefinitionId actor definition id
@@ -739,20 +658,6 @@ public class ConfigRepository {
   @Deprecated
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
     return workspaceService.workspaceCanUseDefinition(actorDefinitionId, workspaceId);
-  }
-
-  /**
-   * Test if workspace or organization id has access to a connector definition.
-   *
-   * @param actorDefinitionId actor definition id
-   * @param scopeId id of the workspace or organization
-   * @param scopeType enum of workspace or organization
-   * @return true, if the workspace or organization has access. otherwise, false.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public boolean scopeCanUseDefinition(final UUID actorDefinitionId, final UUID scopeId, final String scopeType) throws IOException {
-    return actorDefinitionService.scopeCanUseDefinition(actorDefinitionId, scopeId, scopeType);
   }
 
   /**
@@ -1420,130 +1325,6 @@ public class ConfigRepository {
   @Deprecated
   public void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException {
     connectorBuilderService.writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection);
-  }
-
-  /**
-   * Insert an actor definition version.
-   *
-   * @param actorDefinitionVersion - actor definition version to insert
-   * @throws IOException - you never know when you io
-   * @returns the POJO associated with the actor definition version inserted. Contains the versionId
-   *          field from the DB.
-   */
-  @Deprecated
-  public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
-    return actorDefinitionService.writeActorDefinitionVersion(actorDefinitionVersion);
-  }
-
-  /**
-   * Get the actor definition version associated with an actor definition and a docker image tag.
-   *
-   * @param actorDefinitionId - actor definition id
-   * @param dockerImageTag - docker image tag
-   * @return actor definition version if there is an entry in the DB already for this version,
-   *         otherwise an empty optional
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  @VisibleForTesting
-  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag)
-      throws IOException {
-    return actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
-  }
-
-  /**
-   * Get an actor definition version by ID.
-   *
-   * @param actorDefinitionVersionId - actor definition version id
-   * @return actor definition version
-   * @throws ConfigNotFoundException if an actor definition version with the provided ID does not
-   *         exist
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
-    try {
-      return actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * List all actor definition versions for a given actor definition.
-   *
-   * @param actorDefinitionId - actor definition id
-   * @return list of actor definition versions
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public List<ActorDefinitionVersion> listActorDefinitionVersionsForDefinition(final UUID actorDefinitionId) throws IOException {
-    return actorDefinitionService.listActorDefinitionVersionsForDefinition(actorDefinitionId);
-  }
-
-  /**
-   * Get actor definition versions by ID.
-   *
-   * @param actorDefinitionVersionIds - actor definition version ids
-   * @return list of actor definition version
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public List<ActorDefinitionVersion> getActorDefinitionVersions(final List<UUID> actorDefinitionVersionIds) throws IOException {
-    return actorDefinitionService.getActorDefinitionVersions(actorDefinitionVersionIds);
-  }
-
-  /**
-   * Get the list of breaking changes available affecting an actor definition.
-   *
-   * @param actorDefinitionId - actor definition id
-   * @return list of breaking changes
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId) throws IOException {
-    return actorDefinitionService.listBreakingChangesForActorDefinition(actorDefinitionId);
-  }
-
-  /**
-   * Set the support state for a list of actor definition versions.
-   *
-   * @param actorDefinitionVersionIds - actor definition version ids to update
-   * @param supportState - support state to update to
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public void setActorDefinitionVersionSupportStates(final List<UUID> actorDefinitionVersionIds,
-                                                     final ActorDefinitionVersion.SupportState supportState)
-      throws IOException {
-    actorDefinitionService.setActorDefinitionVersionSupportStates(actorDefinitionVersionIds, supportState);
-  }
-
-  /**
-   * Get the list of breaking changes available affecting an actor definition version.
-   * <p>
-   * "Affecting" breaking changes are those between the provided version (non-inclusive) and the actor
-   * definition default version (inclusive).
-   *
-   * @param actorDefinitionVersion - actor definition version
-   * @return list of breaking changes
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion)
-      throws IOException {
-    return actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
-  }
-
-  /**
-   * List all breaking changes.
-   *
-   * @return list of breaking changes
-   * @throws IOException - you never know when you io
-   */
-  @Deprecated
-  public List<ActorDefinitionBreakingChange> listBreakingChanges() throws IOException {
-    return actorDefinitionService.listBreakingChanges();
   }
 
   @Deprecated

@@ -18,7 +18,6 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
@@ -57,7 +56,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,

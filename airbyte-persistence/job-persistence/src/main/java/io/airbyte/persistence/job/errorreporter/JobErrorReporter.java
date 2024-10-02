@@ -21,6 +21,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -60,18 +61,21 @@ public class JobErrorReporter {
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
 
   private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final DeploymentMode deploymentMode;
   private final String airbyteVersion;
   private final WebUrlHelper webUrlHelper;
   private final JobErrorReportingClient jobErrorReportingClient;
 
   public JobErrorReporter(final ConfigRepository configRepository,
+                          final ActorDefinitionService actorDefinitionService,
                           final DeploymentMode deploymentMode,
                           final String airbyteVersion,
                           final WebUrlHelper webUrlHelper,
                           final JobErrorReportingClient jobErrorReportingClient) {
 
     this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
     this.deploymentMode = deploymentMode;
     this.airbyteVersion = airbyteVersion;
     this.webUrlHelper = webUrlHelper;
@@ -111,7 +115,7 @@ public class JobErrorReporter {
           // The rest are ignored.
           if (failureOrigin == FailureOrigin.SOURCE) {
             final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-            final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
+            final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata,
@@ -120,7 +124,7 @@ public class JobErrorReporter {
             reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
           } else if (failureOrigin == FailureOrigin.DESTINATION) {
             final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
-            final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+            final ActorDefinitionVersion destinationVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.destinationVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage(),

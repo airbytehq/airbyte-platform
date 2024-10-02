@@ -112,7 +112,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
@@ -238,6 +240,7 @@ class SchedulerHandlerTest {
 
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private Job job;
   private SynchronousSchedulerClient synchronousSchedulerClient;
@@ -265,9 +268,10 @@ class SchedulerHandlerTest {
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private LogClientManager logClientManager;
   private CatalogService catalogService;
+  private ConnectionService connectionService;
 
   @BeforeEach
-  void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void setup() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     job = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -284,7 +288,9 @@ class SchedulerHandlerTest {
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
     catalogService = mock(CatalogService.class);
+    connectionService = mock(ConnectionService.class);
     when(configRepository.getStandardSync(any())).thenReturn(new StandardSync().withStatus(StandardSync.Status.ACTIVE));
     when(configRepository.getStandardDestinationDefinition(any())).thenReturn(SOME_DESTINATION_DEFINITION);
     when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(SOME_DESTINATION_DEFINITION);
@@ -321,7 +327,9 @@ class SchedulerHandlerTest {
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
+        actorDefinitionService,
         catalogService,
+        connectionService,
         secretsRepositoryWriter,
         synchronousSchedulerClient,
         configurationUpdate,
@@ -348,7 +356,7 @@ class SchedulerHandlerTest {
 
   @Test
   @DisplayName("Test job creation")
-  void createJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void createJob() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(jobFactory.createSync(CONNECTION_ID))
         .thenReturn(JOB_ID);
     Mockito.when(configRepository.getStandardSync(CONNECTION_ID))
@@ -365,7 +373,7 @@ class SchedulerHandlerTest {
 
   @Test
   @DisplayName("Test refresh job creation")
-  void createRefreshJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void createRefreshJob() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(jobFactory.createRefresh(eq(CONNECTION_ID), any()))
         .thenReturn(JOB_ID);
     when(configRepository.getStandardSync(CONNECTION_ID))
@@ -386,7 +394,7 @@ class SchedulerHandlerTest {
 
   @Test
   @DisplayName("Test reset job creation")
-  void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(WEBHOOK_OPERATION);
     final StandardSync standardSync =
         new StandardSync().withDestinationId(DESTINATION_ID).withOperationIds(List.of(WEBHOOK_OPERATION_ID));
@@ -430,7 +438,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckSourceConnectionFromSourceId() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testCheckSourceConnectionFromSourceId()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceIdRequestBody request = new SourceIdRequestBody().sourceId(source.getSourceId());
 
@@ -456,7 +465,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckSourceConnectionFromSourceCreate() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testCheckSourceConnectionFromSourceCreate()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = new SourceConnection()
         .withWorkspaceId(SOURCE.getWorkspaceId())
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
@@ -492,7 +502,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckSourceConnectionFromUpdate() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCheckSourceConnectionFromUpdate()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceUpdate sourceUpdate = new SourceUpdate()
         .name(source.getName())
@@ -529,7 +540,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckDestinationConnectionFromDestinationId() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCheckDestinationConnectionFromDestinationId()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection destination = DestinationHelpers.generateDestination(UUID.randomUUID());
     final DestinationIdRequestBody request = new DestinationIdRequestBody().destinationId(destination.getDestinationId());
 
@@ -555,7 +567,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckDestinationConnectionFromDestinationCreate() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testCheckDestinationConnectionFromDestinationCreate()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection destination = new DestinationConnection()
         .withWorkspaceId(DESTINATION.getWorkspaceId())
         .withDestinationDefinitionId(DESTINATION.getDestinationDefinitionId())
@@ -589,7 +602,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testCheckDestinationConnectionFromUpdate() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCheckDestinationConnectionFromUpdate()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection destination = DestinationHelpers.generateDestination(UUID.randomUUID());
     final DestinationUpdate destinationUpdate = new DestinationUpdate()
         .name(destination.getName())
@@ -684,7 +698,7 @@ class SchedulerHandlerTest {
   void testCheckConnectionReadFormat(final Optional<String> standardCheckConnectionOutputStatusEmittedBySource,
                                      final boolean traceMessageEmittedBySource,
                                      final CheckConnectionRead expectedCheckConnectionRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final io.airbyte.config.FailureReason failureReason = new io.airbyte.config.FailureReason()
         .withFailureOrigin(io.airbyte.config.FailureReason.FailureOrigin.fromValue(FAILURE_ORIGIN))
@@ -1983,7 +1997,7 @@ class SchedulerHandlerTest {
   }
 
   private void mockSourceForDiscoverJob(final SourceConnection source, final StandardSourceDefinition sourceDefinition)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))

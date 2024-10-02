@@ -427,7 +427,8 @@ class WorkspacesHandlerTest {
   }
 
   @Test
-  void testDeleteWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId());
 
     final ConnectionRead connection = new ConnectionRead();

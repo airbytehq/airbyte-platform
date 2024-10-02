@@ -668,7 +668,8 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
+    void testSearchConnections()
+        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
       final ConnectionRead connectionRead1 = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
       final StandardSync standardSync2 = new StandardSync()
           .withConnectionId(UUID.randomUUID())

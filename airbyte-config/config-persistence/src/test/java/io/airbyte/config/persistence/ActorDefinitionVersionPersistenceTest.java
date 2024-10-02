@@ -108,6 +108,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
   private StandardSourceDefinition sourceDefinition;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -121,12 +122,11 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
         new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
             connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
@@ -162,7 +162,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   void testWriteActorDefinitionVersion() throws IOException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId);
-    final ActorDefinitionVersion writtenADV = configRepository.writeActorDefinitionVersion(adv);
+    final ActorDefinitionVersion writtenADV = actorDefinitionService.writeActorDefinitionVersion(adv);
 
     // All non-ID fields should match (the ID is randomly assigned)
     final ActorDefinitionVersion expectedADV = adv.withVersionId(writtenADV.getVersionId());
@@ -174,10 +174,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   void testGetActorDefinitionVersionByTag() throws IOException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId);
-    final ActorDefinitionVersion actorDefinitionVersion = configRepository.writeActorDefinitionVersion(adv);
+    final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionService.writeActorDefinitionVersion(adv);
     final UUID id = actorDefinitionVersion.getVersionId();
 
-    final Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    final Optional<ActorDefinitionVersion> optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(adv.withVersionId(id), optRetrievedADV.get());
   }
@@ -188,28 +188,28 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
 
     // initial insert
-    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final ActorDefinitionVersion insertedADV = actorDefinitionService.writeActorDefinitionVersion(Jsons.clone(initialADV));
     final UUID id = insertedADV.getVersionId();
 
-    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    Optional<ActorDefinitionVersion> optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(insertedADV, optRetrievedADV.get());
     assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
 
     // update w/o ID
     final ActorDefinitionVersion advWithNewSpec = Jsons.clone(initialADV).withSpec(SPEC_2);
-    final ActorDefinitionVersion updatedADV = configRepository.writeActorDefinitionVersion(advWithNewSpec);
+    final ActorDefinitionVersion updatedADV = actorDefinitionService.writeActorDefinitionVersion(advWithNewSpec);
 
-    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(updatedADV, optRetrievedADV.get());
     assertEquals(Jsons.clone(advWithNewSpec).withVersionId(id), optRetrievedADV.get());
 
     // update w/ ID
     final ActorDefinitionVersion advWithAnotherNewSpecAndId = Jsons.clone(updatedADV).withSpec(SPEC_3);
-    final ActorDefinitionVersion updatedADV2 = configRepository.writeActorDefinitionVersion(advWithAnotherNewSpecAndId);
+    final ActorDefinitionVersion updatedADV2 = actorDefinitionService.writeActorDefinitionVersion(advWithAnotherNewSpecAndId);
 
-    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(updatedADV2, optRetrievedADV.get());
     assertEquals(advWithAnotherNewSpecAndId, optRetrievedADV.get());
@@ -221,20 +221,20 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
 
     // initial insert
-    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final ActorDefinitionVersion insertedADV = actorDefinitionService.writeActorDefinitionVersion(Jsons.clone(initialADV));
     final UUID id = insertedADV.getVersionId();
 
-    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    Optional<ActorDefinitionVersion> optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(insertedADV, optRetrievedADV.get());
     assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
 
     // update same tag w/ different ID throws
     final ActorDefinitionVersion advWithNewId = Jsons.clone(initialADV).withSpec(SPEC_2).withVersionId(UUID.randomUUID());
-    assertThrows(RuntimeException.class, () -> configRepository.writeActorDefinitionVersion(advWithNewId));
+    assertThrows(RuntimeException.class, () -> actorDefinitionService.writeActorDefinitionVersion(advWithNewId));
 
     // no change in DB
-    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
   }
@@ -242,17 +242,17 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testGetForNonExistentTagReturnsEmptyOptional() throws IOException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
-    assertTrue(configRepository.getActorDefinitionVersion(defId, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty());
+    assertTrue(actorDefinitionService.getActorDefinitionVersion(defId, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty());
   }
 
   @Test
-  void testGetActorDefinitionVersionById() throws IOException, ConfigNotFoundException {
+  void testGetActorDefinitionVersionById() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId);
-    final ActorDefinitionVersion actorDefinitionVersion = configRepository.writeActorDefinitionVersion(adv);
+    final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionService.writeActorDefinitionVersion(adv);
     final UUID id = actorDefinitionVersion.getVersionId();
 
-    final ActorDefinitionVersion retrievedADV = configRepository.getActorDefinitionVersion(id);
+    final ActorDefinitionVersion retrievedADV = actorDefinitionService.getActorDefinitionVersion(id);
     assertNotNull(retrievedADV);
     assertEquals(adv.withVersionId(id), retrievedADV);
   }
@@ -262,7 +262,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     // Test using the definition id to catch any accidental assignment
     final UUID defId = sourceDefinition.getSourceDefinitionId();
 
-    assertThrows(ConfigNotFoundException.class, () -> configRepository.getActorDefinitionVersion(defId));
+    assertThrows(io.airbyte.data.exceptions.ConfigNotFoundException.class, () -> actorDefinitionService.getActorDefinitionVersion(defId));
   }
 
   @Test
@@ -272,7 +272,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     configRepository.writeConnectorMetadata(sourceDefinition, adv);
 
-    final Optional<ActorDefinitionVersion> optADVForTag = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    final Optional<ActorDefinitionVersion> optADVForTag = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTag.isPresent());
     final ActorDefinitionVersion advForTag = optADVForTag.get();
     assertEquals(advForTag.getSupportLevel(), SupportLevel.NONE);
@@ -307,10 +307,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<UUID> versionIds = new ArrayList<>();
     for (final ActorDefinitionVersion actorDefVersion : allActorDefVersions) {
-      versionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId());
     }
 
-    final List<ActorDefinitionVersion> actorDefinitionVersions = configRepository.getActorDefinitionVersions(versionIds);
+    final List<ActorDefinitionVersion> actorDefinitionVersions = actorDefinitionService.getActorDefinitionVersions(versionIds);
     final List<String> protocolVersions = actorDefinitionVersions.stream().map(ActorDefinitionVersion::getProtocolVersion).toList();
     assertEquals(
         List.of(
@@ -340,14 +340,14 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<UUID> expectedVersionIds = new ArrayList<>();
     for (final ActorDefinitionVersion actorDefVersion : actorDefinitionVersions) {
-      expectedVersionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+      expectedVersionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId());
     }
 
     final UUID defaultVersionId = configRepository.getStandardSourceDefinition(defId).getDefaultVersionId();
     expectedVersionIds.add(defaultVersionId);
 
     final List<ActorDefinitionVersion> actorDefinitionVersionsForDefinition =
-        configRepository.listActorDefinitionVersionsForDefinition(defId);
+        actorDefinitionService.listActorDefinitionVersionsForDefinition(defId);
     assertThat(expectedVersionIds)
         .containsExactlyInAnyOrderElementsOf(actorDefinitionVersionsForDefinition.stream().map(ActorDefinitionVersion::getVersionId).toList());
     assertFalse(
@@ -374,12 +374,12 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<UUID> versionIds = new ArrayList<>();
     for (final ActorDefinitionVersion actorDefVersion : actorDefinitionVersions) {
-      versionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId());
     }
 
-    configRepository.setActorDefinitionVersionSupportStates(versionIds, targetSupportState);
+    actorDefinitionService.setActorDefinitionVersionSupportStates(versionIds, targetSupportState);
 
-    final List<ActorDefinitionVersion> updatedActorDefinitionVersions = configRepository.getActorDefinitionVersions(versionIds);
+    final List<ActorDefinitionVersion> updatedActorDefinitionVersions = actorDefinitionService.getActorDefinitionVersions(versionIds);
     for (final ActorDefinitionVersion updatedActorDefinitionVersion : updatedActorDefinitionVersions) {
       assertEquals(targetSupportState, updatedActorDefinitionVersion.getSupportState());
     }

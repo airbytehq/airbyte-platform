@@ -40,6 +40,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
@@ -69,6 +70,7 @@ import java.util.stream.Stream;
 public class SourceDefinitionsHandler {
 
   private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final Supplier<UUID> uuidSupplier;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
@@ -80,6 +82,7 @@ public class SourceDefinitionsHandler {
 
   @Inject
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
+                                  final ActorDefinitionService actorDefinitionService,
                                   @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                   final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
@@ -89,6 +92,7 @@ public class SourceDefinitionsHandler {
                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                   final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
     this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
@@ -100,9 +104,9 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
     return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
   }
 
@@ -151,7 +155,7 @@ public class SourceDefinitionsHandler {
 
   private Map<UUID, ActorDefinitionVersion> getVersionsForSourceDefinitions(final List<StandardSourceDefinition> sourceDefinitions)
       throws IOException {
-    return configRepository.getActorDefinitionVersions(sourceDefinitions
+    return actorDefinitionService.getActorDefinitionVersions(sourceDefinitions
         .stream()
         .map(StandardSourceDefinition::getDefaultVersionId)
         .collect(Collectors.toList()))
@@ -223,16 +227,16 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return buildSourceDefinitionRead(sourceDefinitionIdRequestBody.getSourceDefinitionId());
   }
 
   public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
     final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
     final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
-    if (!configRepository.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
+    if (!actorDefinitionService.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
       final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
       throw new IdNotFoundKnownException(message, definitionId.toString());
     }
@@ -240,7 +244,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID definitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
     final UUID workspaceId = sourceDefinitionIdWithWorkspaceId.getWorkspaceId();
     if (!configRepository.workspaceCanUseDefinition(definitionId, workspaceId)) {
@@ -294,7 +298,7 @@ public class SourceDefinitionsHandler {
     }
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
-    final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
+    final ActorDefinitionVersion currentVersion = actorDefinitionService.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
 
     final StandardSourceDefinition newSource = buildSourceDefinitionUpdate(currentSourceDefinition, sourceDefinitionUpdate);
 
@@ -337,7 +341,7 @@ public class SourceDefinitionsHandler {
   }
 
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // "delete" all sources associated with the source definition as well. This will cascade to
     // connections that depend on any deleted sources.
     // Delete sources first in case a failure occurs mid-operation.
@@ -354,11 +358,12 @@ public class SourceDefinitionsHandler {
   }
 
   public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition standardSourceDefinition =
         configRepository.getStandardSourceDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
-    final ActorDefinitionVersion actorDefinitionVersion = configRepository.getActorDefinitionVersion(standardSourceDefinition.getDefaultVersionId());
-    configRepository.writeActorDefinitionWorkspaceGrant(
+    final ActorDefinitionVersion actorDefinitionVersion =
+        actorDefinitionService.getActorDefinitionVersion(standardSourceDefinition.getDefaultVersionId());
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.getActorDefinitionId(),
         actorDefinitionIdWithScope.getScopeId(),
         ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
@@ -369,7 +374,7 @@ public class SourceDefinitionsHandler {
 
   public void revokeSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws IOException {
-    configRepository.deleteActorDefinitionWorkspaceGrant(
+    actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.getActorDefinitionId(),
         actorDefinitionIdWithScope.getScopeId(),
         ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));

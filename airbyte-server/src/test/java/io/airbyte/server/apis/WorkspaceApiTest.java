@@ -92,7 +92,8 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(workspacesHandler).deleteWorkspace(Mockito.any());

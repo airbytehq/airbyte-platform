@@ -92,7 +92,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
         new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
             connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,

@@ -44,7 +44,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(sourceDefinitionsHandler).deleteSourceDefinition(Mockito.any());
@@ -70,7 +71,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.getSourceDefinition(Mockito.any()))
         .thenReturn(new SourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -84,7 +86,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetSourceDefinitionForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetSourceDefinitionForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.getSourceDefinitionForWorkspace(Mockito.any()))
         .thenReturn(new SourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -98,7 +101,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGrantSourceDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGrantSourceDefinitionToWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateSourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -132,7 +136,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListSourceDefinitions() throws JsonValidationException, IOException {
+  void testListSourceDefinitions() throws IOException {
     Mockito.when(sourceDefinitionsHandler.listSourceDefinitions())
         .thenReturn(new SourceDefinitionReadList());
     final String path = "/api/v1/source_definitions/list";

@@ -86,7 +86,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     configRepository = spy(
         new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
             connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
@@ -325,7 +324,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testUpdateDeclarativeActorDefinitionVersions() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testUpdateDeclarativeActorDefinitionVersions()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String declarativeDockerRepository = "airbyte/source-declarative-manifest";
     final String previousTag = "0.1.0";
     final String newTag = "0.2.0";
@@ -355,10 +355,10 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition persistedSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
 
     // Definitions that were on the previous tag should be updated to the new tag
-    assertEquals(newTag, configRepository.getActorDefinitionVersion(updatedSourceDef.getDefaultVersionId()).getDockerImageTag());
-    assertEquals(newTag, configRepository.getActorDefinitionVersion(updatedSourceDef2.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(newTag, actorDefinitionService.getActorDefinitionVersion(updatedSourceDef.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(newTag, actorDefinitionService.getActorDefinitionVersion(updatedSourceDef2.getDefaultVersionId()).getDockerImageTag());
     // Definitions on a different version don't get updated
-    assertEquals(differentMajorTag, configRepository.getActorDefinitionVersion(persistedSourceDef3.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(differentMajorTag, actorDefinitionService.getActorDefinitionVersion(persistedSourceDef3.getDefaultVersionId()).getDockerImageTag());
   }
 
   @Test
@@ -386,10 +386,10 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(destDefNotInUse.getDestinationDefinitionId());
     configRepository.writeConnectorMetadata(destDefNotInUse, actorDefinitionVersion2);
 
-    assertTrue(configRepository.getActorDefinitionIdsInUse().contains(sourceDefInUse.getSourceDefinitionId()));
-    assertTrue(configRepository.getActorDefinitionIdsInUse().contains(destDefInUse.getDestinationDefinitionId()));
-    assertFalse(configRepository.getActorDefinitionIdsInUse().contains(sourceDefNotInUse.getSourceDefinitionId()));
-    assertFalse(configRepository.getActorDefinitionIdsInUse().contains(destDefNotInUse.getDestinationDefinitionId()));
+    assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefInUse.getSourceDefinitionId()));
+    assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefInUse.getDestinationDefinitionId()));
+    assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefNotInUse.getSourceDefinitionId()));
+    assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefNotInUse.getDestinationDefinitionId()));
   }
 
   @Test
@@ -402,7 +402,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion2);
 
-    final Map<UUID, ActorDefinitionVersion> actorDefIdToDefaultVersionId = configRepository.getActorDefinitionIdsToDefaultVersionsMap();
+    final Map<UUID, ActorDefinitionVersion> actorDefIdToDefaultVersionId = actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap();
     assertEquals(actorDefIdToDefaultVersionId.size(), 2);
     assertEquals(actorDefIdToDefaultVersionId.get(sourceDef.getSourceDefinitionId()), actorDefinitionVersion);
     assertEquals(actorDefIdToDefaultVersionId.get(destDef.getDestinationDefinitionId()), actorDefinitionVersion2);

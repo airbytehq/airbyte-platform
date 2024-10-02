@@ -62,6 +62,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
@@ -93,6 +94,7 @@ class SourceDefinitionsHandlerTest {
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/source-presto/latest/icon.svg";
 
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
   private StandardSourceDefinition sourceDefinition;
   private StandardSourceDefinition sourceDefinitionWithOptionals;
   private ActorDefinitionVersion sourceDefinitionVersion;
@@ -114,6 +116,7 @@ class SourceDefinitionsHandlerTest {
   @BeforeEach
   void setUp() {
     configRepository = mock(ConfigRepository.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
     uuidSupplier = mock(Supplier.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
@@ -130,8 +133,17 @@ class SourceDefinitionsHandlerTest {
     airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
 
     sourceDefinitionsHandler =
-        new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            supportStateUpdater, featureFlagClient, actorDefinitionVersionHelper, airbyteCompatibleConnectorsValidator);
+        new SourceDefinitionsHandler(
+            configRepository,
+            actorDefinitionService,
+            uuidSupplier,
+            actorDefinitionHandlerHelper,
+            remoteDefinitionsProvider,
+            sourceHandler,
+            supportStateUpdater,
+            featureFlagClient,
+            actorDefinitionVersionHelper,
+            airbyteCompatibleConnectorsValidator);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -207,7 +219,7 @@ class SourceDefinitionsHandlerTest {
 
     when(configRepository.listStandardSourceDefinitions(false))
         .thenReturn(Lists.newArrayList(sourceDefinition, sourceDefinition2, sourceDefinitionWithOptionals));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId(),
+    when(actorDefinitionService.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId(),
         sourceDefinitionWithOptionals.getDefaultVersionId())))
             .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2, sourceDefinitionVersionWithOptionals));
 
@@ -368,7 +380,7 @@ class SourceDefinitionsHandlerTest {
         Lists.newArrayList(
             Map.entry(sourceDefinition, false),
             Map.entry(sourceDefinition2, true)));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
+    when(actorDefinitionService.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
         .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
@@ -419,10 +431,11 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinition should return the right source")
-  void testGetSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+  void testGetSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
@@ -464,7 +477,7 @@ class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForScope should throw an exception for a missing grant")
   void testGetDefinitionWithoutGrantForScope() throws IOException {
-    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value())).thenReturn(
+    when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value())).thenReturn(
         false);
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
         .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -472,8 +485,9 @@ class SourceDefinitionsHandlerTest {
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
     assertThrows(IdNotFoundKnownException.class, () -> sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForWorkspace));
 
-    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value())).thenReturn(
-        false);
+    when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value()))
+        .thenReturn(
+            false);
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForOrganization = new ActorDefinitionIdWithScope()
         .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .scopeId(organizationId)
@@ -484,10 +498,11 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should return the source definition if the grant exists")
-  void testGetDefinitionWithGrantForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+  void testGetDefinitionWithGrantForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.workspaceCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId)).thenReturn(true);
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -517,12 +532,15 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForScope should return the source definition if the grant exists")
-  void testGetDefinitionWithGrantForScope() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value())).thenReturn(true);
-    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value())).thenReturn(
-        true);
+  void testGetDefinitionWithGrantForScope()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value()))
+        .thenReturn(true);
+    when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value()))
+        .thenReturn(
+            true);
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -765,7 +783,7 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(sourceDefinition) // Call at the beginning of the method
         .thenReturn(persistedUpdatedSource); // Call after we've persisted
 
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
@@ -839,11 +857,11 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should not update a sourceDefinition "
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateSource() throws ConfigNotFoundException, IOException,
-      JsonValidationException {
+      JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
     final SourceDefinitionRead currentSource = sourceDefinitionsHandler
         .getSourceDefinition(
@@ -871,11 +889,11 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should not update a sourceDefinition "
       + "if Airbyte version is unsupported")
   void testUnsupportedAirbyteVersionUpdateSource() throws ConfigNotFoundException, IOException,
-      JsonValidationException {
+      JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), eq("12.4.0")))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, ""));
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
     final SourceDefinitionRead currentSource = sourceDefinitionsHandler
         .getSourceDefinition(
@@ -893,7 +911,8 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("deleteSourceDefinition should correctly delete a sourceDefinition")
-  void testDeleteSourceDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testDeleteSourceDefinition()
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinition.getSourceDefinitionId());
     final StandardSourceDefinition updatedSourceDefinition = Jsons.clone(this.sourceDefinition).withTombstone(true);
@@ -914,10 +933,11 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create a workspace grant")
-  void testGrantSourceDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+  void testGrantSourceDefinitionToWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
@@ -945,15 +965,16 @@ class SourceDefinitionsHandlerTest {
                 .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
 
     assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead);
-    verify(configRepository).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
   }
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create an organization grant")
-  void testGrantSourceDefinitionToOrganization() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+  void testGrantSourceDefinitionToOrganization()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
@@ -981,7 +1002,8 @@ class SourceDefinitionsHandlerTest {
                 .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
 
     assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead);
-    verify(configRepository).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION);
+    verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId,
+        ScopeType.ORGANIZATION);
   }
 
   @Test
@@ -990,12 +1012,13 @@ class SourceDefinitionsHandlerTest {
     sourceDefinitionsHandler.revokeSourceDefinition(
         new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(workspaceId)
             .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
-    verify(configRepository).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
 
     sourceDefinitionsHandler.revokeSourceDefinition(
         new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(organizationId)
             .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
-    verify(configRepository).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION);
+    verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId,
+        ScopeType.ORGANIZATION);
   }
 
   @Test

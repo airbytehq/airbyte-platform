@@ -266,7 +266,8 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void testCompleteSourceOAuthHandleReturnSecret() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCompleteSourceOAuthHandleReturnSecret()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
 

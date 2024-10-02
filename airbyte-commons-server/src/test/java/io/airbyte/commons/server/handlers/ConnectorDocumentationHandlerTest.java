@@ -74,7 +74,8 @@ class ConnectorDocumentationHandlerTest {
   // SOURCE
 
   @Test
-  void testNoSourceDocumentationFound() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testNoSourceDocumentationFound()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -90,7 +91,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -111,7 +113,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -132,7 +135,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
@@ -152,7 +156,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
@@ -173,7 +178,8 @@ class ConnectorDocumentationHandlerTest {
 
   // DESTINATION
   @Test
-  void testNoDestinationDocumentationFound() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testNoDestinationDocumentationFound()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -190,7 +196,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -212,7 +219,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -235,7 +243,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
@@ -256,7 +265,8 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);

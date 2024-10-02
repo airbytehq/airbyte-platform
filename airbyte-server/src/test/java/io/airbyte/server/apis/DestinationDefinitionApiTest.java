@@ -45,7 +45,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteDestinationDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteDestinationDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(destinationDefinitionsHandler).deleteDestinationDefinition(Mockito.any());
@@ -71,7 +72,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetDestinationDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetDestinationDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.getDestinationDefinition(Mockito.any()))
         .thenReturn(new DestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -85,7 +87,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetDestinationDefinitionForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetDestinationDefinitionForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(Mockito.any()))
         .thenReturn(new DestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -99,7 +102,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGrantDestinationDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGrantDestinationDefinitionToWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateDestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));

@@ -176,7 +176,6 @@ class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
@@ -194,7 +193,8 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
@@ -284,7 +284,6 @@ class BootloaderTest {
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
     val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         destinationService,
@@ -307,7 +306,8 @@ class BootloaderTest {
     val supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangesHelper,
             breakingChangeNotificationHelper, featureFlagClient);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
@@ -398,7 +398,6 @@ class BootloaderTest {
         actorDefinitionService,
         scopedConfigurationService);
     val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
         connectionService,
         connectorBuilderService,
         new DestinationServiceJooqImpl(configDatabase,
@@ -432,7 +431,8 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
     val postLoadExecutor = new PostLoadExecutor() {
 
       @Override

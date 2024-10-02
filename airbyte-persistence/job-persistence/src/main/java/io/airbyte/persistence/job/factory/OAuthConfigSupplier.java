@@ -148,7 +148,7 @@ public class OAuthConfigSupplier {
             }
           });
       return sourceConnectorConfig;
-    } catch (final JsonValidationException | ConfigNotFoundException e) {
+    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new IOException(e);
     }
   }
@@ -181,7 +181,7 @@ public class OAuthConfigSupplier {
             }
           });
       return destinationConnectorConfig;
-    } catch (final JsonValidationException | ConfigNotFoundException e) {
+    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new IOException(e);
     }
   }

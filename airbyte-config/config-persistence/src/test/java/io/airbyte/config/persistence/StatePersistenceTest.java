@@ -92,7 +92,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
@@ -919,7 +918,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,

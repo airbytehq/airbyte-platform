@@ -64,7 +64,7 @@ public class MatchSearchHandler {
   }
 
   public boolean matchSearch(final ConnectionSearch connectionSearch, final ConnectionRead connectionRead)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionRead.getSourceId());
     final StandardSourceDefinition sourceDefinition =
@@ -85,7 +85,7 @@ public class MatchSearchHandler {
   }
 
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final List<ConnectionRead> reads = Lists.newArrayList();
     for (final StandardSync standardSync : configRepository.listStandardSyncs()) {
       if (standardSync.getStatus() != StandardSync.Status.DEPRECATED) {

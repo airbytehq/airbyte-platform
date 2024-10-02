@@ -24,7 +24,8 @@ import org.mockito.Mockito;
 class SchedulerApiTest extends BaseControllerTest {
 
   @Test
-  void testExecuteDestinationCheckConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteDestinationCheckConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(schedulerHandler.checkDestinationConnectionFromDestinationCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -38,7 +39,8 @@ class SchedulerApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testExecuteSourceCheckConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteSourceCheckConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -52,7 +54,8 @@ class SchedulerApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testExecuteSourceDiscoverSchema() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteSourceDiscoverSchema()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead());
     final String path = "/api/v1/scheduler/sources/check_connection";

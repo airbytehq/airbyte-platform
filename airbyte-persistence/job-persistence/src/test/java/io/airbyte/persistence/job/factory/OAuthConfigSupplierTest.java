@@ -67,7 +67,7 @@ class OAuthConfigSupplierTest {
   private OAuthService oAuthService;
 
   @BeforeEach
-  void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void setup() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     configRepository = mock(ConfigRepository.class);
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -111,7 +111,8 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testNoOAuthInjectionBecauseMissingPredicateKey() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testNoOAuthInjectionBecauseMissingPredicateKey()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of("some_random_fields", AUTH_TYPE))
         .withPredicateValue(OAUTH));
@@ -125,7 +126,8 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testNoOAuthInjectionBecauseWrongPredicateValue() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testNoOAuthInjectionBecauseWrongPredicateValue()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue("wrong_auth_type"));
@@ -176,7 +178,8 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthInjectionWithoutPredicate() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthInjectionWithoutPredicate()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(null)
         .withPredicateValue(null));
@@ -206,7 +209,8 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthInjectionWithoutPredicateValue() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthInjectionWithoutPredicateValue()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue(""));
@@ -236,7 +240,8 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthFullInjectionBecauseNoOAuthSpec()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
@@ -356,7 +361,8 @@ class OAuthConfigSupplierTest {
                     OAuthConfigSupplier.PATH_IN_CONNECTOR_CONFIG, List.of(CREDENTIALS, API_CLIENT)))))));
   }
 
-  private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth) throws JsonValidationException, ConfigNotFoundException, IOException {
+  private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(testSourceVersion
         .withSpec(createConnectorSpecification(advancedAuth)));

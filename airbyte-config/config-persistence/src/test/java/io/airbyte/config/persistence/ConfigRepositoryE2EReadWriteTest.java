@@ -103,6 +103,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   private ConfigRepository configRepository;
   private CatalogService catalogService;
   private OAuthService oauthService;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
@@ -117,12 +118,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
         new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
             connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
@@ -221,7 +221,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadActorCatalog() throws IOException, JsonValidationException, SQLException {
+  void testReadActorCatalog() throws IOException {
     final String otherConfigHash = "OtherConfigHash";
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
 
@@ -521,13 +521,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final UUID definitionId = MockData.standardSourceDefinitions().get(0).getSourceDefinitionId();
 
-    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
+    assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
 
-    configRepository.writeActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
-    assertTrue(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
+    assertTrue(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
 
-    configRepository.deleteActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
-    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
+    actorDefinitionService.deleteActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
+    assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
   }
 
   @Test
@@ -561,8 +561,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition grantableDefinition2 = MockData.grantableSourceDefinition2();
     final StandardSourceDefinition customDefinition = MockData.customSourceDefinition();
 
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     final List<StandardSourceDefinition> actualGrantedDefinitions = configRepository
         .listGrantedSourceDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
@@ -589,8 +589,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition grantableDefinition2 = MockData.grantableDestinationDefinition2();
     final StandardDestinationDefinition customDefinition = MockData.customDestinationDefinition();
 
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     final List<StandardDestinationDefinition> actualGrantedDefinitions = configRepository
         .listGrantedDestinationDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
@@ -617,16 +617,16 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     assertTrue(configRepository.workspaceCanUseDefinition(publicDefinitionId, workspaceId));
 
     // Can use granted definitions
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId, ScopeType.WORKSPACE);
     assertTrue(configRepository.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId));
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId, ScopeType.WORKSPACE);
     assertTrue(configRepository.workspaceCanUseDefinition(customDefinitionId, workspaceId));
 
     // Cannot use private definitions without grant
     assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Cannot use other workspace's grants
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId, ScopeType.WORKSPACE);
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId, ScopeType.WORKSPACE);
     assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Passing invalid IDs returns false
@@ -898,7 +898,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final Set<UUID> actorDefinitionIds = new HashSet<>();
     actorDefinitionIds.addAll(MockData.sourceConnections().stream().map(SourceConnection::getSourceDefinitionId).toList());
     actorDefinitionIds.addAll(MockData.destinationConnections().stream().map(DestinationConnection::getDestinationDefinitionId).toList());
-    assertEquals(actorDefinitionIds, configRepository.getActorDefinitionToProtocolVersionMap().keySet());
+    assertEquals(actorDefinitionIds, actorDefinitionService.getActorDefinitionToProtocolVersionMap().keySet());
   }
 
   private void insertCatalogFetchEvent(final DSLContext ctx, final UUID sourceId, final UUID catalogId, final OffsetDateTime creationDate) {

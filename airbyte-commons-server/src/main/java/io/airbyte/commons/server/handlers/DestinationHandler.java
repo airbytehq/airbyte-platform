@@ -102,7 +102,7 @@ public class DestinationHandler {
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // validate configuration
     final ConnectorSpecification spec = getSpecForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
     validateDestination(spec, destinationCreate.getConnectionConfiguration());
@@ -123,7 +123,7 @@ public class DestinationHandler {
   }
 
   public void deleteDestination(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing implementation
     final DestinationRead destination = buildDestinationRead(destinationIdRequestBody.getDestinationId());
 
@@ -132,7 +132,7 @@ public class DestinationHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public void deleteDestination(final DestinationRead destination)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // disable all connections associated with this destination
     // Delete connections first in case it fails in the middle, destination will still be visible
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destination.getWorkspaceId());
@@ -159,7 +159,7 @@ public class DestinationHandler {
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing implementation
     final DestinationConnection updatedDestination = configurationUpdate
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
@@ -187,7 +187,7 @@ public class DestinationHandler {
   }
 
   public DestinationRead partialDestinationUpdate(final PartialDestinationUpdate partialDestinationUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing implementation
     final DestinationConnection updatedDestination = configurationUpdate
         .partialDestination(partialDestinationUpdate.getDestinationId(), partialDestinationUpdate.getName(),
@@ -231,12 +231,12 @@ public class DestinationHandler {
   }
 
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return buildDestinationRead(destinationIdRequestBody.getDestinationId());
   }
 
   public DestinationRead cloneDestination(final DestinationCloneRequestBody destinationCloneRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // read destination configuration from db
     final DestinationRead destinationToClone = buildDestinationReadWithSecrets(destinationCloneRequestBody.getDestinationCloneId());
     final DestinationCloneConfiguration destinationCloneConfiguration = destinationCloneRequestBody.getDestinationConfiguration();
@@ -264,7 +264,7 @@ public class DestinationHandler {
   }
 
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final List<DestinationRead> destinationReads = new ArrayList<>();
     final List<DestinationConnection> destinationConnections =
@@ -277,7 +277,7 @@ public class DestinationHandler {
   }
 
   private DestinationRead buildDestinationReadWithStatus(final DestinationConnection destinationConnection)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationRead destinationRead = buildDestinationRead(destinationConnection);
     // add destination status into destinationRead
     if (destinationService.isDestinationActive(destinationConnection.getDestinationId())) {
@@ -289,7 +289,7 @@ public class DestinationHandler {
   }
 
   public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final List<DestinationRead> reads = Lists.newArrayList();
     final List<DestinationConnection> destinationConnections = configRepository.listWorkspacesDestinationConnections(
@@ -305,7 +305,7 @@ public class DestinationHandler {
   }
 
   public DestinationReadList listDestinationsForDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final List<DestinationRead> reads = Lists.newArrayList();
 
     for (final DestinationConnection destinationConnection : configRepository
@@ -317,7 +317,7 @@ public class DestinationHandler {
   }
 
   public DestinationReadList searchDestinations(final DestinationSearch destinationSearch)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final List<DestinationRead> reads = Lists.newArrayList();
 
     for (final DestinationConnection dci : configRepository.listDestinationConnection()) {
@@ -337,7 +337,7 @@ public class DestinationHandler {
   }
 
   public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID workspaceId, final UUID destinationId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
@@ -345,7 +345,7 @@ public class DestinationHandler {
   }
 
   public ConnectorSpecification getSpecForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
     return destinationVersion.getSpec();
@@ -376,12 +376,13 @@ public class DestinationHandler {
     }
   }
 
-  public DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
+  public DestinationRead buildDestinationRead(final UUID destinationId)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return buildDestinationRead(configRepository.getDestinationConnection(destinationId));
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectorSpecification spec =
         getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
             destinationConnection.getDestinationId());
@@ -389,7 +390,7 @@ public class DestinationHandler {
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final ConnectorSpecification spec)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     // remove secrets from config before returning the read
     final DestinationConnection dci = Jsons.clone(destinationConnection);
@@ -402,7 +403,7 @@ public class DestinationHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   private DestinationRead buildDestinationReadWithSecrets(final UUID destinationId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     // remove secrets from config before returning the read
     final DestinationConnection dci;
@@ -418,7 +419,7 @@ public class DestinationHandler {
 
   protected DestinationRead toDestinationRead(final DestinationConnection destinationConnection,
                                               final StandardDestinationDefinition standardDestinationDefinition)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final ActorDefinitionVersionWithOverrideStatus destinationVersionWithOverrideStatus =
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(

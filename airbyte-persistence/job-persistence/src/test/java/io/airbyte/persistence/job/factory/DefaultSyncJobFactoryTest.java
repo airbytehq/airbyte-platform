@@ -41,7 +41,8 @@ import org.junit.jupiter.api.Test;
 class DefaultSyncJobFactoryTest {
 
   @Test
-  void createSyncJobFromConnectionId() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void createSyncJobFromConnectionId()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();

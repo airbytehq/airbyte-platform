@@ -81,7 +81,7 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           jobCreatorInput.getWorkspaceId())
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
-    } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
+    } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new RuntimeException(e);
     }
   }
@@ -107,12 +107,13 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           streamsToRefresh)
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
-    } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
+    } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private JobCreatorInput getJobCreatorInput(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
+  private JobCreatorInput getJobCreatorInput(UUID connectionId)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSync standardSync = configRepository.getStandardSync(connectionId);
     final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);

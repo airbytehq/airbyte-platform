@@ -23,7 +23,8 @@ import org.mockito.Mockito;
 class DestinationDefinitionSpecificationApiTest extends BaseControllerTest {
 
   @Test
-  void testCheckConnectionToDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(connectorDefinitionSpecificationHandler.getDestinationSpecification(Mockito.any()))
         .thenReturn(new DestinationDefinitionSpecificationRead())
         .thenThrow(new ConfigNotFoundException("", ""));

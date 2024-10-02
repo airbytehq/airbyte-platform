@@ -75,7 +75,7 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource;
     try {
@@ -141,7 +141,7 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {

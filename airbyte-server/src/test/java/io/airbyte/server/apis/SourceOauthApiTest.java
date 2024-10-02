@@ -25,7 +25,8 @@ import org.mockito.Mockito;
 class SourceOauthApiTest extends BaseControllerTest {
 
   @Test
-  void testCompleteSourceOAuth() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCompleteSourceOAuth()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(oAuthHandler.completeSourceOAuthHandleReturnSecret(Mockito.any()))
         .thenReturn(new CompleteOAuthResponse())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -39,7 +40,8 @@ class SourceOauthApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetSourceOAuthConsent() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testGetSourceOAuthConsent()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(oAuthHandler.getSourceOAuthConsent(Mockito.any()))
         .thenReturn(new OAuthConsentRead())
         .thenThrow(new ConfigNotFoundException("", ""));

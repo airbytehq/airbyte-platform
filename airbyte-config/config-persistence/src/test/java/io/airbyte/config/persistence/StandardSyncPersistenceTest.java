@@ -112,7 +112,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,

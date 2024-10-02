@@ -21,8 +21,8 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.List;
@@ -35,8 +35,8 @@ import org.junit.jupiter.api.Test;
 class ActorDefinitionVersionResolverTest {
 
   private ActorDefinitionVersionResolver actorDefinitionVersionResolver;
-  private RemoteDefinitionsProvider mRemoteDefinitionsProvider;
-  private ConfigRepository mConfigRepository;
+  private RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private ActorDefinitionService actorDefinitionService;
 
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
@@ -72,62 +72,62 @@ class ActorDefinitionVersionResolverTest {
 
   @BeforeEach
   void setup() {
-    mRemoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
-    mConfigRepository = mock(ConfigRepository.class);
-    actorDefinitionVersionResolver = new ActorDefinitionVersionResolver(mRemoteDefinitionsProvider, mConfigRepository);
+    remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
+    actorDefinitionVersionResolver = new ActorDefinitionVersionResolver(remoteDefinitionsProvider, actorDefinitionService);
   }
 
   @Test
   void testResolveVersionFromDB() throws IOException {
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.of(ACTOR_DEFINITION_VERSION));
+    when(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.of(ACTOR_DEFINITION_VERSION));
 
     assertEquals(Optional.of(ACTOR_DEFINITION_VERSION),
         actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG));
 
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+    verifyNoMoreInteractions(actorDefinitionService);
 
-    verifyNoInteractions(mRemoteDefinitionsProvider);
+    verifyNoInteractions(remoteDefinitionsProvider);
   }
 
   @Test
   void testResolveVersionFromRemoteIfNotInDB() throws IOException {
 
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
-    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.of(REGISTRY_DEF));
+    when(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.of(REGISTRY_DEF));
 
     final ActorDefinitionVersion actorDefinitionVersion =
         ConnectorRegistryConverters.toActorDefinitionVersion(REGISTRY_DEF);
     final ActorDefinitionVersion persistedAdv =
         Jsons.clone(actorDefinitionVersion).withVersionId(UUID.randomUUID());
-    when(mConfigRepository.writeActorDefinitionVersion(actorDefinitionVersion)).thenReturn(persistedAdv);
+    when(actorDefinitionService.writeActorDefinitionVersion(actorDefinitionVersion)).thenReturn(persistedAdv);
 
     final Optional<ActorDefinitionVersion> optResult =
         actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG);
     assertTrue(optResult.isPresent());
     assertEquals(persistedAdv, optResult.get());
 
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
-    verify(mConfigRepository).writeActorDefinitionVersion(actorDefinitionVersion);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+    verify(actorDefinitionService).writeActorDefinitionVersion(actorDefinitionVersion);
+    verifyNoMoreInteractions(actorDefinitionService);
 
-    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG);
-    verifyNoMoreInteractions(mRemoteDefinitionsProvider);
+    verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG);
+    verifyNoMoreInteractions(remoteDefinitionsProvider);
   }
 
   @Test
   void testReturnsEmptyOptionalIfNoVersionFoundInDbOrRemote() throws IOException {
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
-    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
+    when(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
 
     assertTrue(
         actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG).isEmpty());
 
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+    verifyNoMoreInteractions(actorDefinitionService);
 
-    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG);
-    verifyNoMoreInteractions(mRemoteDefinitionsProvider);
+    verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG);
+    verifyNoMoreInteractions(remoteDefinitionsProvider);
   }
 
 }

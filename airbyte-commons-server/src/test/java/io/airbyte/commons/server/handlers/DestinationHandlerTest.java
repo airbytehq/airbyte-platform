@@ -88,7 +88,7 @@ class DestinationHandlerTest {
 
   @SuppressWarnings("unchecked")
   @BeforeEach
-  void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     configRepository = mock(ConfigRepository.class);
     validator = mock(JsonSchemaValidator.class);
     uuidGenerator = mock(Supplier.class);
@@ -261,7 +261,7 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -299,7 +299,8 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testListDestinationForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListDestinationForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -384,7 +385,8 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testSearchDestinations() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchDestinations()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())

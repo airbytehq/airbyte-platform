@@ -14,6 +14,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.persistence.job.JobPersistence;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -38,6 +39,7 @@ public class ProtocolVersionChecker {
   private final JobPersistence jobPersistence;
   private final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange;
   private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final DefinitionsProvider definitionsProvider;
 
   /**
@@ -52,10 +54,12 @@ public class ProtocolVersionChecker {
   public ProtocolVersionChecker(final JobPersistence jobPersistence,
                                 final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange,
                                 final ConfigRepository configRepository,
+                                final ActorDefinitionService actorDefinitionService,
                                 @Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider) {
     this.jobPersistence = jobPersistence;
     this.airbyteProtocolTargetVersionRange = airbyteProtocolTargetVersionRange;
     this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
     this.definitionsProvider = definitionsProvider;
   }
 
@@ -139,7 +143,7 @@ public class ProtocolVersionChecker {
   }
 
   protected Map<ActorType, Set<UUID>> getConflictingActorDefinitions(final AirbyteProtocolVersionRange targetRange) throws IOException {
-    final Map<UUID, Map.Entry<ActorType, Version>> actorDefIdToProtocolVersion = configRepository.getActorDefinitionToProtocolVersionMap();
+    final Map<UUID, Map.Entry<ActorType, Version>> actorDefIdToProtocolVersion = actorDefinitionService.getActorDefinitionToProtocolVersionMap();
     final Map<ActorType, Set<UUID>> conflicts =
         actorDefIdToProtocolVersion.entrySet().stream()
             // Keeping only ActorDefinitionIds that have an unsupported protocol version
@@ -194,7 +198,7 @@ public class ProtocolVersionChecker {
         remainingSourceConflicts.stream().map(defId -> {
           try {
             final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(defId);
-            final ActorDefinitionVersion sourceDefVersion = configRepository.getActorDefinitionVersion(sourceDef.getDefaultVersionId());
+            final ActorDefinitionVersion sourceDefVersion = actorDefinitionService.getActorDefinitionVersion(sourceDef.getDefaultVersionId());
             return String.format("Source: %s: %s: protocol version: %s",
                 sourceDef.getSourceDefinitionId(), sourceDef.getName(), sourceDefVersion.getProtocolVersion());
           } catch (final Exception e) {
@@ -205,7 +209,7 @@ public class ProtocolVersionChecker {
         remainingDestConflicts.stream().map(defId -> {
           try {
             final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(defId);
-            final ActorDefinitionVersion destDefVersion = configRepository.getActorDefinitionVersion(destDef.getDefaultVersionId());
+            final ActorDefinitionVersion destDefVersion = actorDefinitionService.getActorDefinitionVersion(destDef.getDefaultVersionId());
             return String.format("Destination: %s: %s: protocol version: %s",
                 destDef.getDestinationDefinitionId(), destDef.getName(), destDefVersion.getProtocolVersion());
           } catch (final Exception e) {

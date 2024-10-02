@@ -21,6 +21,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -82,6 +83,7 @@ class JobErrorReporterTest {
   private static final String WRITE_COMMAND = "write";
 
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
   private JobErrorReportingClient jobErrorReportingClient;
   private WebUrlHelper webUrlHelper;
   private JobErrorReporter jobErrorReporter;
@@ -89,17 +91,18 @@ class JobErrorReporterTest {
   @BeforeEach
   void setup() {
     configRepository = mock(ConfigRepository.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
     jobErrorReportingClient = mock(JobErrorReportingClient.class);
     webUrlHelper = mock(WebUrlHelper.class);
     jobErrorReporter = new JobErrorReporter(
-        configRepository, DEPLOYMENT_MODE, AIRBYTE_VERSION, webUrlHelper, jobErrorReportingClient);
+        configRepository, actorDefinitionService, DEPLOYMENT_MODE, AIRBYTE_VERSION, webUrlHelper, jobErrorReportingClient);
 
     Mockito.when(webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL);
     Mockito.when(webUrlHelper.getWorkspaceUrl(WORKSPACE_ID)).thenReturn(WORKSPACE_URL);
   }
 
   @Test
-  void testReportSyncJobFailure() throws ConfigNotFoundException, IOException {
+  void testReportSyncJobFailure() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
 
     final FailureReason sourceFailureReason = new FailureReason()
@@ -142,14 +145,14 @@ class JobErrorReporterTest {
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
             .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withInternalSupportLevel(SOURCE_INTERNAL_SUPPORT_LEVEL));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -204,7 +207,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID);
 
@@ -224,7 +227,7 @@ class JobErrorReporterTest {
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)

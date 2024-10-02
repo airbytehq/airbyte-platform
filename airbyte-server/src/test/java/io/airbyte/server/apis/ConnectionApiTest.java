@@ -110,7 +110,8 @@ class ConnectionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchConnections()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(matchSearchHandler.searchConnections(Mockito.any()))
         .thenReturn(new ConnectionReadList())
         .thenThrow(new ConfigNotFoundException("", ""));

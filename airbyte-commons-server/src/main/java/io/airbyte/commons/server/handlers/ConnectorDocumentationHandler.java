@@ -45,7 +45,7 @@ public class ConnectorDocumentationHandler {
   }
 
   public ConnectorDocumentationRead getConnectorDocumentation(final ConnectorDocumentationRequestBody request)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion actorDefinitionVersion = request.getActorType().equals(ActorType.SOURCE)
         ? getSourceActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId())
         : getDestinationActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId());
@@ -67,7 +67,7 @@ public class ConnectorDocumentationHandler {
   }
 
   private ActorDefinitionVersion getSourceActorDefinitionVersion(final UUID sourceDefinitionId, final UUID workspaceId, @Nullable final UUID sourceId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     return actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
   }
@@ -75,7 +75,7 @@ public class ConnectorDocumentationHandler {
   private ActorDefinitionVersion getDestinationActorDefinitionVersion(final UUID destDefinitionId,
                                                                       final UUID workspaceId,
                                                                       @Nullable final UUID destId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition destDefinition = configRepository.getStandardDestinationDefinition(destDefinitionId);
     return actorDefinitionVersionHelper.getDestinationVersion(destDefinition, workspaceId, destId);
   }

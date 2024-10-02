@@ -279,7 +279,7 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());
@@ -378,7 +378,8 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testListSourcesForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListSourcesForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
@@ -409,7 +410,8 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testListSourcesForSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListSourcesForSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
@@ -436,7 +438,7 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
 
@@ -582,7 +584,8 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testCreateSourceHandleSecret() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateSourceHandleSecret()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion oauthDefinitionVersion = new ActorDefinitionVersion()
         .withDockerImageTag("thelatesttag")
         .withSpec(ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification());

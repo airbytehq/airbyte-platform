@@ -112,6 +112,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   }
 
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
   void setup() throws SQLException, JsonValidationException, IOException {
@@ -124,12 +125,12 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
+
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
         new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
             connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
@@ -161,11 +162,13 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
 
   @Test
   void testGetBreakingChanges() throws IOException {
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef1 = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef1 =
+        actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
     assertEquals(4, breakingChangesForDef1.size());
     assertEquals(BREAKING_CHANGE, breakingChangesForDef1.get(0));
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef2 = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_2);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef2 =
+        actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_2);
     assertEquals(1, breakingChangesForDef2.size());
     assertEquals(OTHER_CONNECTOR_BREAKING_CHANGE, breakingChangesForDef2.get(0));
   }
@@ -184,7 +187,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         List.of(updatedBreakingChange, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));
 
     // Check updated breaking change
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
+    final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
     assertEquals(4, breakingChanges.size());
     assertEquals(updatedBreakingChange, breakingChanges.get(0));
   }
@@ -193,7 +196,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   void testListBreakingChanges() throws IOException {
     final List<ActorDefinitionBreakingChange> expectedAllBreakingChanges =
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4, OTHER_CONNECTOR_BREAKING_CHANGE);
-    assertThat(expectedAllBreakingChanges).containsExactlyInAnyOrderElementsOf(configRepository.listBreakingChanges());
+    assertThat(expectedAllBreakingChanges).containsExactlyInAnyOrderElementsOf(actorDefinitionService.listBreakingChanges());
   }
 
   @Test
@@ -202,20 +205,20 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, ADV_4_0_0);
 
     // no breaking changes for latest default
-    assertEquals(4, configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1).size());
-    assertEquals(0, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_4_0_0).size());
+    assertEquals(4, actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1).size());
+    assertEquals(0, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_4_0_0).size());
 
     // should see future breaking changes for 2.0.0
     final ActorDefinitionVersion ADV_2_0_0 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "2.0.0");
-    assertEquals(2, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
-    assertEquals(List.of(BREAKING_CHANGE_3, BREAKING_CHANGE_4), configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
+    assertEquals(2, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
+    assertEquals(List.of(BREAKING_CHANGE_3, BREAKING_CHANGE_4), actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
 
     // move back default version for Actor Definition to 3.0.0, should stop seeing "rolled back"
     // breaking changes
     final ActorDefinitionVersion ADV_3_0_0 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "3.0.0");
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, ADV_3_0_0);
-    assertEquals(1, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
-    assertEquals(List.of(BREAKING_CHANGE_3), configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
+    assertEquals(1, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
+    assertEquals(List.of(BREAKING_CHANGE_3), actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
   }
 
 }

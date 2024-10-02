@@ -84,7 +84,9 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
@@ -136,7 +138,9 @@ public class SchedulerHandler {
 
   private final ConnectionsHandler connectionsHandler;
   private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final CatalogService catalogService;
+  private final ConnectionService connectionService;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SynchronousSchedulerClient synchronousSchedulerClient;
   private final ConfigurationUpdate configurationUpdate;
@@ -161,7 +165,9 @@ public class SchedulerHandler {
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
+                          final ActorDefinitionService actorDefinitionService,
                           final CatalogService catalogService,
+                          final ConnectionService connectionService,
                           final SecretsRepositoryWriter secretsRepositoryWriter,
                           final SynchronousSchedulerClient synchronousSchedulerClient,
                           final ConfigurationUpdate configurationUpdate,
@@ -186,7 +192,9 @@ public class SchedulerHandler {
                           final NotificationHelper notificationHelper,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
+    this.connectionService = connectionService;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.configurationUpdate = configurationUpdate;
@@ -207,16 +215,18 @@ public class SchedulerHandler {
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
-        configRepository,
+        actorDefinitionService,
+        connectionService,
         jobNotifier,
-        jobTracker, connectionTimelineEventHelper);
+        jobTracker,
+        connectionTimelineEventHelper);
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.notificationHelper = notificationHelper;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceId = sourceIdRequestBody.getSourceId();
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -233,7 +243,7 @@ public class SchedulerHandler {
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceCreate(final SourceCoreConfig sourceConfig)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceConfig.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConfig.getWorkspaceId(), sourceConfig.getSourceId());
@@ -263,7 +273,7 @@ public class SchedulerHandler {
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceIdForUpdate(final SourceUpdate sourceUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection updatedSource =
         configurationUpdate.source(sourceUpdate.getSourceId(), sourceUpdate.getName(), sourceUpdate.getConnectionConfiguration());
 
@@ -282,7 +292,7 @@ public class SchedulerHandler {
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection destination = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDef = configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
@@ -298,7 +308,7 @@ public class SchedulerHandler {
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationCreate(final DestinationCoreConfig destinationConfig)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(destinationConfig.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destDef, destinationConfig.getWorkspaceId(), destinationConfig.getDestinationId());
@@ -326,7 +336,7 @@ public class SchedulerHandler {
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationIdForUpdate(final DestinationUpdate destinationUpdate)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection updatedDestination = configurationUpdate
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
@@ -622,7 +632,8 @@ public class SchedulerHandler {
     return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.getConnectionId(), connectionStreamRequestBody.getStreams());
   }
 
-  public JobInfoRead createJob(final JobCreate jobCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
+  public JobInfoRead createJob(final JobCreate jobCreate)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Fail non-terminal jobs first to prevent failing to create a new job
     jobCreationAndStatusUpdateHelper.failNonTerminalJobs(jobCreate.getConnectionId());
 

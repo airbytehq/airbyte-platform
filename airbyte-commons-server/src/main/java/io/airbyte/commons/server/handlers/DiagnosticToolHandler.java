@@ -217,7 +217,7 @@ public class DiagnosticToolHandler {
       List<Map<String, Object>> allConnectors = new ArrayList<>(sourceList);
       allConnectors.addAll(destinationList);
       return allConnectors;
-    } catch (JsonValidationException | ConfigNotFoundException | IOException e) {
+    } catch (JsonValidationException | ConfigNotFoundException | IOException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       LOGGER.error("Error collecting connectors information", e);
       return null;
     }

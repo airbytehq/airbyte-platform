@@ -77,7 +77,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetDestinationSpecForDestinationId() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetDestinationSpecForDestinationId()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
@@ -108,7 +109,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetSourceSpecWithoutDocs() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpecWithoutDocs()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
         new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
@@ -132,7 +134,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetSourceSpecForSourceId() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpecForSourceId()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -164,7 +167,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetDestinationSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetDestinationSpec()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
@@ -189,7 +193,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetSourceSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpec() throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
         new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
@@ -213,7 +217,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void testDestinationSyncModeEnrichment(boolean supportsRefreshes) throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testDestinationSyncModeEnrichment(boolean supportsRefreshes)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
@@ -252,7 +257,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
   void testDestinationSyncModeEnrichmentWithoutOverwrite(boolean supportsRefreshes)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 

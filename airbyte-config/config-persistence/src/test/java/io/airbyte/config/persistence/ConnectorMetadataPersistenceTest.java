@@ -82,6 +82,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
   void setup() throws SQLException, JsonValidationException, IOException {
@@ -95,11 +96,10 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     actorDefinitionVersionUpdater =
         spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService));
     configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
         connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
@@ -145,7 +145,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
     StandardSourceDefinition sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
     final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
 
     assertTrue(actorDefinitionVersionFromDB.isPresent());
     final UUID firstVersionId = actorDefinitionVersionFromDB.get().getVersionId();
@@ -167,9 +167,9 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
     sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
     final Optional<ActorDefinitionVersion> actorDefinitionVersion2FromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
     final List<ActorDefinitionBreakingChange> breakingChangesForDefFromDb =
-        configRepository.listBreakingChangesForActorDefinition(sourceDefinition2.getSourceDefinitionId());
+        actorDefinitionService.listBreakingChangesForActorDefinition(sourceDefinition2.getSourceDefinitionId());
 
     assertTrue(actorDefinitionVersion2FromDB.isPresent());
     final UUID newADVId = actorDefinitionVersion2FromDB.get().getVersionId();
@@ -193,7 +193,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     StandardDestinationDefinition destinationDefinitionFromDB =
         configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
     final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
 
     assertTrue(actorDefinitionVersionFromDB.isPresent());
     final UUID firstVersionId = actorDefinitionVersionFromDB.get().getVersionId();
@@ -216,9 +216,9 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
     destinationDefinitionFromDB = configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
     final Optional<ActorDefinitionVersion> actorDefinitionVersion2FromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
     final List<ActorDefinitionBreakingChange> breakingChangesForDefFromDb =
-        configRepository.listBreakingChangesForActorDefinition(destinationDefinition2.getDestinationDefinitionId());
+        actorDefinitionService.listBreakingChangesForActorDefinition(destinationDefinition2.getDestinationDefinitionId());
 
     assertTrue(actorDefinitionVersion2FromDB.isPresent());
     final UUID newADVId = actorDefinitionVersion2FromDB.get().getVersionId();
@@ -237,7 +237,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(actorDefinitionId);
     configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion1);
 
-    final Optional<ActorDefinitionVersion> optADVForTag = configRepository.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
+    final Optional<ActorDefinitionVersion> optADVForTag = actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTag.isPresent());
     final ActorDefinitionVersion advForTag = optADVForTag.get();
     final StandardSourceDefinition retrievedSourceDefinition =
@@ -252,7 +252,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeConnectorMetadata(sourceDefinition, modifiedADV);
 
     assertEquals(retrievedSourceDefinition, configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()));
-    final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 = configRepository.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
+    final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 =
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTagAfterCall2.isPresent());
 
     // Modifying fields without updating image tag updates existing version
@@ -263,7 +264,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         createBaseActorDefVersion(actorDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG).withSpec(updatedSpec);
     configRepository.writeConnectorMetadata(sourceDefinition, newADV);
 
-    final Optional<ActorDefinitionVersion> optADVForTag2 = configRepository.getActorDefinitionVersion(actorDefinitionId, UPGRADE_IMAGE_TAG);
+    final Optional<ActorDefinitionVersion> optADVForTag2 = actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, UPGRADE_IMAGE_TAG);
     assertTrue(optADVForTag2.isPresent());
     final ActorDefinitionVersion advForTag2 = optADVForTag2.get();
 
@@ -346,7 +347,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testTransactionRollbackOnFailure() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testTransactionRollbackOnFailure()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID initialADVId = UUID.randomUUID();
     final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion1 =
@@ -387,14 +389,14 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinitionAfterFailedUpgrade =
         configRepository.getStandardSourceDefinition(sourceDefId);
     final Optional<ActorDefinitionVersion> newActorDefinitionVersionAfterFailedUpgrade =
-        configRepository.getActorDefinitionVersion(sourceDefId, invalidVersion);
+        actorDefinitionService.getActorDefinitionVersion(sourceDefId, invalidVersion);
     final ActorDefinitionVersion defaultActorDefinitionVersionAfterFailedUpgrade =
-        configRepository.getActorDefinitionVersion(sourceDefinitionDefaultVersionIdAfterFailedUpgrade);
+        actorDefinitionService.getActorDefinitionVersion(sourceDefinitionDefaultVersionIdAfterFailedUpgrade);
 
     // New actor definition version was not persisted
     assertFalse(newActorDefinitionVersionAfterFailedUpgrade.isPresent());
     // Valid breaking change was not persisted
-    assertEquals(0, configRepository.listBreakingChangesForActorDefinition(sourceDefId).size());
+    assertEquals(0, actorDefinitionService.listBreakingChangesForActorDefinition(sourceDefId).size());
 
     // The default version does not get upgraded
     assertEquals(initialSourceDefinitionDefaultVersionId, sourceDefinitionDefaultVersionIdAfterFailedUpgrade);

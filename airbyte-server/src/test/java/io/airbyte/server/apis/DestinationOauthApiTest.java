@@ -26,7 +26,8 @@ import org.mockito.Mockito;
 class DestinationOauthApiTest extends BaseControllerTest {
 
   @Test
-  void testCompleteDestinationOAuth() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCompleteDestinationOAuth()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(oAuthHandler.completeDestinationOAuth(Mockito.any()))
         .thenReturn(new CompleteOAuthResponse())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -40,7 +41,8 @@ class DestinationOauthApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetDestinationOAuthConsent() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetDestinationOAuthConsent()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(oAuthHandler.getDestinationOAuthConsent(Mockito.any()))
         .thenReturn(new OAuthConsentRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -54,7 +56,7 @@ class DestinationOauthApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteDestination() throws JsonValidationException, IOException {
+  void testDeleteDestination() throws IOException {
     Mockito.doNothing()
         .when(oAuthHandler).setDestinationInstancewideOauthParams(Mockito.any());
 

@@ -208,7 +208,7 @@ public class WorkspacesHandler {
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing implementation
     final StandardWorkspace persistedWorkspace = configRepository.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), false);
 

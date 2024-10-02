@@ -340,13 +340,14 @@ public class WebBackendConnectionsHandler {
     return SchemaChange.NO_CHANGE;
   }
 
-  private SourceRead getSourceRead(final UUID sourceId) throws JsonValidationException, IOException, ConfigNotFoundException {
+  private SourceRead getSourceRead(final UUID sourceId)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceId);
     return sourceHandler.getSource(sourceIdRequestBody);
   }
 
   private DestinationRead getDestinationRead(final UUID destinationId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(destinationId);
     return destinationHandler.getDestination(destinationIdRequestBody);
   }

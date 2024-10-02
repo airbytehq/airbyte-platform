@@ -500,7 +500,7 @@ public class JobTracker {
   }
 
   private Map<String, Object> generateDestinationDefinitionMetadata(final UUID destinationDefinitionId, final UUID workspaceId, final UUID actorId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, actorId);
     return generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -512,7 +512,7 @@ public class JobTracker {
   }
 
   private Map<String, Object> generateSourceDefinitionMetadata(final UUID sourceDefinitionId, final UUID workspaceId, final UUID actorId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, actorId);
     return generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
