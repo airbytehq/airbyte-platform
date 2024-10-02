@@ -82,6 +82,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private InvokeOperationsActivity invokeOperationsActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "asyncActivityOptions")
+  private AsyncReplicationActivity asyncReplicationActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "workloadStatusCheckActivityOptions")
+  private WorkloadStatusCheckActivity workloadStatusCheckActivity;
 
   private Boolean shouldBlock;
 
@@ -154,30 +158,28 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (syncInput.getUseAsyncReplicate() == null || !syncInput.getUseAsyncReplicate()) {
       syncOutput = replicationActivity.replicateV2(replicationActivityInput);
     } else {
-      String workloadId = null;
-      try {
-        workloadId = replicationActivity.startReplication(replicationActivityInput);
+      final String workloadId = asyncReplicationActivity.startReplication(replicationActivityInput);
 
+      try {
         shouldBlock = true;
         while (shouldBlock) {
           Workflow.await(Duration.ofMinutes(15), () -> !shouldBlock);
-          shouldBlock = !replicationActivity.isTerminal(replicationActivityInput, workloadId);
+          shouldBlock = !workloadStatusCheckActivity.isTerminal(workloadId);
         }
-
-        syncOutput = replicationActivity.getReplicationOutput(replicationActivityInput, workloadId);
       } catch (final CanceledFailure | ActivityFailure cf) {
         if (workloadId != null) {
           // This is in order to be usable from the detached scope
-          final String capturedWorkloadId = workloadId;
           CancellationScope detached =
               Workflow.newDetachedCancellationScope(() -> {
-                replicationActivity.cancel(replicationActivityInput, capturedWorkloadId);
+                asyncReplicationActivity.cancel(replicationActivityInput, workloadId);
                 shouldBlock = false;
               });
           detached.run();
         }
         throw cf;
       }
+
+      syncOutput = asyncReplicationActivity.getReplicationOutput(replicationActivityInput, workloadId);
     }
 
     final WebhookOperationSummary webhookOperationSummary = invokeOperationsActivity.invokeOperations(

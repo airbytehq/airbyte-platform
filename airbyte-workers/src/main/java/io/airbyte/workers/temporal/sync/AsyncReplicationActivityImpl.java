@@ -18,7 +18,9 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.MdcScope;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ReplicationAttemptSummary;
@@ -36,26 +38,22 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
-import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.sync.WorkloadClient;
-import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
-import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,9 +63,9 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 @SuppressWarnings("PMD.UseVarargs")
-public class ReplicationActivityImpl implements ReplicationActivity {
+public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AsyncReplicationActivityImpl.class);
   private static final int MAX_TEMPORAL_MESSAGE_SIZE = 2 * 1024 * 1024;
 
   private final ReplicationInputHydrator replicationInputHydrator;
@@ -85,21 +83,21 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
   private final LogClientManager logClientManager;
 
-  public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
-                                 @Named("workspaceRoot") final Path workspaceRoot,
-                                 @Value("${airbyte.version}") final String airbyteVersion,
-                                 final AirbyteApiClient airbyteApiClient,
-                                 final JobOutputDocStore jobOutputDocStore,
-                                 final WorkloadApiClient workloadApiClient,
-                                 final WorkloadClient workloadClient,
-                                 final WorkloadIdGenerator workloadIdGenerator,
-                                 final MetricClient metricClient,
-                                 final FeatureFlagClient featureFlagClient,
-                                 final PayloadChecker payloadChecker,
-                                 @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
-                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
-                                 final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
-                                 final LogClientManager logClientManager) {
+  public AsyncReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
+                                      @Named("workspaceRoot") final Path workspaceRoot,
+                                      @Value("${airbyte.version}") final String airbyteVersion,
+                                      final AirbyteApiClient airbyteApiClient,
+                                      final JobOutputDocStore jobOutputDocStore,
+                                      final WorkloadApiClient workloadApiClient,
+                                      final WorkloadClient workloadClient,
+                                      final WorkloadIdGenerator workloadIdGenerator,
+                                      final MetricClient metricClient,
+                                      final FeatureFlagClient featureFlagClient,
+                                      final PayloadChecker payloadChecker,
+                                      @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
+                                      @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
+                                      final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
+                                      final LogClientManager logClientManager) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
@@ -118,20 +116,20 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   @VisibleForTesting
-  ReplicationActivityImpl(final ReplicationInputHydrator replicationInputHydrator,
-                          @Named("workspaceRoot") final Path workspaceRoot,
-                          @Value("${airbyte.version}") final String airbyteVersion,
-                          final AirbyteApiClient airbyteApiClient,
-                          final JobOutputDocStore jobOutputDocStore,
-                          final WorkloadApiClient workloadApiClient,
-                          final WorkloadClient workloadClient,
-                          final WorkloadIdGenerator workloadIdGenerator,
-                          final MetricClient metricClient,
-                          final FeatureFlagClient featureFlagClient,
-                          final PayloadChecker payloadChecker,
-                          @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
-                          @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
-                          final LogClientManager logClientManager) {
+  AsyncReplicationActivityImpl(final ReplicationInputHydrator replicationInputHydrator,
+                               @Named("workspaceRoot") final Path workspaceRoot,
+                               @Value("${airbyte.version}") final String airbyteVersion,
+                               final AirbyteApiClient airbyteApiClient,
+                               final JobOutputDocStore jobOutputDocStore,
+                               final WorkloadApiClient workloadApiClient,
+                               final WorkloadClient workloadClient,
+                               final WorkloadIdGenerator workloadIdGenerator,
+                               final MetricClient metricClient,
+                               final FeatureFlagClient featureFlagClient,
+                               final PayloadChecker payloadChecker,
+                               @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
+                               @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
+                               final LogClientManager logClientManager) {
     this.replicationInputHydrator = replicationInputHydrator;
     this.workspaceRoot = workspaceRoot;
     this.airbyteVersion = airbyteVersion;
@@ -150,56 +148,90 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
   record TracingContext(UUID connectionId, String jobId, Long attemptNumber, Map<String, Object> traceAttributes) {}
 
-  /**
-   * Performs the replication activity.
-   * <p>
-   * Takes a lite input (no catalog, no state, no secrets) to avoid passing those through Temporal and
-   * hydrates it before launching the replication orchestrator.
-   * <p>
-   * TODO: this is the preferred method. Once we remove `replicate`, this can be renamed.
-   *
-   * @param replicationActivityInput the input to the replication activity
-   * @return output from the replication activity, populated in the StandardSyncOutput
-   */
-  @Deprecated
+  @SuppressWarnings({"PMD.UnusedLocalVariable"})
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
-  public StandardSyncOutput replicateV2(final ReplicationActivityInput replicationActivityInput) {
-    metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
-
+  public String startReplication(final ReplicationActivityInput replicationActivityInput) {
     final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
-    ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
 
-    if (replicationActivityInput.getIsReset()) {
-      metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+    try (final var mdcScope = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
+      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+
+      ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
+
+      if (replicationActivityInput.getIsReset()) {
+        metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+      }
+
+      LOGGER.info("Starting async replication");
+
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+
+      LOGGER.info("connection {}, input: {}", tracingContext.connectionId, workerAndReplicationInput.replicationInput);
+
+      return worker.createWorkload(workerAndReplicationInput.replicationInput, jobRoot);
+    } catch (final Exception e) {
+      ApmTraceUtils.addActualRootCauseToTrace(e);
+      throw Activity.wrap(e);
+    } finally {
+      logClientManager.setJobMdc(null);
     }
-    final ActivityExecutionContext context = Activity.getExecutionContext();
+  }
 
-    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
+  @Override
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  public void cancel(final ReplicationActivityInput replicationActivityInput, final String workloadId) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
 
-    return HeartbeatUtils.withBackgroundHeartbeat(
-        cancellationCallback,
-        () -> {
-          final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
-          final ReplicationInput replicationInput = workerAndReplicationInput.replicationInput;
-          final ReplicationWorker worker = workerAndReplicationInput.worker;
+    try (final var ignored = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
 
-          LOGGER.info("connection {}, input: {}", tracingContext.connectionId, replicationInput);
-          cancellationCallback.set(worker::cancel);
+      LOGGER.info("Canceling workload {}", workloadId);
 
-          final TemporalAttemptExecution temporalAttempt =
-              new TemporalAttemptExecution(
-                  workspaceRoot,
-                  replicationInput.getJobRunConfig(),
-                  worker,
-                  replicationInput,
-                  airbyteVersion,
-                  logClientManager);
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+      try {
+        worker.cancelWorkload(workloadId);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
 
-          final ReplicationOutput attemptOutput = temporalAttempt.get();
-          return finalizeOutput(replicationActivityInput, attemptOutput);
-        },
-        context);
+  @SuppressWarnings({"PMD.UnusedLocalVariable"})
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public StandardSyncOutput getReplicationOutput(final ReplicationActivityInput replicationActivityInput, final String workloadId) {
+    final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
+
+    try (final var mdcScope = new MdcScope.Builder()
+        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .build()) {
+      logClientManager.setJobMdc(jobRoot);
+
+      final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
+      final WorkloadApiWorker worker = workerAndReplicationInput.worker;
+
+      final var output = worker.getOutput(workloadId);
+      return finalizeOutput(replicationActivityInput, output);
+    } catch (final Exception e) {
+      ApmTraceUtils.addActualRootCauseToTrace(e);
+      throw Activity.wrap(e);
+    } finally {
+      logClientManager.setJobMdc(null);
+    }
   }
 
   private StandardSyncOutput finalizeOutput(final ReplicationActivityInput replicationActivityInput, final ReplicationOutput attemptOutput) {

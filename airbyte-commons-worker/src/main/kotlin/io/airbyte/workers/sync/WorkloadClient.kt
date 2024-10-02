@@ -52,6 +52,8 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     }
   }
 
+  fun isTerminal(workloadId: String) = isWorkloadTerminal(workloadApiClient.workloadApi.workloadGet(workloadId))
+
   fun waitForWorkload(
     workloadId: String,
     pollingFrequencyInSeconds: Int,

@@ -13,9 +13,14 @@ import io.temporal.activity.ActivityMethod;
  * ReplicationActivity.
  */
 @ActivityInterface
-public interface ReplicationActivity {
+public interface AsyncReplicationActivity {
 
   @ActivityMethod
-  StandardSyncOutput replicateV2(final ReplicationActivityInput replicationInput);
+  String startReplication(final ReplicationActivityInput replicationInput);
+
+  @ActivityMethod
+  StandardSyncOutput getReplicationOutput(final ReplicationActivityInput replicationInput, final String workloadId);
+
+  void cancel(final ReplicationActivityInput replicationInput, final String workloadId);
 
 }

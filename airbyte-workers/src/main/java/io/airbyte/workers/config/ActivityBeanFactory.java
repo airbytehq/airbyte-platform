@@ -25,11 +25,13 @@ import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueAct
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
+import io.airbyte.workers.temporal.sync.AsyncReplicationActivity;
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
+import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -117,10 +119,32 @@ public class ActivityBeanFactory {
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
                                      final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
-                                     final InvokeOperationsActivity invokeOperationsActivity) {
+                                     final InvokeOperationsActivity invokeOperationsActivity,
+                                     final AsyncReplicationActivity asyncReplicationActivity,
+                                     final WorkloadStatusCheckActivity workloadStatusCheckActivity) {
     return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
         reportRunTimeActivity, syncFeatureFlagFetcherActivity,
-        routeToSyncTaskQueueActivity, invokeOperationsActivity);
+        routeToSyncTaskQueueActivity, invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity);
+  }
+
+  @Singleton
+  @Named("asyncActivityOptions")
+  public ActivityOptions asyncActivityOptions(@Property(name = "airbyte.activity.async-timeout") final Integer asyncTimeoutSeconds) {
+    return ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
+  @Named("workloadStatusCheckActivityOptions")
+  public ActivityOptions workloadStatusCheckActivityOptions(@Property(name = "airbyte.activity.async-timeout") final Integer asyncTimeoutSeconds) {
+    return ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
+        .build();
   }
 
   @Singleton

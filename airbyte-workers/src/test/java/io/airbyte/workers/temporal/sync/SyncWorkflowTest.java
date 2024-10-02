@@ -124,6 +124,8 @@ class SyncWorkflowTest {
   private ActivityOptions shortActivityOptions;
   private ActivityOptions discoveryActivityOptions;
   private ActivityOptions refreshSchemaActivityOptions;
+  private ActivityOptions asyncReplicationActivityOptions;
+  private ActivityOptions workloadStatusCheckActivityOptions;
   private TemporalProxyHelper temporalProxyHelper;
 
   @BeforeEach
@@ -184,6 +186,16 @@ class SyncWorkflowTest {
         .setStartToCloseTimeout(Duration.ofSeconds(360))
         .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
+    asyncReplicationActivityOptions = ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(60))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+    workloadStatusCheckActivityOptions = ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(60))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
+        .build();
 
     final BeanIdentifier longActivitiesBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration longActivityOptionsBeanRegistration = mock(BeanRegistration.class);
@@ -205,9 +217,19 @@ class SyncWorkflowTest {
     when(refreshSchemaActivityBeanIdentifier.getName()).thenReturn("refreshSchemaActivityOptions");
     when(refreshSchemaActivityOptionsBeanRegistration.getIdentifier()).thenReturn(refreshSchemaActivityBeanIdentifier);
     when(refreshSchemaActivityOptionsBeanRegistration.getBean()).thenReturn(refreshSchemaActivityOptions);
+    final BeanIdentifier asyncActivitiesBeanIdentifier = mock(BeanIdentifier.class);
+    final BeanRegistration asyncActivityOptionsBeanRegistration = mock(BeanRegistration.class);
+    when(asyncActivitiesBeanIdentifier.getName()).thenReturn("asyncActivityOptions");
+    when(asyncActivityOptionsBeanRegistration.getIdentifier()).thenReturn(asyncActivitiesBeanIdentifier);
+    when(asyncActivityOptionsBeanRegistration.getBean()).thenReturn(asyncReplicationActivityOptions);
+    final BeanIdentifier workloadStatusCheckActivitiesBeanIdentifier = mock(BeanIdentifier.class);
+    final BeanRegistration workloadStatusCheckActivityOptionsBeanRegistration = mock(BeanRegistration.class);
+    when(workloadStatusCheckActivitiesBeanIdentifier.getName()).thenReturn("workloadStatusCheckActivityOptions");
+    when(workloadStatusCheckActivityOptionsBeanRegistration.getIdentifier()).thenReturn(workloadStatusCheckActivitiesBeanIdentifier);
+    when(workloadStatusCheckActivityOptionsBeanRegistration.getBean()).thenReturn(workloadStatusCheckActivityOptions);
     temporalProxyHelper = new TemporalProxyHelper(
         List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration, discoveryActivityOptionsBeanRegistration,
-            refreshSchemaActivityOptionsBeanRegistration));
+            refreshSchemaActivityOptionsBeanRegistration, asyncActivityOptionsBeanRegistration, workloadStatusCheckActivityOptionsBeanRegistration));
 
     syncWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
   }
