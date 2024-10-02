@@ -50,7 +50,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -203,12 +202,8 @@ public class ApplicationBeanFactory {
 
   @Singleton
   @Requires(env = Environment.KUBERNETES)
-  public Optional<KubernetesClient> kubernetesClient() {
-    try {
-      return Optional.of(new KubernetesClientBuilder().build());
-    } catch (final Exception e) {
-      return Optional.empty();
-    }
+  public KubernetesClient kubernetesClient() {
+    return new KubernetesClientBuilder().build();
   }
 
 }
