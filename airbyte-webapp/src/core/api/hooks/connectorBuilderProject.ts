@@ -82,10 +82,15 @@ export const useListBuilderProjects = () => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-      convertProjectDetailsReadToBuilderProject
-    )
+  return useSuspenseQuery(
+    connectorBuilderProjectsKeys.list(workspaceId),
+    async () =>
+      (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
+        convertProjectDetailsReadToBuilderProject
+      ),
+    {
+      refetchOnMount: "always",
+    }
   );
 };
 
