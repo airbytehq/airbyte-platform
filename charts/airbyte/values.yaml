@@ -1722,6 +1722,13 @@ minio:
     repository: minio/minio
     # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
+    
+  mc:
+    image:
+      # -- Minio Client image used by Minio helm chart
+      repository: minio/mc
+      # -- Minio Client tag image
+      tag: latest
 
   storage:
     volumeClaimValue: 500Mi

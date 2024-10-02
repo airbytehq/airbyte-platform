@@ -236,6 +236,8 @@ Helm chart to deploy airbyte
 | minio.affinity | object | `{}` | Affinity and anti-affinity for minio pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity            |
 | minio.image.repository | string | `"minio/minio"` | Minio image used by Minio helm chart                                                                                                                                    |
 | minio.image.tag | string | `"RELEASE.2023-11-20T22-40-07Z"` | Minio tag image                                                                                                                                                         |
+| minio.mc.image.repository | string | `"minio/mc"` | Minio Client image used by Minio helm chart |
+| minio.mc.image.tag | string | `"latest"` | Minio Client tag image |                
 | minio.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ #                                                                             |
 | minio.storage.volumeClaimValue | string | `"500Mi"` |                                                                                                                                                                         |
 | minio.tolerations | list | `[]` | Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ #                                                     |
