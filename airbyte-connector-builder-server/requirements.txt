@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==5.8.1
+airbyte-cdk==5.10.2
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
@@ -77,7 +77,7 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.129
+langsmith==0.1.130
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
@@ -134,8 +134,11 @@ requests==2.32.3
     #   airbyte-cdk
     #   langsmith
     #   requests-cache
+    #   requests-toolbelt
 requests-cache==1.2.1
     # via airbyte-cdk
+requests-toolbelt==1.0.0
+    # via langsmith
 serpyco-rs==1.11.0
     # via airbyte-cdk
 six==1.16.0
