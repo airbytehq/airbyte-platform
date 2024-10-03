@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-1.0.0-informational?style=flat-square)
+![Version: 1.1.0](https://img.shields.io/badge/Version-1.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.1.0](https://img.shields.io/badge/AppVersion-1.1.0-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -8,19 +8,19 @@ Helm chart to deploy airbyte
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | cron | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | keycloak | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | server | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | worker | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | workload-api-server | 1.0.0 |
-| https://airbytehq.github.io/helm-charts/ | workload-launcher | 1.0.0 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | cron | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | keycloak | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | metrics | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | server | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | temporal | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | webapp | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | worker | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | workload-api-server | 1.1.0 |
+| https://airbytehq.github.io/helm-charts/ | workload-launcher | 1.1.0 |
 | https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
