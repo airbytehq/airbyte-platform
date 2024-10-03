@@ -26,7 +26,6 @@ import io.airbyte.api.model.generated.ConnectorRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutStartResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateFinalizingRequestBody;
-import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -52,7 +51,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/create")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -68,7 +66,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   }
 
   @Post("/start")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -83,7 +80,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   }
 
   @Post("/rollout")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -99,7 +95,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/finalize")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -115,7 +110,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -130,7 +124,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list_all")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -143,7 +136,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list_by_actor_definition_id")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -157,7 +149,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/get")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -172,7 +163,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/update_finalizing")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -189,7 +179,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/manual_start")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -205,7 +194,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/manual_rollout")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -222,7 +210,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/manual_finalize")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

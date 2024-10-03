@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
-import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.validation.json.JsonValidationException;
@@ -116,7 +115,6 @@ public class PermissionApiController implements PermissionApi {
     });
   }
 
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Post("/list_by_user")
   @Override
