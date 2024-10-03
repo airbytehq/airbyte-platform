@@ -10,15 +10,18 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputR
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
-import io.temporal.api.common.v1.WorkflowExecution
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
+import io.temporal.client.WorkflowStub
 import io.temporal.client.WorkflowUpdateException
+import io.temporal.client.WorkflowUpdateStage
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ConnectorRolloutClient
@@ -26,12 +29,8 @@ class ConnectorRolloutClient
   constructor(
     private val workflowClient: WorkflowClientWrapper,
   ) {
-    companion object {
-      private val log = LoggerFactory.getLogger(ConnectorRolloutClient::class.java)
-    }
-
     init {
-      log.info("ConnectorRolloutService constructor")
+      logger.info { "ConnectorRolloutService constructor" }
     }
 
     private fun getWorkflowId(
@@ -49,16 +48,16 @@ class ConnectorRolloutClient
     ): T {
       return try {
         val workflowStub = workflowClient.getClient().newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowId)
-        log.info("Executing workflow action for $workflowId")
+        logger.info { "Executing workflow action for $workflowId" }
         action(workflowStub, input)
       } catch (e: WorkflowUpdateException) {
-        log.error("Error executing workflow action: $e")
+        logger.error { "Error executing workflow action: $e" }
         throw e
       }
     }
 
     fun startWorkflow(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
-      log.info("ConnectorRolloutService.startWorkflow with input: $input")
+      logger.info { "ConnectorRolloutService.startWorkflow with input: $input" }
       if (input.rolloutId == null) {
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
       }
@@ -74,11 +73,11 @@ class ConnectorRolloutClient
             .build(),
         )
 
-      log.info("Starting workflow $workflowId")
-      val workflowExecution: WorkflowExecution = WorkflowClient.start(workflowStub::run, input)
-      log.info("Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}")
+      logger.info { "Starting workflow $workflowId" }
+      val workflowExecution = WorkflowClient.start(workflowStub::run, input)
+      logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
       val startOutput = executeUpdate(input, workflowId) { stub, i -> stub.startRollout(i) }
-      log.info("Rollout $workflowId started with ID: ${workflowExecution.workflowId}")
+      logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
       return startOutput
     }
 
@@ -87,8 +86,21 @@ class ConnectorRolloutClient
       return executeUpdate(input, workflowId) { stub, i -> stub.doRollout(i) }
     }
 
-    fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
+    fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize) {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeUpdate(input, workflowId) { stub, i -> stub.finalizeRollout(i) }
+      logger.info { "Rollout $workflowId starting `finalizeRollout` update: $workflowId" }
+      val workflow =
+        workflowClient.getClient().newWorkflowStub(
+          ConnectorRolloutWorkflow::class.java,
+          workflowId,
+        )
+      logger.info { "Rollout $workflowId starting `finalizeRollout` workflow: $workflow" }
+      // Send the `update` request async so we don't block waiting for the GHA to run and the default version to become available
+      WorkflowStub.fromTyped(workflow).startUpdate(
+        "finalizeRollout",
+        WorkflowUpdateStage.ACCEPTED,
+        ConnectorRolloutOutput::class.java,
+        input,
+      )
     }
   }

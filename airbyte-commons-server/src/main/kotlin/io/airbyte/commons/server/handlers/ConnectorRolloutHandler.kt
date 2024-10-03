@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
@@ -14,7 +15,9 @@ import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutState
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.commons.server.validation.InvalidRequest
+import io.airbyte.api.model.generated.ConnectorRolloutUpdateFinalizingRequestBody
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
@@ -97,9 +100,11 @@ open class ConnectorRolloutHandler
           connectorRolloutCreate.dockerImageTag,
         )
       if (rolloutVersion.isEmpty) {
-        throw InvalidRequest(
-          "Could not find actor definition version for actor definition id: " +
-            "${connectorRolloutCreate.actorDefinitionId} and docker image tag: ${connectorRolloutCreate.dockerImageTag}",
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Could not find actor definition version for actor definition id: " +
+              "${connectorRolloutCreate.actorDefinitionId} and docker image tag: ${connectorRolloutCreate.dockerImageTag}",
+          ),
         )
       }
 
@@ -127,7 +132,9 @@ open class ConnectorRolloutHandler
           // and was therefore canceled.
           // If the rollout succeeded we shouldn't be re-rolling out, and if it failed then there should be a code change that will bump the version.
           if (rollout.state != ConnectorRolloutState.CANCELED_ROLLED_BACK) {
-            throw InvalidRequest("Cannot insert new rollout: Active or non-canceled rollout(s) exist.")
+            throw ConnectorRolloutInvalidRequestProblem(
+              ProblemMessageData().message("Cannot insert new rollout: Active or non-canceled rollout(s) exist."),
+            )
           }
         }
       }
@@ -143,11 +150,19 @@ open class ConnectorRolloutHandler
       val actorDefinitionVersion =
         actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
           .orElseThrow {
-            InvalidRequest("Actor definition version not found for actor definition id: $actorDefinitionId and docker image tag: $dockerImageTag")
+            throw ConnectorRolloutInvalidRequestProblem(
+              ProblemMessageData().message(
+                "Actor definition version not found for actor definition id: $actorDefinitionId and docker image tag: $dockerImageTag",
+              ),
+            )
           }
 
       if (actorDefinitionVersion.dockerRepository != dockerRepository || actorDefinitionVersion.dockerImageTag != dockerImageTag) {
-        throw InvalidRequest("Actor definition ID does not match docker repository: $dockerRepository and docker image tag: $dockerImageTag")
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Actor definition ID does not match docker repository: $dockerRepository and docker image tag: $dockerImageTag",
+          ),
+        )
       }
     }
 
@@ -163,14 +178,18 @@ open class ConnectorRolloutHandler
           dockerImageTag,
         )
       if (actorDefinitionVersion.isEmpty) {
-        throw InvalidRequest(
-          "Actor definition version not found for actor definition id: $actorDefinitionId " +
-            "and docker image tag: $dockerImageTag",
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Actor definition version not found for actor definition id: $actorDefinitionId " +
+              "and docker image tag: $dockerImageTag",
+          ),
         )
       }
       if (actorDefinitionVersion.get().dockerRepository != dockerRepository) {
-        throw InvalidRequest(
-          "Actor definition version does not match docker repository: $dockerRepository ",
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Actor definition version does not match docker repository: $dockerRepository ",
+          ),
         )
       }
       val connectorRollouts: List<ConnectorRollout> =
@@ -182,7 +201,9 @@ open class ConnectorRolloutHandler
       val initializedRollouts = connectorRollouts.filter { it.state == ConnectorEnumRolloutState.INITIALIZED }
       val initialVersion =
         actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
-          ?: throw InvalidRequest("Could not find initial version for actor definition id: $actorDefinitionId")
+          ?: throw ConnectorRolloutInvalidRequestProblem(
+            ProblemMessageData().message("Could not find initial version for actor definition id: $actorDefinitionId"),
+          )
 
       if (initializedRollouts.isEmpty()) {
         val connectorRollout =
@@ -199,7 +220,9 @@ open class ConnectorRolloutHandler
       }
 
       if (initializedRollouts.size > 1) {
-        throw InvalidRequest("Expected at most 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}.")
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message("Expected at most 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}."),
+        )
       }
       val finalEnumStates =
         ConnectorEnumRolloutState.entries.filter {
@@ -214,7 +237,9 @@ open class ConnectorRolloutHandler
         }
 
       if (rolloutsInInvalidState.isNotEmpty()) {
-        throw InvalidRequest("Found rollouts in invalid states: ${rolloutsInInvalidState.map { it.id }}.")
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message("Found rollouts in invalid states: ${rolloutsInInvalidState.map { it.id }}."),
+        )
       }
       return initializedRollouts.first()
     }
@@ -223,8 +248,10 @@ open class ConnectorRolloutHandler
     open fun getAndValidateStartRequest(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
       if (connectorRollout.state != ConnectorEnumRolloutState.INITIALIZED) {
-        throw InvalidRequest(
-          "Connector rollout must be in INITIALIZED state to start the rollout, but was in state " + connectorRollout.state.toString(),
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Connector rollout must be in INITIALIZED state to start the rollout, but was in state " + connectorRollout.state.toString(),
+          ),
         )
       }
       return connectorRollout
@@ -243,9 +270,11 @@ open class ConnectorRolloutHandler
           ConnectorEnumRolloutState.PAUSED,
         )
       ) {
-        throw InvalidRequest(
-          "Connector rollout must be in WORKFLOW_STARTED, IN_PROGRESS, or PAUSED state to update the rollout, but was in state " +
-            connectorRollout.state.toString(),
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Connector rollout must be in WORKFLOW_STARTED, IN_PROGRESS, or PAUSED state to update the rollout, but was in state " +
+              connectorRollout.state.toString(),
+          ),
         )
       }
 
@@ -257,7 +286,7 @@ open class ConnectorRolloutHandler
           connectorRollout.releaseCandidateVersionId,
         )
       } catch (e: InvalidRequestException) {
-        throw InvalidRequest("Failed to create release candidate pins for actors: ${e.message}")
+        throw ConnectorRolloutInvalidRequestProblem(ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"))
       }
 
       return connectorRollout
@@ -272,8 +301,10 @@ open class ConnectorRolloutHandler
       val invalidFinalizeStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
       if (connectorRollout.state in invalidFinalizeStates
       ) {
-        throw InvalidRequest(
-          "Connector rollout may not be in a terminal state when finalizing the rollout, but was in state " + connectorRollout.state.toString(),
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Connector rollout may not be in a terminal state when finalizing the rollout, but was in state " + connectorRollout.state.toString(),
+          ),
         )
       }
       val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
@@ -288,6 +319,22 @@ open class ConnectorRolloutHandler
         .withCompletedAt(currentTime)
         .withErrorMsg(connectorRolloutFinalize.errorMsg)
         .withFailedReason(connectorRolloutFinalize.failedReason)
+    }
+
+    @VisibleForTesting
+    open fun getAndValidateFinalizingRequest(id: UUID): ConnectorRollout {
+      val connectorRollout = connectorRolloutService.getConnectorRollout(id)
+      val invalidFinalizeStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
+      if (connectorRollout.state in invalidFinalizeStates
+      ) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Connector rollout may not be in a terminal state when finalizing the rollout, but was in state " + connectorRollout.state.toString(),
+          ),
+        )
+      }
+      return connectorRollout
+        .withState(ConnectorEnumRolloutState.FINALIZING)
     }
 
     private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime {
@@ -359,6 +406,12 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRollout)
     }
 
+    open fun updateStateFinalizing(connectorRolloutUpdateFinalizingRequestBody: ConnectorRolloutUpdateFinalizingRequestBody): ConnectorRolloutRead {
+      val connectorRollout = getAndValidateFinalizingRequest(connectorRolloutUpdateFinalizingRequestBody.id)
+      val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
+      return buildConnectorRolloutRead(updatedConnectorRollout)
+    }
+
     open fun manualStartConnectorRollout(connectorRolloutWorkflowStart: ConnectorRolloutManualStartRequestBody): ConnectorRolloutRead {
       val rollout =
         getOrCreateAndValidateManualStartInput(
@@ -394,7 +447,13 @@ open class ConnectorRolloutHandler
 
     open fun manualFinalizeConnectorRolloutWorkflowUpdate(
       connectorRolloutFinalizeWorkflowUpdate: ConnectorRolloutManualFinalizeRequestBody,
-    ): ConnectorRolloutRead {
+    ): ConnectorRolloutManualFinalizeResponse {
+      logger.info {
+        "Finalizing rollout for ${connectorRolloutFinalizeWorkflowUpdate.id}; " +
+          "dockerRepository=${connectorRolloutFinalizeWorkflowUpdate.dockerRepository}" +
+          "dockerImageTag=${connectorRolloutFinalizeWorkflowUpdate.dockerImageTag}" +
+          "actorDefinitionId=${connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId}"
+      }
       connectorRolloutClient.finalizeRollout(
         ConnectorRolloutActivityInputFinalize(
           connectorRolloutFinalizeWorkflowUpdate.dockerRepository,
@@ -404,7 +463,9 @@ open class ConnectorRolloutHandler
           ConnectorRolloutFinalState.fromValue(connectorRolloutFinalizeWorkflowUpdate.state.toString()),
         ),
       )
-      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutFinalizeWorkflowUpdate.id))
+      val response = ConnectorRolloutManualFinalizeResponse()
+      response.status("ok")
+      return response
     }
 
     @Cacheable("rollout-updated-by")

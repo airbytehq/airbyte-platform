@@ -14,22 +14,22 @@ import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
-import org.slf4j.LoggerFactory
 import java.io.IOException
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : FinalizeRolloutActivity {
-  private val log = LoggerFactory.getLogger(FinalizeRolloutActivityImpl::class.java)
-
   init {
-    log.info("Initialized FinalizeRolloutActivityImpl")
+    logger.info { "Initialized FinalizeRolloutActivityImpl" }
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
-    log.info("Finalizing rollout for ${input.dockerRepository}:${input.dockerImageTag}")
+    logger.info { "Finalizing rollout for ${input.dockerRepository}:${input.dockerImageTag}" }
 
     val (state, errorMsg, failureReason) =
       when (input.result) {
@@ -52,7 +52,7 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
 
     return try {
       val response: ConnectorRolloutFinalizeResponse = client.finalizeConnectorRollout(body)
-      log.info("ConnectorRolloutFinalizeResponse = ${response.data}")
+      logger.info { "ConnectorRolloutFinalizeResponse = ${response.data}" }
       ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
     } catch (e: IOException) {
       throw Activity.wrap(e)

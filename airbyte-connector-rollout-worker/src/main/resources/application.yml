@@ -47,9 +47,10 @@ airbyte:
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
-  workspace:
-    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
-    root: ${WORKSPACE_ROOT}
+  connector_rollouts:
+    github_workflow:
+      dispatch_url: "https://api.github.com/repos/airbytehq/airbyte/actions/workflows/finalize_rollout.yml/dispatches"
+      github_token: ${CONNECTOR_ROLLOUT_GITHUB_AIRBYTE_PAT:}
 
 temporal:
   cloud:

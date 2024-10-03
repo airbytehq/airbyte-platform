@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -85,6 +86,14 @@ public class ActorDefinitionVersionHandler {
       case DESTINATION -> actorDefinitionService.getActorDefinitionVersion(
           destinationService.getStandardDestinationDefinition(actorDefinitionId).getDefaultVersionId());
     };
+  }
+
+  @SuppressWarnings("LineLength")
+  public ActorDefinitionVersionRead getDefaultVersion(GetActorDefinitionVersionDefaultRequestBody actorDefinitionVersionDefaultRequestBody)
+      throws IOException {
+    final Optional<ActorDefinitionVersion> version =
+        actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersionDefaultRequestBody.getActorDefinitionId());
+    return createActorDefinitionVersionRead(new ActorDefinitionVersionWithOverrideStatus(version.get(), false));
   }
 
   public ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionByTag(final ResolveActorDefinitionVersionRequestBody resolveVersionReq)

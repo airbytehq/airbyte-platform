@@ -15,11 +15,18 @@ dependencies {
   implementation(libs.airbyte.protocol)
 
   implementation(project(mapOf("path" to ":oss:airbyte-commons-temporal")))
+  implementation("com.squareup.okhttp3:okhttp:4.9.1")
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
+
+  runtimeOnly(libs.snakeyaml)
+
+  testImplementation("io.temporal:temporal-testing:1.22.3")
+  testImplementation(libs.mockk)
+  testImplementation(libs.mockito.inline)
 }
 
 airbyte {

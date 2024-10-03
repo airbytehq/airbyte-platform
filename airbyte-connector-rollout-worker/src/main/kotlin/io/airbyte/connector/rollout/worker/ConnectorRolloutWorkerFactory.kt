@@ -9,7 +9,9 @@ import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivityImpl
+import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivityImpl
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
+import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivityImpl
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.temporal.client.WorkflowClient
@@ -31,6 +33,8 @@ class ConnectorRolloutWorkerFactory {
     findRolloutActivityImpl: FindRolloutActivityImpl,
     updateRolloutActivityImpl: DoRolloutActivityImpl,
     finalizeRolloutActivityImpl: FinalizeRolloutActivityImpl,
+    promoteOrRollbackActivityImpl: PromoteOrRollbackActivityImpl,
+    verifyDefaultVersionActivityImpl: VerifyDefaultVersionActivityImpl,
   ): WorkerFactory {
     logger.info { "ConnectorRolloutWorkerFactory registering workflow" }
     val workerFactory = WorkerFactory.newInstance(workflowClient)
@@ -42,6 +46,8 @@ class ConnectorRolloutWorkerFactory {
       findRolloutActivityImpl,
       updateRolloutActivityImpl,
       finalizeRolloutActivityImpl,
+      promoteOrRollbackActivityImpl,
+      verifyDefaultVersionActivityImpl,
     )
     return workerFactory
   }

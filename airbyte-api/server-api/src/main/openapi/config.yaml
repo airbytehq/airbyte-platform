@@ -857,6 +857,27 @@ paths:
                 $ref: "#/components/schemas/ResolveActorDefinitionVersionResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/actor_definition_versions/get_default:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get the default actor definition version for the actor.
+      operationId: getActorDefinitionVersionDefault
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetActorDefinitionVersionDefaultRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -5235,6 +5256,30 @@ paths:
       tags:
         - connector_rollout
 
+  /v1/connector_rollout/update_finalizing:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateFinalizingRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update rollout state to indicate that a request was sent to finalize the release candidate.
+      operationId: updateConnectorRolloutFinalizing
+      tags:
+        - connector_rollout
+
   /v1/connector_rollout/finalize:
     post:
       requestBody:
@@ -5320,7 +5365,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutFinalizeResponse"
+                $ref: "#/components/schemas/ConnectorRolloutManualFinalizeResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -7561,6 +7606,14 @@ components:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
 
+    ConnectorRolloutUpdateFinalizingRequestBody:
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
     ConnectorRolloutFinalizeRequestBody:
       type: object
       required:
@@ -7582,6 +7635,14 @@ components:
         updated_by:
           type: string
           format: uuid
+
+    ConnectorRolloutManualFinalizeResponse:
+      type: object
+      required:
+        - data
+      properties:
+        status:
+          type: string
 
     ConnectorRolloutFinalizeResponse:
       type: object
@@ -8827,6 +8888,13 @@ components:
           $ref: "#/components/schemas/ActorType"
         dockerImageTag:
           type: string
+    GetActorDefinitionVersionDefaultRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ListDeclarativeManifestsRequestBody:
       type: object
       required:

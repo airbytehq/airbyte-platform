@@ -581,6 +581,27 @@ components:
             title:
               type: string
               default: Found more than one subscription with some not being prepaid.
+    ConnectorRolloutInvalidRequestProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/invalid-request
+            title:
+              type: string
+              default: Invalid Connector Rollout request
+            detail:
+              type: string
+              default: Invalid connector rollout request. Check the logs for more information.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     ProblemCronData:
       type: object
       properties:
