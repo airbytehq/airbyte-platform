@@ -87,7 +87,11 @@ export const EnterpriseSourcePage: React.FC = () => {
 
       <div className={styles.rightSection}>
         {enterpriseSource && (
-          <EnterpriseDocumentationPanel name={enterpriseSource.name} documentationUrl={enterpriseSource.url} />
+          <EnterpriseDocumentationPanel
+            id={enterpriseSource.id}
+            name={enterpriseSource.name}
+            documentationUrl={enterpriseSource.url}
+          />
         )}
       </div>
     </div>

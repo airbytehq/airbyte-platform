@@ -16,6 +16,7 @@ import styles from "views/Connector/ConnectorDocumentationLayout/DocumentationPa
 const remarkPlugins = [removeFirstHeading];
 
 interface EnterpriseDocumentationPanelProps {
+  id: string;
   name: string;
   documentationUrl: string;
 }
@@ -25,12 +26,13 @@ export const EnterpriseDocumentationPanel: React.FC<EnterpriseDocumentationPanel
   // The existing DocumentationPanel component is wrapped in context expectations that don't align
   // with the simplicity of our enterprise stubs implementation.
   // Once we are done with this experiment we can remove this component.
+  id,
   name,
   documentationUrl,
 }) => {
   const { formatMessage } = useIntl();
 
-  const { data, isLoading, error } = useConnectorDocumentation("source", undefined, undefined, documentationUrl);
+  const { data, isLoading, error } = useConnectorDocumentation("source", id, undefined, documentationUrl);
 
   const doc = data?.doc;
 
