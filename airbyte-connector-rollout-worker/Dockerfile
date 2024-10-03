@@ -8,8 +8,9 @@ FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
 
 ENV APPLICATION airbyte-connector-rollout-worker
 ENV VERSION ${VERSION}
+# 8016 is the port micronaut listens on
 # 5005 is the remote debug port
-EXPOSE 5005
+EXPOSE 8016 5005
 
 WORKDIR /app
 COPY --chown=airbyte:airbyte --from=builder /app /app

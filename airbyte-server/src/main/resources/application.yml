@@ -350,6 +350,7 @@ temporal:
     host: ${TEMPORAL_CLOUD_HOST:}
     namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
     connector-rollout:
+      host: ${TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT:}
       namespace: ${TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT:}
   host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
   retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}

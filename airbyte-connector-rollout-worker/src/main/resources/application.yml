@@ -7,6 +7,12 @@ micronaut:
     visibility: all # Enable verbose logging for bean injection
   env:
     cloud-deduction: true
+  server:
+    port: 8016
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
@@ -17,7 +23,7 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
   security:
-    enabled: true
+    enabled: false
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -83,3 +89,34 @@ logging:
   level:
     root: INFO
     io.airbyte: DEBUG
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: false

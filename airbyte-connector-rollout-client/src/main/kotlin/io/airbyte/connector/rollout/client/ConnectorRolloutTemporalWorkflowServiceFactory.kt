@@ -22,8 +22,8 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
   @Property(name = "temporal.cloud.client.cert") temporalCloudClientCert: String?,
   @Property(name = "temporal.cloud.client.key") temporalCloudClientKey: String?,
   @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
-  @Value("\${temporal.cloud.host}") temporalCloudHost: String?,
-  @Value("\${temporal.cloud.connectorRollout.namespace}") temporalCloudNamespace: String?,
+  @Value("\${temporal.cloud.connector-rollout.host}") temporalCloudHost: String?,
+  @Value("\${temporal.cloud.connector-rollout.namespace}") temporalCloudNamespace: String?,
   @Value("\${temporal.host}") temporalHost: String?,
 ) {
   private val temporalCloudConfig: TemporalCloudConfig
