@@ -20,11 +20,13 @@ public final class AuthRoleConstants {
 
   public static final String ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN";
   public static final String ORGANIZATION_EDITOR = "ORGANIZATION_EDITOR";
+  public static final String ORGANIZATION_RUNNER = "ORGANIZATION_RUNNER";
   public static final String ORGANIZATION_READER = "ORGANIZATION_READER";
   public static final String ORGANIZATION_MEMBER = "ORGANIZATION_MEMBER";
 
   public static final String WORKSPACE_ADMIN = "WORKSPACE_ADMIN";
   public static final String WORKSPACE_EDITOR = "WORKSPACE_EDITOR";
+  public static final String WORKSPACE_RUNNER = "WORKSPACE_RUNNER";
   public static final String WORKSPACE_READER = "WORKSPACE_READER";
 
   // the 'SELF' role is used to secure endpoints that should only be called by the user themselves.
