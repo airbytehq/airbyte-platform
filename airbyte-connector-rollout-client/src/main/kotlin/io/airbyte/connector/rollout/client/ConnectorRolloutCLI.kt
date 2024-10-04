@@ -16,14 +16,16 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutManualStartRequestB
 import io.airbyte.api.client.model.generated.ConnectorRolloutReadRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.configuration.picocli.PicocliRunner
 import jakarta.inject.Inject
-import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 val objectMapper =
   jacksonObjectMapper().apply {
@@ -85,8 +87,6 @@ class ConnectorRolloutCLI : Runnable {
   private var actorIds: List<UUID>? = null
 
   companion object {
-    private val log = LoggerFactory.getLogger(ConnectorRolloutCLI::class.java)
-
     @JvmStatic
     fun main(args: Array<String>) {
       PicocliRunner.run(ConnectorRolloutCLI::class.java, *args)
@@ -102,7 +102,7 @@ class ConnectorRolloutCLI : Runnable {
     val rolloutClient = airbyteApiClient.connectorRolloutApi
 
     val rolloutCommand = RolloutCommand.fromString(command)
-    log.info("CLI Running command: $rolloutCommand")
+    logger.info { "CLI Running command: $rolloutCommand" }
 
     when (rolloutCommand) {
       RolloutCommand.START -> {
@@ -182,7 +182,7 @@ class ConnectorRolloutCLI : Runnable {
         finalizeRollout(rolloutClient, finalizeInput)
       }
       else -> {
-        log.info("CLI unknown command $command")
+        logger.info { "CLI unknown command $command" }
         CommandLine.usage(this, System.out)
       }
     }
@@ -233,6 +233,6 @@ class ConnectorRolloutCLI : Runnable {
     data: T,
   ) {
     val jsonOutput = objectMapper.writeValueAsString(data)
-    log.info("$message:\n$jsonOutput")
+    logger.info { "$message:\n$jsonOutput" }
   }
 }

@@ -42,6 +42,7 @@ mockito = "5.8.0"
 mockito-kotlin = "5.2.1"
 netty-tcnative = "2.0.62.Final"
 okhttp3 = "4.12.0"
+picocli = "4.7.4"
 platform-testcontainers = "1.19.4"
 postgresql = "42.7.3"
 reactor = "3.6.9"
@@ -175,6 +176,8 @@ otel-ext-annotations = { module = "io.opentelemetry:opentelemetry-extension-anno
 otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.36.0" }
 otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version = "1.36.0" }
 otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.30.1-alpha" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
 platform-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "platform-testcontainers" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
@@ -237,6 +240,7 @@ micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micr
 micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations", version.ref = "micronaut-openapi" }
+micronaut-picocli = { module = "io.micronaut.picocli:micronaut-picocli", version = "5.5.0" }
 micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version.ref = "micronaut" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "3.5.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.6.0" }

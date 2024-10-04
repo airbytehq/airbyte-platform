@@ -15,7 +15,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
 
   implementation(project(mapOf("path" to ":oss:airbyte-commons-temporal")))
-  implementation("com.squareup.okhttp3:okhttp:4.9.1")
+  implementation(libs.okhttp)
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))

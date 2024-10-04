@@ -12,11 +12,9 @@ import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
-import lombok.extern.slf4j.Slf4j
 import java.time.Duration
 import java.util.Objects
 
-@Slf4j
 @Singleton
 class ConnectorRolloutTemporalWorkflowServiceFactory(
   @Property(name = "temporal.cloud.client.cert") temporalCloudClientCert: String?,
