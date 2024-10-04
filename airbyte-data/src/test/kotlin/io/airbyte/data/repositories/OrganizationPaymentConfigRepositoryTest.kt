@@ -15,6 +15,7 @@ internal class OrganizationPaymentConfigRepositoryTest : AbstractConfigRepositor
   @AfterEach
   fun tearDown() {
     organizationPaymentConfigRepository.deleteAll()
+    workspaceRepository.deleteAll()
     organizationRepository.deleteAll()
   }
 
