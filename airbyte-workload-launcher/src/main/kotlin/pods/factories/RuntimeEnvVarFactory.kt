@@ -17,6 +17,7 @@ import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -29,6 +30,7 @@ import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 @Singleton
 class RuntimeEnvVarFactory(
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
+  @Value("\${airbyte.container.orchestrator.staging-folder}") private val stagingFolder: String,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
 ) {
@@ -106,7 +108,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> {
     val envVars = mutableListOf<EnvVar>()
     envVars.add(EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, true.toString(), null))
-
+    envVars.add(EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingFolder, null))
     val concurrentSourceStreamReadEnabled =
       dockerImage.startsWith(MYSQL_SOURCE_NAME) &&
         featureFlagClient.boolVariation(ConcurrentSourceStreamRead, Connection(connectionId))

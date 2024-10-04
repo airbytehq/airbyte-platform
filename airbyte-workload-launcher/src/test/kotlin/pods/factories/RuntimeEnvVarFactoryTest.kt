@@ -40,13 +40,15 @@ class RuntimeEnvVarFactoryTest {
 
   private lateinit var factory: RuntimeEnvVarFactory
 
+  private val stagingFolder = "staging-folder"
+
   @BeforeEach
   fun setup() {
     connectorApmSupportHelper = mockk()
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
 
-    factory = spyk(RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, connectorApmSupportHelper, ffClient))
+    factory = spyk(RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingFolder, connectorApmSupportHelper, ffClient))
   }
 
   @Test
@@ -159,6 +161,7 @@ class RuntimeEnvVarFactoryTest {
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingFolder, null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "true", null),
       )
 
@@ -178,6 +181,7 @@ class RuntimeEnvVarFactoryTest {
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingFolder, null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "false", null),
       )
 
