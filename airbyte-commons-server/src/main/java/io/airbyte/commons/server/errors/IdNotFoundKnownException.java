@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.errors;
 
 import io.airbyte.api.model.generated.NotFoundKnownExceptionInfo;
-import org.apache.logging.log4j.core.util.Throwables;
 
 /**
  * Thrown when an api input requests an id that does not exist.
@@ -46,10 +45,10 @@ public class IdNotFoundKnownException extends KnownException {
     final NotFoundKnownExceptionInfo exceptionInfo = new NotFoundKnownExceptionInfo()
         .exceptionClassName(this.getClass().getName())
         .message(this.getMessage())
-        .exceptionStack(Throwables.toStringList(this));
+        .exceptionStack(getStackTraceAsList(this));
     if (this.getCause() != null) {
       exceptionInfo.rootCauseExceptionClassName(this.getClass().getClass().getName());
-      exceptionInfo.rootCauseExceptionStack(Throwables.toStringList(this.getCause()));
+      exceptionInfo.rootCauseExceptionStack(getStackTraceAsList(this.getCause()));
     }
     exceptionInfo.id(this.getId());
     return exceptionInfo;

@@ -29,6 +29,7 @@ configurations.all {
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
   exclude(group = "io.micronaut.sql")
+  exclude(group="org.apache.logging.log4j")
 }
 
 dependencies {
@@ -36,7 +37,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
-  implementation(libs.bundles.log4j)
   implementation(libs.bundles.micronaut.light)
   implementation(libs.google.cloud.storage)
   implementation(libs.java.jwt)
@@ -48,8 +48,8 @@ dependencies {
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -59,7 +59,7 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
-  runtimeOnly(libs.appender.log4j2)
+  runtimeOnly(libs.bundles.logback)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
   kspTest(platform(libs.micronaut.platform))

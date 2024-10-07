@@ -9,6 +9,7 @@ import com.azure.storage.blob.BlobServiceClientBuilder
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
+import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import com.google.common.annotations.VisibleForTesting
@@ -24,8 +25,10 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
@@ -68,7 +71,13 @@ class StorageClientFactory(
 enum class DocumentType(
   val prefix: Path,
 ) {
-  LOGS(prefix = Path.of("/job-logging")),
+  // Note that app logs and job logs should not have a leading slash to ensure
+  // that GCS/Azure can find these files in blob storage.  Both of those
+  // cloud providers treat the leading slash as a directory.  Currently, logs
+  // are retrieved by the LogClient, which uses a path set on the attempt that
+  // does NOT contain a leading slash.  Therefor, these paths need to match that logic.
+  APPLICATION_LOGS(prefix = Path.of("app-logging")),
+  LOGS(prefix = Path.of("job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
   ACTIVITY_PAYLOADS(prefix = Path.of("/activity-payloads")),
@@ -128,6 +137,10 @@ class AzureStorageClient(
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, azureClient = config.azureClient())
 
+  init {
+    runCatching { createBucketIfNotExists() }
+  }
+
   override fun write(
     id: String,
     document: String,
@@ -154,6 +167,13 @@ class AzureStorageClient(
       .deleteIfExists()
 
   internal fun key(id: String): String = "${type.prefix}/$id"
+
+  private fun createBucketIfNotExists() {
+    val blobContainerClient = azureClient.getBlobContainerClient(bucketName)
+    if (!blobContainerClient.exists()) {
+      blobContainerClient.createIfNotExists()
+    }
+  }
 }
 
 /**
@@ -176,6 +196,10 @@ class GcsStorageClient(
     config: GcsStorageConfig,
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, gcsClient = config.gcsClient())
+
+  init {
+    runCatching { createBucketIfNotExists() }
+  }
 
   override fun write(
     id: String,
@@ -200,6 +224,12 @@ class GcsStorageClient(
 
   @VisibleForTesting
   internal fun blobId(id: String): BlobId = BlobId.of(bucketName, key(id))
+
+  private fun createBucketIfNotExists() {
+    if (gcsClient.get(bucketName) == null) {
+      gcsClient.create(BucketInfo.of(bucketName))
+    }
+  }
 }
 
 /**
@@ -294,6 +324,10 @@ abstract class AbstractS3StorageClient internal constructor(
 ) : StorageClient {
   private val bucketName = config.bucketName(type)
 
+  init {
+    runCatching { createBucketIfNotExists() }
+  }
+
   override fun write(
     id: String,
     document: String,
@@ -348,6 +382,23 @@ abstract class AbstractS3StorageClient internal constructor(
   }
 
   internal fun key(id: String): String = "${type.prefix}/$id"
+
+  private fun createBucketIfNotExists() {
+    if (!doesBucketExist(bucketName=bucketName)) {
+      val createBucketRequest = CreateBucketRequest.builder().bucket(bucketName).build()
+      s3Client.createBucket(createBucketRequest)
+    }
+  }
+
+  private fun doesBucketExist(bucketName: String): Boolean {
+    val headBucketRequest = HeadBucketRequest.builder().bucket(bucketName).build()
+    return try {
+      s3Client.headBucket(headBucketRequest)
+      true
+    } catch (e: Exception) {
+      false
+    }
+  }
 }
 
 /**
@@ -417,6 +468,7 @@ fun StorageConfig.bucketName(type: DocumentType): String =
   when (type) {
     DocumentType.STATE -> this.buckets.state
     DocumentType.WORKLOAD_OUTPUT -> this.buckets.workloadOutput
+    DocumentType.APPLICATION_LOGS -> this.buckets.log
     DocumentType.LOGS -> this.buckets.log
     DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
   }

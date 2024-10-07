@@ -8,6 +8,10 @@ configurations.all {
   exclude(group = "io.micronaut.flyway")
 }
 
+configurations.all {
+  exclude(group="org.apache.logging.log4j")
+}
+
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut

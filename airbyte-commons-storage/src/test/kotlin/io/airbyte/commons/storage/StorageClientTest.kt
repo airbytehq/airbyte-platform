@@ -6,10 +6,12 @@ package io.airbyte.commons.storage
 
 import com.azure.core.util.BinaryData
 import com.azure.storage.blob.BlobClient
+import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
+import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import io.mockk.every
 import io.mockk.mockk
@@ -24,15 +26,20 @@ import org.junit.jupiter.api.io.TempDir
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectResponse
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import com.google.cloud.storage.Bucket as GcsBucket
 
 private const val KEY = "a"
 private const val DOC1 = "hello"
@@ -43,7 +50,8 @@ private val buckets = StorageBucketConfig(log = "log", state = "state", workload
 class DocumentTypeTest {
   @Test
   fun `prefixes are correct`() {
-    assertEquals(DocumentType.LOGS.prefix, Path.of("/job-logging"))
+    assertEquals(DocumentType.APPLICATION_LOGS.prefix, Path.of("app-logging"))
+    assertEquals(DocumentType.LOGS.prefix, Path.of("job-logging"))
     assertEquals(DocumentType.STATE.prefix, Path.of("/state"))
     assertEquals(DocumentType.WORKLOAD_OUTPUT.prefix, Path.of("/workload/output"))
   }
@@ -55,6 +63,11 @@ class AzureStorageClientTest {
   @Test
   fun `key matches`() {
     val azureClient: BlobServiceClient = mockk()
+    val blobContainerClient: BlobContainerClient = mockk()
+
+    every { azureClient.getBlobContainerClient(any()) } returns blobContainerClient
+    every { blobContainerClient.exists() } returns false
+    every { blobContainerClient.createIfNotExists() } returns true
 
     val clientState = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
     assertEquals("/state/$KEY", clientState.key(KEY))
@@ -66,6 +79,12 @@ class AzureStorageClientTest {
   @Test
   fun `read missing doc`() {
     val azureClient: BlobServiceClient = mockk()
+    val blobContainerClient: BlobContainerClient = mockk()
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { blobContainerClient.exists() } returns false
+    every { blobContainerClient.createIfNotExists() } returns true
+
     val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
 
     every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
@@ -82,6 +101,12 @@ class AzureStorageClientTest {
   @Test
   fun `read existing doc`() {
     val azureClient: BlobServiceClient = mockk()
+    val blobContainerClient: BlobContainerClient = mockk()
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { blobContainerClient.exists() } returns false
+    every { blobContainerClient.createIfNotExists() } returns true
+
     val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
 
     every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
@@ -105,14 +130,18 @@ class AzureStorageClientTest {
   @Test
   fun `write doc`() {
     val azureClient: BlobServiceClient = mockk()
-    var blobClient: BlobClient = mockk()
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val blobClient: BlobClient = mockk()
+    val blobContainerClient: BlobContainerClient = mockk()
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
-      mockk { every { getBlobClient(client.key(KEY)) } returns blobClient }
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { blobContainerClient.exists() } returns false
+    every { blobContainerClient.createIfNotExists() } returns true
 
     every { blobClient.exists() } returns true
     every { blobClient.upload(any<InputStream>()) } returns Unit
+
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    every { blobContainerClient.getBlobClient(client.key(KEY)) } returns blobClient
 
     client.write(KEY, DOC1)
     verify { blobClient.upload(any<InputStream>()) }
@@ -121,6 +150,12 @@ class AzureStorageClientTest {
   @Test
   fun `delete doc`() {
     val azureClient: BlobServiceClient = mockk()
+    val blobContainerClient: BlobContainerClient = mockk()
+
+    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { blobContainerClient.exists() } returns false
+    every { blobContainerClient.createIfNotExists() } returns true
+
     val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
 
     // doc not deleted
@@ -150,7 +185,11 @@ class GcsStorageClientTest {
 
   @Test
   fun `blobId matches`() {
-    val gcsClient: Storage = mockk()
+    val gcsClient: Storage =
+      mockk {
+        every { get(any<String>(), *anyVararg()) } returns null
+        every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
+      }
 
     val clientState = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
     assertEquals(BlobId.of(buckets.state, "/state/$KEY"), clientState.blobId(KEY))
@@ -161,7 +200,11 @@ class GcsStorageClientTest {
 
   @Test
   fun `read missing doc`() {
-    val gcsClient: Storage = mockk()
+    val gcsClient: Storage =
+      mockk {
+        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
+      }
     val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
 
     // verify no blob is returned
@@ -178,7 +221,11 @@ class GcsStorageClientTest {
 
   @Test
   fun `read existing doc`() {
-    val gcsClient: Storage = mockk()
+    val gcsClient: Storage =
+      mockk {
+        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
+      }
     val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
@@ -196,7 +243,11 @@ class GcsStorageClientTest {
 
   @Test
   fun `write doc`() {
-    val gcsClient: Storage = mockk()
+    val gcsClient: Storage =
+      mockk {
+        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
+      }
     val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
@@ -210,7 +261,11 @@ class GcsStorageClientTest {
 
   @Test
   fun `delete doc`() {
-    val gcsClient: Storage = mockk()
+    val gcsClient: Storage =
+      mockk {
+        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
+      }
     val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
@@ -263,7 +318,11 @@ class MinioStorageClientTest {
 
   @Test
   fun `key matches`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
 
     val clientState = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
     assertEquals("/state/$KEY", clientState.key(KEY))
@@ -274,7 +333,11 @@ class MinioStorageClientTest {
 
   @Test
   fun `read missing doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -293,7 +356,11 @@ class MinioStorageClientTest {
 
   @Test
   fun `read existing doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -316,7 +383,11 @@ class MinioStorageClientTest {
 
   @Test
   fun `write doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -334,7 +405,11 @@ class MinioStorageClientTest {
 
   @Test
   fun `delete doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val existsRequest =
@@ -368,7 +443,11 @@ class S3StorageClientTest {
 
   @Test
   fun `key matches`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
 
     val clientState = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
     assertEquals("/state/$KEY", clientState.key(KEY))
@@ -379,7 +458,11 @@ class S3StorageClientTest {
 
   @Test
   fun `read missing doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -398,7 +481,11 @@ class S3StorageClientTest {
 
   @Test
   fun `read existing doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -421,7 +508,11 @@ class S3StorageClientTest {
 
   @Test
   fun `write doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
@@ -439,7 +530,11 @@ class S3StorageClientTest {
 
   @Test
   fun `delete doc`() {
-    val s3Client: S3Client = mockk()
+    val s3Client: S3Client =
+      mockk {
+        every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+        every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+      }
     val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val existsRequest =

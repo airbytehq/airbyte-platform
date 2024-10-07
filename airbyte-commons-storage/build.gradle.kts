@@ -17,6 +17,8 @@ dependencies {
   api(libs.aws.java.sdk.sts)
   api(libs.s3)
   api(libs.google.cloud.storage)
+  api(libs.guava)
+  api(libs.slf4j.api)
 
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-metrics:metrics-lib"))
@@ -26,6 +28,7 @@ dependencies {
   // TODO: This is deprecated, but required to make the real van logging solution happy.
   implementation("com.microsoft.azure:azure-storage:8.6.6")
   implementation(libs.micronaut.inject)
+  implementation(libs.bundles.logback)
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

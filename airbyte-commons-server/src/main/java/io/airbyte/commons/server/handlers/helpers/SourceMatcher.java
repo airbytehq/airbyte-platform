@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
-import org.apache.logging.log4j.util.Strings;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Constructs a query for finding a query.
@@ -28,10 +28,10 @@ public class SourceMatcher implements Matchable<SourceRead> {
     }
 
     final SourceRead fromSearch = new SourceRead();
-    fromSearch.name(Strings.isBlank(search.getName()) ? query.getName() : search.getName());
+    fromSearch.name(StringUtils.isBlank(search.getName()) ? query.getName() : search.getName());
     fromSearch.sourceDefinitionId(search.getSourceDefinitionId() == null ? query.getSourceDefinitionId() : search.getSourceDefinitionId());
     fromSearch.sourceId(search.getSourceId() == null ? query.getSourceId() : search.getSourceId());
-    fromSearch.sourceName(Strings.isBlank(search.getSourceName()) ? query.getSourceName() : search.getSourceName());
+    fromSearch.sourceName(StringUtils.isBlank(search.getSourceName()) ? query.getSourceName() : search.getSourceName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
     fromSearch.icon(query.getIcon());
     fromSearch.isVersionOverrideApplied(query.getIsVersionOverrideApplied());

@@ -27,4 +27,21 @@ class EnvVarTest {
   fun `fetch returns null when unset and no default defined`() {
     assertNull(EnvVar.Z_TESTING_PURPOSES_ONLY_3.fetch())
   }
+
+  @Test
+  fun `fetchNotNull returns the correct value when set`() {
+    assertEquals("value-defined", EnvVar.Z_TESTING_PURPOSES_ONLY_1.fetchNotNull())
+    assertEquals("value-defined", EnvVar.Z_TESTING_PURPOSES_ONLY_1.fetchNotNull(default = "not this value"))
+  }
+
+  @Test
+  fun `fetchNotNull returns the default value if missing or blank`() {
+    val default = "defined as blank, so should return this value instead"
+    assertEquals(default, EnvVar.Z_TESTING_PURPOSES_ONLY_2.fetchNotNull(default = default))
+  }
+
+  @Test
+  fun `fetchNotNull returns empty string when unset and no default defined`() {
+    assertEquals("", EnvVar.Z_TESTING_PURPOSES_ONLY_3.fetchNotNull())
+  }
 }
