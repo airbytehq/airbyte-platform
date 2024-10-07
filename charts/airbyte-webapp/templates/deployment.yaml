@@ -53,7 +53,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-webapp-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "webapp.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if eq .Values.global.deploymentMode "oss"  }}

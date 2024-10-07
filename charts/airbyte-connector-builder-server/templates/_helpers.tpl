@@ -57,17 +57,3 @@ Define db secret
 {{- define "database.secret.name" -}}
 {{- printf "%s-postgresql" .Release.Name }}
 {{- end }}
-
-{{/* 
-Define imageTag
-*/}}
-
-{{- define "connector-builder-server.imageTag" -}}
-{{- if .Values.image.tag }}
-    {{- printf "%s" .Values.image.tag }}
-{{- else if ((.Values.global.image).tag) }}
-    {{- printf "%s" .Values.global.image.tag }}
-{{- else }}
-    {{- printf "%s" .Chart.AppVersion }}
-{{- end }}
-{{- end }}

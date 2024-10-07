@@ -55,7 +55,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-workload-launcher-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "workload-launcher.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -190,20 +190,31 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
+        - name: CONNECTOR_SIDECAR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_SIDECAR_IMAGE
+        - name: WORKLOAD_INIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_INIT_IMAGE
+        - name: CONTAINER_ORCHESTRATOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTAINER_ORCHESTRATOR_IMAGE
         - name: JOB_KUBE_BUSYBOX_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
         - name: JOB_KUBE_CURL_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_CURL_IMAGE
-        {{- end }}
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:

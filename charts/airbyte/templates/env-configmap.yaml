@@ -89,13 +89,12 @@ data:
   JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
   {{- end }}
 
-  {{- if $.Values.global.jobs.kube.images.busybox }}
-  JOB_KUBE_BUSYBOX_IMAGE: {{ $.Values.global.jobs.kube.images.busybox | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.images.curl }}
-  JOB_KUBE_CURL_IMAGE: {{ $.Values.global.jobs.kube.images.curl | quote }}
-  {{- end }}
+  JOB_KUBE_BUSYBOX_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.busybox $) }}
+  JOB_KUBE_CURL_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.curl $) }}
+  {{ $workloadLauncher := (index .Values "workload-launcher") }}
+  CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
+  WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
+  CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
 
   JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
@@ -142,9 +141,7 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator" "image") | quote }}
-  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit" "image") | quote }}
-  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar" "image") | quote }}
+  
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"

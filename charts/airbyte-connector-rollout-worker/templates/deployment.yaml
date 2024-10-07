@@ -56,7 +56,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-connector-rollout-worker-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "connector-rollout-worker.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
