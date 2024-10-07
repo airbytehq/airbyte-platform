@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.workers.internal.VersionedAirbyteStreamFactory.CONNECTION_ID_NOT_PRESENT;
+import static io.airbyte.workers.internal.VersionedAirbyteStreamFactory.MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE;
+import static io.airbyte.workers.internal.VersionedAirbyteStreamFactory.MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
@@ -111,7 +114,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).info(invalidRecord);
+      verify(logger).info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord);
     }
 
     @Test
@@ -131,7 +134,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).info(invalidRecord);
+      verify(logger).info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord);
     }
 
     @Test
@@ -141,7 +144,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).info(invalidRecord);
+      verify(logger).info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord);
     }
 
     @Test
@@ -169,7 +172,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testMalformedRecordShouldOnlyDebugLog(final String invalidRecord) {
       stringToMessageStream(invalidRecord).collect(Collectors.toList());
       verifyBlankedRecordRecordWarning();
-      verify(logger).debug(invalidRecord);
+      verify(logger).debug(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord);
     }
 
     private VersionedAirbyteStreamFactory getFactory() {
@@ -197,7 +200,7 @@ class VersionedAirbyteStreamFactoryTest {
       final String randomLog = "I should not be send on the same channel than the airbyte messages";
       Assertions.assertThat(getFactory().toAirbyteMessage(randomLog))
           .isEmpty();
-      verify(logger).info(randomLog);
+      verify(logger).info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, randomLog);
     }
 
     @Test
@@ -205,7 +208,7 @@ class VersionedAirbyteStreamFactoryTest {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
       getFactory().toAirbyteMessage(messageLine);
       verifyBlankedRecordRecordWarning();
-      verify(logger).debug(messageLine);
+      verify(logger).debug(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, messageLine);
     }
 
     @Test
@@ -213,7 +216,7 @@ class VersionedAirbyteStreamFactoryTest {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
       Assertions.assertThat(getFactory().toAirbyteMessage(messageLine)).isEmpty();
       verifyBlankedRecordRecordWarning();
-      verify(logger).debug(messageLine);
+      verify(logger).debug(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, messageLine);
     }
 
     @Test
