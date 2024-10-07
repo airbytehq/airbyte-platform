@@ -35,7 +35,6 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
-import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -72,7 +71,6 @@ import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
-import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -117,7 +115,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -237,6 +234,11 @@ class SchedulerHandlerTest {
       .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
       .withOperatorWebhook(new OperatorWebhook());
   private static final UUID WEBHOOK_OPERATION_ID = UUID.randomUUID();
+  private static final ConnectionRead CONNECTION = new ConnectionRead()
+      .connectionId(UUID.randomUUID())
+      .sourceId(SOURCE.getSourceId())
+      .syncCatalog(null)
+      .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY);
 
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
@@ -264,7 +266,6 @@ class SchedulerHandlerTest {
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private StreamRefreshesHandler streamRefreshesHandler;
-  private NotificationHelper notificationHelper;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private LogClientManager logClientManager;
   private CatalogService catalogService;
@@ -322,7 +323,6 @@ class SchedulerHandlerTest {
 
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
-    notificationHelper = mock(NotificationHelper.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     schedulerHandler = new SchedulerHandler(
@@ -350,8 +350,7 @@ class SchedulerHandlerTest {
         connectorDefinitionSpecificationHandler,
         workspaceService,
         secretPersistenceConfigService,
-        streamRefreshesHandler,
-        notificationHelper, connectionTimelineEventHelper);
+        streamRefreshesHandler, connectionTimelineEventHelper);
   }
 
   @Test
@@ -1010,7 +1009,7 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     schedulerHandler.discoverSchemaForSourceFromSourceId(request);
@@ -1019,7 +1018,7 @@ class SchedulerHandlerTest {
     // source
     final var expectedOldPathCalls = enabled ? 0 : 2;
     verify(connectionsHandler, times(expectedOldPathCalls)).getDiff(any(), any(), any(), any());
-    verify(connectionsHandler, times(expectedOldPathCalls)).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
+    verify(connectionsHandler, times(expectedOldPathCalls)).disableConnectionIfNeeded(any(), anyBoolean(), any());
 
     // if the ff is on, we use the ala cart diff and disabling logic for just the connection specified
     final var expectedNewPathCalls = enabled ? 1 : 0;
@@ -1069,7 +1068,7 @@ class SchedulerHandlerTest {
     when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
@@ -1131,7 +1130,7 @@ class SchedulerHandlerTest {
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
     when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final ActorCatalog actorCatalog = new ActorCatalog()
@@ -1206,14 +1205,14 @@ class SchedulerHandlerTest {
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
     final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(ConnectionStatus.INACTIVE, actual.getConnectionStatus());
-    verify(connectionsHandler).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
+    verify(connectionsHandler).disableConnectionIfNeeded(any(), anyBoolean(), any());
   }
 
   // TODO: to be removed once we swap to new discover flow
@@ -1262,7 +1261,7 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
@@ -1353,7 +1352,7 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-    when(connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
+    when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.ACTIVE));
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
@@ -1364,8 +1363,7 @@ class SchedulerHandlerTest {
     assertEquals(catalogDiff1, actual.getCatalogDiff());
     assertEquals(expectedActorCatalog, actual.getCatalog());
     assertEquals(ConnectionStatus.ACTIVE, actual.getConnectionStatus());
-
-    verify(connectionsHandler, times(3)).updateSchemaChangesAndAutoDisableConnectionIfNeeded(any(), anyBoolean(), any());
+    verify(connectionsHandler, times(3)).disableConnectionIfNeeded(any(), anyBoolean(), any());
   }
 
   @Test
@@ -1687,7 +1685,6 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
 
     final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
-    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.PROPAGATE_FULLY);
     mockNewStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
@@ -1700,7 +1697,8 @@ class SchedulerHandlerTest {
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(CONNECTION));
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
         .workspaceId(workspaceId)
@@ -1709,11 +1707,8 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler).updateConnection(
-        new ConnectionUpdate().connectionId(connection.getConnectionId())
-            .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId),
-        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
+
   }
 
   @Test
@@ -1730,7 +1725,6 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
 
     final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
-    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.PROPAGATE_FULLY);
     mockUpdateStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
@@ -1740,7 +1734,8 @@ class SchedulerHandlerTest {
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(CONNECTION));
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
         .workspaceId(workspaceId)
@@ -1749,11 +1744,8 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler).updateConnection(
-        new ConnectionUpdate().connectionId(connection.getConnectionId())
-            .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId),
-        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
+
   }
 
   @Test
@@ -1770,7 +1762,6 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
 
     final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
-    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.PROPAGATE_FULLY);
     mockRemoveStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
@@ -1780,7 +1771,8 @@ class SchedulerHandlerTest {
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(CONNECTION));
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
         .workspaceId(workspaceId)
@@ -1789,11 +1781,8 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler).updateConnection(
-        new ConnectionUpdate().connectionId(connection.getConnectionId())
-            .syncCatalog(catalogWithDiff)
-            .sourceCatalogId(discoveredSourceId),
-        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
+
   }
 
   @Test
@@ -1810,7 +1799,6 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
-    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.PROPAGATE_COLUMNS);
     mockUpdateAndAddStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
@@ -1822,7 +1810,8 @@ class SchedulerHandlerTest {
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(CONNECTION));
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
         .workspaceId(source.getWorkspaceId())
@@ -1831,11 +1820,8 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler).updateConnection(
-        new ConnectionUpdate().connectionId(connection.getConnectionId())
-            .syncCatalog(catalogWithNewColumn)
-            .sourceCatalogId(discoveredSourceId),
-        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
+
   }
 
   @Test
@@ -1944,8 +1930,7 @@ class SchedulerHandlerTest {
         .catalogId(catalogId)
         .catalog(newCatalog);
     spySchedulerHandler.applySchemaChangeForSource(request);
-    verify(connectionsHandler).updateConnection(any(), any(), any());
-    verify(notificationHelper, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
   }
 
   @Test
@@ -1961,7 +1946,6 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
 
     final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
-    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.IGNORE);
     mockEmptyDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
@@ -1972,7 +1956,8 @@ class SchedulerHandlerTest {
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(CONNECTION));
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
         .workspaceId(workspaceId)
@@ -1981,11 +1966,8 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler).updateConnection(
-        new ConnectionUpdate().connectionId(connection.getConnectionId())
-            .syncCatalog(discoveredCatalog)
-            .sourceCatalogId(discoveredSourceId),
-        ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), true);
+    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean());
+
   }
 
   private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {

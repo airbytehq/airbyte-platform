@@ -1375,7 +1375,7 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog(), false);
+    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog(), true);
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(
@@ -1419,6 +1419,8 @@ public class ConnectionsHandler {
       updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), autoApply);
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.getConnectionId(), catalogId);
+      connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff);
+      LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
       notificationHelper.notifySchemaPropagated(
           workspace.getNotificationSettings(),
           appliedDiff,
@@ -1546,9 +1548,9 @@ public class ConnectionsHandler {
    * changes but the connection is configured to disable for any schema changes
    *
    */
-  public ConnectionRead updateSchemaChangesAndAutoDisableConnectionIfNeeded(final ConnectionRead connectionRead,
-                                                                            final boolean containsBreakingChange,
-                                                                            final CatalogDiff diff)
+  public ConnectionRead disableConnectionIfNeeded(final ConnectionRead connectionRead,
+                                                  final boolean containsBreakingChange,
+                                                  final CatalogDiff diff)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID connectionId = connectionRead.getConnectionId();
     // Monitor the schema change detection
@@ -1593,7 +1595,7 @@ public class ConnectionsHandler {
 
     final var diff = getDiff(connectionRead, discoveredCatalog);
     final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-    final ConnectionRead updatedConnection = updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
+    final ConnectionRead updatedConnection = disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
     return new SourceDiscoverSchemaRead()
         .breakingChange(containsBreakingChange)
         .catalogDiff(diff)

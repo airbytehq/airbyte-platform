@@ -12295,6 +12295,114 @@ components:
         - stream
         - legacy
         - not_set
+    CatalogConfigDiff:
+      type: object
+      description: Describes the difference between two configured catalogs.
+      properties:
+        streamsEnabled:
+          description: list of new streams enabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        streamsDisabled:
+          description: list of streams disabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsEnabled:
+          description: list of new fields enabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsDisabled:
+          description: list of fields disabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsDataTypeChanged:
+          description: list of changes ofr field data type. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDataTypeDiff"
+        primaryKeysChanged:
+          description: list of changes for primary keys. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamConfigDiff"
+        cursorFieldsChanged:
+          description: list of changes for cursor fields. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamConfigDiff"
+        syncModesChanged:
+          description: list of changes for sync mode. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamSyncModeDiff"
+    StreamFieldStatusChanged:
+      type: object
+      description: Describes the fields newly enabled or disabled in a stream.
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        status:
+          type: string
+          enum:
+            - enabled
+            - disabled
+        fields:
+          type: array
+          items:
+            type: string
+    FieldDataTypeDiff:
+      type: object
+      description: Field data type changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        fieldName:
+          type: string
+        prev:
+          type: string
+        current:
+          type: string
+    StreamConfigDiff:
+      type: object
+      description: Stream configuration changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        configType:
+          type: string
+          enum:
+            - primary_key
+            - cursor_field
+        prev:
+          type: string
+        current:
+          type: string
+    StreamSyncModeDiff:
+      type: object
+      description: Sync mode changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        prevSourceSyncMode:
+          type: string
+        prevDestinationSyncMode:
+          type: string
+        currentSourceSyncMode:
+          type: string
+        currentDestinationSyncMode:
+          type: string
     CatalogDiff:
       type: object
       description: Describes the difference between two Airbyte catalogs.

@@ -40,6 +40,10 @@ public class NotificationHelper {
                                      final SourceConnection source,
                                      final String email) {
     try {
+      if (notificationSettings.getSendOnConnectionUpdate() == null) {
+        LOGGER.warn("Connection update notification settings are not configured for workspaceId: '{}'", workspace.getWorkspaceId());
+        return;
+      }
       if (diff.getTransforms().isEmpty()) {
         LOGGER.info("No diff to report for connection: '{}'; skipping notification.", connection.getConnectionId());
         return;

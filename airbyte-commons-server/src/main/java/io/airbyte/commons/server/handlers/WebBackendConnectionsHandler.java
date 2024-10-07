@@ -657,7 +657,8 @@ public class WebBackendConnectionsHandler {
 
     // persist the update and set the connectionRead to the updated form.
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch, null, false);
-
+    // TODO: if syncCatalog is included in the patch, we need to calculate the diff and log a
+    // schema_config_change event in connection timeline.
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
     resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
     /*

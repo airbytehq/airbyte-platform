@@ -4,21 +4,15 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.api.model.generated.CatalogDiff
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-class SchemaUpdateEvent(
-  private val startTimeEpochSeconds: Long,
+class SchemaChangeAutoPropagationEvent(
   private val catalogDiff: CatalogDiff,
-  private val updateReason: String? = null,
 ) : ConnectionEvent {
-  fun getStartTimeEpochSeconds(): Long {
-    return startTimeEpochSeconds
-  }
-
   fun getCatalogDiff(): CatalogDiff {
     return catalogDiff
   }
 
   fun getUpdateReason(): String? {
-    return updateReason
+    return ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name
   }
 
   override fun getEventType(): ConnectionEvent.Type {

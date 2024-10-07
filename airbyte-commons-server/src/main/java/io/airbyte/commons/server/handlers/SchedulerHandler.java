@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
 import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,25 +20,20 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
-import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
-import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.LogRead;
-import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
-import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -47,11 +41,9 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
-import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
@@ -64,7 +56,6 @@ import io.airbyte.config.Attempt;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
-import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
@@ -89,7 +80,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -160,7 +150,6 @@ public class SchedulerHandler {
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final StreamRefreshesHandler streamRefreshesHandler;
-  private final NotificationHelper notificationHelper;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   @VisibleForTesting
@@ -189,7 +178,6 @@ public class SchedulerHandler {
                           final WorkspaceService workspaceService,
                           final SecretPersistenceConfigService secretPersistenceConfigService,
                           final StreamRefreshesHandler streamRefreshesHandler,
-                          final NotificationHelper notificationHelper,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.configRepository = configRepository;
     this.actorDefinitionService = actorDefinitionService;
@@ -221,7 +209,6 @@ public class SchedulerHandler {
         jobTracker,
         connectionTimelineEventHelper);
     this.streamRefreshesHandler = streamRefreshesHandler;
-    this.notificationHelper = notificationHelper;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
   }
 
@@ -517,56 +504,15 @@ public class SchedulerHandler {
     }
 
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(sourceAutoPropagateChange.getWorkspaceId(), true);
-    final SourceConnection source = configRepository.getSourceConnection(sourceAutoPropagateChange.getSourceId());
-    final NotificationSettings notificationSettings = workspace.getNotificationSettings();
     final ConnectionReadList connectionsForSource =
         connectionsHandler.listConnectionsForSource(sourceAutoPropagateChange.getSourceId(), false);
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
-      final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
-          .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
-      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog syncCatalog =
-          connectionRead.getSyncCatalog();
-      final CatalogDiff diff =
-          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
-              sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredInternal(syncCatalog), connectionRead.getConnectionId());
-
-      final ConnectionUpdate updateObject =
-          new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
-      final UUID destinationDefinitionId =
-          configRepository.getDestinationDefinitionFromConnection(connectionRead.getConnectionId()).getDestinationDefinitionId();
-      final var supportedDestinationSyncModes =
-          connectorDefinitionSpecificationHandler
-              .getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
-                  .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
-              .getSupportedDestinationSyncModes();
-
-      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, connectionRead)) {
-        final UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
-            updateObject,
-            syncCatalog,
-            sourceAutoPropagateChange.getCatalog(),
-            diff.getTransforms(),
-            sourceAutoPropagateChange.getCatalogId(),
-            connectionRead.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
-        connectionsHandler.updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(),
-            true);
-        connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
-            updateObject.getConnectionId(), result);
-        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
-            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-
-        if (notificationSettings != null
-            && notificationSettings.getSendOnConnectionUpdate() != null
-            && !result.appliedDiff().getTransforms().isEmpty()
-            && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
-          notificationHelper.notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
-              workspace.getEmail());
-        }
-      } else {
-        LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
-            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-      }
+      connectionsHandler.applySchemaChange(
+          connectionRead.getConnectionId(),
+          workspace.getWorkspaceId(),
+          sourceAutoPropagateChange.getCatalogId(),
+          sourceAutoPropagateChange.getCatalog(),
+          true);
     }
   }
 
@@ -718,32 +664,11 @@ public class SchedulerHandler {
               CatalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
       final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
       final ConnectionRead updatedConnection =
-          connectionsHandler.updateSchemaChangesAndAutoDisableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
+          connectionsHandler.disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(updatedConnection.getStatus());
       }
     }
-  }
-
-  private UpdateSchemaResult applySchemaChange(final UUID connectionId,
-                                               final ConnectionUpdate updateObject,
-                                               final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
-                                               final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
-                                               final List<StreamTransform> transformations,
-                                               final UUID sourceCatalogId,
-                                               final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                               final List<DestinationSyncMode> supportedDestinationSyncModes) {
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    final UpdateSchemaResult updateSchemaResult = getUpdatedSchema(
-        currentSyncCatalog,
-        newCatalog,
-        transformations,
-        nonBreakingChangesPreference,
-        supportedDestinationSyncModes);
-    updateObject.setSyncCatalog(updateSchemaResult.catalog());
-    updateObject.setSourceCatalogId(sourceCatalogId);
-    return updateSchemaResult;
   }
 
   private CheckConnectionRead reportConnectionStatus(final SynchronousResponse<StandardCheckConnectionOutput> response) {
