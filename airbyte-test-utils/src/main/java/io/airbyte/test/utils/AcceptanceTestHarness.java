@@ -311,6 +311,7 @@ public class AcceptanceTestHarness {
         null,
         List.of(),
         List.of(),
+        List.of(),
         null,
         null,
         null);
@@ -1378,6 +1379,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
             stream.getConfig().getHashedFields(),
+            stream.getConfig().getMappers(),
             stream.getConfig().getMinimumGenerationId(),
             stream.getConfig().getGenerationId(),
             stream.getConfig().getSyncId())))

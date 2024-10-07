@@ -34,6 +34,7 @@ import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
@@ -74,6 +75,7 @@ import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamMapperType;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
@@ -106,6 +108,7 @@ import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
@@ -1681,15 +1684,59 @@ class ConnectionsHandlerTest {
         catalogForUpdate.getStreams().getFirst().getConfig().hashedFields(List.of(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME)));
 
         // Expect mapper in the persisted catalog
+        final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
         final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateAirbyteCatalogWithTwoFields();
-        expectedPersistedCatalog.getStreams().getFirst().setMappers(List.of(MapperHelperKt.createHashingMapper(FIELD_NAME)));
+        expectedPersistedCatalog.getStreams().getFirst().setMappers(List.of(hashingMapper));
 
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
             .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalogForUpdate);
 
+        // Ensure mappers are populated as well
+        final AirbyteCatalog expectedCatalog = Jsons.clone(catalogForUpdate);
+        expectedCatalog.getStreams().getFirst().getConfig().addMappersItem(
+            new ConfiguredStreamMapper().type(StreamMapperType.HASHING).mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())));
+
         final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .syncCatalog(expectedCatalog);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withCatalog(expectedPersistedCatalog);
+
+        when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
+        verify(configRepository).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchMappers() throws Exception {
+        // The connection initially has a catalog with one stream, and two fields in that stream.
+        standardSync.setCatalog(ConnectionHelpers.generateAirbyteCatalogWithTwoFields());
+
+        // Send an update that hashes one of the fields, using mappers
+        final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
+        final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateApiCatalogWithTwoFields();
+        catalogForUpdate.getStreams().getFirst().getConfig().addMappersItem(
+            new ConfiguredStreamMapper().type(StreamMapperType.HASHING).mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())));
+
+        // Expect mapper in the persisted catalog
+        final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateAirbyteCatalogWithTwoFields();
+        expectedPersistedCatalog.getStreams().getFirst().setMappers(List.of(hashingMapper));
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalogForUpdate);
+
+        // Ensure hashedFields is set as well for backwards-compatibility with UI expectations
+        final AirbyteCatalog expectedCatalog = Jsons.clone(catalogForUpdate);
+        expectedCatalog.getStreams().getFirst().getConfig().addHashedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .syncCatalog(expectedCatalog);
 
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog);

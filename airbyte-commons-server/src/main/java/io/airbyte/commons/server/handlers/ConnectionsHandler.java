@@ -909,6 +909,7 @@ public class ConnectionsHandler {
     final Set<List<String>> convertedNewPrimaryKey = new HashSet<>(newConfig.getPrimaryKey());
     final boolean hasPrimaryKeyChanged = !(convertedOldPrimaryKey.equals(convertedNewPrimaryKey));
 
+    // TODO(pedro): This should be checked by generating the destination catalog to support all mappers
     final List<SelectedFieldInfo> oldHashedFields =
         oldConfig.getHashedFields() == null ? new ArrayList() : new ArrayList(oldConfig.getHashedFields());
     final List<SelectedFieldInfo> newHashedFields =

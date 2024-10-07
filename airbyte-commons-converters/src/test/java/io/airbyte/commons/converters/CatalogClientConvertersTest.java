@@ -10,9 +10,12 @@ import static org.mockito.Mockito.spy;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.SelectedFieldInfo;
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper;
+import io.airbyte.api.client.model.generated.StreamMapperType;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -65,6 +68,7 @@ class CatalogClientConvertersTest {
           null,
           null,
           null,
+          null,
           null);
 
   private static final AirbyteCatalog BASIC_MODEL_CATALOG = new AirbyteCatalog().withStreams(
@@ -92,6 +96,9 @@ class CatalogClientConvertersTest {
   @Test
   void testConvertInternalWithMapping() {
     reset(fieldGenerator);
+
+    final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
+
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
         io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
@@ -102,7 +109,8 @@ class CatalogClientConvertersTest {
         null,
         null,
         null,
-        List.of(new SelectedFieldInfo(List.of(ID_FIELD_NAME))),
+        null,
+        List.of(new ConfiguredStreamMapper(StreamMapperType.HASHING, Jsons.jsonNode(hashingMapper.getConfig()))),
         null,
         null,
         null);
@@ -156,6 +164,7 @@ class CatalogClientConvertersTest {
           List.of(),
           Names.toAlphanumericAndUnderscore(STREAM_NAME),
           true,
+          null,
           null,
           null,
           null,

@@ -11597,9 +11597,15 @@ components:
         selectedFields:
           description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
           $ref: "#/components/schemas/SelectedFields"
+        # TODO(pedro): remove `hashedFields` once the UI is updated to use `mappers`.
         hashedFields:
-          description: Fields that should be hashed before being written to the destination.
+          description: Fields that should be hashed before being written to the destination. Deprecated, use `mappers` instead.
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
         minimumGenerationId:
           type: integer
           format: int64
@@ -11622,6 +11628,23 @@ components:
           items:
             type: string
       x-sdk-component: true
+    StreamMapperType:
+      type: string
+      enum:
+        - hashing
+    ConfiguredStreamMapper:
+      type: object
+      required:
+        - type
+        - mapperConfiguration
+      properties:
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
+    MapperConfiguration:
+      type: object
+      description: The values required to configure the mapper.
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
       type: array

@@ -126,7 +126,7 @@ public class WebBackendConnectionsHandler {
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
                                       final ConfigRepository configRepositoryDoNotUse,
-                                      CatalogService catalogService,
+                                      final CatalogService catalogService,
                                       final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                       final FieldGenerator fieldGenerator,
@@ -545,7 +545,9 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setSelected(originalConfiguredStream.getConfig().getSelected());
         outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
+        outputStreamConfig.setMappers(originalStreamConfig.getMappers());
 
+        // TODO(pedro): Handle other mappers that are no longer valid
         // Add hashed field configs that are still present in the schema
         if (originalStreamConfig.getHashedFields() != null && !originalStreamConfig.getHashedFields().isEmpty()) {
           final List<String> discoveredFields =

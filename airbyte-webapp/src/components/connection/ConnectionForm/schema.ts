@@ -14,6 +14,7 @@ import {
   NonBreakingChangesPreference,
   SyncMode,
   SchemaChangeBackfillPreference,
+  StreamMapperType,
 } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog";
 
@@ -102,6 +103,15 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
   hashedFields: yup
     .array()
     .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
+    .optional(),
+  mappers: yup
+    .array()
+    .of(
+      yup.object({
+        type: yup.mixed<StreamMapperType>().oneOf(Object.values(StreamMapperType)),
+        mapperConfiguration: yup.object(),
+      })
+    )
     .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),

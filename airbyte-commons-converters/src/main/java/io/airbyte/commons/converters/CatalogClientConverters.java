@@ -7,15 +7,15 @@ package io.airbyte.commons.converters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.SelectedFieldInfo;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
@@ -196,16 +196,13 @@ public class CatalogClientConverters {
             .withIsResumable(stream.isResumable());
   }
 
-  private static List<ConfiguredMapper> toConfiguredHashingMappers(final @Nullable List<SelectedFieldInfo> hashedFields) {
-    if (hashedFields == null) {
+  private static List<ConfiguredMapper> toConfiguredMappers(final @Nullable List<ConfiguredStreamMapper> mappers) {
+    if (mappers == null) {
       return Collections.emptyList();
     }
-
-    // FIXME(pedro): See https://github.com/airbytehq/airbyte-internal-issues/issues/9718
-    // We shouldn't have to rebuild these here, and can potentially lead to losing configuration that's
-    // actually stored in the db.
-    return hashedFields.stream().map(f -> MapperHelperKt.createHashingMapper(f.getFieldPath().getFirst()) // We don't support nested fields for now.
-    ).toList();
+    return mappers.stream()
+        .map(mapper -> new ConfiguredMapper(mapper.getType().getValue(), Jsons.deserializeToStringMap(mapper.getMapperConfiguration())))
+        .collect(Collectors.toList());
   }
 
   private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
@@ -220,11 +217,9 @@ public class CatalogClientConverters {
         .cursorField(config.getCursorField())
         .generationId(config.getGenerationId())
         .minimumGenerationId(config.getMinimumGenerationId())
-        .syncId(config.getSyncId());
-
-    builder
+        .syncId(config.getSyncId())
         .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
-        .mappers(toConfiguredHashingMappers(config.getHashedFields()));
+        .mappers(toConfiguredMappers(config.getMappers()));
 
     return builder.build();
   }
@@ -253,6 +248,7 @@ public class CatalogClientConverters {
         stream.getSourceDefinedPrimaryKey(),
         Names.toAlphanumericAndUnderscore(stream.getName()),
         true,
+        null,
         null,
         null,
         null,

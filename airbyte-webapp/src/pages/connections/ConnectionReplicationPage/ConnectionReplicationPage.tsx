@@ -129,6 +129,15 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const onFormSubmit = useCallback(
     async (values: RelevantConnectionValues) => {
+      // ** FOR NOW **
+      // the UI relies on `config.hashedFields` which the API maps to `mappers`
+      // to enable support for `mappers` in the public API, compose BE does some magic to convert between the two
+      // but that can lead to `mappers` here overriding `hashedFields`, so we unset any mappers
+      // `hashedFields` will go away with the mappers UI project
+      values.syncCatalog.streams.forEach((stream) => {
+        delete stream.config?.mappers;
+      });
+
       setSubmitError(null);
 
       /**

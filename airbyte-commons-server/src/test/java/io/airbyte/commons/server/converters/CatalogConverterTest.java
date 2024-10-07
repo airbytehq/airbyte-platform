@@ -13,10 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
+import io.airbyte.api.model.generated.StreamMapperType;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.config.ConfiguredMapper;
@@ -52,6 +55,28 @@ class CatalogConverterTest {
 
   @Test
   void testConvertInternal() throws JsonValidationException {
+    final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    final var apiStream = apiCatalog.getStreams().getFirst();
+    apiStream.getConfig().setMappers(
+        List.of(new ConfiguredStreamMapper()
+            .type(StreamMapperType.HASHING)
+            .mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig()))));
+
+    final var internalCatalog = CatalogConverter.toConfiguredInternal(apiCatalog);
+    assertEquals(1, internalCatalog.getStreams().size());
+    final var internalStream = internalCatalog.getStreams().getFirst();
+    final var mappers = internalStream.getMappers();
+    assertEquals(1, mappers.size());
+
+    final var fields = internalStream.getFields();
+    assertEquals(2, fields.size());
+
+    assertEquals(hashingMapper, mappers.getFirst());
+  }
+
+  @Test
+  void testConvertInternalWithHashedFields() throws JsonValidationException {
     final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     final var apiStream = apiCatalog.getStreams().getFirst();
     apiStream.getConfig().setHashedFields(List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME))));
@@ -67,7 +92,6 @@ class CatalogConverterTest {
 
     final ConfiguredMapper expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
     assertEquals(expectedMapper, mappers.getFirst());
-
   }
 
   @Test
