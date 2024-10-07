@@ -14,12 +14,12 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspace } from "core/api";
 import { ConnectionScheduleType, ConnectionStatus } from "core/api/types/AirbyteClient";
+import { FormattedCredits } from "packages/cloud/area/billing/components/FormattedCredits";
+import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
-import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerConnectionTable.module.scss";
-import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 interface UsagePerConnectionTableProps {
   freeAndPaidUsageByConnection: ConnectionFreeAndPaidUsage[];
@@ -51,7 +51,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
                 {props.cell.getValue()}
                 {props.row.original.connection.status === ConnectionStatus.deprecated && (
                   <InfoTooltip>
-                    <FormattedMessage id="credits.deleted" />
+                    <FormattedMessage id="credits.connection.deleted" />
                   </InfoTooltip>
                 )}
               </TextWithOverflowTooltip>

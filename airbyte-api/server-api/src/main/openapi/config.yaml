@@ -4864,6 +4864,27 @@ paths:
                 $ref: "#/components/schemas/OrganizationReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get_usage:
+    post:
+      tags:
+        - organization
+        - cloud-only
+      summary: Get usage for an organization
+      operationId: getOrganizationUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/deployment/metadata:
     post:
       summary: Provides the Airbyte deployment metadata.
@@ -8161,24 +8182,26 @@ components:
         destinationDefinition:
           $ref: "#/components/schemas/DestinationDefinitionRead"
         usage:
-          type: object
-          required:
-            - free
-            - regular
-            - internal
-          properties:
-            free:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
-            regular:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
-            internal:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
+          $ref: "#/components/schemas/UsageBucket"
+    UsageBucket:
+      type: object
+      required:
+        - free
+        - regular
+        - internal
+      properties:
+        free:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
+        regular:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
+        internal:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
     TimeframeUsage:
       type: object
       required:
@@ -11145,6 +11168,46 @@ components:
           $ref: "#/components/schemas/PermissionType"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    OrganizationUsageRequestBody:
+      type: object
+      required:
+        - organizationId
+        - timeWindow
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+    OrganizationUsageRead:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    IndividualWorkspaceUsageRead:
+      type: object
+      required:
+        - workspace
+        - usage
+      properties:
+        workspace:
+          type: object
+          required:
+            - id
+            - name
+            - tombstoned
+          properties:
+            id:
+              $ref: "#/components/schemas/WorkspaceId"
+            name:
+              type: string
+            tombstoned:
+              type: boolean
+        usage:
+          $ref: "#/components/schemas/UsageBucket"
 
     # PERMISSIONS
     PermissionIdRequestBody:

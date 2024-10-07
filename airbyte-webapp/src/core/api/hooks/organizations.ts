@@ -9,10 +9,11 @@ import {
   listUsersInOrganization,
   updateOrganization,
   getOrganizationTrialStatus,
+  getOrganizationUsage,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
-import { OrganizationTrialStatusRead, OrganizationUserReadList } from "../types/AirbyteClient";
+import { ConsumptionTimeWindow, OrganizationTrialStatusRead, OrganizationUserReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -25,6 +26,8 @@ export const organizationKeys = {
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
+  usage: (organizationId: string, timeWindow: string) =>
+    [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
 };
 
 /**
@@ -104,5 +107,14 @@ export const useOrganizationTrialStatus = (
       return getOrganizationTrialStatus({ organizationId }, requestOptions);
     },
     { enabled }
+  );
+};
+
+export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTimeWindow }) => {
+  const requestOptions = useRequestOptions();
+  const { organizationId } = useCurrentOrganizationInfo();
+
+  return useSuspenseQuery(organizationKeys.usage(organizationId, timeWindow), () =>
+    getOrganizationUsage({ organizationId, timeWindow }, requestOptions)
   );
 };

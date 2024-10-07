@@ -22,6 +22,12 @@ intents:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - ADMIN
+  ViewOrganizationUsage:
+    name: View organization usage
+    description: Ability to view usage across the whole organization
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ManageOrganizationBilling:
     name: Manage organization billing
     description: View and edit billing information for the organization

@@ -1,0 +1,1 @@
+export { FormattedCredits } from "./FormattedCredits";

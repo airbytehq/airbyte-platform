@@ -7,11 +7,11 @@ import { useCurrentWorkspace, useFilters } from "core/api";
 import { useGetCloudWorkspaceUsage, useGetWorkspaceUsage } from "core/api/cloud";
 import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
+import { UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
   ConnectionFreeAndPaidUsage,
-  UsagePerTimeChunk,
   calculateFreeAndPaidUsageByTimeChunk,
   calculateFreeAndPaidUsageByConnection,
   getWorkspaceUsageByTimeChunk,

@@ -16,9 +16,10 @@ import {
 
 import { Text } from "components/ui/Text";
 
-import { UsagePerTimeChunk } from "./calculateUsageDataObjects";
-import { FormattedCredits } from "./FormattedCredits";
+import { UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
+
 import styles from "./UsagePerDayGraph.module.scss";
+import { FormattedCredits } from "../FormattedCredits";
 
 interface UsagePerDayGraphProps {
   chartData: UsagePerTimeChunk;

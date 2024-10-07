@@ -16,6 +16,11 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
 import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
+import io.airbyte.api.model.generated.OrganizationUsageRead;
+import io.airbyte.api.model.generated.OrganizationUsageRequestBody;
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem;
+import io.airbyte.commons.auth.generated.Intent;
+import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.OrganizationsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Body;
@@ -71,6 +76,14 @@ public class OrganizationApiController implements OrganizationApi {
   @Override
   public OrganizationReadList listOrganizationsByUser(@Body final ListOrganizationsByUserRequestBody request) {
     return ApiHelper.execute(() -> organizationsHandler.listOrganizationsByUser(request));
+  }
+
+  @Post("/get_usage")
+  @RequiresIntent(Intent.ViewOrganizationUsage)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public OrganizationUsageRead getOrganizationUsage(@Body OrganizationUsageRequestBody organizationUsageRequestBody) {
+    throw new ApiNotImplementedInOssProblem();
   }
 
 }

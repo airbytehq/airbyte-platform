@@ -7,13 +7,13 @@ import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
 import { trackTiming } from "core/utils/datadog";
+import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 
 import styles from "./CreditsUsage.module.scss";
 import { useCreditsContext } from "./CreditsUsageContext";
 import { CreditsUsageFilters } from "./CreditsUsageFilters";
 import { EmptyState } from "./EmptyState";
 import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
-import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 export const CreditsUsage: React.FC = () => {
   const { freeAndPaidUsageByTimeChunk, hasFreeUsage, freeAndPaidUsageByConnection } = useCreditsContext();

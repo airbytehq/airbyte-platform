@@ -50,7 +50,7 @@ export const links = {
   connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
-  creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,
   pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,

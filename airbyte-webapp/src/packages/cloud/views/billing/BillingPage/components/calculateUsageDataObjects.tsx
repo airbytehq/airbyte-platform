@@ -1,16 +1,8 @@
-import dayjs, { ConfigType, ManipulateType } from "dayjs";
+import dayjs, { ConfigType } from "dayjs";
 
 import { ConnectionUsageRead, TimeframeUsage } from "core/api/types/AirbyteClient";
 import { ConnectionProto, ConsumptionRead, ConsumptionTimeWindow } from "core/api/types/CloudApi";
-
-export type UsagePerTimeChunk = Array<{
-  timeChunkLabel: string;
-  billedCost: number;
-  freeUsage: number;
-  internalUsage: number;
-  startTime: string;
-  endTime: string;
-}>;
+import { generateArrayForTimeWindow, UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
 export interface ConnectionFreeAndPaidUsage {
   connection: ConnectionProto;
@@ -20,53 +12,6 @@ export interface ConnectionFreeAndPaidUsage {
   totalInternalUsage: number;
   totalUsage: number;
 }
-
-export const generateArrayForTimeWindow = (timeWindow?: ConsumptionTimeWindow) => {
-  const usagePerTimeChunk: UsagePerTimeChunk = [];
-
-  // base case: lastMonth, which returns past 30 days of usage
-  const end = dayjs();
-  let start = end.subtract(29, "day");
-  let aggregation: ManipulateType = "day";
-  let formatterString = "MMM DD";
-
-  if (timeWindow === "lastSixMonths") {
-    aggregation = "week";
-    formatterString = "MMM DD";
-    start = end.subtract(6, "month").startOf(aggregation);
-  } else if (timeWindow === "lastYear") {
-    aggregation = "month";
-    formatterString = "MMM 'YY";
-    start = end.subtract(1, "year").startOf(aggregation);
-  }
-
-  for (let current = start; !current.isAfter(end.endOf(aggregation)); current = current.add(1, aggregation)) {
-    usagePerTimeChunk.push({
-      timeChunkLabel: current.format(formatterString),
-      billedCost: 0,
-      freeUsage: 0,
-      internalUsage: 0,
-      startTime: current.format("YYYY-MM-DD"),
-      endTime:
-        aggregation === "day"
-          ? current.add(1, "day").format("YYYY-MM-DD")
-          : current.endOf(aggregation).format("YYYY-MM-DD"),
-    });
-  }
-
-  // depending on the day of the week/month, we are likely
-  // to get a partial first entry of data... we'll just toss it
-  // since saying I am showing you March's data, but only providing 14 days worth of data
-  // seems like a bad idea
-  if (aggregation === "week") {
-    return usagePerTimeChunk.slice(-26);
-  }
-  if (aggregation === "month") {
-    return usagePerTimeChunk.slice(-12);
-  }
-
-  return usagePerTimeChunk;
-};
 
 /**
  * if there is no consumption for a given time chunk (in this case, day) we will not receive a data point

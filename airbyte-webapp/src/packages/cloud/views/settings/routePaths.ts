@@ -3,6 +3,7 @@ import { SettingsRoutePaths } from "pages/routePaths";
 export const CloudSettingsRoutePaths = {
   Usage: "usage",
   Billing: "billing",
+  OrganizationUsage: "organization-usage",
   Notifications: SettingsRoutePaths.Notifications,
   Account: SettingsRoutePaths.Account,
   Advanced: SettingsRoutePaths.Advanced,

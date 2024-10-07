@@ -29,6 +29,7 @@ export const CloudSettingsPage: React.FC = () => {
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
   const showBillingPageV2 = useShowBillingPageV2();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
 
   return (
     <SettingsLayout>
@@ -120,6 +121,13 @@ export const CloudSettingsPage: React.FC = () => {
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}
                 to={CloudSettingsRoutePaths.Billing}
+              />
+            )}
+            {showBillingPageV2 && canViewOrganizationUsage && (
+              <SettingsLink
+                iconType="chart"
+                name={formatMessage({ id: "settings.usage" })}
+                to={CloudSettingsRoutePaths.OrganizationUsage}
               />
             )}
           </SettingsNavigationBlock>

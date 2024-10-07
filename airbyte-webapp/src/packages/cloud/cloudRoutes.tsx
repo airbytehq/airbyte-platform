@@ -49,6 +49,7 @@ const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/Cloud
 const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
+const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/billing/OrganizationUsagePage"));
 const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
@@ -74,6 +75,7 @@ const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showBillingPageV2 = useShowBillingPageV2();
 
   useExperimentContext("organization", workspace.organizationId);
@@ -135,6 +137,9 @@ const MainRoutes: React.FC = () => {
           )}
           {canManageOrganizationBilling && showBillingPageV2 && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+          )}
+          {canViewOrganizationUsage && showBillingPageV2 && (
+            <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
