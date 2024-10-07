@@ -34,6 +34,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectorRolloutService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -203,13 +204,14 @@ class BootloaderTest {
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    val connectorRolloutService = mock(ConnectorRolloutService.class);
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
@@ -311,9 +313,10 @@ class BootloaderTest {
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    val connectorRolloutService = mock(ConnectorRolloutService.class);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),

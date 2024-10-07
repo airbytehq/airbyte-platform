@@ -433,6 +433,17 @@ open class ConnectorRolloutHandler
     }
 
     open fun manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutWorkflowUpdate.id)
+      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
+        connectorRolloutClient.startWorkflow(
+          ConnectorRolloutActivityInputStart(
+            connectorRolloutWorkflowUpdate.dockerRepository,
+            connectorRolloutWorkflowUpdate.dockerImageTag,
+            connectorRolloutWorkflowUpdate.actorDefinitionId,
+            connectorRolloutWorkflowUpdate.id,
+          ),
+        )
+      }
       connectorRolloutClient.doRollout(
         ConnectorRolloutActivityInputRollout(
           connectorRolloutWorkflowUpdate.dockerRepository,

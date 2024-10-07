@@ -19,12 +19,17 @@ import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.BreakingChanges;
+import io.airbyte.config.ConnectorEnumRolloutState;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleasesDestination;
 import io.airbyte.config.ConnectorReleasesSource;
+import io.airbyte.config.ConnectorRollout;
+import io.airbyte.config.ReleaseCandidatesDestination;
+import io.airbyte.config.ReleaseCandidatesSource;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.RolloutConfiguration;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
@@ -290,6 +295,107 @@ class ConnectorRegistryConvertersTest {
         new ConnectorRegistryDestinationDefinition()
             .withReleases(new ConnectorReleasesDestination().withBreakingChanges(new BreakingChanges()));
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
+  }
+
+  @Test
+  void testToReleaseCandidateSourceDefinitions() {
+    ConnectorRegistrySourceDefinition registrySourceDef = new ConnectorRegistrySourceDefinition();
+    assertEquals(ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef), Collections.emptyList());
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition()
+        .withReleases(new ConnectorReleasesSource().withReleaseCandidates(new ReleaseCandidatesSource().withAdditionalProperty(
+            DOCKER_TAG,
+            new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY))));
+    List<ConnectorRegistrySourceDefinition> rcDefs = ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef);
+    assertEquals(rcDefs.size(), 1);
+    assertEquals(rcDefs.get(0).getDockerImageTag(), DOCKER_TAG);
+    assertEquals(rcDefs.get(0).getDockerRepository(), DOCKER_REPOSITORY);
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition()
+        .withReleases(new ConnectorReleasesSource().withReleaseCandidates(new ReleaseCandidatesSource().withAdditionalProperty(
+            DOCKER_TAG,
+            null)));
+    rcDefs = ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef);
+    assertEquals(rcDefs.size(), 0);
+
+  }
+
+  @Test
+  void testToReleaseCandidateDestinationDefinitions() {
+    ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition();
+    assertEquals(ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef), Collections.emptyList());
+
+    registryDestinationDef = new ConnectorRegistryDestinationDefinition()
+        .withReleases(new ConnectorReleasesDestination().withReleaseCandidates(new ReleaseCandidatesDestination().withAdditionalProperty(
+            DOCKER_TAG,
+            new ConnectorRegistryDestinationDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY))));
+
+    List<ConnectorRegistryDestinationDefinition> rcDefs =
+        ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef);
+    assertEquals(rcDefs.size(), 1);
+    assertEquals(rcDefs.get(0).getDockerImageTag(), DOCKER_TAG);
+    assertEquals(rcDefs.get(0).getDockerRepository(), DOCKER_REPOSITORY);
+
+    registryDestinationDef = new ConnectorRegistryDestinationDefinition()
+        .withReleases(new ConnectorReleasesDestination().withReleaseCandidates(new ReleaseCandidatesDestination().withAdditionalProperty(
+            DOCKER_TAG,
+            null)));
+    rcDefs = ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef);
+    assertEquals(rcDefs.size(), 0);
+
+  }
+
+  @Test
+  void testToConnectorRollout() {
+    UUID advId = UUID.randomUUID();
+    UUID actorDefinitionId = UUID.randomUUID();
+    RolloutConfiguration rolloutConfiguration =
+        new RolloutConfiguration().withAdvanceDelayMinutes(1L).withInitialPercentage(10L).withMaxPercentage(100L);
+    ConnectorRegistrySourceDefinition rcDef =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdv = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+
+    // Normal behavior
+
+    ConnectorRollout rollout = ConnectorRegistryConverters.toConnectorRollout(rcDef, rcAdv);
+
+    assertEquals(rollout.getActorDefinitionId(), actorDefinitionId);
+    assertEquals(rollout.getInitialRolloutPct(), rolloutConfiguration.getInitialPercentage());
+    assertEquals(rollout.getFinalTargetRolloutPct(), rolloutConfiguration.getMaxPercentage());
+    assertEquals(rollout.getMaxStepWaitTimeMins(), rolloutConfiguration.getAdvanceDelayMinutes());
+    assertEquals(rollout.getState(), ConnectorEnumRolloutState.INITIALIZED);
+
+    // With dockerImageTag mismatch
+    ConnectorRegistrySourceDefinition rcDefWithDockerImageTagMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag("1.0.0").withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvWithDockerImageTagMismatch = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId)
+        .withVersionId(advId).withDockerImageTag("1.1.0").withDockerRepository(DOCKER_REPOSITORY);
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDockerImageTagMismatch, rcAdvWithDockerImageTagMismatch);
+    });
+
+    // With definition id mismatch
+    ConnectorRegistrySourceDefinition rcDefWithDefinitionIdTagMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvWithDefinitionIdMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDefinitionIdTagMismatch, rcAdvWithDefinitionIdMismatch);
+    });
+
+    // With docker repository mismatch
+    ConnectorRegistrySourceDefinition rcDefDockerRepoMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository("airbyte/source-faker")
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvDockerRepoMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository("airbyte/source-mismatch");
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefDockerRepoMismatch, rcAdvDockerRepoMismatch);
+    });
   }
 
   @ParameterizedTest

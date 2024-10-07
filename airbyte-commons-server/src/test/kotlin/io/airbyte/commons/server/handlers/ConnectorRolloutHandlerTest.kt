@@ -126,6 +126,10 @@ internal class ConnectorRolloutHandlerTest {
         // If the rollout is already finalized, it can't be finalized again
         validFinalizeStates().map { it.name }.contains(state.name)
       }
+
+    @JvmStatic
+    fun workflowStartedInProgress() =
+      listOf(ConnectorEnumRolloutState.WORKFLOW_STARTED, ConnectorEnumRolloutState.IN_PROGRESS, ConnectorEnumRolloutState.PAUSED)
   }
 
   @BeforeEach
@@ -676,8 +680,9 @@ internal class ConnectorRolloutHandlerTest {
     }
   }
 
-  @Test
-  fun `test manualDoConnectorRolloutWorkflowUpdate`() {
+  @ParameterizedTest
+  @MethodSource("workflowStartedInProgress")
+  fun `test manualDoConnectorRolloutWorkflowUpdate`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
     val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
     val connectorRolloutWorkflowUpdate =
@@ -689,6 +694,8 @@ internal class ConnectorRolloutHandlerTest {
         this.actorIds = actorIds
       }
     val connectorRollout = createMockConnectorRollout(rolloutId)
+    // Rollout has been started
+    connectorRollout.apply { this.state = state }
 
     every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
@@ -698,6 +705,41 @@ internal class ConnectorRolloutHandlerTest {
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
+      connectorRolloutClient.doRollout(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionService.getActorDefinitionVersion(any())
+    }
+
+    // Verify that startWorkflow() was not called because the rollout is already in progress
+    verify(exactly = 0) { connectorRolloutClient.startWorkflow(any()) }
+  }
+
+  @Test
+  fun `test manualDoConnectorRolloutWorkflowUpdate workflow not started`() {
+    val rolloutId = UUID.randomUUID()
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val connectorRolloutWorkflowUpdate =
+      ConnectorRolloutManualRolloutRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+        id = rolloutId
+        this.actorIds = actorIds
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+    // Rollout has been initialized, but workflow hasn't been started
+    connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
+
+    every { connectorRolloutClient.startWorkflow(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+
+    val result = connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.startWorkflow(any())
       connectorRolloutClient.doRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
