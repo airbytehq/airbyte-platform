@@ -413,6 +413,7 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
+        useFileTransfer = replicationFeatureFlags?.useFileTransfer ?: false,
       ).also { streamTrackers[pair] = it }
     }
   }

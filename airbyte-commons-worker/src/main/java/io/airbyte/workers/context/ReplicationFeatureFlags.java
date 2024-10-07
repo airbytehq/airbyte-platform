@@ -12,4 +12,5 @@ public record ReplicationFeatureFlags(boolean isDestinationTimeoutEnabled,
                                       long workloadHeartbeatTimeoutInMinutes,
                                       boolean failOnInvalidChecksum,
                                       boolean logStateMsgs,
-                                      boolean logConnectorMsgs) {}
+                                      boolean logConnectorMsgs,
+                                      boolean useFileTransfer) {}

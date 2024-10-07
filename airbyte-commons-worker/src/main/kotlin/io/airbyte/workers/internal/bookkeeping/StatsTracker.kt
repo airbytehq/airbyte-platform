@@ -3,6 +3,7 @@ package io.airbyte.workers.internal.bookkeeping
 import com.google.common.hash.HashFunction
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.FileTransferInformations
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
@@ -94,6 +95,7 @@ private val logger = KotlinLogging.logger { }
 class StreamStatsTracker(
   val nameNamespacePair: AirbyteStreamNameNamespacePair,
   private val metricClient: MetricClient,
+  private val useFileTransfer: Boolean,
 ) {
   val streamStats = StreamStatsCounters()
   private val stateIds = ConcurrentHashMap.newKeySet<Int>()
@@ -110,7 +112,16 @@ class StreamStatsTracker(
    * avoid having to traverse the map to get the global count.
    */
   fun trackRecord(recordMessage: AirbyteRecordMessage) {
-    val estimatedBytesSize: Long = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+    // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
+    val estimatedBytesSize: Long =
+      if (!useFileTransfer) {
+        Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+      } else {
+        recordMessage.additionalProperties["file"]?.let {
+          val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
+          fileTransferInformations.bytes
+        } ?: Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+      }
 
     // Update the current emitted stats
     // We do a local copy of the reference to emittedStats to ensure all the stats are
