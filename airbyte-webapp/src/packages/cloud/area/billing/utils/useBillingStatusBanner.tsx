@@ -31,21 +31,34 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   }
 
   if (billing.paymentStatus === "manual") {
-    return context === "top_level"
-      ? undefined
-      : {
-          level: "info",
-          content: formatMessage(
-            { id: "billing.banners.manualPaymentStatus" },
-            {
-              lnk: (node: React.ReactNode) => (
-                <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
-                  {node}
-                </ExternalLink>
-              ),
-            }
+    if (context === "top_level") {
+      // Do not show this information banner as a top-level banner.
+      return undefined;
+    }
+    if (billing.accountType === "free") {
+      return {
+        level: "info",
+        content: formatMessage({ id: "billing.banners.manualPaymentStatusFree" }),
+      };
+    } else if (billing.accountType === "internal") {
+      return {
+        level: "info",
+        content: formatMessage({ id: "billing.banners.manualPaymentStatusInternal" }),
+      };
+    }
+    return {
+      level: "info",
+      content: formatMessage(
+        { id: "billing.banners.manualPaymentStatus" },
+        {
+          lnk: (node: React.ReactNode) => (
+            <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
+              {node}
+            </ExternalLink>
           ),
-        };
+        }
+      ),
+    };
   }
 
   if (billing.paymentStatus === "locked") {

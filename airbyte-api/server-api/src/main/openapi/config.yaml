@@ -8049,6 +8049,11 @@ components:
                 - disabled
                 - locked
                 - manual
+            accountType:
+              type: string
+              enum:
+                - free
+                - internal
             gracePeriodEndsAt:
               type: integer
               format: int64
