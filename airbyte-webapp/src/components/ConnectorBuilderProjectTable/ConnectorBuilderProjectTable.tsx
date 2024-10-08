@@ -236,7 +236,7 @@ export const ConnectorBuilderProjectTable = ({
         header: () => null,
         cell: (props) => (
           <BuilderCell>
-            <FlexContainer justifyContent="flex-end" gap="sm" alignItems="center">
+            <FlexContainer justifyContent="flex-end" gap="sm" alignItems="center" className={styles.actions}>
               <Text className={styles.draftInProgress} color="grey">
                 {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
               </Text>
