@@ -746,6 +746,7 @@
   "connection.timeline.filters.sync": "Sync",
   "connection.timeline.filters.refresh": "Refresh",
   "connection.timeline.filters.clear": "Clear",
+  "connection.timeline.filters.schema_update": "Schema update",
   "connection.timeline.filters.connection_settings": "Settings change",
   "connection.timeline.filters.allEventTypes": "All event types",
   "connection.timeline.filters.allStatuses": "All statuses",

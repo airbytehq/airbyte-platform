@@ -9,6 +9,9 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { useCurrentConnection } from "core/api";
+import { useExperiment } from "hooks/services/Experiment";
+
 import styles from "./ConnectionTimelineFilters.module.scss";
 import { eventTypeFilterOptions, statusFilterOptions, TimelineFilterValues } from "./utils";
 
@@ -19,7 +22,7 @@ interface ConnectionTimelineFiltersProps {
   filtersAreDefault: boolean;
 }
 
-const EARLIEST_TIMELINE_EVENTS_AVAILABLE = dayjs("2024-06-20").toISOString();
+const EARLIEST_TIMELINE_EVENTS_AVAILABLE_DATE = dayjs("2024-06-20");
 const END_OF_TODAY = dayjs().endOf("day").toISOString();
 
 export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps> = ({
@@ -28,6 +31,14 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
   resetFilters,
   filtersAreDefault,
 }) => {
+  const areSchemaChangeEventsEnabled = useExperiment("connection.timeline.schemaUpdates");
+
+  const { createdAt: connectionCreatedAt } = useCurrentConnection();
+  const dayConnectionCreatedAt = dayjs(connectionCreatedAt ?? 0).startOf("day");
+  const filterStart = EARLIEST_TIMELINE_EVENTS_AVAILABLE_DATE.isAfter(dayConnectionCreatedAt)
+    ? EARLIEST_TIMELINE_EVENTS_AVAILABLE_DATE.toISOString()
+    : dayConnectionCreatedAt.toISOString();
+
   const [tempRangeDateFilterValue, setTempRangeDateFilterValue] = useState<{ startDate: string; endDate: string }>({
     startDate: filterValues.startDate,
     endDate: filterValues.endDate,
@@ -76,7 +87,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               buttonClassName={styles.filterButton}
               optionClassName={styles.filterOption}
               optionTextAs="span"
-              options={eventTypeFilterOptions(filterValues)}
+              options={eventTypeFilterOptions(filterValues, areSchemaChangeEventsEnabled)}
               selectedValue={filterValues.eventCategory}
               onSelect={(value) => setFilterValue("eventCategory", value)}
             />
@@ -86,7 +97,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               value={[tempRangeDateFilterValue.startDate, tempRangeDateFilterValue.endDate]}
               onChange={updateTempRangeDateFilter}
               onClose={setRangeDateFilterValue}
-              minDate={EARLIEST_TIMELINE_EVENTS_AVAILABLE}
+              minDate={filterStart}
               maxDate={END_OF_TODAY}
               valueFormat="unix"
               buttonText="connection.timeline.rangeDateFilter"
