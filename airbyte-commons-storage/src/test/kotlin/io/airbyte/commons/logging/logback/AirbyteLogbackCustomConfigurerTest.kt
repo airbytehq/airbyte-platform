@@ -8,18 +8,12 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.sift.SiftingAppender
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Context
-import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.OutputStreamAppender
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
-import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
-import ch.qos.logback.core.rolling.RollingFileAppender
-import ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy
 import ch.qos.logback.core.sift.AppenderFactory
 import ch.qos.logback.core.status.Status
 import ch.qos.logback.core.status.StatusManager
 import ch.qos.logback.core.util.Duration
-import ch.qos.logback.core.util.FileSize
-import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.storage.DocumentType
 import io.mockk.every
 import io.mockk.mockk
@@ -27,10 +21,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.exists
-import kotlin.io.path.pathString
 
 private class AirbyteLogbackCustomConfigurerTest {
   private lateinit var configurer: AirbyteLogbackCustomConfigurer
@@ -38,94 +28,6 @@ private class AirbyteLogbackCustomConfigurerTest {
   @BeforeEach
   fun setUp() {
     configurer = AirbyteLogbackCustomConfigurer()
-  }
-
-  @Test
-  fun testCreateApplicationRollingAppender() {
-    val context =
-      mockk<Context> {
-        every { getObject(any()) } returns mutableMapOf<String, String>()
-        every { statusManager } returns
-          mockk<StatusManager> {
-            every { add(any<Status>()) } returns Unit
-          }
-      }
-    val discriminatorValue = Files.createTempDirectory("test-1").pathString
-    val appender = configurer.createApplicationRollingAppender(loggerContext = context, discriminatorValue = discriminatorValue)
-
-    assertEquals(RollingFileAppender::class.java, appender.javaClass)
-    assertEquals(context, appender.context)
-    assertEquals("$discriminatorValue-local", appender.name)
-    assertEquals(
-      AirbytePlatformLogbackMessageLayout::class.java,
-      ((appender as OutputStreamAppender).encoder as LayoutWrappingEncoder).layout.javaClass,
-    )
-    assertEquals("$discriminatorValue/$DEFAULT_LOG_FILENAME", (appender as RollingFileAppender).file)
-
-    assertEquals(FixedWindowRollingPolicy::class.java, appender.rollingPolicy.javaClass)
-    assertEquals(
-      "$discriminatorValue/$DEFAULT_LOG_FILENAME".replace(LOG_FILE_EXTENSION, ROLLING_FILE_NAME_PATTERN),
-      (appender.rollingPolicy as FixedWindowRollingPolicy).fileNamePattern,
-    )
-    assertEquals(3, (appender.rollingPolicy as FixedWindowRollingPolicy).maxIndex)
-
-    assertEquals(SizeBasedTriggeringPolicy::class.java, appender.triggeringPolicy.javaClass)
-    assertEquals(FileSize.valueOf(DEFAULT_MAX_LOG_FILE_SIZE), (appender.triggeringPolicy as SizeBasedTriggeringPolicy).maxFileSize)
-
-    assertTrue(appender.isStarted)
-    assertTrue(Path.of(appender.file).exists())
-  }
-
-  @Test
-  fun testCreateOperationsJobFileAppender() {
-    val context =
-      mockk<Context> {
-        every { getObject(any()) } returns mutableMapOf<String, String>()
-        every { statusManager } returns
-          mockk<StatusManager> {
-            every { add(any<Status>()) } returns Unit
-          }
-      }
-    val discriminatorValue = Files.createTempDirectory("test-2").pathString
-    val appender = configurer.createOperationsJobFileAppender(loggerContext = context, discriminatorValue = discriminatorValue)
-
-    assertEquals(FileAppender::class.java, appender.javaClass)
-    assertEquals(context, appender.context)
-    assertEquals("$discriminatorValue/$DEFAULT_LOG_FILENAME", (appender as FileAppender).file)
-    assertEquals("$discriminatorValue-local", appender.name)
-    assertEquals(
-      AirbyteOperationsJobLogbackMessageLayout::class.java,
-      ((appender as OutputStreamAppender).encoder as LayoutWrappingEncoder).layout.javaClass,
-    )
-
-    assertTrue(appender.isStarted)
-    assertTrue(Path.of(appender.file).exists())
-  }
-
-  @Test
-  fun testCreateOperationsJobFileAppenderWithFileDiscriminator() {
-    val context =
-      mockk<Context> {
-        every { getObject(any()) } returns mutableMapOf<String, String>()
-        every { statusManager } returns
-          mockk<StatusManager> {
-            every { add(any<Status>()) } returns Unit
-          }
-      }
-    val discriminatorValue = Files.createTempFile("test-2", "other.log").pathString
-    val appender = configurer.createOperationsJobFileAppender(loggerContext = context, discriminatorValue = discriminatorValue)
-
-    assertEquals(FileAppender::class.java, appender.javaClass)
-    assertEquals(context, appender.context)
-    assertEquals(discriminatorValue, (appender as FileAppender).file)
-    assertEquals("$discriminatorValue-local", appender.name)
-    assertEquals(
-      AirbyteOperationsJobLogbackMessageLayout::class.java,
-      ((appender as OutputStreamAppender).encoder as LayoutWrappingEncoder).layout.javaClass,
-    )
-
-    assertTrue(appender.isStarted)
-    assertTrue(Path.of(appender.file).exists())
   }
 
   @Test

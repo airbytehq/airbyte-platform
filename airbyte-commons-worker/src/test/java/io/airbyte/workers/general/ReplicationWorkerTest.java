@@ -5,15 +5,12 @@
 package io.airbyte.workers.general;
 
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_JOB_LOG_PATH_MDC_KEY;
-import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
-import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_WORKSPACE_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -43,10 +40,7 @@ import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRespon
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.logging.LocalLogMdcHelper;
-import io.airbyte.commons.logging.LogMdcHelper;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
@@ -112,7 +106,6 @@ import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -683,38 +676,6 @@ abstract class ReplicationWorkerTest {
    * different checks.
    */
   abstract void verifyTestLoggingInThreads(final String logs);
-
-  @Test
-  void testLoggingInThreads() throws IOException, WorkerException {
-    // set up the mdc so that actually log to a file, so that we can verify that file logging captures
-    // threads.
-    final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    final LogMdcHelper logMdcHelper = new LocalLogMdcHelper();
-    MDC.put(logMdcHelper.getJobLogPathMdcKey(), Path.of(jobRoot.toString(), DEFAULT_LOG_FILENAME).toString());
-
-    final var worker = getDefaultReplicationWorker();
-
-    worker.run(replicationInput, jobRoot);
-
-    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
-    final String logs = IOs.readFile(logPath);
-    verifyTestLoggingInThreads(logs);
-  }
-
-  @Test
-  void testLogMaskRegex() throws IOException {
-    MDC.clear();
-    final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    MDC.put(DEFAULT_WORKSPACE_MDC_KEY, jobRoot.toString());
-
-    LOGGER.info(
-        "500 Server Error: Internal Server Error for url: https://api.hubapi.com/crm/v3/objects/contact?limit=100&archived=false&hapikey=secret-key_1&after=5315621");
-
-    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
-    final String logs = IOs.readFile(logPath);
-    assertTrue(logs.contains("apikey"));
-    assertFalse(logs.contains("secret-key_1"));
-  }
 
   @SuppressWarnings({"BusyWait"})
   @Test

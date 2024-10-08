@@ -13,34 +13,24 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.Context
-import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.Layout
 import ch.qos.logback.core.boolex.EventEvaluator
 import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.EvaluatorFilter
 import ch.qos.logback.core.hook.DefaultShutdownHook
-import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
-import ch.qos.logback.core.rolling.RollingFileAppender
-import ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy
 import ch.qos.logback.core.sift.AppenderFactory
 import ch.qos.logback.core.sift.Discriminator
 import ch.qos.logback.core.spi.ContextAwareBase
 import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.Duration
-import ch.qos.logback.core.util.FileSize
 import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.logging.DEFAULT_CLOUD_JOB_LOG_PATH_MDC_KEY
-import io.airbyte.commons.logging.DEFAULT_CLOUD_WORKSPACE_MDC_KEY
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
-import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.DEFAULT_WORKSPACE_MDC_KEY
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import java.io.File
-import java.nio.file.Path
-import kotlin.io.path.isDirectory
 
 /**
  * Custom Logback [Configurator] that configures Logback appenders and loggers for use in the platform.  This configurator allows us to
@@ -60,10 +50,8 @@ class AirbyteLogbackCustomConfigurer :
     val appenders =
       listOf(
         createPlatformAppender(loggerContext = loggerContext),
-        createOperationsJobAppender(loggerContext = loggerContext),
         createApplicationAppender(loggerContext = loggerContext),
-        createCloudApplicationAppender(loggerContext = loggerContext),
-        createCloudOperationsJobAppender(loggerContext = loggerContext),
+        createOperationsJobAppender(loggerContext = loggerContext),
       )
 
     // Register appenders with root logger
@@ -79,73 +67,12 @@ class AirbyteLogbackCustomConfigurer :
   }
 
   /**
-   * Builds the appender for application log messages.  This appender logs all messages to a rolling local file.
+   * Builds the appender for application log messages.  This appender logs all messages to remote storage.
    *
    * @param loggerContext The logging context.
    * @return The application appender.
    */
   private fun createApplicationAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
-    return createSiftingAppender(
-      appenderFactory = this::createApplicationRollingAppender,
-      appenderName = APPLICATION_LOGGER_NAME,
-      contextKey = DEFAULT_WORKSPACE_MDC_KEY,
-      loggerContext = loggerContext,
-    )
-  }
-
-  /**
-   * Builds a [RollingFileAppender] for application logs.
-   *
-   * @param loggerContext The logging context.
-   * @param discriminatorValue The discriminator value used to select this appender.
-   * @return A [RollingFileAppender] configured for the application logs.
-   */
-  internal fun createApplicationRollingAppender(
-    loggerContext: Context,
-    discriminatorValue: String,
-  ): Appender<ILoggingEvent> {
-    val baseFile = "$discriminatorValue/$DEFAULT_LOG_FILENAME"
-
-    // Ensure that the file exists before logging
-    touchFile(file = baseFile)
-
-    val appender =
-      RollingFileAppender<ILoggingEvent>().apply {
-        context = loggerContext
-        name = "$discriminatorValue-local"
-        encoder = createEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
-        file = baseFile
-      }
-
-    val triggeringPolicy =
-      SizeBasedTriggeringPolicy<ILoggingEvent>().apply {
-        context = loggerContext
-        maxFileSize = FileSize.valueOf(DEFAULT_MAX_LOG_FILE_SIZE)
-      }
-    triggeringPolicy.start()
-
-    val rollingPolicy =
-      FixedWindowRollingPolicy().apply {
-        context = loggerContext
-        fileNamePattern = baseFile.replace(LOG_FILE_EXTENSION, ROLLING_FILE_NAME_PATTERN)
-        maxIndex = 3
-        setParent(appender)
-      }
-    rollingPolicy.start()
-
-    appender.rollingPolicy = rollingPolicy
-    appender.triggeringPolicy = triggeringPolicy
-    appender.start()
-    return appender
-  }
-
-  /**
-   * Builds the cloud appender for application log messages.  This appender logs all messages to remote storage.
-   *
-   * @param loggerContext The logging context.
-   * @return The cloud application appender.
-   */
-  private fun createCloudApplicationAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
     val appenderFactory = { context: Context, discriminatorValue: String ->
       createCloudAppender(
         context = context,
@@ -159,18 +86,18 @@ class AirbyteLogbackCustomConfigurer :
     return createSiftingAppender(
       appenderFactory = appenderFactory,
       appenderName = CLOUD_APPLICATION_LOGGER_NAME,
-      contextKey = DEFAULT_CLOUD_WORKSPACE_MDC_KEY,
+      contextKey = DEFAULT_WORKSPACE_MDC_KEY,
       loggerContext = loggerContext,
     )
   }
 
   /**
-   * Builds the appender for cloud operations job log messages.  This appender logs all messages to remote storage.
+   * Builds the appender for operations job log messages.  This appender logs all messages to remote storage.
    *
    * @param loggerContext The logging context.
-   * @return The cloud operations job appender.
+   * @return The operations job appender.
    */
-  private fun createCloudOperationsJobAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
+  private fun createOperationsJobAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
     val appenderFactory = { context: Context, discriminatorValue: String ->
       createCloudAppender(
         context = context,
@@ -184,56 +111,9 @@ class AirbyteLogbackCustomConfigurer :
     return createSiftingAppender(
       appenderFactory = appenderFactory,
       appenderName = CLOUD_OPERATIONS_JOB_LOGGER_NAME,
-      contextKey = DEFAULT_CLOUD_JOB_LOG_PATH_MDC_KEY,
-      loggerContext = loggerContext,
-    )
-  }
-
-  /**
-   * Builds the appender for operations job log messages.  This appender logs all messages to a local file.
-   *
-   * @param loggerContext The logging context.
-   * @return The operations job appender.
-   */
-  private fun createOperationsJobAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
-    return createSiftingAppender(
-      appenderFactory = this::createOperationsJobFileAppender,
-      appenderName = OPERATIONS_JOB_LOGGER_NAME,
       contextKey = DEFAULT_JOB_LOG_PATH_MDC_KEY,
       loggerContext = loggerContext,
     )
-  }
-
-  /**
-   * Builds the operations job file appender for operations job log messages.
-   *
-   * @param loggerContext The logging context.
-   * @param discriminatorValue The discriminator value used to select this appender.
-   * @return A [FileAppender] configured for the operations job logs.
-   */
-  internal fun createOperationsJobFileAppender(
-    loggerContext: Context,
-    discriminatorValue: String,
-  ): Appender<ILoggingEvent> {
-    val filePath =
-      if (Path.of(discriminatorValue).isDirectory()) {
-        Path.of(discriminatorValue, DEFAULT_LOG_FILENAME)
-      } else {
-        Path.of(discriminatorValue)
-      }
-
-    // Ensure that the log file exists
-    touchFile(file = filePath.toString())
-
-    val appender =
-      FileAppender<ILoggingEvent>().apply {
-        context = loggerContext
-        encoder = createEncoder(context = loggerContext, layout = AirbyteOperationsJobLogbackMessageLayout())
-        file = filePath.toString()
-        name = "$discriminatorValue-local"
-      }
-    appender.start()
-    return appender
   }
 
   /**
