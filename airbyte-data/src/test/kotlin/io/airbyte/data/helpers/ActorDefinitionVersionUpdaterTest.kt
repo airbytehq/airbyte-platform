@@ -830,13 +830,13 @@ internal class ActorDefinitionVersionUpdaterTest {
   ): ScopedConfiguration {
     return ScopedConfiguration()
       .withKey(ConnectorVersionKey.key)
-      .withValue(defaultVersionId.toString())
+      .withValue(releaseCandidateVersionId.toString())
       .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
       .withResourceId(ACTOR_DEFINITION_ID)
       .withScopeType(ConfigScopeType.ACTOR)
       .withScopeId(actorId)
       .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
-      .withOrigin(releaseCandidateVersionId.toString())
+      .withOrigin(defaultVersionId.toString())
   }
 
   private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId {
