@@ -11610,6 +11610,7 @@ components:
       type: string
       enum:
         - hashing
+        - field-renaming
     ConfiguredStreamMapper:
       type: object
       required:

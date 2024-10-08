@@ -22,6 +22,11 @@ interface AirbyteRecord {
 
   fun remove(fieldName: String)
 
+  fun rename(
+    oldFieldName: String,
+    newFieldName: String,
+  )
+
   fun <T : Any> set(
     fieldName: String,
     value: T,

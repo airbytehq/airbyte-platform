@@ -31,6 +31,14 @@ class TestRecordAdapter(override val streamDescriptor: StreamDescriptor, data: M
     data.remove(fieldName)
   }
 
+  override fun rename(
+    oldFieldName: String,
+    newFieldName: String,
+  ) {
+    data[newFieldName] = data[oldFieldName] as Any
+    data.remove(oldFieldName)
+  }
+
   override fun <T : Any> set(
     fieldName: String,
     value: T,

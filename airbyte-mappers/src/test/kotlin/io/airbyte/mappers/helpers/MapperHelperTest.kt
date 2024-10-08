@@ -97,7 +97,7 @@ class MapperHelperTest {
       assertThrows<IllegalArgumentException> {
         validateConfiguredMappers(catalog)
       }
-    Assertions.assertEquals("Hashed field missing_field not found in stream my_stream.", exception.message)
+    Assertions.assertEquals("Hashed field 'missing_field' not found in stream 'my_stream'.", exception.message)
   }
 
   @Test
@@ -116,7 +116,7 @@ class MapperHelperTest {
       assertThrows<IllegalArgumentException> {
         validateConfiguredMappers(catalog)
       }
-    Assertions.assertEquals("Hashed field my_field_hashed already exists in stream my_stream.", exception.message)
+    Assertions.assertEquals("Hashed field 'my_field_hashed' already exists in stream 'my_stream'.", exception.message)
   }
 
   @Test

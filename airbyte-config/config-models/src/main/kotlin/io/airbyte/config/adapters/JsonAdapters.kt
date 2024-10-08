@@ -20,17 +20,27 @@ class JsonValueAdapter(private val node: JsonNode) : Value {
 }
 
 data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : AirbyteRecord {
-  override val asProtocol: AirbyteMessage
-    get() = message
-  override val streamDescriptor: StreamDescriptor = StreamDescriptor().withNamespace(message.record.namespace).withName(message.record.stream)
+  override val asProtocol: AirbyteMessage = message
+  override val streamDescriptor: StreamDescriptor =
+    StreamDescriptor()
+      .withNamespace(message.record.namespace)
+      .withName(message.record.stream)
   private val data: ObjectNode = message.record.data as ObjectNode
 
   override fun has(fieldName: String): Boolean = data.has(fieldName)
 
-  override fun get(fieldName: String): Value = JsonValueAdapter(data.get(fieldName))
+  override fun get(fieldName: String): Value = JsonValueAdapter(data[fieldName])
 
   override fun remove(fieldName: String) {
     data.remove(fieldName)
+  }
+
+  override fun rename(
+    oldFieldName: String,
+    newFieldName: String,
+  ) {
+    data.set<JsonNode>(newFieldName, data[oldFieldName])
+    data.remove(oldFieldName)
   }
 
   override fun <T : Any> set(
@@ -51,16 +61,11 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
         .withField(fieldName)
         .withReason(reason.toProtocol())
 
-    // handling all the cascading layers of potential null objects
-    // very thread-unsafe
-    if (message.record != null) {
-      if (message.record.meta == null) {
-        message.record.withMeta(AirbyteRecordMessageMeta().withChanges(mutableListOf()))
-      }
-      if (message.record.meta.changes == null) {
-        message.record.meta.withChanges(mutableListOf())
-      }
-      message.record.meta.changes.add(metaChange)
+    // Ensure thread-safe modification of shared mutable state
+    synchronized(message.record) {
+      val meta = message.record.meta ?: AirbyteRecordMessageMeta().also { message.record.withMeta(it) }
+      val changes = meta.changes ?: mutableListOf<AirbyteRecordMessageMetaChange>().also { meta.withChanges(it) }
+      changes.add(metaChange)
     }
   }
 

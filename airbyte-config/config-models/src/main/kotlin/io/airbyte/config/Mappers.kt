@@ -10,6 +10,7 @@ import io.airbyte.commons.json.Jsons
 
 object MapperOperationName {
   const val HASHING = "hashing"
+  const val FIELD_RENAMING = "field-renaming"
 }
 
 /**

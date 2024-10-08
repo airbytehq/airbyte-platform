@@ -2,9 +2,12 @@ package io.airbyte.mappers.helpers
 
 import com.google.common.base.Preconditions
 import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.MapperOperationName
+import io.airbyte.mappers.transformations.FieldRenamingMapper.Companion.NEW_FIELD_NAME
+import io.airbyte.mappers.transformations.FieldRenamingMapper.Companion.ORIGINAL_FIELD_NAME
 import io.airbyte.mappers.transformations.HashingMapper
 
 internal const val DEFAULT_HASHING_METHOD = HashingMapper.SHA256
@@ -36,33 +39,91 @@ fun getHashedFieldName(mapper: ConfiguredMapper): String {
 
 /**
  * Validates that the configured mappers in a configured catalog are valid.
- * For now this only checks that the hashing mapper is correctly configured, but we should move to using mapper specs in the future.
  */
 fun validateConfiguredMappers(configuredCatalog: ConfiguredAirbyteCatalog) {
   for (configuredStream in configuredCatalog.streams) {
-    val fields = configuredStream.fields
-    for (mapper in configuredStream.mappers) {
-      Preconditions.checkArgument(MapperOperationName.HASHING == mapper.name, "Mapping operation %s is not supported.", mapper.name)
-      Preconditions.checkNotNull(fields, "Fields must be set in order to use mappers.")
-
-      val mappedField = getHashedFieldName(mapper)
-      Preconditions.checkArgument(
-        fields!!.stream().anyMatch { f: Field -> f.name == mappedField },
-        "Hashed field %s not found in stream %s.",
-        mappedField,
-        configuredStream.stream.name,
-      )
-
-      val mappedFieldName =
-        getHashedFieldName(
-          mapper,
-        ) + mapper.config.getOrDefault(HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY, DEFAULT_HASHING_SUFFIX)
-      Preconditions.checkArgument(
-        fields.stream().noneMatch { f: Field -> f.name == mappedFieldName },
-        "Hashed field %s already exists in stream %s.",
-        mappedFieldName,
-        configuredStream.stream.name,
-      )
-    }
+    validateConfiguredStream(configuredStream)
   }
+}
+
+private fun validateConfiguredStream(configuredStream: ConfiguredAirbyteStream) {
+  val fields = configuredStream.fields
+  Preconditions.checkNotNull(fields, "Fields must be set in order to use mappers.")
+
+  for (mapper in configuredStream.mappers) {
+    validateMapper(configuredStream, mapper, fields!!)
+  }
+}
+
+private fun validateMapper(
+  configuredStream: ConfiguredAirbyteStream,
+  mapper: ConfiguredMapper,
+  fields: List<Field>,
+) {
+  when (mapper.name) {
+    MapperOperationName.HASHING -> validateHashingMapper(configuredStream, mapper, fields)
+    MapperOperationName.FIELD_RENAMING -> validateFieldRenamingMapper(configuredStream, mapper, fields)
+    else ->
+      Preconditions.checkArgument(
+        false,
+        "Mapping operation %s is not supported.",
+        mapper.name,
+      )
+  }
+}
+
+private fun validateHashingMapper(
+  configuredStream: ConfiguredAirbyteStream,
+  mapper: ConfiguredMapper,
+  fields: List<Field>,
+) {
+  val mappedField = getHashedFieldName(mapper)
+
+  Preconditions.checkArgument(
+    fields.any { it.name == mappedField },
+    "Hashed field '%s' not found in stream '%s'.",
+    mappedField,
+    configuredStream.stream.name,
+  )
+
+  val suffix =
+    mapper.config.getOrDefault(
+      HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY,
+      DEFAULT_HASHING_SUFFIX,
+    )
+  val mappedFieldName = "$mappedField$suffix"
+
+  Preconditions.checkArgument(
+    fields.none { it.name == mappedFieldName },
+    "Hashed field '%s' already exists in stream '%s'.",
+    mappedFieldName,
+    configuredStream.stream.name,
+  )
+}
+
+private fun validateFieldRenamingMapper(
+  configuredStream: ConfiguredAirbyteStream,
+  mapper: ConfiguredMapper,
+  fields: List<Field>,
+) {
+  val originalFieldName =
+    mapper.config[ORIGINAL_FIELD_NAME]
+      ?: throw IllegalArgumentException("Config missing required key: originalFieldName")
+  val newFieldName =
+    mapper.config[NEW_FIELD_NAME]
+      ?: throw IllegalArgumentException("Config missing required key: newFieldName")
+
+  Preconditions.checkArgument(
+    fields.any { it.name == originalFieldName },
+    "Original field '%s' not found in stream '%s'.",
+    originalFieldName,
+    configuredStream.stream.name,
+  )
+
+  Preconditions.checkArgument(
+    fields.none { it.name == newFieldName },
+    "New field '%s' already exists in stream '%s'.",
+    newFieldName,
+    configuredStream.stream.name,
+  )
 }

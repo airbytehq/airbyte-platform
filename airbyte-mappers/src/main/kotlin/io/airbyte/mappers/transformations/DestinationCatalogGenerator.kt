@@ -40,7 +40,7 @@ class DestinationCatalogGenerator(
     }
   }
 
-  internal fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<ConfiguredMapper, MapperError> {
+  private fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<ConfiguredMapper, MapperError> {
     val (updateFields, _, errors) = applyMapperToFields(stream)
 
     val jsonSchema =
