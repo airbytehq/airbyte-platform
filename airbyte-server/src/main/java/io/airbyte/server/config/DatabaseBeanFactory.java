@@ -11,8 +11,6 @@ import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.services.ConnectorBuilderService;
-import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
@@ -90,12 +88,8 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final ConnectorBuilderService connectorBuilderService,
-                                           final OperationService operationService,
-                                           final WorkspaceService workspaceService) {
+  public ConfigRepository configRepository(final WorkspaceService workspaceService) {
     return new ConfigRepository(
-        connectorBuilderService,
-        operationService,
         workspaceService);
 
   }

@@ -16,9 +16,9 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.OrganizationService;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -39,7 +39,7 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
   private static final String WEBHOOK_OPERATION_EXECUTION_URL = "test-webhook-url";
   private static final String WEBHOOK_OPERATION_EXECUTION_BODY = "test-webhook-body";
 
-  private ConfigRepository configRepository;
+  private OperationService operationService;
 
   private static final StandardSyncOperation WEBHOOK_OP = new StandardSyncOperation()
       .withName("webhook-operation")
@@ -58,57 +58,49 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    operationService = new OperationServiceJooqImpl(database);
 
-    configRepository = new ConfigRepository(
-        new ConnectorBuilderServiceJooqImpl(database),
-        new OperationServiceJooqImpl(database),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
-
-    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
     createWorkspace();
 
     for (final StandardSyncOperation op : OPS) {
-      configRepository.writeStandardSyncOperation(op);
+      operationService.writeStandardSyncOperation(op);
     }
   }
 
   @Test
   void testReadWrite() throws IOException, ConfigNotFoundException, JsonValidationException {
     for (final StandardSyncOperation op : OPS) {
-      assertEquals(op, configRepository.getStandardSyncOperation(op.getOperationId()));
+      assertEquals(op, operationService.getStandardSyncOperation(op.getOperationId()));
     }
   }
 
   @Test
   void testReadNotExists() {
-    assertThrows(ConfigNotFoundException.class, () -> configRepository.getStandardSyncOperation(UUID.randomUUID()));
+    assertThrows(ConfigNotFoundException.class, () -> operationService.getStandardSyncOperation(UUID.randomUUID()));
   }
 
   @Test
   void testList() throws IOException, JsonValidationException {
-    assertEquals(OPS, configRepository.listStandardSyncOperations());
+    assertEquals(OPS, operationService.listStandardSyncOperations());
   }
 
   @Test
   void testDelete() throws IOException, ConfigNotFoundException, JsonValidationException {
     for (final StandardSyncOperation op : OPS) {
-      assertEquals(op, configRepository.getStandardSyncOperation(op.getOperationId()));
-      configRepository.deleteStandardSyncOperation(op.getOperationId());
-      assertThrows(ConfigNotFoundException.class, () -> configRepository.getStandardSyncOperation(UUID.randomUUID()));
+      assertEquals(op, operationService.getStandardSyncOperation(op.getOperationId()));
+      operationService.deleteStandardSyncOperation(op.getOperationId());
+      assertThrows(ConfigNotFoundException.class, () -> operationService.getStandardSyncOperation(UUID.randomUUID()));
 
     }
   }
 
   private void createWorkspace() throws IOException, JsonValidationException {
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
+
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
         .withName("Another Workspace")
@@ -117,7 +109,8 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService)
+        .writeStandardWorkspaceNoSecrets(workspace);
   }
 
 }

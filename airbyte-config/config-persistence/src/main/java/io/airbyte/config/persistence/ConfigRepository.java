@@ -5,27 +5,17 @@
 package io.airbyte.config.persistence;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
-import io.airbyte.config.SourceConnection;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.services.ConnectorBuilderService;
-import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 /**
  * Repository of all SQL queries for the Configs Db. We are moving to persistences scoped by
@@ -44,26 +34,6 @@ public class ConfigRepository {
    * @param includeDeleted include tombstoned connections
    */
   public record StandardSyncQuery(@Nonnull UUID workspaceId, List<UUID> sourceId, List<UUID> destinationId, boolean includeDeleted) {
-
-  }
-
-  /**
-   * Query object for paginated querying of connections in multiple workspaces.
-   *
-   * @param workspaceIds workspaces to fetch connections for
-   * @param sourceId fetch connections with this source id
-   * @param destinationId fetch connections with this destination id
-   * @param includeDeleted include tombstoned connections
-   * @param pageSize limit
-   * @param rowOffset offset
-   */
-  public record StandardSyncsQueryPaginated(
-                                            @Nonnull List<UUID> workspaceIds,
-                                            List<UUID> sourceId,
-                                            List<UUID> destinationId,
-                                            boolean includeDeleted,
-                                            int pageSize,
-                                            int rowOffset) {
 
   }
 
@@ -115,17 +85,11 @@ public class ConfigRepository {
                                               int pageSize,
                                               int rowOffset) {}
 
-  private final ConnectorBuilderService connectorBuilderService;
-  private final OperationService operationService;
   private final WorkspaceService workspaceService;
 
   @SuppressWarnings("ParameterName")
   @VisibleForTesting
-  public ConfigRepository(final ConnectorBuilderService connectorBuilderService,
-                          final OperationService operationService,
-                          final WorkspaceService workspaceService) {
-    this.connectorBuilderService = connectorBuilderService;
-    this.operationService = operationService;
+  public ConfigRepository(final WorkspaceService workspaceService) {
     this.workspaceService = workspaceService;
   }
 
@@ -339,97 +303,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get sync operation.
-   *
-   * @param operationId operation id
-   * @return sync operation
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public StandardSyncOperation getStandardSyncOperation(final UUID operationId) throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return operationService.getStandardSyncOperation(operationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Write standard sync operation.
-   *
-   * @param standardSyncOperation standard sync operation.
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public void writeStandardSyncOperation(final StandardSyncOperation standardSyncOperation) throws IOException {
-    operationService.writeStandardSyncOperation(standardSyncOperation);
-  }
-
-  /**
-   * List standard sync operations.
-   *
-   * @return standard sync operations.
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StandardSyncOperation> listStandardSyncOperations() throws IOException {
-    return operationService.listStandardSyncOperations();
-  }
-
-  /**
-   * Updates {@link io.airbyte.db.instance.configs.jooq.generated.tables.ConnectionOperation} records
-   * for the given {@code connectionId}.
-   *
-   * @param connectionId ID of the associated connection to update operations for
-   * @param newOperationIds Set of all operationIds that should be associated to the connection
-   * @throws IOException - exception while interacting with the db
-   */
-  @Deprecated
-  public void updateConnectionOperationIds(final UUID connectionId, final Set<UUID> newOperationIds) throws IOException {
-    operationService.updateConnectionOperationIds(connectionId, newOperationIds);
-  }
-
-  /**
-   * Delete standard sync operation.
-   *
-   * @param standardSyncOperationId standard sync operation id
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public void deleteStandardSyncOperation(final UUID standardSyncOperationId) throws IOException {
-    operationService.deleteStandardSyncOperation(standardSyncOperationId);
-  }
-
-  /**
-   * Pair of source and its associated definition.
-   * <p>
-   * Data-carrier records to hold combined result of query for a Source or Destination and its
-   * corresponding Definition. This enables the API layer to process combined information about a
-   * Source/Destination/Definition pair without requiring two separate queries and in-memory join
-   * operation, because the config models are grouped immediately in the repository layer.
-   *
-   * @param source source
-   * @param definition its corresponding definition
-   */
-  @VisibleForTesting
-  public record SourceAndDefinition(SourceConnection source, StandardSourceDefinition definition) {
-
-  }
-
-  /**
-   * Pair of destination and its associated definition.
-   *
-   * @param destination destination
-   * @param definition its corresponding definition
-   */
-  @VisibleForTesting
-  public record DestinationAndDefinition(DestinationConnection destination, StandardDestinationDefinition definition) {
-
-  }
-
-  /**
    * Count connections in workspace.
    *
    * @param workspaceId workspace id
@@ -524,31 +397,6 @@ public class ConfigRepository {
   @Deprecated
   public boolean getWorkspaceHasAlphaOrBetaConnector(final UUID workspaceId) throws IOException {
     return workspaceService.getWorkspaceHasAlphaOrBetaConnector(workspaceId);
-  }
-
-  /**
-   * Load all config injection for an actor definition.
-   *
-   * @param actorDefinitionId id of the actor definition to fetch
-   * @return stream of config injection objects
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<ActorDefinitionConfigInjection> getActorDefinitionConfigInjections(final UUID actorDefinitionId) throws IOException {
-    return connectorBuilderService.getActorDefinitionConfigInjections(actorDefinitionId);
-  }
-
-  /**
-   * Update or create a config injection object. If there is an existing config injection for the
-   * given actor definition and path, it is updated. If there isn't yet, a new config injection is
-   * created.
-   *
-   * @param actorDefinitionConfigInjection the config injection object to write to the database
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException {
-    connectorBuilderService.writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection);
   }
 
 }

@@ -40,9 +40,7 @@ import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.factory.DSLContextFactory;
@@ -151,7 +149,6 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -177,8 +174,6 @@ class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
-        connectorBuilderService,
-        new OperationServiceJooqImpl(configDatabase),
         workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
@@ -258,7 +253,6 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -284,8 +278,6 @@ class BootloaderTest {
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
     val configRepository = new ConfigRepository(
-        connectorBuilderService,
-        new OperationServiceJooqImpl(configDatabase),
         workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
@@ -390,15 +382,12 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService);
     val configRepository = new ConfigRepository(
-        connectorBuilderService,
-        new OperationServiceJooqImpl(configDatabase),
         new WorkspaceServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
