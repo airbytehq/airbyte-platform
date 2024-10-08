@@ -23,8 +23,7 @@ global:
 
   # Docker image config that will apply to all images.
   image:
-    # Docker registry to pull platform images from.
-    # Must end with a trailing slash, e.g. my-registry.foo.com/
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
     # Image tag to use for airbyte images. 
     # Does not include non-airbyte images such as busybox, temporal, minio, etc.
@@ -186,7 +185,7 @@ global:
         busybox: "busybox:1.35"
         ## JOB_KUBE_CURL_IMAGE
         # -- curl image used by the job pod
-        curl: "curlimages/curl:7.83.1"
+        curl: "curlimages/curl:8.1.1"
 
 ## @section Common Parameters
 
@@ -856,10 +855,6 @@ worker:
   debug:
     enabled: false
 
-  containerOrchestrator:
-    # -- Orchestrator image
-    image: ""
-
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
@@ -1000,17 +995,17 @@ workload-launcher:
     enabled: true
     # -- Orchestrator image
     # This is a template string that will be passed to the "tpl" helper.
-    image: "airbyte/container-orchestrator:{{ .Chart.AppVersion }}"
+    image: "airbyte/container-orchestrator:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   connectorSidecar:
     # -- Connector Sidecar image
     # This is a template string that will be passed to the "tpl" helper.
-    image: "airbyte/connector-sidecar:{{ .Chart.AppVersion }}"
+    image: "airbyte/connector-sidecar:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   workloadInit:
     # -- Workload init image
     # This is a template string that will be passed to the "tpl" helper.
-    image: "airbyte/workload-init-container:{{ .Chart.AppVersion }}"
+    image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   ## current no exist documentations
   activityMaxAttempt: ""
@@ -2035,6 +2030,10 @@ keycloak:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  image:
+    repository: airbyte/keycloak
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
     # gid=0(root)
@@ -2042,7 +2041,7 @@ keycloak:
 
   initContainers:
     initDb:
-      image: {}
+      image: "postgres:13-alpine"
 
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
@@ -2084,6 +2083,10 @@ keycloak-setup:
   enabled: true
   env_vars: {}
 
+  image:
+    repository: airbyte/keycloak-setup
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2104,7 +2107,7 @@ keycloak-setup:
 
   initContainers:
     keycloakReadinessCheck:
-      image: {}
+      image: "curlimages/curl:8.1.1"
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 

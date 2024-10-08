@@ -1,6 +1,13 @@
 ##  global.serviceAccountName Name of service account to be associated with service
 global:
   serviceAccountName: &service-account-name "airbyte-admin"
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    tag: ""
 
 enabled: true
 ##  podSweeper.image.repository The image repository to use for the pod sweeper

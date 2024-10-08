@@ -46,15 +46,17 @@ spec:
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
       initContainers:
         {{- if and (eq .Values.global.deploymentMode "oss") (ne .Values.bypassInit true)}}
         # This init container will only executed if the deployment mode is "oss" and the bypassInit is not true.
         - name: init-db
-          {{- if .Values.initContainers.initDb.image }}
-          image: {{ .Values.initContainers.initDb.image }}
-          {{- else }}
-          image: postgres:13-alpine
-          {{- end }}
+          image: {{ include "imageUrl" (list .Values.initContainers.initDb.image $) }}
           command: [ "sh", "-c" ]
           args:
             - >
@@ -70,7 +72,7 @@ spec:
         {{- end }}
       containers:
         - name: airbyte-keycloak
-          image: {{ printf "%s:%s" .Values.image.repository (include "keycloak.imageTag" .) }}
+          image: {{ include "imageUrl" (list .Values.image $)}}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{- if eq .Values.global.deploymentMode "oss"  }}

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -30,6 +31,11 @@ func TestImages_Default(t *testing.T) {
 		"busybox:latest",
 		"airbyte/db:dev",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
+		"airbyte/workload-init-container:dev",
+		"curlimages/curl:8.1.1",
+		"airbyte/connector-sidecar:dev",
+		"busybox:1.35",
+		"airbyte/container-orchestrator:dev",
 	})
 }
 
@@ -54,9 +60,16 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 		"busybox:latest",
 		"airbyte/db:dev",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
-		"airbyte/featureflag-server:dev",
 		"airbyte/metrics-reporter:dev",
 		"temporalio/ui:2.30.1",
+		"postgres:13-alpine",
+		"airbyte/keycloak:dev",
+		"airbyte/keycloak-setup:dev",
+		"curlimages/curl:8.1.1",
+		"airbyte/container-orchestrator:dev",
+		"airbyte/workload-init-container:dev",
+		"airbyte/connector-sidecar:dev",
+		"busybox:1.35",
 	})
 }
 
@@ -82,9 +95,16 @@ func TestImages_GlobalTag(t *testing.T) {
 		"busybox:latest",
 		"airbyte/db:test-tag",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
-		"airbyte/featureflag-server:test-tag",
 		"airbyte/metrics-reporter:test-tag",
 		"temporalio/ui:2.30.1",
+		"curlimages/curl:8.1.1",
+		"busybox:1.35",
+		"postgres:13-alpine",
+		"airbyte/connector-sidecar:test-tag",
+		"airbyte/workload-init-container:test-tag",
+		"airbyte/container-orchestrator:test-tag",
+		"airbyte/keycloak-setup:test-tag",
+		"airbyte/keycloak:test-tag",
 	})
 }
 
@@ -116,10 +136,19 @@ func TestImages_GlobalRegistry(t *testing.T) {
 
 	// The loop above checks these too, but these are important core images, so they're tested explicitly here.
 	assert.Equal(t, "http://my-registry/busybox:1.35", env.Data["JOB_KUBE_BUSYBOX_IMAGE"])
-	assert.Equal(t, "http://my-registry/curlimages/curl:7.83.1", env.Data["JOB_KUBE_CURL_IMAGE"])
+	assert.Equal(t, "http://my-registry/curlimages/curl:8.1.1", env.Data["JOB_KUBE_CURL_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/container-orchestrator:dev", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/connector-sidecar:dev", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/workload-init-container:dev", env.Data["WORKLOAD_INIT_IMAGE"])
+}
+
+func TestImages_GlobalRegistry_NoTrailingSlash(t *testing.T) {
+	// test that the global registry can have no trailing slash
+	opts := BaseHelmOptions()
+	opts.SetValues["global.image.registry"] = "http://my-registry"
+	chart := renderChart(t, opts)
+	s := getDeployment(chart, "airbyte-server")
+	assert.Equal(t, "http://my-registry/airbyte/server:dev", s.Spec.Template.Spec.Containers[0].Image)
 }
 
 func TestImages_AppTag(t *testing.T) {
@@ -132,7 +161,7 @@ func TestImages_AppTag(t *testing.T) {
 
 	moreApps := []string{
 		"postgresql", "minio", "testWebapp", "temporal-ui",
-		"featureflag-server",
+		"featureflag-server", "keycloak", "keycloak-setup",
 	}
 	for _, app := range slices.Concat(allApps, moreApps) {
 		setAppOpt(opts, app, "image.tag", "app-tag")
@@ -156,9 +185,17 @@ func TestImages_AppTag(t *testing.T) {
 		"busybox:app-tag",
 		"airbyte/db:app-tag",
 		"minio/minio:app-tag",
-		"airbyte/featureflag-server:app-tag",
 		"airbyte/metrics-reporter:app-tag",
 		"temporalio/ui:app-tag",
+		"busybox:1.35",
+		"postgres:13-alpine",
+		"curlimages/curl:8.1.1",
+		"airbyte/keycloak:app-tag",
+		"airbyte/keycloak-setup:app-tag",
+		// these don't support app tags due to backwards compat.
+		"airbyte/workload-init-container:global-tag",
+		"airbyte/container-orchestrator:global-tag",
+		"airbyte/connector-sidecar:global-tag",
 	})
 }
 
@@ -209,6 +246,12 @@ func TestImages_StringImages(t *testing.T) {
 }
 
 func enableAllImages(opts *helm.Options) {
+	// Unfortunately this turns off anything that deploys only to "oss";
+	// which is only "featureflag-server" at the time this comment was made.
+	opts.SetValues["global.edition"] = "enterprise"
+
+	opts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+	opts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
 	opts.SetValues["metrics.enabled"] = "true"
 	opts.SetValues["featureflag-server.enabled"] = "true"
 	opts.SetValues["temporal-ui.enabled"] = "true"
@@ -216,8 +259,18 @@ func enableAllImages(opts *helm.Options) {
 
 func findAllImages(chartYaml string) []string {
 	objs := decodeK8sResources(chartYaml)
-	images := []string{}
+	imageSet := map[string]bool{}
+
 	for _, obj := range objs {
+
+		if cm, ok := obj.(*corev1.ConfigMap); ok && cm.Name == "airbyte-airbyte-env" {
+			for k, v := range cm.Data {
+				if strings.HasSuffix(k, "_IMAGE") {
+					imageSet[v] = true
+				}
+			}
+			continue
+		}
 
 		podSpec := getPodSpec(obj)
 		if podSpec == nil {
@@ -225,13 +278,13 @@ func findAllImages(chartYaml string) []string {
 		}
 
 		for _, c := range podSpec.InitContainers {
-			images = append(images, c.Image)
+			imageSet[c.Image] = true
 		}
 		for _, c := range podSpec.Containers {
-			images = append(images, c.Image)
+			imageSet[c.Image] = true
 		}
 	}
-	return images
+	return slices.Collect(maps.Keys(imageSet))
 }
 
 // dropImageTag drops the tag from a docker image,
