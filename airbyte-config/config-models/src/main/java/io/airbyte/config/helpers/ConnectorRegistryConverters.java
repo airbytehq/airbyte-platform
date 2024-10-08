@@ -234,7 +234,9 @@ public class ConnectorRegistryConverters {
     }
   }
 
-  public static ConnectorRollout toConnectorRollout(final ConnectorRegistrySourceDefinition rcDef, final ActorDefinitionVersion rcAdv) {
+  public static ConnectorRollout toConnectorRollout(final ConnectorRegistrySourceDefinition rcDef,
+                                                    final ActorDefinitionVersion rcAdv,
+                                                    final ActorDefinitionVersion initialAdv) {
     assert rcDef.getSourceDefinitionId().equals(rcAdv.getActorDefinitionId());
     assert Objects.equals(rcDef.getDockerRepository(), rcAdv.getDockerRepository());
     assert Objects.equals(rcDef.getDockerImageTag(), rcAdv.getDockerImageTag());
@@ -242,12 +244,14 @@ public class ConnectorRegistryConverters {
       boolean hasBreakingChange = rcDef.getReleases().getBreakingChanges() != null
           && rcDef.getReleases().getBreakingChanges().getAdditionalProperties().containsKey(rcDef.getDockerImageTag());
       RolloutConfiguration rolloutConfiguration = rcDef.getReleases().getRolloutConfiguration();
-      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, hasBreakingChange);
+      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, initialAdv, hasBreakingChange);
     }
-    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, false);
+    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, initialAdv, false);
   }
 
-  public static ConnectorRollout toConnectorRollout(final ConnectorRegistryDestinationDefinition rcDef, final ActorDefinitionVersion rcAdv) {
+  public static ConnectorRollout toConnectorRollout(final ConnectorRegistryDestinationDefinition rcDef,
+                                                    final ActorDefinitionVersion rcAdv,
+                                                    final ActorDefinitionVersion initialAdv) {
     assert rcDef.getDestinationDefinitionId().equals(rcAdv.getActorDefinitionId());
     assert Objects.equals(rcDef.getDockerRepository(), rcAdv.getDockerRepository());
     assert Objects.equals(rcDef.getDockerImageTag(), rcAdv.getDockerImageTag());
@@ -255,18 +259,20 @@ public class ConnectorRegistryConverters {
       boolean hasBreakingChange = rcDef.getReleases().getBreakingChanges() != null
           && rcDef.getReleases().getBreakingChanges().getAdditionalProperties().containsKey(rcDef.getDockerImageTag());
       RolloutConfiguration rolloutConfiguration = rcDef.getReleases().getRolloutConfiguration();
-      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, hasBreakingChange);
+      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, initialAdv, hasBreakingChange);
     }
-    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, false);
+    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, initialAdv, false);
   }
 
   private static ConnectorRollout toConnectorRollout(final RolloutConfiguration rolloutConfiguration,
                                                      final ActorDefinitionVersion rcAdv,
+                                                     final ActorDefinitionVersion initialAdv,
                                                      final boolean hasBreakingChange) {
     ConnectorRollout connectorRollout = new ConnectorRollout()
         .withId(UUID.randomUUID())
         .withActorDefinitionId(rcAdv.getActorDefinitionId())
         .withReleaseCandidateVersionId(rcAdv.getVersionId())
+        .withInitialVersionId(initialAdv.getVersionId())
         .withState(ConnectorEnumRolloutState.INITIALIZED)
         .withHasBreakingChanges(hasBreakingChange);
 

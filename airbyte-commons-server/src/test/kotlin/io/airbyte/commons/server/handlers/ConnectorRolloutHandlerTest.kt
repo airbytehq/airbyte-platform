@@ -25,12 +25,9 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
-import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -152,31 +149,6 @@ internal class ConnectorRolloutHandlerTest {
     verify {
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
-    }
-  }
-
-  @Test
-  fun `test insertConnectorRollout`() {
-    val rolloutId = UUID.randomUUID()
-    val connectorRolloutCreate = createMockConnectorRolloutCreateRequestBody()
-    val expectedRollout = createMockConnectorRollout(rolloutId)
-
-    every { actorDefinitionService.getActorDefinitionVersion(any(), any()) } returns Optional.of(createMockActorDefinitionVersion())
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.of(createMockActorDefinitionVersion())
-    every { connectorRolloutService.writeConnectorRollout(any()) } returns expectedRollout
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns emptyList()
-
-    val insertedRolloutRead = connectorRolloutHandler.insertConnectorRollout(connectorRolloutCreate)
-
-    assertEquals(connectorRolloutHandler.buildConnectorRolloutRead(expectedRollout), insertedRolloutRead)
-
-    verifyAll {
-      connectorRolloutService.writeConnectorRollout(any())
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-      actorDefinitionService.getActorDefinitionVersion(any(), any())
-      actorDefinitionService.getActorDefinitionVersion(any())
-      connectorRolloutService.listConnectorRollouts(any(), any())
     }
   }
 
@@ -402,61 +374,6 @@ internal class ConnectorRolloutHandlerTest {
     }
 
     verify { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG) }
-  }
-
-  @ParameterizedTest
-  @MethodSource("validInsertStates")
-  fun `test insertConnectorRolloutExistingCanceledRolloutSucceeds`(state: ConnectorEnumRolloutState) {
-    val connectorRolloutCreate = createMockConnectorRolloutCreateRequestBody()
-    val connectorRollout = createMockConnectorRollout(UUID.randomUUID()).apply { this.state = state }
-
-    val connectorRolloutHandlerSpy = spyk<ConnectorRolloutHandler>(connectorRolloutHandler)
-    every { connectorRolloutHandlerSpy.validateRolloutActorDefinitionId(any(), any(), any()) } just Runs
-    every { actorDefinitionService.getActorDefinitionVersion(any(), any()) } returns Optional.of(createMockActorDefinitionVersion())
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
-    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
-
-    val result = connectorRolloutHandlerSpy.insertConnectorRollout(connectorRolloutCreate)
-    assertEquals(connectorRollout.state.toString(), result.state.toString())
-    assertEquals(connectorRollout.actorDefinitionId, result.actorDefinitionId)
-    assertEquals(connectorRollout.releaseCandidateVersionId, result.releaseCandidateVersionId)
-    assertEquals(connectorRollout.initialVersionId, result.initialVersionId)
-    assertEquals(connectorRollout.rolloutStrategy.toString(), result.rolloutStrategy.toString())
-
-    verify {
-      connectorRolloutHandlerSpy.validateRolloutActorDefinitionId(any(), any(), any())
-      connectorRolloutService.listConnectorRollouts(any(), any())
-      connectorRolloutHandlerSpy.getAndValidateInsertRequest(any())
-      actorDefinitionService.getActorDefinitionVersion(any(), any())
-      actorDefinitionService.getActorDefinitionVersion(any())
-    }
-  }
-
-  @ParameterizedTest
-  @MethodSource("invalidInsertStates")
-  fun `test insertConnectorRolloutExistingNonCanceledRolloutThrows`(state: ConnectorEnumRolloutState) {
-    val connectorRolloutCreate = createMockConnectorRolloutCreateRequestBody()
-    val connectorRollout = createMockConnectorRollout(UUID.randomUUID()).apply { this.state = state }
-
-    val connectorRolloutHandlerSpy = spyk<ConnectorRolloutHandler>(connectorRolloutHandler)
-    every { connectorRolloutHandlerSpy.validateRolloutActorDefinitionId(any(), any(), any()) } just Runs
-    every { actorDefinitionService.getActorDefinitionVersion(any(), any()) } returns Optional.of(createMockActorDefinitionVersion())
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
-    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
-
-    assertThrows<ConnectorRolloutInvalidRequestProblem> { connectorRolloutHandlerSpy.insertConnectorRollout(connectorRolloutCreate) }
-
-    verify {
-      connectorRolloutHandlerSpy.validateRolloutActorDefinitionId(any(), any(), any())
-      connectorRolloutService.listConnectorRollouts(any(), any())
-      connectorRolloutHandlerSpy.getAndValidateInsertRequest(any())
-      actorDefinitionService.getActorDefinitionVersion(any(), any())
-      actorDefinitionService.getActorDefinitionVersion(any())
-    }
   }
 
   @ParameterizedTest

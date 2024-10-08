@@ -185,16 +185,25 @@ internal class ApplyDefinitionsHelperTest {
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
     every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout()
     val fakeAdvId = UUID.randomUUID()
+    val fakeInitialAdvId = UUID.randomUUID()
     val insertedAdvSource =
       ConnectorRegistryConverters.toActorDefinitionVersion(
         SOURCE_POSTGRES_RC,
       ).withVersionId(fakeAdvId)
+    val insertedInitialAdvSource =
+      ConnectorRegistryConverters.toActorDefinitionVersion(
+        SOURCE_POSTGRES_RC,
+      ).withVersionId(fakeInitialAdvId)
     val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeInitialAdvId)
 
     every {
       actorDefinitionService.writeActorDefinitionVersion(any())
     } returns
       insertedAdvSource andThen insertedAdvDestination
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
 
@@ -268,6 +277,45 @@ internal class ApplyDefinitionsHelperTest {
 
     verify(exactly = 0) {
       actorDefinitionService.writeActorDefinitionVersion(any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenario")
+  @Throws(
+    IOException::class,
+    JsonValidationException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `a connector with release candidate with no initial version does not write connector rollout`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
+    mockSeedInitialDefinitions()
+
+    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
+    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
+    every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout()
+
+    val fakeAdvId = UUID.randomUUID()
+
+    val insertedAdvSource =
+      ConnectorRegistryConverters.toActorDefinitionVersion(
+        SOURCE_POSTGRES_RC,
+      ).withVersionId(fakeAdvId)
+    val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
+
+    every {
+      actorDefinitionService.writeActorDefinitionVersion(any())
+    } returns
+      insertedAdvSource andThen insertedAdvDestination
+
+    applyDefinitionsHelper.apply(updateAll, reImport)
+
+    verify(exactly = 0) {
+      connectorRolloutService.insertConnectorRollout(any())
     }
   }
 

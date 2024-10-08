@@ -208,12 +208,16 @@ class ApplyDefinitionsHelper(
 
       val insertedAdv = actorDefinitionService.writeActorDefinitionVersion(rcAdv)
       log.info("Inserted or updated release candidate actor definition version for {}:{}", insertedAdv.dockerRepository, insertedAdv.dockerImageTag)
-
+      val initialAdv = actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(rcAdv.actorDefinitionId)
+      if (initialAdv.isEmpty) {
+        log.error("Could not find default version for actor definition ID: {}", rcAdv.actorDefinitionId)
+        continue
+      }
       try {
         val connectorRollout =
           when (rcDef) {
-            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv)
-            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv)
+            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.get())
+            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.get())
             else -> throw IllegalArgumentException("Unsupported type: ${rcDef!!::class.java}")
           }
         connectorRolloutService.insertConnectorRollout(connectorRollout)

@@ -119,29 +119,6 @@ open class ConnectorRolloutHandler
     }
 
     @VisibleForTesting
-    open fun getAndValidateInsertRequest(connectorRolloutCreate: ConnectorRolloutCreateRequestBody): ConnectorRollout {
-      validateRolloutActorDefinitionId(
-        connectorRolloutCreate.dockerRepository,
-        connectorRolloutCreate.dockerImageTag,
-        connectorRolloutCreate.actorDefinitionId,
-      )
-      val existingRollouts = listConnectorRollouts(connectorRolloutCreate.actorDefinitionId, connectorRolloutCreate.dockerImageTag)
-      if (existingRollouts.isNotEmpty()) {
-        existingRollouts.forEach { rollout ->
-          // We should only be creating a new rollout for the same actor definition + release candidate version if the previous rollout errored
-          // and was therefore canceled.
-          // If the rollout succeeded we shouldn't be re-rolling out, and if it failed then there should be a code change that will bump the version.
-          if (rollout.state != ConnectorRolloutState.CANCELED_ROLLED_BACK) {
-            throw ConnectorRolloutInvalidRequestProblem(
-              ProblemMessageData().message("Cannot insert new rollout: Active or non-canceled rollout(s) exist."),
-            )
-          }
-        }
-      }
-      return buildConnectorRollout(connectorRolloutCreate)
-    }
-
-    @VisibleForTesting
     open fun validateRolloutActorDefinitionId(
       dockerRepository: String,
       dockerImageTag: String,
@@ -372,12 +349,6 @@ open class ConnectorRolloutHandler
       return connectorRollouts.map { connectorRollout ->
         buildConnectorRolloutRead(connectorRollout)
       }
-    }
-
-    open fun insertConnectorRollout(connectorRolloutCreate: ConnectorRolloutCreateRequestBody): ConnectorRolloutRead {
-      val connectorRollout = getAndValidateInsertRequest(connectorRolloutCreate)
-      val insertedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
-      return buildConnectorRolloutRead(insertedConnectorRollout)
     }
 
     @Transactional("config")

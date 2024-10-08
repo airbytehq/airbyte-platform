@@ -7,8 +7,6 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.ConnectorRolloutApi;
-import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody;
-import io.airbyte.api.model.generated.ConnectorRolloutCreateResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutListByActorDefinitionIdRequestBody;
@@ -47,22 +45,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   public ConnectorRolloutApiController(final ConnectorRolloutHandler connectorRolloutHandler) {
     this.connectorRolloutHandler = connectorRolloutHandler;
-  }
-
-  @SuppressWarnings("LineLength")
-  @Post("/create")
-  @Secured({ADMIN})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Override
-  public ConnectorRolloutCreateResponse createConnectorRollout(@Body final ConnectorRolloutCreateRequestBody connectorRolloutCreateRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead createdConnectorRollout = connectorRolloutHandler.insertConnectorRollout(
-          connectorRolloutCreateRequestBody);
-
-      final ConnectorRolloutCreateResponse response = new ConnectorRolloutCreateResponse();
-      response.setData(createdConnectorRollout);
-      return response;
-    });
   }
 
   @Post("/start")

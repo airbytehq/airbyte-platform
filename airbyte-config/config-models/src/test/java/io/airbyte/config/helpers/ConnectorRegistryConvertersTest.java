@@ -348,6 +348,7 @@ class ConnectorRegistryConvertersTest {
   @Test
   void testToConnectorRollout() {
     UUID advId = UUID.randomUUID();
+    UUID initialAdvId = UUID.randomUUID();
     UUID actorDefinitionId = UUID.randomUUID();
     RolloutConfiguration rolloutConfiguration =
         new RolloutConfiguration().withAdvanceDelayMinutes(1L).withInitialPercentage(10L).withMaxPercentage(100L);
@@ -356,10 +357,12 @@ class ConnectorRegistryConvertersTest {
             .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
     ActorDefinitionVersion rcAdv = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId).withVersionId(advId)
         .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+    ActorDefinitionVersion initialAdv = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId).withVersionId(initialAdvId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
 
     // Normal behavior
 
-    ConnectorRollout rollout = ConnectorRegistryConverters.toConnectorRollout(rcDef, rcAdv);
+    ConnectorRollout rollout = ConnectorRegistryConverters.toConnectorRollout(rcDef, rcAdv, initialAdv);
 
     assertEquals(rollout.getActorDefinitionId(), actorDefinitionId);
     assertEquals(rollout.getInitialRolloutPct(), rolloutConfiguration.getInitialPercentage());
@@ -374,7 +377,7 @@ class ConnectorRegistryConvertersTest {
     ActorDefinitionVersion rcAdvWithDockerImageTagMismatch = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId)
         .withVersionId(advId).withDockerImageTag("1.1.0").withDockerRepository(DOCKER_REPOSITORY);
     assertThrows(AssertionError.class, () -> {
-      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDockerImageTagMismatch, rcAdvWithDockerImageTagMismatch);
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDockerImageTagMismatch, rcAdvWithDockerImageTagMismatch, initialAdv);
     });
 
     // With definition id mismatch
@@ -384,7 +387,7 @@ class ConnectorRegistryConvertersTest {
     ActorDefinitionVersion rcAdvWithDefinitionIdMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
         .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
     assertThrows(AssertionError.class, () -> {
-      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDefinitionIdTagMismatch, rcAdvWithDefinitionIdMismatch);
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDefinitionIdTagMismatch, rcAdvWithDefinitionIdMismatch, initialAdv);
     });
 
     // With docker repository mismatch
@@ -394,7 +397,7 @@ class ConnectorRegistryConvertersTest {
     ActorDefinitionVersion rcAdvDockerRepoMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
         .withDockerImageTag(DOCKER_TAG).withDockerRepository("airbyte/source-mismatch");
     assertThrows(AssertionError.class, () -> {
-      ConnectorRegistryConverters.toConnectorRollout(rcDefDockerRepoMismatch, rcAdvDockerRepoMismatch);
+      ConnectorRegistryConverters.toConnectorRollout(rcDefDockerRepoMismatch, rcAdvDockerRepoMismatch, initialAdv);
     });
   }
 

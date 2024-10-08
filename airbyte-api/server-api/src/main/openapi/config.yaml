@@ -5182,28 +5182,6 @@ paths:
       tags:
         - connector_rollout
 
-  /v1/connector_rollout/create:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
-      responses:
-        "200":
-          description: Newly created connector rollout entry
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConnectorRolloutCreateResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-      operationId: createConnectorRollout
-      summary: Create a new connector rollout
-      tags:
-        - connector_rollout
-
   /v1/connector_rollout/get:
     post:
       requestBody:
