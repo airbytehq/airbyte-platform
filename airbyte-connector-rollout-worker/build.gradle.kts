@@ -30,7 +30,7 @@ dependencies {
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
 
-  testImplementation("io.temporal:temporal-testing:1.22.3")
+  testImplementation(libs.temporal.testing)
   testImplementation(libs.mockk)
   testImplementation(libs.mockito.inline)
 }

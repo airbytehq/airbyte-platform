@@ -17,7 +17,7 @@ dependencies {
   implementation(libs.micronaut.picocli)
   implementation(libs.kotlin.logging)
   implementation(libs.jackson.datatype)
-  implementation("io.temporal:temporal-sdk:1.25.0")
+  implementation(libs.temporal.sdk)
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
   implementation(project(":oss:airbyte-commons-storage"))
