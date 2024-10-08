@@ -27,17 +27,15 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -47,6 +45,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -106,9 +105,9 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("https://airbyte.com")));
   }
 
-  private ConfigRepository configRepository;
   private StandardSourceDefinition sourceDefinition;
   private ActorDefinitionService actorDefinitionService;
+  private SourceService sourceService;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -120,42 +119,25 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
-    final ConnectionService connectionService = mock(ConnectionService.class);
-    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = spy(
-        new ConfigRepository(
-            connectionService,
-            new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new OperationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+    ConnectionService connectionService = mock(ConnectionService.class);
+    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
+
+    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater));
 
     final UUID defId = UUID.randomUUID();
     final ActorDefinitionVersion initialADV = initialActorDefinitionVersion(defId);
     sourceDefinition = baseSourceDefinition(defId);
 
     // Make sure that the source definition exists before we start writing actor definition versions
-    configRepository.writeConnectorMetadata(sourceDefinition, initialADV);
+    sourceService.writeConnectorMetadata(sourceDefinition, initialADV, Collections.emptyList());
   }
 
   @Test
@@ -270,7 +252,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId).withActorDefinitionId(defId).withSupportLevel(SupportLevel.NONE);
 
-    configRepository.writeConnectorMetadata(sourceDefinition, adv);
+    sourceService.writeConnectorMetadata(sourceDefinition, adv, Collections.emptyList());
 
     final Optional<ActorDefinitionVersion> optADVForTag = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTag.isPresent());
@@ -286,7 +268,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     assertThrows(
         RuntimeException.class,
-        () -> configRepository.writeConnectorMetadata(sourceDefinition, adv));
+        () -> sourceService.writeConnectorMetadata(sourceDefinition, adv, Collections.emptyList()));
   }
 
   @Test
@@ -329,9 +311,9 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(UUID.randomUUID());
     final ActorDefinitionVersion otherActorDefVersion =
         baseActorDefinitionVersion(defId).withActorDefinitionId(otherSourceDef.getSourceDefinitionId());
-    configRepository.writeConnectorMetadata(otherSourceDef, otherActorDefVersion);
+    sourceService.writeConnectorMetadata(otherSourceDef, otherActorDefVersion, Collections.emptyList());
 
-    final UUID otherActorDefVersionId = configRepository.getStandardSourceDefinition(otherSourceDef.getSourceDefinitionId()).getDefaultVersionId();
+    final UUID otherActorDefVersionId = sourceService.getStandardSourceDefinition(otherSourceDef.getSourceDefinitionId()).getDefaultVersionId();
 
     final List<ActorDefinitionVersion> actorDefinitionVersions = List.of(
         baseActorDefinitionVersion(defId).withDockerImageTag("1.0.0"),
@@ -343,7 +325,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
       expectedVersionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId());
     }
 
-    final UUID defaultVersionId = configRepository.getStandardSourceDefinition(defId).getDefaultVersionId();
+    final UUID defaultVersionId = sourceService.getStandardSourceDefinition(defId).getDefaultVersionId();
     expectedVersionIds.add(defaultVersionId);
 
     final List<ActorDefinitionVersion> actorDefinitionVersionsForDefinition =

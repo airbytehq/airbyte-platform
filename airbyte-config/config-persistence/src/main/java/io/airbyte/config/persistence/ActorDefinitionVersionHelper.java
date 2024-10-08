@@ -178,7 +178,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersionWithOverrideStatus getSourceVersionWithOverrideStatus(final StandardSourceDefinition sourceDefinition,
                                                                                      final UUID workspaceId,
                                                                                      @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
@@ -200,7 +200,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition,
                                                  final UUID workspaceId,
                                                  @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getSourceVersionWithOverrideStatus(sourceDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
@@ -227,7 +227,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersionWithOverrideStatus getDestinationVersionWithOverrideStatus(final StandardDestinationDefinition destinationDefinition,
                                                                                           final UUID workspaceId,
                                                                                           @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
@@ -249,7 +249,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
                                                       final UUID workspaceId,
                                                       @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getDestinationVersionWithOverrideStatus(destinationDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
@@ -262,7 +262,7 @@ public class ActorDefinitionVersionHelper {
    */
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
                                                       final UUID workspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getDestinationVersion(destinationDefinition, workspaceId, null);
   }
 

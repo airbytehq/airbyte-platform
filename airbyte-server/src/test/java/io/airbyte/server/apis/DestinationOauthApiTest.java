@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -27,7 +27,7 @@ class DestinationOauthApiTest extends BaseControllerTest {
 
   @Test
   void testCompleteDestinationOAuth()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(oAuthHandler.completeDestinationOAuth(Mockito.any()))
         .thenReturn(new CompleteOAuthResponse())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -42,7 +42,7 @@ class DestinationOauthApiTest extends BaseControllerTest {
 
   @Test
   void testGetDestinationOAuthConsent()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(oAuthHandler.getDestinationOAuthConsent(Mockito.any()))
         .thenReturn(new OAuthConsentRead())
         .thenThrow(new ConfigNotFoundException("", ""));

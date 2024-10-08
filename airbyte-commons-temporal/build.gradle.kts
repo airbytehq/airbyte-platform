@@ -21,6 +21,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-notification"))

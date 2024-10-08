@@ -22,10 +22,9 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -47,7 +46,6 @@ import org.mockito.Mockito;
 
 class OAuthHandlerTest {
 
-  private ConfigRepository configRepository;
   private OAuthHandler handler;
   private TrackingClient trackingClient;
   private HttpClient httpClient;
@@ -67,7 +65,6 @@ class OAuthHandlerTest {
 
   @BeforeEach
   public void init() {
-    configRepository = Mockito.mock(ConfigRepository.class);
     trackingClient = mock(TrackingClient.class);
     httpClient = Mockito.mock(HttpClient.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -79,13 +76,21 @@ class OAuthHandlerTest {
     oauthService = mock(OAuthService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     workspaceService = mock(WorkspaceService.class);
-    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryWriter,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, destinationService, oauthService, secretPersistenceConfigService,
+    handler = new OAuthHandler(
+        httpClient,
+        trackingClient,
+        secretsRepositoryWriter,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        destinationService,
+        oauthService,
+        secretPersistenceConfigService,
         workspaceService);
   }
 
   @Test
-  void setSourceInstancewideOauthParams() throws JsonValidationException, IOException {
+  void setSourceInstancewideOauthParams() throws IOException {
     final UUID sourceDefId = UUID.randomUUID();
     final Map<String, Object> params = new HashMap<>();
     params.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -104,7 +109,7 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void resetSourceInstancewideOauthParams() throws JsonValidationException, IOException {
+  void resetSourceInstancewideOauthParams() throws IOException {
     final UUID sourceDefId = UUID.randomUUID();
     final Map<String, Object> firstParams = new HashMap<>();
     firstParams.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -137,7 +142,7 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void setDestinationInstancewideOauthParams() throws JsonValidationException, IOException {
+  void setDestinationInstancewideOauthParams() throws IOException {
     final UUID destinationDefId = UUID.randomUUID();
     final Map<String, Object> params = new HashMap<>();
     params.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -156,7 +161,7 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void resetDestinationInstancewideOauthParams() throws JsonValidationException, IOException {
+  void resetDestinationInstancewideOauthParams() throws IOException {
     final UUID destinationDefId = UUID.randomUUID();
     final Map<String, Object> firstParams = new HashMap<>();
     firstParams.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -267,7 +272,7 @@ class OAuthHandlerTest {
 
   @Test
   void testCompleteSourceOAuthHandleReturnSecret()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
 

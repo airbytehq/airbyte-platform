@@ -66,12 +66,13 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
-import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.validation.json.JsonValidationException;
@@ -108,13 +109,14 @@ public class WebBackendConnectionsHandler {
   private final OperationsHandler operationsHandler;
   private final EventRunner eventRunner;
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
-  @Deprecated
-  private final ConfigRepository configRepositoryDoNotUse;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FieldGenerator fieldGenerator;
+
   private final CatalogService catalogService;
   private final ConnectionService connectionService;
-  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
-  private final FeatureFlagClient featureFlagClient;
-  private final FieldGenerator fieldGenerator;
+  private final DestinationService destinationService;
+  private final SourceService sourceService;
+  private final WorkspaceService workspaceService;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
@@ -125,12 +127,13 @@ public class WebBackendConnectionsHandler {
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
-                                      final ConfigRepository configRepositoryDoNotUse,
                                       final CatalogService catalogService,
                                       final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                       final FieldGenerator fieldGenerator,
-                                      final FeatureFlagClient featureFlagClient) {
+                                      final DestinationService destinationService,
+                                      final SourceService sourceService,
+                                      final WorkspaceService workspaceService) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
@@ -140,19 +143,20 @@ public class WebBackendConnectionsHandler {
     this.schedulerHandler = schedulerHandler;
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
-    this.configRepositoryDoNotUse = configRepositoryDoNotUse;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.fieldGenerator = fieldGenerator;
-    this.featureFlagClient = featureFlagClient;
+    this.destinationService = destinationService;
+    this.sourceService = sourceService;
+    this.workspaceService = workspaceService;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
     final var workspaceId = webBackendWorkspaceState.getWorkspaceId();
-    final var connectionCount = configRepositoryDoNotUse.countConnectionsForWorkspace(workspaceId);
-    final var destinationCount = configRepositoryDoNotUse.countDestinationsForWorkspace(workspaceId);
-    final var sourceCount = configRepositoryDoNotUse.countSourcesForWorkspace(workspaceId);
+    final var connectionCount = workspaceService.countConnectionsForWorkspace(workspaceId);
+    final var destinationCount = workspaceService.countDestinationsForWorkspace(workspaceId);
+    final var sourceCount = workspaceService.countSourcesForWorkspace(workspaceId);
 
     return new WebBackendWorkspaceStateResult()
         .hasConnections(connectionCount > 0)
@@ -166,7 +170,7 @@ public class WebBackendConnectionsHandler {
 
   @SuppressWarnings("LineLength")
   public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final StandardSyncQuery query = new StandardSyncQuery(
         webBackendConnectionListRequestBody.getWorkspaceId(),
@@ -175,7 +179,7 @@ public class WebBackendConnectionsHandler {
         // passing 'false' so that deleted connections are not included
         false);
 
-    final List<StandardSync> standardSyncs = configRepositoryDoNotUse.listWorkspaceStandardSyncs(query);
+    final List<StandardSync> standardSyncs = connectionService.listWorkspaceStandardSyncs(query);
     final List<UUID> sourceIds = standardSyncs.stream().map(StandardSync::getSourceId).toList();
     final List<UUID> destinationIds = standardSyncs.stream().map(StandardSync::getDestinationId).toList();
     final List<UUID> connectionIds = standardSyncs.stream().map(StandardSync::getConnectionId).toList();
@@ -217,14 +221,14 @@ public class WebBackendConnectionsHandler {
   }
 
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
-    return configRepositoryDoNotUse.getSourceAndDefinitionsFromSourceIds(sourceIds)
+    return sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
         .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
-    return configRepositoryDoNotUse.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
+    return destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
         .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
             destinationAndDefinition.definition()))
@@ -232,7 +236,7 @@ public class WebBackendConnectionsHandler {
   }
 
   private WebBackendConnectionRead buildWebBackendConnectionRead(final ConnectionRead connectionRead, final Optional<UUID> currentSourceCatalogId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceRead source = getSourceRead(connectionRead.getSourceId());
     final DestinationRead destination = getDestinationRead(connectionRead.getDestinationId());
     final OperationReadList operations = getOperationReadList(connectionRead);
@@ -274,7 +278,7 @@ public class WebBackendConnectionsHandler {
                                                                          final Map<UUID, JobStatusSummary> latestJobByConnectionId,
                                                                          final Map<UUID, JobRead> runningJobByConnectionId,
                                                                          final Optional<ActorCatalogFetchEvent> latestFetchEvent)
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final SourceSnippetRead source = sourceReadById.get(standardSync.getSourceId());
     final DestinationSnippetRead destination = destinationReadById.get(standardSync.getDestinationId());
@@ -392,7 +396,7 @@ public class WebBackendConnectionsHandler {
   // tracking selected streams in any reasonable way. We should update that.
   @Trace
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
     ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.getConnectionId().toString()));
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody()
         .connectionId(webBackendConnectionRequestBody.getConnectionId());
@@ -466,7 +470,7 @@ public class WebBackendConnectionsHandler {
   }
 
   private Optional<SourceDiscoverSchemaRead> getRefreshedSchema(final UUID sourceId, final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceDiscoverSchemaRequestBody discoverSchemaReadReq = new SourceDiscoverSchemaRequestBody()
         .sourceId(sourceId)
         .disableCache(true)
@@ -596,7 +600,7 @@ public class WebBackendConnectionsHandler {
   }
 
   public WebBackendConnectionRead webBackendCreateConnection(final WebBackendConnectionCreate webBackendConnectionCreate)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
     final List<UUID> operationIds = createOperations(webBackendConnectionCreate);
 
     final ConnectionCreate connectionCreate = toConnectionCreate(webBackendConnectionCreate, operationIds);
@@ -612,7 +616,7 @@ public class WebBackendConnectionsHandler {
    * request, and bundles those newly-created operationIds into the connection update.
    */
   public WebBackendConnectionRead webBackendUpdateConnection(final WebBackendConnectionUpdate webBackendConnectionPatch)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final ConnectionRead originalConnectionRead = connectionsHandler.getConnection(connectionId);
@@ -632,7 +636,7 @@ public class WebBackendConnectionsHandler {
         final io.airbyte.protocol.models.AirbyteCatalog mostRecentAirbyteCatalog =
             Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
         final StandardSourceDefinition sourceDefinition =
-            configRepositoryDoNotUse.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
+            sourceService.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
         final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
             sourceDefinition,
             source.getWorkspaceId(),
@@ -687,7 +691,7 @@ public class WebBackendConnectionsHandler {
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
                                     final ConnectionRead oldConnectionRead)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;

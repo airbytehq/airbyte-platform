@@ -177,11 +177,8 @@ class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
-        connectionService,
         connectorBuilderService,
-        destinationService,
         new OperationServiceJooqImpl(configDatabase),
-        sourceService,
         workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
@@ -195,7 +192,8 @@ class BootloaderTest {
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val protocolVersionChecker =
-        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
@@ -286,11 +284,8 @@ class BootloaderTest {
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
     val configRepository = new ConfigRepository(
-        connectionService,
         connectorBuilderService,
-        destinationService,
         new OperationServiceJooqImpl(configDatabase),
-        sourceService,
         workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
@@ -309,7 +304,8 @@ class BootloaderTest {
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangesHelper,
             breakingChangeNotificationHelper, featureFlagClient);
     val protocolVersionChecker =
-        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
@@ -401,28 +397,27 @@ class BootloaderTest {
         actorDefinitionService,
         scopedConfigurationService);
     val configRepository = new ConfigRepository(
-        connectionService,
         connectorBuilderService,
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
         new OperationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
             mock(SecretsRepositoryWriter.class),
             mock(SecretPersistenceConfigService.class)));
+    val sourceService = new SourceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class),
+        connectionService,
+        actorDefinitionVersionUpdater);
+    val destinationService = new DestinationServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class),
+        connectionService,
+        actorDefinitionVersionUpdater);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -435,7 +430,8 @@ class BootloaderTest {
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val protocolVersionChecker =
-        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, actorDefinitionService, definitionsProvider);
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
     val postLoadExecutor = new PostLoadExecutor() {
 
       @Override

@@ -41,12 +41,11 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -91,7 +90,6 @@ public class OAuthHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(OAuthHandler.class);
   private static final String ERROR_MESSAGE = "failed while reporting usage.";
 
-  private final ConfigRepository configRepository;
   private final OAuthImplementationFactory oAuthImplementationFactory;
   private final TrackingClient trackingClient;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
@@ -103,8 +101,7 @@ public class OAuthHandler {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final WorkspaceService workspaceService;
 
-  public OAuthHandler(final ConfigRepository configRepository,
-                      @Named("oauthHttpClient") final HttpClient httpClient,
+  public OAuthHandler(@Named("oauthHttpClient") final HttpClient httpClient,
                       final TrackingClient trackingClient,
                       final SecretsRepositoryWriter secretsRepositoryWriter,
                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
@@ -114,7 +111,6 @@ public class OAuthHandler {
                       final OAuthService oauthService,
                       final SecretPersistenceConfigService secretPersistenceConfigService,
                       final WorkspaceService workspaceService) {
-    this.configRepository = configRepository;
     this.oAuthImplementationFactory = new OAuthImplementationFactory(httpClient);
     this.trackingClient = trackingClient;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -129,7 +125,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public OAuthConsentRead getSourceOAuthConsent(final SourceOauthConsentRequest sourceOauthConsentRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, sourceOauthConsentRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         sourceOauthConsentRequest.getSourceDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -144,7 +140,7 @@ public class OAuthHandler {
     }
 
     final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId());
+        sourceService.getStandardSourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         sourceOauthConsentRequest.getWorkspaceId(), sourceOauthConsentRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
@@ -195,7 +191,7 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public OAuthConsentRead getDestinationOAuthConsent(final DestinationOauthConsentRequest destinationOauthConsentRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, destinationOauthConsentRequest.getWorkspaceId(), DESTINATION_DEFINITION_ID_KEY,
         destinationOauthConsentRequest.getDestinationDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
@@ -210,7 +206,7 @@ public class OAuthHandler {
     }
 
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
@@ -261,7 +257,7 @@ public class OAuthHandler {
   }
 
   public CompleteOAuthResponse completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final CompleteOAuthResponse completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest);
     if (completeOAuthResponse != null && completeSourceOauthRequest.getReturnSecretCoordinate()) {
       return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), completeOAuthResponse);
@@ -273,14 +269,14 @@ public class OAuthHandler {
   @VisibleForTesting
   @SuppressWarnings("PMD.PreserveStackTrace")
   public CompleteOAuthResponse completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
     ApmTraceUtils.addTagsToRootSpan(traceTags);
 
     final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(completeSourceOauthRequest.getSourceDefinitionId());
+        sourceService.getStandardSourceDefinition(completeSourceOauthRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         completeSourceOauthRequest.getWorkspaceId(), completeSourceOauthRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
@@ -334,14 +330,14 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeDestinationOAuthRequest.getWorkspaceId(), DESTINATION_DEFINITION_ID_KEY,
         completeDestinationOAuthRequest.getDestinationDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
     ApmTraceUtils.addTagsToRootSpan(traceTags);
 
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(completeDestinationOAuthRequest.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(completeDestinationOAuthRequest.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
@@ -396,9 +392,9 @@ public class OAuthHandler {
 
   @SuppressWarnings("PMD.PreserveStackTrace")
   public void revokeSourceOauthTokens(final RevokeSourceOauthTokensRequest revokeSourceOauthTokensRequest)
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException {
     final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(revokeSourceOauthTokensRequest.getSourceDefinitionId());
+        sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
@@ -582,7 +578,7 @@ public class OAuthHandler {
    * @param requestBody request body
    */
   public void setWorkspaceOverrideOAuthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     switch (requestBody.getActorType()) {
       case SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody);
       case DESTINATION -> setDestinationWorkspaceOverrideOauthParams(requestBody);
@@ -591,10 +587,10 @@ public class OAuthHandler {
   }
 
   public void setSourceWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID definitionId = requestBody.getDefinitionId();
     final StandardSourceDefinition standardSourceDefinition =
-        configRepository.getStandardSourceDefinition(definitionId);
+        sourceService.getStandardSourceDefinition(definitionId);
 
     final UUID workspaceId = requestBody.getWorkspaceId();
     final ActorDefinitionVersion actorDefinitionVersion =
@@ -617,11 +613,11 @@ public class OAuthHandler {
   }
 
   public void setDestinationWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID workspaceId = requestBody.getWorkspaceId();
     final UUID definitionId = requestBody.getDefinitionId();
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(definitionId);
+        destinationService.getStandardDestinationDefinition(definitionId);
     final ActorDefinitionVersion actorDefinitionVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
 

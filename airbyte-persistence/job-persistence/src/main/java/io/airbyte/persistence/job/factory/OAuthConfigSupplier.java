@@ -17,9 +17,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -45,19 +46,22 @@ public class OAuthConfigSupplier {
 
   public static final String PATH_IN_CONNECTOR_CONFIG = "path_in_connector_config";
   private static final String PROPERTIES = "properties";
-  private final ConfigRepository configRepository;
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final OAuthService oAuthService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
 
-  public OAuthConfigSupplier(final ConfigRepository configRepository,
-                             final TrackingClient trackingClient,
+  public OAuthConfigSupplier(final TrackingClient trackingClient,
                              final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                             final OAuthService oauthService) {
-    this.configRepository = configRepository;
+                             final OAuthService oauthService,
+                             final SourceService sourceService,
+                             final DestinationService destinationService) {
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.oAuthService = oauthService;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   /**
@@ -86,7 +90,7 @@ public class OAuthConfigSupplier {
                                             final ConnectorSpecification sourceConnectorSpec)
       throws IOException {
     try {
-      final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+      final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
       oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceConnectorSpec, sourceConnectorConfig));
       return sourceConnectorConfig;
@@ -111,7 +115,7 @@ public class OAuthConfigSupplier {
                                                  final ConnectorSpecification destinationConnectorSpec)
       throws IOException {
     try {
-      final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+      final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
       oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationConnectorSpec,
               destinationConnectorConfig));
@@ -137,7 +141,7 @@ public class OAuthConfigSupplier {
                                               final JsonNode sourceConnectorConfig)
       throws IOException {
     try {
-      final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+      final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
       oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> {
@@ -148,7 +152,7 @@ public class OAuthConfigSupplier {
             }
           });
       return sourceConnectorConfig;
-    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final JsonValidationException | ConfigNotFoundException e) {
       throw new IOException(e);
     }
   }
@@ -169,7 +173,7 @@ public class OAuthConfigSupplier {
                                                    final JsonNode destinationConnectorConfig)
       throws IOException {
     try {
-      final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+      final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
       oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
@@ -181,7 +185,7 @@ public class OAuthConfigSupplier {
             }
           });
       return destinationConnectorConfig;
-    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final JsonValidationException | ConfigNotFoundException e) {
       throw new IOException(e);
     }
   }

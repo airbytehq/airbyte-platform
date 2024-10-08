@@ -110,16 +110,19 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent;
@@ -181,8 +184,6 @@ public class ConnectionsHandler {
   public static final int DEFAULT_ROW_OFFSET = 0;
 
   private final JobPersistence jobPersistence;
-  private final ConfigRepository configRepository;
-  private final CatalogService catalogService;
   private final Supplier<UUID> uuidGenerator;
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
@@ -205,10 +206,16 @@ public class ConnectionsHandler {
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final StatePersistence statePersistence;
 
+  private final CatalogService catalogService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+  private final ConnectionService connectionService;
+  private final WorkspaceService workspaceService;
+
+  // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
                             final JobPersistence jobPersistence,
-                            final ConfigRepository configRepository,
                             final CatalogService catalogService,
                             @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                             final WorkspaceHelper workspaceHelper,
@@ -228,9 +235,12 @@ public class ConnectionsHandler {
                             final StreamStatusesService streamStatusesService,
                             final ConnectionTimelineEventService connectionTimelineEventService,
                             final ConnectionTimelineEventHelper connectionTimelineEventHelper,
-                            final StatePersistence statePersistence) {
+                            final StatePersistence statePersistence,
+                            final SourceService sourceService,
+                            final DestinationService destinationService,
+                            final ConnectionService connectionService,
+                            final WorkspaceService workspaceService) {
     this.jobPersistence = jobPersistence;
-    this.configRepository = configRepository;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
     this.workspaceHelper = workspaceHelper;
@@ -252,6 +262,10 @@ public class ConnectionsHandler {
     this.connectionTimelineEventService = connectionTimelineEventService;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.statePersistence = statePersistence;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
+    this.connectionService = connectionService;
+    this.workspaceService = workspaceService;
   }
 
   /**
@@ -366,7 +380,7 @@ public class ConnectionsHandler {
   InternalOperationResult autoDisableConnection(final UUID connectionId, final Instant timestamp)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     // if connection is already inactive, no need to disable
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     if (standardSync.getStatus() == Status.INACTIVE) {
       return new InternalOperationResult().succeeded(false);
     }
@@ -459,7 +473,7 @@ public class ConnectionsHandler {
       throws IOException {
     // apply patch to connection
     standardSync.setStatus(Status.INACTIVE);
-    configRepository.writeStandardSync(standardSync);
+    connectionService.writeStandardSync(standardSync);
     // log connection disabled event in connection timeline
     connectionTimelineEventHelper.logStatusChangedEventInConnectionTimeline(standardSync.getConnectionId(), ConnectionStatus.INACTIVE,
         disabledReason.name(), true);
@@ -515,11 +529,11 @@ public class ConnectionsHandler {
   }
 
   public ConnectionRead createConnection(final ConnectionCreate connectionCreate)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     // Validate source and destination
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionCreate.getSourceId());
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(connectionCreate.getDestinationId());
+    final SourceConnection sourceConnection = sourceService.getSourceConnection(connectionCreate.getSourceId());
+    final DestinationConnection destinationConnection = destinationService.getDestinationConnection(connectionCreate.getDestinationId());
 
     // Set this as default name if connectionCreate doesn't have it
     final String defaultName = sourceConnection.getName() + " <> " + destinationConnection.getName();
@@ -591,7 +605,7 @@ public class ConnectionsHandler {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
     }
-    configRepository.writeStandardSync(standardSync);
+    connectionService.writeStandardSync(standardSync);
 
     trackNewConnection(standardSync);
 
@@ -609,7 +623,7 @@ public class ConnectionsHandler {
   }
 
   private Geography getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     if (connectionCreate.getGeography() != null) {
       return ApiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
@@ -617,7 +631,7 @@ public class ConnectionsHandler {
 
     // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
     final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
 
     if (workspace.getDefaultGeography() != null) {
       return workspace.getDefaultGeography();
@@ -673,9 +687,9 @@ public class ConnectionsHandler {
     final Builder<String, Object> metadata = ImmutableMap.builder();
 
     final UUID connectionId = standardSync.getConnectionId();
-    final StandardSourceDefinition sourceDefinition = configRepository
+    final StandardSourceDefinition sourceDefinition = sourceService
         .getSourceDefinitionFromConnection(connectionId);
-    final StandardDestinationDefinition destinationDefinition = configRepository
+    final StandardDestinationDefinition destinationDefinition = destinationService
         .getDestinationDefinitionFromConnection(connectionId);
 
     metadata.put("connector_source", sourceDefinition.getName());
@@ -706,7 +720,7 @@ public class ConnectionsHandler {
   }
 
   public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch, final String updateReason, final Boolean autoUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final UUID connectionId = connectionPatch.getConnectionId();
     final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId);
@@ -714,7 +728,7 @@ public class ConnectionsHandler {
     LOGGER.debug("Starting updateConnection for connectionId {}, workspaceId {}...", connectionId, workspaceId);
     LOGGER.debug("incoming connectionPatch: {}", connectionPatch);
 
-    final StandardSync sync = configRepository.getStandardSync(connectionId);
+    final StandardSync sync = connectionService.getStandardSync(connectionId);
     LOGGER.debug("initial StandardSync: {}", sync);
 
     validateConnectionPatch(workspaceHelper, sync, connectionPatch);
@@ -739,7 +753,7 @@ public class ConnectionsHandler {
     applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);
-    configRepository.writeStandardSync(sync);
+    connectionService.writeStandardSync(sync);
 
     eventRunner.update(connectionId);
 
@@ -804,7 +818,7 @@ public class ConnectionsHandler {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
-    for (final StandardSync standardSync : configRepository.listWorkspaceStandardSyncs(workspaceIdRequestBody.getWorkspaceId(), includeDeleted)) {
+    for (final StandardSync standardSync : connectionService.listWorkspaceStandardSyncs(workspaceIdRequestBody.getWorkspaceId(), includeDeleted)) {
       connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
     }
 
@@ -818,7 +832,7 @@ public class ConnectionsHandler {
 
   public ConnectionReadList listConnectionsForSource(final UUID sourceId, final boolean includeDeleted) throws IOException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listConnectionsBySource(sourceId, includeDeleted)) {
+    for (final StandardSync standardSync : connectionService.listConnectionsBySource(sourceId, includeDeleted)) {
       connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
     }
     return new ConnectionReadList().connections(connectionReads);
@@ -827,7 +841,7 @@ public class ConnectionsHandler {
   public ConnectionReadList listConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
-    for (final StandardSync standardSync : configRepository.listStandardSyncs()) {
+    for (final StandardSync standardSync : connectionService.listStandardSyncs()) {
       if (standardSync.getStatus() == StandardSync.Status.DEPRECATED) {
         continue;
       }
@@ -932,18 +946,18 @@ public class ConnectionsHandler {
   }
 
   public Optional<AirbyteCatalog> getConnectionAirbyteCatalog(final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final StandardSync connection = configRepository.getStandardSync(connectionId);
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardSync connection = connectionService.getStandardSync(connectionId);
     if (connection.getSourceCatalogId() == null) {
       return Optional.empty();
     }
     final ActorCatalog catalog = catalogService.getActorCatalogById(connection.getSourceCatalogId());
-    final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(connection.getSourceId());
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(connection.getSourceId());
+    final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromSource(connection.getSourceId());
+    final SourceConnection sourceConnection = sourceService.getSourceConnection(connection.getSourceId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
     final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-    final StandardDestinationDefinition destination = configRepository.getDestinationDefinitionFromConnection(connectionId);
+    final StandardDestinationDefinition destination = destinationService.getDestinationDefinitionFromConnection(connectionId);
     // Note: we're using the workspace from the source to save an extra db request.
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destination, sourceConnection.getWorkspaceId());
@@ -966,13 +980,13 @@ public class ConnectionsHandler {
 
   public ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     return ApiPojoConverters.internalToConnectionRead(standardSync);
   }
 
   private ConnectionRead buildConnectionRead(final UUID connectionId, final Long jobId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     final Job job = jobPersistence.getJob(jobId);
     final List<Generation> generations = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId);
     final Optional<ConfiguredAirbyteCatalog> catalogWithGeneration;
@@ -1007,7 +1021,7 @@ public class ConnectionsHandler {
 
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
-    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = connectionService.listWorkspaceStandardSyncsPaginated(
         listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
         PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
@@ -1029,7 +1043,7 @@ public class ConnectionsHandler {
 
     final List<ConnectionRead> connectionReads = new ArrayList<>();
 
-    final List<StandardSync> standardSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+    final List<StandardSync> standardSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         actorDefinitionRequestBody.getActorDefinitionId(),
         actorDefinitionRequestBody.getActorType().toString(),
         false);
@@ -1374,7 +1388,7 @@ public class ConnectionsHandler {
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog(), true);
   }
 
@@ -1384,7 +1398,7 @@ public class ConnectionsHandler {
                                                          final UUID catalogId,
                                                          final AirbyteCatalog catalog,
                                                          final Boolean autoApply)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     LOGGER.info("Applying schema change for connection '{}' only", connectionId);
     final ConnectionRead connection = buildConnectionRead(connectionId);
@@ -1399,12 +1413,12 @@ public class ConnectionsHandler {
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
     final UUID destinationDefinitionId =
-        configRepository.getDestinationDefinitionFromConnection(connection.getConnectionId()).getDestinationDefinitionId();
+        destinationService.getDestinationDefinitionFromConnection(connection.getConnectionId()).getDestinationDefinitionId();
     final var supportedDestinationSyncModes =
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
             .workspaceId(workspaceId)).getSupportedDestinationSyncModes();
-    final var workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
-    final var source = configRepository.getSourceConnection(connection.getSourceId());
+    final var workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final var source = sourceService.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
     if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
@@ -1532,7 +1546,7 @@ public class ConnectionsHandler {
    * diff, conditionally disables and auto-propagates schema changes.
    */
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
 
     final var autoPropResult =
@@ -1551,7 +1565,7 @@ public class ConnectionsHandler {
   public ConnectionRead disableConnectionIfNeeded(final ConnectionRead connectionRead,
                                                   final boolean containsBreakingChange,
                                                   final CatalogDiff diff)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID connectionId = connectionRead.getConnectionId();
     // Monitor the schema change detection
     if (containsBreakingChange) {
@@ -1585,10 +1599,10 @@ public class ConnectionsHandler {
    * breaking changes then disable the connection if necessary.
    */
   public SourceDiscoverSchemaRead diffCatalogAndConditionallyDisable(final UUID connectionId, final UUID discoveredCatalogId)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final var connectionRead = getConnection(connectionId);
-    final var source = configRepository.getSourceConnection(connectionRead.getSourceId());
-    final var sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final var source = sourceService.getSourceConnection(connectionRead.getSourceId());
+    final var sourceDef = sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
     final var sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), connectionRead.getSourceId());
 
     final var discoveredCatalog = retrieveDiscoveredCatalog(discoveredCatalogId, sourceVersion);

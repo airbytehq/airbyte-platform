@@ -5,33 +5,23 @@
 package io.airbyte.config.persistence;
 
 import com.google.common.annotations.VisibleForTesting;
-import datadog.trace.api.Trace;
-import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
-import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
-import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -125,26 +115,17 @@ public class ConfigRepository {
                                               int pageSize,
                                               int rowOffset) {}
 
-  private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
-  private final DestinationService destinationService;
   private final OperationService operationService;
-  private final SourceService sourceService;
   private final WorkspaceService workspaceService;
 
   @SuppressWarnings("ParameterName")
   @VisibleForTesting
-  public ConfigRepository(final ConnectionService connectionService,
-                          final ConnectorBuilderService connectorBuilderService,
-                          final DestinationService destinationService,
+  public ConfigRepository(final ConnectorBuilderService connectorBuilderService,
                           final OperationService operationService,
-                          final SourceService sourceService,
                           final WorkspaceService workspaceService) {
-    this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
-    this.destinationService = destinationService;
     this.operationService = operationService;
-    this.sourceService = sourceService;
     this.workspaceService = workspaceService;
   }
 
@@ -287,47 +268,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get source definition.
-   *
-   * @param sourceDefinitionId source definition id
-   * @return source definition
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws IOException - you never know when you IO
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   */
-  @Deprecated
-  public StandardSourceDefinition getStandardSourceDefinition(final UUID sourceDefinitionId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return sourceService.getStandardSourceDefinition(sourceDefinitionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get source definition form source.
-   *
-   * @param sourceId source id
-   * @return source definition
-   */
-  @Deprecated
-  public StandardSourceDefinition getSourceDefinitionFromSource(final UUID sourceId) {
-    return sourceService.getSourceDefinitionFromSource(sourceId);
-  }
-
-  /**
-   * Get source definition used by a connection.
-   *
-   * @param connectionId connection id
-   * @return source definition
-   */
-  @Deprecated
-  public StandardSourceDefinition getSourceDefinitionFromConnection(final UUID connectionId) {
-    return sourceService.getSourceDefinitionFromConnection(connectionId);
-  }
-
-  /**
    * Get workspace for a connection.
    *
    * @param connectionId connection id
@@ -342,309 +282,6 @@ public class ConfigRepository {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-  }
-
-  /**
-   * List standard source definitions.
-   *
-   * @param includeTombstone include tombstoned source
-   * @return list source definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardSourceDefinition> listStandardSourceDefinitions(final boolean includeTombstone) throws IOException {
-    return sourceService.listStandardSourceDefinitions(includeTombstone);
-  }
-
-  /**
-   * List public source definitions.
-   *
-   * @param includeTombstone include tombstoned source
-   * @return public source definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardSourceDefinition> listPublicSourceDefinitions(final boolean includeTombstone) throws IOException {
-    return sourceService.listPublicSourceDefinitions(includeTombstone);
-  }
-
-  /**
-   * List granted source definitions for workspace.
-   *
-   * @param workspaceId workspace id
-   * @param includeTombstones include tombstoned destinations
-   * @return list standard source definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardSourceDefinition> listGrantedSourceDefinitions(final UUID workspaceId, final boolean includeTombstones)
-      throws IOException {
-    return sourceService.listGrantedSourceDefinitions(workspaceId, includeTombstones);
-  }
-
-  /**
-   * List source to which we can give a grant.
-   *
-   * @param workspaceId workspace id
-   * @param includeTombstones include tombstoned definitions
-   * @return list of pairs from source definition and whether it can be granted
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<Entry<StandardSourceDefinition, Boolean>> listGrantableSourceDefinitions(final UUID workspaceId,
-                                                                                       final boolean includeTombstones)
-      throws IOException {
-    return sourceService.listGrantableSourceDefinitions(workspaceId, includeTombstones);
-  }
-
-  /**
-   * Update source definition.
-   *
-   * @param sourceDefinition source definition
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void updateStandardSourceDefinition(final StandardSourceDefinition sourceDefinition)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    try {
-      sourceService.updateStandardSourceDefinition(sourceDefinition);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get destination definition.
-   *
-   * @param destinationDefinitionId destination definition id
-   * @return destination definition
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws IOException - you never know when you IO
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   */
-  @Deprecated
-  public StandardDestinationDefinition getStandardDestinationDefinition(final UUID destinationDefinitionId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return destinationService.getStandardDestinationDefinition(destinationDefinitionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get destination definition form destination.
-   *
-   * @param destinationId destination id
-   * @return destination definition
-   */
-  @Deprecated
-  public StandardDestinationDefinition getDestinationDefinitionFromDestination(final UUID destinationId) {
-    return destinationService.getDestinationDefinitionFromDestination(destinationId);
-  }
-
-  /**
-   * Get destination definition used by a connection.
-   *
-   * @param connectionId connection id
-   * @return destination definition
-   */
-  @Deprecated
-  public StandardDestinationDefinition getDestinationDefinitionFromConnection(final UUID connectionId) {
-    return destinationService.getDestinationDefinitionFromConnection(connectionId);
-  }
-
-  /**
-   * List standard destination definitions.
-   *
-   * @param includeTombstone include tombstoned destinations
-   * @return list destination definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardDestinationDefinition> listStandardDestinationDefinitions(final boolean includeTombstone) throws IOException {
-    return destinationService.listStandardDestinationDefinitions(includeTombstone);
-  }
-
-  /**
-   * List public destination definitions.
-   *
-   * @param includeTombstone include tombstoned destinations
-   * @return public destination definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardDestinationDefinition> listPublicDestinationDefinitions(final boolean includeTombstone) throws IOException {
-    return destinationService.listPublicDestinationDefinitions(includeTombstone);
-  }
-
-  /**
-   * List granted destination definitions for workspace.
-   *
-   * @param workspaceId workspace id
-   * @param includeTombstones include tombstoned destinations
-   * @return list standard destination definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<StandardDestinationDefinition> listGrantedDestinationDefinitions(final UUID workspaceId, final boolean includeTombstones)
-      throws IOException {
-    return destinationService.listGrantedDestinationDefinitions(workspaceId, includeTombstones);
-  }
-
-  /**
-   * List destinations to which we can give a grant.
-   *
-   * @param workspaceId workspace id
-   * @param includeTombstones include tombstoned definitions
-   * @return list of pairs from destination definition and whether it can be granted
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<Entry<StandardDestinationDefinition, Boolean>> listGrantableDestinationDefinitions(final UUID workspaceId,
-                                                                                                 final boolean includeTombstones)
-      throws IOException {
-    return destinationService.listGrantableDestinationDefinitions(workspaceId, includeTombstones);
-  }
-
-  /**
-   * Update destination definition.
-   *
-   * @param destinationDefinition destination definition
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void updateStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    try {
-      destinationService.updateStandardDestinationDefinition(destinationDefinition);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Write metadata for a destination connector. Writes global metadata (destination definition) and
-   * versioned metadata (info for actor definition version to set as default). Sets the new version as
-   * the default version and updates actors accordingly, based on whether the upgrade will be breaking
-   * or not.
-   *
-   * @param destinationDefinition standard destination definition
-   * @param actorDefinitionVersion actor definition version
-   * @param breakingChangesForDefinition - list of breaking changes for the definition
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
-                                     final ActorDefinitionVersion actorDefinitionVersion,
-                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
-      throws IOException {
-    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition);
-  }
-
-  /**
-   * Write metadata for a destination connector. Writes global metadata (destination definition) and
-   * versioned metadata (info for actor definition version to set as default). Sets the new version as
-   * the default version and updates actors accordingly, based on whether the upgrade will be breaking
-   * or not. Usage of this version of the method assumes no new breaking changes need to be persisted
-   * for the definition.
-   *
-   * @param destinationDefinition standard destination definition
-   * @param actorDefinitionVersion actor definition version
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
-                                     final ActorDefinitionVersion actorDefinitionVersion)
-      throws IOException {
-    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, List.of());
-  }
-
-  /**
-   * Write metadata for a source connector. Writes global metadata (source definition, breaking
-   * changes) and versioned metadata (info for actor definition version to set as default). Sets the
-   * new version as the default version and updates actors accordingly, based on whether the upgrade
-   * will be breaking or not.
-   *
-   * @param sourceDefinition standard source definition
-   * @param actorDefinitionVersion actor definition version, containing tag to set as default
-   * @param breakingChangesForDefinition - list of breaking changes for the definition
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
-                                     final ActorDefinitionVersion actorDefinitionVersion,
-                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
-      throws IOException {
-    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition);
-  }
-
-  /**
-   * Write metadata for a source connector. Writes global metadata (source definition) and versioned
-   * metadata (info for actor definition version to set as default). Sets the new version as the
-   * default version and updates actors accordingly, based on whether the upgrade will be breaking or
-   * not. Usage of this version of the method assumes no new breaking changes need to be persisted for
-   * the definition.
-   *
-   * @param sourceDefinition standard source definition
-   * @param actorDefinitionVersion actor definition version
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
-                                     final ActorDefinitionVersion actorDefinitionVersion)
-      throws IOException {
-    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, List.of());
-  }
-
-  /**
-   * Write metadata for a custom destination: global metadata (destination definition) and versioned
-   * metadata (actor definition version for the version to use).
-   *
-   * @param destinationDefinition destination definition
-   * @param defaultVersion default actor definition version
-   * @param scopeId workspace or organization id
-   * @param scopeType enum of workspace or organization
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeCustomConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
-                                           final ActorDefinitionVersion defaultVersion,
-                                           final UUID scopeId,
-                                           final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    destinationService.writeCustomConnectorMetadata(destinationDefinition, defaultVersion, scopeId, scopeType);
-  }
-
-  /**
-   * Write metadata for a custom source: global metadata (source definition) and versioned metadata
-   * (actor definition version for the version to use).
-   *
-   * @param sourceDefinition source definition
-   * @param defaultVersion default actor definition version
-   * @param scopeId scope id
-   * @param scopeType enum which defines if the scopeId is a workspace or organization id
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeCustomConnectorMetadata(final StandardSourceDefinition sourceDefinition,
-                                           final ActorDefinitionVersion defaultVersion,
-                                           final UUID scopeId,
-                                           final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    sourceService.writeCustomConnectorMetadata(sourceDefinition, defaultVersion, scopeId, scopeType);
-  }
-
-  /**
-   * Delete connection.
-   *
-   * @param syncId connection id
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void deleteStandardSync(final UUID syncId) throws IOException {
-    connectionService.deleteStandardSync(syncId);
   }
 
   /**
@@ -674,158 +311,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Returns source with a given id. Does not contain secrets. To hydrate with secrets see the
-   * config-secrets module.
-   *
-   * @param sourceId - id of source to fetch.
-   * @return sources
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws IOException - you never know when you IO
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   */
-  @Deprecated
-  public SourceConnection getSourceConnection(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
-    try {
-      return sourceService.getSourceConnection(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from the config-secrets module.
-   * <p>
-   * Write a SourceConnection to the database. The configuration of the Source will be a partial
-   * configuration (no secrets, just pointer to the secrets store).
-   *
-   * @param partialSource - The configuration of the Source will be a partial configuration (no
-   *        secrets, just pointer to the secrets store)
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeSourceConnectionNoSecrets(final SourceConnection partialSource) throws IOException {
-    sourceService.writeSourceConnectionNoSecrets(partialSource);
-  }
-
-  /**
-   * Returns all sources in the database. Does not contain secrets. To hydrate with secrets see the
-   * config-secrets module.
-   *
-   * @return sources
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<SourceConnection> listSourceConnection() throws IOException {
-    return sourceService.listSourceConnection();
-  }
-
-  /**
-   * Returns all sources for a workspace. Does not contain secrets.
-   *
-   * @param workspaceId - id of the workspace
-   * @return sources
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<SourceConnection> listWorkspaceSourceConnection(final UUID workspaceId) throws IOException {
-    return sourceService.listWorkspaceSourceConnection(workspaceId);
-  }
-
-  /**
-   * Returns all sources for a set of workspaces. Does not contain secrets.
-   *
-   * @param resourcesQueryPaginated - Includes all the things we might want to query
-   * @return sources
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<SourceConnection> listWorkspacesSourceConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return sourceService.listWorkspacesSourceConnections(new io.airbyte.data.services.shared.ResourcesQueryPaginated(
-        resourcesQueryPaginated.workspaceIds,
-        resourcesQueryPaginated.includeDeleted,
-        resourcesQueryPaginated.pageSize,
-        resourcesQueryPaginated.rowOffset,
-        resourcesQueryPaginated.nameContains));
-  }
-
-  /**
-   * Returns destination with a given id. Does not contain secrets. To hydrate with secrets see the
-   * config-secrets module.
-   *
-   * @param destinationId - id of destination to fetch.
-   * @return destinations
-   * @throws JsonValidationException - throws if returned destinations are invalid
-   * @throws IOException - you never know when you IO
-   * @throws ConfigNotFoundException - throws if no destination with that id can be found.
-   */
-  @Deprecated
-  public DestinationConnection getDestinationConnection(final UUID destinationId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return destinationService.getDestinationConnection(destinationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from the config-secrets module.
-   * <p>
-   * Write a DestinationConnection to the database. The configuration of the Destination will be a
-   * partial configuration (no secrets, just pointer to the secrets store).
-   *
-   * @param partialDestination - The configuration of the Destination will be a partial configuration
-   *        (no secrets, just pointer to the secrets store)
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeDestinationConnectionNoSecrets(final DestinationConnection partialDestination) throws IOException {
-    destinationService.writeDestinationConnectionNoSecrets(partialDestination);
-  }
-
-  /**
-   * Returns all destinations in the database. Does not contain secrets. To hydrate with secrets see
-   * the config-secrets module.
-   *
-   * @return destinations
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<DestinationConnection> listDestinationConnection() throws IOException {
-    return destinationService.listDestinationConnection();
-  }
-
-  /**
-   * Returns all destinations for a workspace. Does not contain secrets.
-   *
-   * @param workspaceId - id of the workspace
-   * @return destinations
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<DestinationConnection> listWorkspaceDestinationConnection(final UUID workspaceId) throws IOException {
-    return destinationService.listWorkspaceDestinationConnection(workspaceId);
-  }
-
-  /**
-   * Returns all destinations for a list of workspaces. Does not contain secrets.
-   *
-   * @param resourcesQueryPaginated - Includes all the things we might want to query
-   * @return destinations
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<DestinationConnection> listWorkspacesDestinationConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    final var query = new io.airbyte.data.services.shared.ResourcesQueryPaginated(
-        resourcesQueryPaginated.workspaceIds,
-        resourcesQueryPaginated.includeDeleted,
-        resourcesQueryPaginated.pageSize,
-        resourcesQueryPaginated.rowOffset,
-        resourcesQueryPaginated.nameContains);
-    return destinationService.listWorkspacesDestinationConnections(query);
-  }
-
-  /**
    * List active workspace IDs with most recently running jobs within a given time window (in hours).
    *
    * @param timeWindowInHours - integer, e.g. 24, 48, etc
@@ -835,113 +320,6 @@ public class ConfigRepository {
   @Deprecated
   public List<UUID> listActiveWorkspacesByMostRecentlyRunningJobs(final int timeWindowInHours) throws IOException {
     return workspaceService.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
-  }
-
-  /**
-   * Returns all active sources using a definition.
-   *
-   * @param definitionId - id for the definition
-   * @return sources
-   * @throws IOException - exception while interacting with the db
-   */
-  @Deprecated
-  public List<SourceConnection> listSourcesForDefinition(final UUID definitionId) throws IOException {
-    return sourceService.listSourcesForDefinition(definitionId);
-  }
-
-  /**
-   * Returns all active destinations using a definition.
-   *
-   * @param definitionId - id for the definition
-   * @return destinations
-   * @throws IOException - exception while interacting with the db
-   */
-  @Deprecated
-  public List<DestinationConnection> listDestinationsForDefinition(final UUID definitionId) throws IOException {
-    return destinationService.listDestinationsForDefinition(definitionId);
-  }
-
-  /**
-   * Get connection.
-   *
-   * @param connectionId connection id
-   * @return connection
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public StandardSync getStandardSync(final UUID connectionId) throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return connectionService.getStandardSync(connectionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Write connection.
-   *
-   * @param standardSync connection
-   * @throws IOException - exception while interacting with the db
-   */
-  @Deprecated
-  public void writeStandardSync(final StandardSync standardSync) throws IOException {
-    connectionService.writeStandardSync(standardSync);
-  }
-
-  /**
-   * List connections.
-   *
-   * @return connections
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StandardSync> listStandardSyncs() throws IOException {
-    return connectionService.listStandardSyncs();
-  }
-
-  /**
-   * List connections using operation.
-   *
-   * @param operationId operation id.
-   * @return Connections that use the operation.
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StandardSync> listStandardSyncsUsingOperation(final UUID operationId) throws IOException {
-    return connectionService.listStandardSyncsUsingOperation(operationId);
-  }
-
-  /**
-   * List connections for workspace.
-   *
-   * @param workspaceId workspace id
-   * @param includeDeleted include deleted
-   * @return list of connections
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  @Trace
-  public List<StandardSync> listWorkspaceStandardSyncs(final UUID workspaceId, final boolean includeDeleted) throws IOException {
-    return connectionService.listWorkspaceStandardSyncs(workspaceId, includeDeleted);
-  }
-
-  /**
-   * List connections for workspace via a query.
-   *
-   * @param standardSyncQuery query
-   * @return list of connections
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StandardSync> listWorkspaceStandardSyncs(final StandardSyncQuery standardSyncQuery) throws IOException {
-    final var query = new io.airbyte.data.services.shared.StandardSyncQuery(
-        standardSyncQuery.workspaceId(),
-        standardSyncQuery.sourceId(),
-        standardSyncQuery.destinationId(),
-        standardSyncQuery.includeDeleted());
-    return connectionService.listWorkspaceStandardSyncs(query);
   }
 
   /**
@@ -958,83 +336,6 @@ public class ConfigRepository {
         standardSyncQuery.sourceId(),
         standardSyncQuery.destinationId(),
         standardSyncQuery.includeDeleted()));
-  }
-
-  /**
-   * List connections. Paginated.
-   */
-  @Deprecated
-  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(
-                                                                           final List<UUID> workspaceIds,
-                                                                           final boolean includeDeleted,
-                                                                           final int pageSize,
-                                                                           final int rowOffset)
-      throws IOException {
-    return connectionService.listWorkspaceStandardSyncsPaginated(workspaceIds, includeDeleted, pageSize, rowOffset);
-  }
-
-  /**
-   * List connections for workspace. Paginated.
-   *
-   * @param standardSyncsQueryPaginated query
-   * @return Map of workspace ID -> list of connections
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated)
-      throws IOException {
-    final var query = new io.airbyte.data.services.shared.StandardSyncsQueryPaginated(
-        standardSyncsQueryPaginated.workspaceIds(),
-        standardSyncsQueryPaginated.sourceId(),
-        standardSyncsQueryPaginated.destinationId(),
-        standardSyncsQueryPaginated.includeDeleted(),
-        standardSyncsQueryPaginated.pageSize(),
-        standardSyncsQueryPaginated.rowOffset());
-    return connectionService.listWorkspaceStandardSyncsPaginated(query);
-  }
-
-  /**
-   * List connections that use a source.
-   *
-   * @param sourceId source id
-   * @param includeDeleted include deleted
-   * @return connections that use the provided source
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StandardSync> listConnectionsBySource(final UUID sourceId, final boolean includeDeleted) throws IOException {
-    return connectionService.listConnectionsBySource(sourceId, includeDeleted);
-  }
-
-  /**
-   * List connections that use a particular actor definition.
-   *
-   * @param actorDefinitionId id of the source or destination definition.
-   * @param actorTypeValue either 'source' or 'destination' enum value.
-   * @param includeDeleted whether to include tombstoned records in the return value.
-   * @return List of connections that use the actor definition.
-   * @throws IOException you never know when you IO
-   */
-  @Deprecated
-  public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
-                                                                      final String actorTypeValue,
-                                                                      final boolean includeDeleted)
-      throws IOException {
-    return connectionService.listConnectionsByActorDefinitionIdAndType(
-        actorDefinitionId,
-        actorTypeValue,
-        includeDeleted);
-  }
-
-  /**
-   * Disable a list of connections by setting their status to inactive.
-   *
-   * @param connectionIds list of connection ids to disable
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
-    connectionService.disableConnectionsById(connectionIds);
   }
 
   /**
@@ -1129,36 +430,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get source and definition from sources ids.
-   *
-   * @param sourceIds source ids
-   * @return pair of source and definition
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<SourceAndDefinition> getSourceAndDefinitionsFromSourceIds(final List<UUID> sourceIds) throws IOException {
-    return sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds)
-        .stream()
-        .map(record -> new SourceAndDefinition(record.source(), record.definition()))
-        .toList();
-  }
-
-  /**
-   * Get destination and definition from destinations ids.
-   *
-   * @param destinationIds destination ids
-   * @return pair of destination and definition
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<DestinationAndDefinition> getDestinationAndDefinitionsFromDestinationIds(final List<UUID> destinationIds) throws IOException {
-    return destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
-        .stream()
-        .map(record -> new DestinationAndDefinition(record.destination(), record.definition()))
-        .toList();
-  }
-
-  /**
    * Count connections in workspace.
    *
    * @param workspaceId workspace id
@@ -1226,35 +497,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get all streams for connection.
-   *
-   * @param connectionId connection id
-   * @return list of streams for connection
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
-    try {
-      return connectionService.getAllStreamsForConnection(connectionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get geography for a connection.
-   *
-   * @param connectionId connection id
-   * @return geography
-   * @throws IOException exception while interacting with the db
-   */
-  @Deprecated
-  public Geography getGeographyForConnection(final UUID connectionId) throws IOException {
-    return connectionService.getGeographyForConnection(connectionId);
-  }
-
-  /**
    * Get geography for a workspace.
    *
    * @param workspaceId workspace id
@@ -1285,24 +527,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Specialized query for efficiently determining a connection's eligibility for the Free Connector
-   * Program. If a connection has at least one Alpha or Beta connector, it will be free to use as long
-   * as the workspace is enrolled in the Free Connector Program. This check is used to allow free
-   * connections to continue running even when a workspace runs out of credits.
-   * <p>
-   * This should only be used for efficiently determining eligibility for the Free Connector Program.
-   * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
-   * the ReleaseStages.
-   *
-   * @param connectionId ID of the connection to check connectors for
-   * @return boolean indicating if an alpha or beta connector is used by the connection
-   */
-  @Deprecated
-  public boolean getConnectionHasAlphaOrBetaConnector(final UUID connectionId) throws IOException {
-    return connectionService.getConnectionHasAlphaOrBetaConnector(connectionId);
-  }
-
-  /**
    * Load all config injection for an actor definition.
    *
    * @param actorDefinitionId id of the actor definition to fetch
@@ -1325,12 +549,6 @@ public class ConfigRepository {
   @Deprecated
   public void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException {
     connectorBuilderService.writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection);
-  }
-
-  @Deprecated
-  public Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange)
-      throws IOException {
-    return connectionService.listEarlySyncJobs(freeUsageInterval, jobsFetchRange);
   }
 
 }

@@ -22,8 +22,9 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -40,16 +41,19 @@ import java.util.UUID;
 @Singleton
 public class ConnectorDefinitionSpecificationHandler {
 
-  private final ConfigRepository configRepository;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final JobConverter jobConverter;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
 
-  public ConnectorDefinitionSpecificationHandler(final ConfigRepository configRepository,
-                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                                                 final JobConverter jobConverter) {
-    this.configRepository = configRepository;
+  public ConnectorDefinitionSpecificationHandler(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                                 final JobConverter jobConverter,
+                                                 final SourceService sourceService,
+                                                 final DestinationService destinationService) {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.jobConverter = jobConverter;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   /**
@@ -62,9 +66,9 @@ public class ConnectorDefinitionSpecificationHandler {
    * @throws IOException - if there is an error reading the specification.
    */
   public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final SourceConnection source = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final SourceConnection source = sourceService.getSourceConnection(sourceIdRequestBody.getSourceId());
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), sourceIdRequestBody.getSourceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
@@ -82,9 +86,9 @@ public class ConnectorDefinitionSpecificationHandler {
    * @throws IOException - if there is an error reading the specification.
    */
   public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID sourceDefinitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
-    final StandardSourceDefinition source = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final StandardSourceDefinition source = sourceService.getStandardSourceDefinition(sourceDefinitionId);
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
@@ -102,10 +106,10 @@ public class ConnectorDefinitionSpecificationHandler {
    * @throws IOException - if there is an error reading the specification.
    */
   public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final DestinationConnection destination = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final DestinationConnection destination = destinationService.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
             destinationIdRequestBody.getDestinationId());
@@ -125,9 +129,9 @@ public class ConnectorDefinitionSpecificationHandler {
    */
   @SuppressWarnings("LineLength")
   public DestinationDefinitionSpecificationRead getDestinationSpecification(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID destinationDefinitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
-    final StandardDestinationDefinition destination = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final StandardDestinationDefinition destination = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();

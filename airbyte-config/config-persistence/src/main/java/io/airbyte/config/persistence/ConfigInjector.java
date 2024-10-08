@@ -6,6 +6,7 @@ package io.airbyte.config.persistence;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.data.services.ConnectorBuilderService;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -19,10 +20,10 @@ import java.util.UUID;
 @Requires(bean = ConfigRepository.class)
 public class ConfigInjector {
 
-  private final ConfigRepository configRepository;
+  private final ConnectorBuilderService connectorBuilderService;
 
-  public ConfigInjector(final ConfigRepository configRepository) {
-    this.configRepository = configRepository;
+  public ConfigInjector(ConnectorBuilderService connectorBuilderService) {
+    this.connectorBuilderService = connectorBuilderService;
   }
 
   /**
@@ -35,7 +36,7 @@ public class ConfigInjector {
    * @throws IOException exception while interacting with db
    */
   public JsonNode injectConfig(final JsonNode configuration, final UUID actorDefinitionId) throws IOException {
-    configRepository.getActorDefinitionConfigInjections(actorDefinitionId).forEach(injection -> {
+    connectorBuilderService.getActorDefinitionConfigInjections(actorDefinitionId).forEach(injection -> {
       ((ObjectNode) configuration).set(injection.getInjectionPath(), injection.getJsonToInject());
     });
     return configuration;

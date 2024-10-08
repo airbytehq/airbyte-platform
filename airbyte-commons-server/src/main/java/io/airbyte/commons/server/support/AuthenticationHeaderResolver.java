@@ -27,8 +27,8 @@ import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.ScopeType;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -100,7 +100,7 @@ public class AuthenticationHeaderResolver {
         }
       }
       return organizationIds;
-    } catch (final ConfigNotFoundException e) {
+    } catch (final ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve organization ID.", e);
       return null;
     } catch (final IOException e) {
@@ -169,7 +169,7 @@ public class AuthenticationHeaderResolver {
         log.debug("Request does not contain any headers that resolve to a workspace ID.");
         return null;
       }
-    } catch (final JsonValidationException | ConfigNotFoundException e) {
+    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve workspace ID.", e);
       return null;
     } catch (final IOException e) {
@@ -207,7 +207,8 @@ public class AuthenticationHeaderResolver {
     return new HashSet<>(authUserIds);
   }
 
-  private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
+  private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties)
+      throws ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }
@@ -216,7 +217,8 @@ public class AuthenticationHeaderResolver {
     return permission.getWorkspaceId();
   }
 
-  private UUID resolveOrganizationIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
+  private UUID resolveOrganizationIdFromPermissionHeader(final Map<String, String> properties)
+      throws ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }

@@ -22,9 +22,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
@@ -56,7 +57,6 @@ class OAuthConfigSupplierTest {
   private static final String SECRET_ONE = "mysecret";
   private static final String SECRET_TWO = "123";
 
-  private ConfigRepository configRepository;
   private TrackingClient trackingClient;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private UUID sourceDefinitionId;
@@ -65,14 +65,17 @@ class OAuthConfigSupplierTest {
   private ConnectorSpecification testConnectorSpecification;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private OAuthService oAuthService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
 
   @BeforeEach
-  void setup() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    configRepository = mock(ConfigRepository.class);
+  void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
     trackingClient = mock(TrackingClient.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     oAuthService = mock(OAuthService.class);
-    oAuthConfigSupplier = new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper, oAuthService);
+    oAuthConfigSupplier = new OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oAuthService, sourceService, destinationService);
     sourceDefinitionId = UUID.randomUUID();
     testSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefinitionId)
@@ -112,7 +115,7 @@ class OAuthConfigSupplierTest {
 
   @Test
   void testNoOAuthInjectionBecauseMissingPredicateKey()
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of("some_random_fields", AUTH_TYPE))
         .withPredicateValue(OAUTH));
@@ -127,7 +130,7 @@ class OAuthConfigSupplierTest {
 
   @Test
   void testNoOAuthInjectionBecauseWrongPredicateValue()
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue("wrong_auth_type"));
@@ -179,7 +182,7 @@ class OAuthConfigSupplierTest {
 
   @Test
   void testOAuthInjectionWithoutPredicate()
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(null)
         .withPredicateValue(null));
@@ -210,7 +213,7 @@ class OAuthConfigSupplierTest {
 
   @Test
   void testOAuthInjectionWithoutPredicateValue()
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     setupStandardDefinitionMock(createAdvancedAuth()
         .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue(""));
@@ -241,7 +244,7 @@ class OAuthConfigSupplierTest {
 
   @Test
   void testOAuthFullInjectionBecauseNoOAuthSpec()
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
@@ -362,8 +365,8 @@ class OAuthConfigSupplierTest {
   }
 
   private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    when(configRepository.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(sourceService.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(testSourceVersion
         .withSpec(createConnectorSpecification(advancedAuth)));
   }

@@ -54,8 +54,12 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
@@ -188,27 +192,44 @@ class JobTrackerTest {
     }
   }
 
-  private ConfigRepository configRepository;
-
   private JobPersistence jobPersistence;
   private TrackingClient trackingClient;
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private JobTracker jobTracker;
 
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private ConnectionService connectionService;
+  private OperationService operationService;
+  private WorkspaceService workspaceService;
+
   @BeforeEach
   void setup() {
-    configRepository = mock(ConfigRepository.class);
     jobPersistence = mock(JobPersistence.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+    connectionService = mock(ConnectionService.class);
+    operationService = mock(OperationService.class);
+    workspaceService = mock(WorkspaceService.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper);
+    jobTracker = new JobTracker(
+        jobPersistence,
+        workspaceHelper,
+        trackingClient,
+        actorDefinitionVersionHelper,
+        sourceService,
+        destinationService,
+        connectionService,
+        operationService,
+        workspaceService);
   }
 
   @Test
   void testTrackCheckConnectionSource()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_SOURCE)
         .put(JOB_ID_KEY, JOB_ID.toString())
@@ -225,10 +246,10 @@ class JobTrackerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION);
-    when(configRepository.getStandardSourceDefinition(UUID1))
+    when(sourceService.getStandardSourceDefinition(UUID1))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
 
     assertCheckConnCorrectMessageForEachState(
@@ -246,7 +267,7 @@ class JobTrackerTest {
 
   @Test
   void testTrackCheckConnectionDestination()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_DESTINATION)
         .put(JOB_ID_KEY, JOB_ID.toString())
@@ -263,10 +284,10 @@ class JobTrackerTest {
     final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION);
-    when(configRepository.getStandardDestinationDefinition(UUID2))
+    when(destinationService.getStandardDestinationDefinition(UUID2))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(destinationVersion);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
 
     assertCheckConnCorrectMessageForEachState(
@@ -283,7 +304,7 @@ class JobTrackerTest {
   }
 
   @Test
-  void testTrackDiscover() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testTrackDiscover() throws IOException, JsonValidationException, ConfigNotFoundException {
     final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.DISCOVER_SCHEMA)
         .put(JOB_ID_KEY, JOB_ID.toString())
@@ -300,10 +321,10 @@ class JobTrackerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION);
-    when(configRepository.getStandardSourceDefinition(UUID1))
+    when(sourceService.getStandardSourceDefinition(UUID1))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
 
     assertDiscoverCorrectMessageForEachState(
@@ -318,12 +339,12 @@ class JobTrackerTest {
   }
 
   @Test
-  void testTrackSync() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testTrackSync() throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronous(ConfigType.SYNC, SYNC_CONFIG_METADATA);
   }
 
   @Test
-  void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testTrackRefresh() throws IOException, JsonValidationException, ConfigNotFoundException {
     final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
         SYNC_CONFIG_METADATA,
         Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
@@ -332,20 +353,20 @@ class JobTrackerTest {
 
   @Test
   void testTrackSyncForInternalFailure()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final Long jobId = 12345L;
     final Integer attemptNumber = 2;
     final JobState jobState = JobState.SUCCEEDED;
     final Exception exception = new IOException("test");
 
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID);
-    when(configRepository.getStandardSync(CONNECTION_ID))
+    when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(new StandardSync()
             .withConnectionId(CONNECTION_ID).withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withCatalog(CATALOG)
             .withManual(true));
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    when(configRepository.getStandardSync(CONNECTION_ID))
+    when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(new StandardSync()
             .withConnectionId(CONNECTION_ID).withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withCatalog(CATALOG)
             .withManual(false).withSchedule(new Schedule().withUnits(1L).withTimeUnit(TimeUnit.MINUTES)));
@@ -357,13 +378,13 @@ class JobTrackerTest {
         .withDestinationDefinitionId(UUID2)
         .withName(DESTINATION_DEF_NAME);
 
-    when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
+    when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(sourceDefinition);
-    when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
+    when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(destinationDefinition);
-    when(configRepository.getStandardSourceDefinition(UUID1))
+    when(sourceService.getStandardSourceDefinition(UUID1))
         .thenReturn(sourceDefinition);
-    when(configRepository.getStandardDestinationDefinition(UUID2))
+    when(destinationService.getStandardDestinationDefinition(UUID2))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
         .thenReturn(new ActorDefinitionVersion()
@@ -407,18 +428,18 @@ class JobTrackerTest {
   }
 
   @Test
-  void testTrackReset() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testTrackReset() throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronous(ConfigType.RESET_CONNECTION);
   }
 
   void testAsynchronous(final ConfigType configType)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronous(configType, Collections.emptyMap());
   }
 
   // todo update with connection-specific test
   void testAsynchronous(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     // for sync the job id is a long not a uuid.
     final long jobId = 10L;
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID);
@@ -427,14 +448,14 @@ class JobTrackerTest {
     final Job job = getJobMock(configType, jobId);
     // test when frequency is manual.
 
-    when(configRepository.getStandardSync(CONNECTION_ID))
+    when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(new StandardSync()
             .withConnectionId(CONNECTION_ID)
             .withSourceId(SOURCE_ID)
             .withDestinationId(DESTINATION_ID)
             .withCatalog(CATALOG)
             .withManual(true));
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     final Map<String, Object> manualMetadata = MoreMaps.merge(
         metadata,
@@ -443,7 +464,7 @@ class JobTrackerTest {
     assertCorrectMessageForEachState((jobState) -> jobTracker.trackSync(job, jobState), manualMetadata);
 
     // test when frequency is scheduled.
-    when(configRepository.getStandardSync(CONNECTION_ID))
+    when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(new StandardSync()
             .withConnectionId(CONNECTION_ID)
             .withSourceId(SOURCE_ID)
@@ -460,19 +481,19 @@ class JobTrackerTest {
 
   @Test
   void testTrackSyncAttempt()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronousAttempt(ConfigType.SYNC, SYNC_CONFIG_METADATA);
   }
 
   @Test
   void testTrackResetAttempt()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronousAttempt(ConfigType.RESET_CONNECTION);
   }
 
   @Test
   void testTrackSyncAttemptWithFailures()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronousAttemptWithFailures(ConfigType.SYNC, SYNC_CONFIG_METADATA);
   }
 
@@ -521,21 +542,21 @@ class JobTrackerTest {
   }
 
   void testAsynchronousAttempt(final ConfigType configType)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), Collections.emptyMap());
   }
 
   void testAsynchronousAttempt(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), additionalExpectedMetadata);
   }
 
   void testAsynchronousAttempt(final ConfigType configType, final Job job, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final Map<String, Object> metadata = getJobMetadata(configType, LONG_JOB_ID);
     // test when frequency is manual.
-    when(configRepository.getStandardSync(CONNECTION_ID))
+    when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(new StandardSync()
             .withConnectionId(CONNECTION_ID)
             .withSourceId(SOURCE_ID)
@@ -543,7 +564,7 @@ class JobTrackerTest {
             .withManual(true)
             .withCatalog(CATALOG));
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     final Map<String, Object> manualMetadata = MoreMaps.merge(
         ATTEMPT_METADATA,
@@ -595,7 +616,7 @@ class JobTrackerTest {
   }
 
   void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final Map<String, Object> failureMetadata = ImmutableMap.of(
         "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
@@ -605,7 +626,7 @@ class JobTrackerTest {
   }
 
   private Job getJobMock(final ConfigType configType, final long jobId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID1)
         .withName(SOURCE_DEF_NAME);
@@ -613,13 +634,13 @@ class JobTrackerTest {
         .withDestinationDefinitionId(UUID2)
         .withName(DESTINATION_DEF_NAME);
 
-    when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
+    when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(sourceDefinition);
-    when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
+    when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(destinationDefinition);
-    when(configRepository.getStandardSourceDefinition(UUID1))
+    when(sourceService.getStandardSourceDefinition(UUID1))
         .thenReturn(sourceDefinition);
-    when(configRepository.getStandardDestinationDefinition(UUID2))
+    when(destinationService.getStandardDestinationDefinition(UUID2))
         .thenReturn(destinationDefinition);
 
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
@@ -709,12 +730,12 @@ class JobTrackerTest {
   }
 
   private Job getJobWithAttemptsMock(final ConfigType configType, final long jobId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     return getJobWithAttemptsMock(configType, jobId, List.of(getAttemptMock()));
   }
 
   private Job getJobWithAttemptsMock(final ConfigType configType, final long jobId, final List<Attempt> attempts)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final Job job = getJobMock(configType, jobId);
     when(job.getAttempts()).thenReturn(attempts);
     when(jobPersistence.getJob(jobId)).thenReturn(job);
@@ -775,7 +796,7 @@ class JobTrackerTest {
   }
 
   private Job getJobWithFailuresMock(final ConfigType configType, final long jobId)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     return getJobWithAttemptsMock(configType, jobId, getAttemptsWithFailuresMock());
   }
 

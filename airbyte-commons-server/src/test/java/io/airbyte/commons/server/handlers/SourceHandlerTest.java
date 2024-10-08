@@ -49,11 +49,10 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -79,7 +78,6 @@ import org.mockito.Mockito;
 
 class SourceHandlerTest {
 
-  private ConfigRepository configRepository;
   private SecretsRepositoryReader secretsRepositoryReader;
   private StandardSourceDefinition standardSourceDefinition;
   private ActorDefinitionVersion sourceDefinitionVersion;
@@ -116,7 +114,6 @@ class SourceHandlerTest {
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
-    configRepository = mock(ConfigRepository.class);
     catalogService = mock(CatalogService.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     validator = mock(JsonSchemaValidator.class);
@@ -156,7 +153,7 @@ class SourceHandlerTest {
 
     sourceConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
 
-    sourceHandler = new SourceHandler(configRepository,
+    sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
         validator,
@@ -165,13 +162,18 @@ class SourceHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        workspaceService,
+        secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater);
   }
 
   @Test
-  void testCreateSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testCreateSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
         .workspaceId(sourceConnection.getWorkspaceId())
@@ -179,8 +181,8 @@ class SourceHandlerTest {
         .connectionConfiguration(sourceConnection.getConfiguration());
 
     when(uuidGenerator.get()).thenReturn(sourceConnection.getSourceId());
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
         .thenReturn(sourceDefinitionVersion);
@@ -211,7 +213,8 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testUpdateSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testUpdateSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
@@ -234,13 +237,13 @@ class SourceHandlerTest {
     when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
         newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
         .thenReturn(standardSourceDefinition);
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
     when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
@@ -268,8 +271,8 @@ class SourceHandlerTest {
   void testUpgradeSourceVersion() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceConnection.getSourceId());
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(standardSourceDefinition.getSourceDefinitionId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(standardSourceDefinition.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
 
     sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
@@ -279,17 +282,17 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -308,7 +311,7 @@ class SourceHandlerTest {
 
   @Test
   void testCloneSourceWithoutConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
     final SourceRead expectedClonedSourceRead =
         SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
@@ -318,13 +321,13 @@ class SourceHandlerTest {
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
     when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
+    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
 
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -343,7 +346,7 @@ class SourceHandlerTest {
 
   @Test
   void testCloneSourceWithConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
     final SourceRead expectedClonedSourceRead =
         SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
@@ -355,13 +358,13 @@ class SourceHandlerTest {
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
     when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
+    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
 
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -379,21 +382,21 @@ class SourceHandlerTest {
 
   @Test
   void testListSourcesForWorkspace()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
 
-    when(configRepository.listWorkspaceSourceConnection(sourceConnection.getWorkspaceId())).thenReturn(Lists.newArrayList(sourceConnection));
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.listWorkspaceSourceConnection(sourceConnection.getWorkspaceId())).thenReturn(Lists.newArrayList(sourceConnection));
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -411,19 +414,19 @@ class SourceHandlerTest {
 
   @Test
   void testListSourcesForSourceDefinition()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.listSourcesForDefinition(sourceConnection.getSourceDefinitionId())).thenReturn(Lists.newArrayList(sourceConnection));
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.listSourcesForDefinition(sourceConnection.getSourceDefinitionId())).thenReturn(Lists.newArrayList(sourceConnection));
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -438,17 +441,17 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
@@ -467,7 +470,7 @@ class SourceHandlerTest {
 
   @Test
   void testDeleteSourceAndDeleteSecrets()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
 
@@ -479,7 +482,7 @@ class SourceHandlerTest {
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(Collections.singletonList(connectionRead));
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
-    when(configRepository.getSourceConnection(sourceConnection.getSourceId()))
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
     when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
@@ -488,11 +491,11 @@ class SourceHandlerTest {
     when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
         newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)).thenReturn(connectionReadList);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -585,7 +588,7 @@ class SourceHandlerTest {
 
   @Test
   void testCreateSourceHandleSecret()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final ActorDefinitionVersion oauthDefinitionVersion = new ActorDefinitionVersion()
         .withDockerImageTag("thelatesttag")
         .withSpec(ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification());
@@ -599,7 +602,7 @@ class SourceHandlerTest {
 
     doReturn(new SourceRead()).when(sourceHandlerSpy).createSource(any());
     doReturn(Jsons.emptyObject()).when(sourceHandlerSpy).hydrateOAuthResponseSecret(any(), any());
-    when(configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceCreate.getWorkspaceId()))
         .thenReturn(oauthDefinitionVersion);

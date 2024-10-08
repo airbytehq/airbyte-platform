@@ -15,6 +15,8 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.persistence.job.JobPersistence;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -38,9 +40,10 @@ public class ProtocolVersionChecker {
 
   private final JobPersistence jobPersistence;
   private final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange;
-  private final ConfigRepository configRepository;
   private final ActorDefinitionService actorDefinitionService;
   private final DefinitionsProvider definitionsProvider;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
 
   /**
    * Constructs a new protocol version checker that verifies all connectors are within the provided
@@ -53,14 +56,16 @@ public class ProtocolVersionChecker {
    */
   public ProtocolVersionChecker(final JobPersistence jobPersistence,
                                 final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange,
-                                final ConfigRepository configRepository,
                                 final ActorDefinitionService actorDefinitionService,
-                                @Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider) {
+                                @Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
+                                final SourceService sourceService,
+                                final DestinationService destinationService) {
     this.jobPersistence = jobPersistence;
     this.airbyteProtocolTargetVersionRange = airbyteProtocolTargetVersionRange;
-    this.configRepository = configRepository;
     this.actorDefinitionService = actorDefinitionService;
     this.definitionsProvider = definitionsProvider;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   /**
@@ -197,7 +202,7 @@ public class ProtocolVersionChecker {
     return Stream.concat(
         remainingSourceConflicts.stream().map(defId -> {
           try {
-            final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(defId);
+            final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(defId);
             final ActorDefinitionVersion sourceDefVersion = actorDefinitionService.getActorDefinitionVersion(sourceDef.getDefaultVersionId());
             return String.format("Source: %s: %s: protocol version: %s",
                 sourceDef.getSourceDefinitionId(), sourceDef.getName(), sourceDefVersion.getProtocolVersion());
@@ -208,7 +213,7 @@ public class ProtocolVersionChecker {
         }),
         remainingDestConflicts.stream().map(defId -> {
           try {
-            final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(defId);
+            final StandardDestinationDefinition destDef = destinationService.getStandardDestinationDefinition(defId);
             final ActorDefinitionVersion destDefVersion = actorDefinitionService.getActorDefinitionVersion(destDef.getDefaultVersionId());
             return String.format("Destination: %s: %s: protocol version: %s",
                 destDef.getDestinationDefinitionId(), destDef.getName(), destDefVersion.getProtocolVersion());

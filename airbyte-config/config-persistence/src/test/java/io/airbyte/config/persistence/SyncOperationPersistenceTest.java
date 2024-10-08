@@ -16,15 +16,11 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
-import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -67,26 +63,9 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
-    final ConnectionService connectionService = mock(ConnectionService.class);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     configRepository = new ConfigRepository(
-        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
         new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,

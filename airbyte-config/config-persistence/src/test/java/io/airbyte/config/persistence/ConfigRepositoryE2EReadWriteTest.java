@@ -36,29 +36,33 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
-import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
-import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.DestinationAndDefinition;
+import io.airbyte.data.services.shared.SourceAndDefinition;
+import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.db.Database;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -100,10 +104,14 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   private static final String DOCKER_IMAGE_TAG = "1.2.0";
   private static final String CONFIG_HASH = "ConfigHash";
 
-  private ConfigRepository configRepository;
   private CatalogService catalogService;
   private OAuthService oauthService;
   private ActorDefinitionService actorDefinitionService;
+  private ConnectionService connectionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
+  private OperationService operationService;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
@@ -117,34 +125,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
 
-    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
+    connectionService = spy(new ConnectionServiceJooqImpl(database));
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = spy(
-        new ConfigRepository(
-            connectionService,
-            new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new OperationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     catalogService = spy(new CatalogServiceJooqImpl(database));
     OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
@@ -152,32 +139,56 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         featureFlagClient,
         secretsRepositoryReader,
         secretPersistenceConfigService));
+    sourceService = spy(new SourceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater));
+    destinationService = spy(new DestinationServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater));
+    workspaceService = spy(new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService));
+    operationService = spy(new OperationServiceJooqImpl(database));
+
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
-      configRepository.writeStandardWorkspaceNoSecrets(workspace);
+      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     }
     for (final StandardSourceDefinition sourceDefinition : MockData.standardSourceDefinitions()) {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
           .withVersionId(sourceDefinition.getDefaultVersionId());
-      configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+      sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
     }
     for (final StandardDestinationDefinition destinationDefinition : MockData.standardDestinationDefinitions()) {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
           .withVersionId(destinationDefinition.getDefaultVersionId());
-      configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion);
+      destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, Collections.emptyList());
     }
     for (final SourceConnection source : MockData.sourceConnections()) {
-      configRepository.writeSourceConnectionNoSecrets(source);
+      sourceService.writeSourceConnectionNoSecrets(source);
     }
     for (final DestinationConnection destination : MockData.destinationConnections()) {
-      configRepository.writeDestinationConnectionNoSecrets(destination);
+      destinationService.writeDestinationConnectionNoSecrets(destination);
     }
     for (final StandardSyncOperation operation : MockData.standardSyncOperations()) {
-      configRepository.writeStandardSyncOperation(operation);
+      operationService.writeStandardSyncOperation(operation);
     }
     for (final StandardSync sync : MockData.standardSyncs()) {
-      configRepository.writeStandardSync(sync);
+      connectionService.writeStandardSync(sync);
     }
 
     for (final SourceOAuthParameter oAuthParameter : MockData.sourceOauthParameters()) {
@@ -193,24 +204,24 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testWorkspaceCountConnections() throws IOException {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
-    assertEquals(3, configRepository.countConnectionsForWorkspace(workspaceId));
-    assertEquals(2, configRepository.countDestinationsForWorkspace(workspaceId));
-    assertEquals(2, configRepository.countSourcesForWorkspace(workspaceId));
+    assertEquals(3, workspaceService.countConnectionsForWorkspace(workspaceId));
+    assertEquals(2, workspaceService.countDestinationsForWorkspace(workspaceId));
+    assertEquals(2, workspaceService.countSourcesForWorkspace(workspaceId));
   }
 
   @Test
   void testWorkspaceCountConnectionsDeprecated() throws IOException {
     final UUID workspaceId = MockData.standardWorkspaces().get(1).getWorkspaceId();
-    assertEquals(1, configRepository.countConnectionsForWorkspace(workspaceId));
+    assertEquals(1, workspaceService.countConnectionsForWorkspace(workspaceId));
   }
 
   @Test
   void testFetchActorsUsingDefinition() throws IOException {
     final UUID destinationDefinitionId = MockData.publicDestinationDefinition().getDestinationDefinitionId();
     final UUID sourceDefinitionId = MockData.publicSourceDefinition().getSourceDefinitionId();
-    final List<DestinationConnection> destinationConnections = configRepository.listDestinationsForDefinition(
+    final List<DestinationConnection> destinationConnections = destinationService.listDestinationsForDefinition(
         destinationDefinitionId);
-    final List<SourceConnection> sourceConnections = configRepository.listSourcesForDefinition(
+    final List<SourceConnection> sourceConnections = sourceService.listSourcesForDefinition(
         sourceDefinitionId);
 
     assertThat(destinationConnections)
@@ -232,7 +243,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -240,7 +251,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .withName("SomeConnector")
         .withWorkspaceId(workspace.getWorkspaceId())
         .withConfiguration(Jsons.deserialize("{}"));
-    configRepository.writeSourceConnectionNoSecrets(source);
+    sourceService.writeSourceConnectionNoSecrets(source);
 
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
@@ -290,7 +301,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -298,7 +309,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .withName("SomeConnector")
         .withWorkspaceId(workspace.getWorkspaceId())
         .withConfiguration(Jsons.deserialize("{}"));
-    configRepository.writeSourceConnectionNoSecrets(source);
+    sourceService.writeSourceConnectionNoSecrets(source);
 
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
@@ -344,7 +355,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -352,7 +363,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .withName("SomeConnector")
         .withWorkspaceId(workspace.getWorkspaceId())
         .withConfiguration(Jsons.deserialize("{}"));
-    configRepository.writeSourceConnectionNoSecrets(source);
+    sourceService.writeSourceConnectionNoSecrets(source);
 
     final AirbyteCatalog actorCatalog = CatalogHelpers.createAirbyteCatalog("clothes", Field.of("name", JsonSchemaType.STRING));
     final AirbyteCatalog expectedActorCatalog = CatalogHelpers.createAirbyteCatalog("clothes", Field.of("name", JsonSchemaType.STRING));
@@ -402,7 +413,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testListWorkspaceStandardSyncAll() throws IOException {
     final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 4));
-    final List<StandardSync> actualSyncs = configRepository.listWorkspaceStandardSyncs(
+    final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(
         MockData.standardWorkspaces().get(0).getWorkspaceId(), true);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -417,7 +428,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
             .toList());
-    final List<StandardSync> actualSyncs = configRepository.listWorkspaceStandardSyncs(query);
+    final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
   }
@@ -430,7 +441,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
             .toList());
-    final List<StandardSync> actualSyncs = configRepository.listWorkspaceStandardSyncs(query);
+    final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
   }
@@ -443,7 +454,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
             .toList());
-    final List<StandardSync> actualSyncs = configRepository.listWorkspaceStandardSyncs(query);
+    final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
   }
@@ -451,7 +462,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testListWorkspaceStandardSyncExcludeDeleted() throws IOException {
     final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 3));
-    final List<StandardSync> actualSyncs = configRepository.listWorkspaceStandardSyncs(MockData.standardWorkspaces().get(0).getWorkspaceId(), false);
+    final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(MockData.standardWorkspaces().get(0).getWorkspaceId(), false);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
   }
@@ -460,10 +471,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetWorkspaceBySlug() throws IOException {
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
     final StandardWorkspace tombstonedWorkspace = MockData.standardWorkspaces().get(2);
-    final Optional<StandardWorkspace> retrievedWorkspace = configRepository.getWorkspaceBySlugOptional(workspace.getSlug(), false);
+    final Optional<StandardWorkspace> retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace.getSlug(), false);
     final Optional<StandardWorkspace> retrievedTombstonedWorkspaceNoTombstone =
-        configRepository.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), false);
-    final Optional<StandardWorkspace> retrievedTombstonedWorkspace = configRepository.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), true);
+        workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), false);
+    final Optional<StandardWorkspace> retrievedTombstonedWorkspace = workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), true);
 
     assertTrue(retrievedWorkspace.isPresent());
 
@@ -492,19 +503,19 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     // first, remove all associated operations
     Set<UUID> expectedOperationIds = Collections.emptySet();
-    configRepository.updateConnectionOperationIds(connectionId, expectedOperationIds);
+    operationService.updateConnectionOperationIds(connectionId, expectedOperationIds);
     Set<UUID> actualOperationIds = fetchOperationIdsForConnectionId(connectionId);
     assertEquals(expectedOperationIds, actualOperationIds);
 
     // now, add back one operation
     expectedOperationIds = Collections.singleton(existingOperationIds.get(0));
-    configRepository.updateConnectionOperationIds(connectionId, expectedOperationIds);
+    operationService.updateConnectionOperationIds(connectionId, expectedOperationIds);
     actualOperationIds = fetchOperationIdsForConnectionId(connectionId);
     assertEquals(expectedOperationIds, actualOperationIds);
 
     // finally, remove the first operation while adding back in the rest
     expectedOperationIds = existingOperationIds.stream().skip(1).collect(Collectors.toSet());
-    configRepository.updateConnectionOperationIds(connectionId, expectedOperationIds);
+    operationService.updateConnectionOperationIds(connectionId, expectedOperationIds);
     actualOperationIds = fetchOperationIdsForConnectionId(connectionId);
     assertEquals(expectedOperationIds, actualOperationIds);
   }
@@ -532,7 +543,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @Test
   void testListPublicSourceDefinitions() throws IOException {
-    final List<StandardSourceDefinition> actualDefinitions = configRepository.listPublicSourceDefinitions(false);
+    final List<StandardSourceDefinition> actualDefinitions = sourceService.listPublicSourceDefinitions(false);
     assertEquals(List.of(MockData.publicSourceDefinition()), actualDefinitions);
   }
 
@@ -541,7 +552,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = MockData.standardWorkspaces().get(1).getWorkspaceId();
     final List<SourceConnection> expectedSources = MockData.sourceConnections().stream()
         .filter(source -> source.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
-    final List<SourceConnection> sources = configRepository.listWorkspaceSourceConnection(workspaceId);
+    final List<SourceConnection> sources = sourceService.listWorkspaceSourceConnection(workspaceId);
     assertThat(sources).hasSameElementsAs(expectedSources);
   }
 
@@ -550,7 +561,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final List<DestinationConnection> expectedDestinations = MockData.destinationConnections().stream()
         .filter(destination -> destination.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
-    final List<DestinationConnection> destinations = configRepository.listWorkspaceDestinationConnection(workspaceId);
+    final List<DestinationConnection> destinations = destinationService.listWorkspaceDestinationConnection(workspaceId);
     assertThat(destinations).hasSameElementsAs(expectedDestinations);
   }
 
@@ -563,11 +574,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
-    final List<StandardSourceDefinition> actualGrantedDefinitions = configRepository
+    final List<StandardSourceDefinition> actualGrantedDefinitions = sourceService
         .listGrantedSourceDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
 
-    final List<Entry<StandardSourceDefinition, Boolean>> actualGrantableDefinitions = configRepository
+    final List<Entry<StandardSourceDefinition, Boolean>> actualGrantableDefinitions = sourceService
         .listGrantableSourceDefinitions(workspaceId, false);
     assertThat(actualGrantableDefinitions).hasSameElementsAs(List.of(
         Map.entry(grantableDefinition1, true),
@@ -578,7 +589,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @Test
   void testListPublicDestinationDefinitions() throws IOException {
-    final List<StandardDestinationDefinition> actualDefinitions = configRepository.listPublicDestinationDefinitions(false);
+    final List<StandardDestinationDefinition> actualDefinitions = destinationService.listPublicDestinationDefinitions(false);
     assertEquals(List.of(MockData.publicDestinationDefinition()), actualDefinitions);
   }
 
@@ -591,11 +602,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
-    final List<StandardDestinationDefinition> actualGrantedDefinitions = configRepository
+    final List<StandardDestinationDefinition> actualGrantedDefinitions = destinationService
         .listGrantedDestinationDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
 
-    final List<Entry<StandardDestinationDefinition, Boolean>> actualGrantableDefinitions = configRepository
+    final List<Entry<StandardDestinationDefinition, Boolean>> actualGrantableDefinitions = destinationService
         .listGrantableDestinationDefinitions(workspaceId, false);
     assertThat(actualGrantableDefinitions).hasSameElementsAs(List.of(
         Map.entry(grantableDefinition1, true),
@@ -614,27 +625,27 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID customDefinitionId = MockData.customSourceDefinition().getSourceDefinitionId();
 
     // Can use public definitions
-    assertTrue(configRepository.workspaceCanUseDefinition(publicDefinitionId, workspaceId));
+    assertTrue(workspaceService.workspaceCanUseDefinition(publicDefinitionId, workspaceId));
 
     // Can use granted definitions
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId, ScopeType.WORKSPACE);
-    assertTrue(configRepository.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId));
+    assertTrue(workspaceService.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId));
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId, ScopeType.WORKSPACE);
-    assertTrue(configRepository.workspaceCanUseDefinition(customDefinitionId, workspaceId));
+    assertTrue(workspaceService.workspaceCanUseDefinition(customDefinitionId, workspaceId));
 
     // Cannot use private definitions without grant
-    assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
+    assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Cannot use other workspace's grants
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId, ScopeType.WORKSPACE);
-    assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
+    assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Passing invalid IDs returns false
-    assertFalse(configRepository.workspaceCanUseDefinition(new UUID(0L, 0L), workspaceId));
+    assertFalse(workspaceService.workspaceCanUseDefinition(new UUID(0L, 0L), workspaceId));
 
     // workspaceCanUseCustomDefinition can only be true for custom definitions
-    assertTrue(configRepository.workspaceCanUseCustomDefinition(customDefinitionId, workspaceId));
-    assertFalse(configRepository.workspaceCanUseCustomDefinition(grantableDefinition1Id, workspaceId));
+    assertTrue(workspaceService.workspaceCanUseCustomDefinition(customDefinitionId, workspaceId));
+    assertFalse(workspaceService.workspaceCanUseCustomDefinition(grantableDefinition1Id, workspaceId));
 
     // todo: add tests for organizations
     // to test orgs, need to somehow link org to workspace
@@ -687,7 +698,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetStandardSyncUsingOperation() throws IOException {
     final UUID operationId = MockData.standardSyncOperations().get(0).getOperationId();
     final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 3));
-    final List<StandardSync> actualSyncs = configRepository.listStandardSyncsUsingOperation(operationId);
+    final List<StandardSync> actualSyncs = connectionService.listStandardSyncsUsingOperation(operationId);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
   }
@@ -737,10 +748,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final UUID deletedOperationId = MockData.standardSyncOperations().get(0).getOperationId();
     final List<StandardSync> syncs = MockData.standardSyncs();
-    configRepository.deleteStandardSyncOperation(deletedOperationId);
+    operationService.deleteStandardSyncOperation(deletedOperationId);
 
     for (final StandardSync sync : syncs) {
-      final StandardSync retrievedSync = configRepository.getStandardSync(sync.getConnectionId());
+      final StandardSync retrievedSync = connectionService.getStandardSync(sync.getConnectionId());
       for (final UUID operationId : sync.getOperationIds()) {
         if (operationId.equals(deletedOperationId)) {
           assertThat(retrievedSync.getOperationIds()).doesNotContain(deletedOperationId);
@@ -759,7 +770,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         new SourceAndDefinition(MockData.sourceConnections().get(0), MockData.standardSourceDefinitions().get(0)),
         new SourceAndDefinition(MockData.sourceConnections().get(1), MockData.standardSourceDefinitions().get(1)));
 
-    final List<SourceAndDefinition> actual = configRepository.getSourceAndDefinitionsFromSourceIds(sourceIds);
+    final List<SourceAndDefinition> actual = sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds);
     assertThat(actual).hasSameElementsAs(expected);
   }
 
@@ -771,7 +782,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         new DestinationAndDefinition(MockData.destinationConnections().get(0), MockData.standardDestinationDefinitions().get(0)),
         new DestinationAndDefinition(MockData.destinationConnections().get(1), MockData.standardDestinationDefinitions().get(1)));
 
-    final List<DestinationAndDefinition> actual = configRepository.getDestinationAndDefinitionsFromDestinationIds(destinationIds);
+    final List<DestinationAndDefinition> actual = destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds);
     assertThat(actual).hasSameElementsAs(expected);
   }
 
@@ -779,7 +790,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetGeographyForConnection() throws IOException {
     final StandardSync sync = MockData.standardSyncs().get(0);
     final Geography expected = sync.getGeography();
-    final Geography actual = configRepository.getGeographyForConnection(sync.getConnectionId());
+    final Geography actual = connectionService.getGeographyForConnection(sync.getConnectionId());
 
     assertEquals(expected, actual);
   }
@@ -788,7 +799,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetGeographyForWorkspace() throws IOException {
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
     final Geography expected = workspace.getDefaultGeography();
-    final Geography actual = configRepository.getGeographyForWorkspace(workspace.getWorkspaceId());
+    final Geography actual = workspaceService.getGeographyForWorkspace(workspace.getWorkspaceId());
 
     assertEquals(expected, actual);
   }
@@ -952,7 +963,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetEarlySyncJobs() throws IOException {
     // This test just verifies that the query can be run against configAPI DB.
     // The query has been tested locally against prod DB to verify the outputs.
-    final Set<Long> earlySyncJobs = configRepository.listEarlySyncJobs(7, 30);
+    final Set<Long> earlySyncJobs = connectionService.listEarlySyncJobs(7, 30);
     assertNotNull(earlySyncJobs);
   }
 

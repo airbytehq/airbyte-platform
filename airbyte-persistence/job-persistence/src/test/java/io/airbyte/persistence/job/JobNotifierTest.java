@@ -30,8 +30,11 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -62,7 +65,6 @@ class JobNotifierTest {
 
   private final WebUrlHelper webUrlHelper = new WebUrlHelper(WEBAPP_URL);
 
-  private ConfigRepository configRepository;
   private JobNotifier jobNotifier;
   private NotificationClient notificationClient;
   private NotificationClient customerIoNotificationClient;
@@ -72,15 +74,30 @@ class JobNotifierTest {
   private StandardSourceDefinition sourceDefinition;
   private ActorDefinitionVersion actorDefinitionVersion;
   private StandardDestinationDefinition destinationDefinition;
+  private ConnectionService connectionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
 
   @BeforeEach
   void setup() throws Exception {
-    configRepository = mock(ConfigRepository.class);
     trackingClient = mock(TrackingClient.class);
+    connectionService = mock(ConnectionService.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+    workspaceService = mock(WorkspaceService.class);
 
     ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
-    jobNotifier = Mockito.spy(new JobNotifier(webUrlHelper, configRepository, workspaceHelper, trackingClient, actorDefinitionVersionHelper));
+    jobNotifier = Mockito.spy(new JobNotifier(
+        webUrlHelper,
+        connectionService,
+        sourceService,
+        destinationService,
+        workspaceService,
+        workspaceHelper,
+        trackingClient,
+        actorDefinitionVersionHelper));
     notificationClient = mock(NotificationClient.class);
     customerIoNotificationClient = mock(NotificationClient.class);
     when(jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem())).thenReturn(List.of(notificationClient));
@@ -99,17 +116,17 @@ class JobNotifierTest {
     actorDefinitionVersion = new ActorDefinitionVersion()
         .withDockerImageTag(TEST_DOCKER_TAG)
         .withDockerRepository(TEST_DOCKER_REPO);
-    when(configRepository.getStandardSync(UUID.fromString(job.getScope())))
+    when(connectionService.getStandardSync(UUID.fromString(job.getScope())))
         .thenReturn(new StandardSync().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID));
-    when(configRepository.getSourceConnection(SOURCE_ID))
+    when(sourceService.getSourceConnection(SOURCE_ID))
         .thenReturn(new SourceConnection().withWorkspaceId(WORKSPACE_ID).withSourceId(SOURCE_ID).withName(SOURCE_NAME));
-    when(configRepository.getDestinationConnection(DESTINATION_ID))
+    when(destinationService.getDestinationConnection(DESTINATION_ID))
         .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID).withDestinationId(DESTINATION_ID).withName(DESTINATION_NAME));
-    when(configRepository.getSourceDefinitionFromConnection(any())).thenReturn(sourceDefinition);
-    when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(destinationDefinition);
-    when(configRepository.getStandardSourceDefinition(any())).thenReturn(sourceDefinition);
-    when(configRepository.getStandardDestinationDefinition(any())).thenReturn(destinationDefinition);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
+    when(sourceService.getSourceDefinitionFromConnection(any())).thenReturn(sourceDefinition);
+    when(destinationService.getDestinationDefinitionFromConnection(any())).thenReturn(destinationDefinition);
+    when(sourceService.getStandardSourceDefinition(any())).thenReturn(sourceDefinition);
+    when(destinationService.getStandardDestinationDefinition(any())).thenReturn(destinationDefinition);
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId())).thenReturn(WORKSPACE_ID);
     when(notificationClient.notifyJobFailure(any(), ArgumentMatchers.anyString())).thenReturn(true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion);
@@ -155,7 +172,7 @@ class JobNotifierTest {
     workspace.setNotificationSettings(sendNotificationOnSuccessSetting);
     when(jobNotifier.getNotificationClientsFromNotificationItem(item)).thenReturn(List.of(notificationClient));
 
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(workspace);
+    when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(workspace);
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
     verify(notificationClient).notifyJobSuccess(any(), any());

@@ -15,7 +15,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceReadList;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Node;
@@ -205,7 +205,8 @@ public class DiagnosticToolHandler {
               connectionInfo.put("connectorDockerImageTag", sourceDefinitionVersion.getDockerImageTag());
               connectionInfo.put("connectorVersionOverrideApplied", sourceDefinitionVersion.getIsVersionOverrideApplied());
               connectionInfo.put("connectorSupportState", sourceDefinitionVersion.getSupportState().toString());
-            } catch (final JsonValidationException | IOException | io.airbyte.data.exceptions.ConfigNotFoundException | ConfigNotFoundException e) {
+            } catch (final JsonValidationException | IOException | ConfigNotFoundException
+                | io.airbyte.config.persistence.ConfigNotFoundException e) {
               LOGGER.error("Error collecting source version information", e);
             }
             return connectionInfo;
@@ -227,8 +228,8 @@ public class DiagnosticToolHandler {
                   connectionInfo.put("connectorDockerImageTag", destinationDefinitionVersion.getDockerImageTag());
                   connectionInfo.put("connectorVersionOverrideApplied", destinationDefinitionVersion.getIsVersionOverrideApplied());
                   connectionInfo.put("connectorSupportState", destinationDefinitionVersion.getSupportState().toString());
-                } catch (final JsonValidationException | IOException | io.airbyte.data.exceptions.ConfigNotFoundException
-                    | ConfigNotFoundException e) {
+                } catch (final JsonValidationException | IOException | ConfigNotFoundException
+                    | io.airbyte.config.persistence.ConfigNotFoundException e) {
                   LOGGER.error("Error collecting destination version information", e);
                 }
                 return connectionInfo;
@@ -237,7 +238,7 @@ public class DiagnosticToolHandler {
       final List<Map<String, Object>> allConnectors = new ArrayList<>(sourceList);
       allConnectors.addAll(destinationList);
       return allConnectors;
-    } catch (final JsonValidationException | ConfigNotFoundException | IOException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final JsonValidationException | IOException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       LOGGER.error("Error collecting connectors information", e);
       return null;
     }

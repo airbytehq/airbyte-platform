@@ -87,6 +87,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-featureflag"))
