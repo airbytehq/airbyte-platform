@@ -3,10 +3,6 @@ plugins {
   id("io.airbyte.gradle.docker")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.v3.swagger.annotations)

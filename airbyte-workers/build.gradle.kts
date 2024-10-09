@@ -17,7 +17,6 @@ buildscript {
   }
 }
 
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -30,7 +29,6 @@ val jdbc by configurations.creating
 configurations.all {
   // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
   exclude(group = "com.zaxxer", module = "HikariCP-java7")
-  exclude(group="org.apache.logging.log4j")
 }
 
 dependencies {

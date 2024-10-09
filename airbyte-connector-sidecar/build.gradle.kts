@@ -29,7 +29,6 @@ configurations.all {
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
   exclude(group = "io.micronaut.sql")
-  exclude(group="org.apache.logging.log4j")
 }
 
 dependencies {

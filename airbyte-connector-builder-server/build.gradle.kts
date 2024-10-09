@@ -9,10 +9,6 @@ plugins {
   id("io.airbyte.gradle.kube-reload")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   // Micronaut dependencies
   annotationProcessor(platform(libs.micronaut.platform))

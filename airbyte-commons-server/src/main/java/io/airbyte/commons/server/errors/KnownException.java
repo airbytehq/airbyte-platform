@@ -4,8 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
-import com.google.common.base.Throwables;
 import io.airbyte.api.model.generated.KnownExceptionInfo;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,7 +50,9 @@ public abstract class KnownException extends RuntimeException {
   }
 
   public static List<String> getStackTraceAsList(final Throwable throwable) {
-    final String[] stackTrace = Throwables.getStackTraceAsString(throwable).split("\n");
+    final StringWriter stringWriter = new StringWriter();
+    throwable.printStackTrace(new PrintWriter(stringWriter));
+    final String[] stackTrace = stringWriter.toString().split("\n");
     return Stream.of(stackTrace).collect(Collectors.toList());
   }
 

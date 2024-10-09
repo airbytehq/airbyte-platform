@@ -17,8 +17,6 @@ dependencies {
   implementation(libs.guava)
   implementation(libs.commons.io)
   implementation(libs.bundles.apache)
-  // TODO: remove this, it's pulled in for a Strings.notEmpty() check
-  implementation(libs.bundles.log4j)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-protocol"))

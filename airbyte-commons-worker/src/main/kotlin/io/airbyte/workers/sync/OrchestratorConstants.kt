@@ -9,7 +9,7 @@ import io.airbyte.commons.envvar.EnvVar
 
 private const val LOG_LEVEL = "LOG_LEVEL"
 
-// necessary for s3/minio logging. used in the log4j2 configuration.
+// necessary for s3/minio logging. used in the logging configuration.
 private const val S3_PATH_STYLE_ACCESS = "S3_PATH_STYLE_ACCESS"
 
 object OrchestratorConstants {
@@ -69,7 +69,6 @@ object OrchestratorConstants {
           EnvVar.LAUNCHDARKLY_KEY,
           EnvVar.LOCAL_DOCKER_MOUNT,
           EnvVar.LOCAL_ROOT,
-          EnvVar.LOG4J_CONFIGURATION_FILE,
           EnvVar.METRIC_CLIENT,
           EnvVar.MINIO_ENDPOINT,
           EnvVar.OTEL_COLLECTOR_ENDPOINT,

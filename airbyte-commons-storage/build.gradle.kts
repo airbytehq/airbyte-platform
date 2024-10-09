@@ -24,9 +24,6 @@ dependencies {
   api(project(":oss:airbyte-metrics:metrics-lib"))
   api(project(":oss:airbyte-featureflag"))
 
-  // Dependencies for specific storage clients
-  // TODO: This is deprecated, but required to make the real van logging solution happy.
-  implementation("com.microsoft.azure:azure-storage:8.6.6")
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)
 

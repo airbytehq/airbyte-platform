@@ -107,7 +107,6 @@ data:
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
   LOCAL_ROOT: /tmp/airbyte_local
   LOG_LEVEL: {{ default "INFO" (((.Values.global).logging).level) }}
-  LOG4J_CONFIGURATION_FILE: {{ include "airbyte.logging.log4jConfig" . | quote }}
   MICROMETER_METRICS_ENABLED: "false"
   MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}

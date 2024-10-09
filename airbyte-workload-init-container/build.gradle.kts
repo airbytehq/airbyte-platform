@@ -8,7 +8,6 @@ configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
-  exclude(group="org.apache.logging.log4j")
 }
 
 dependencies {

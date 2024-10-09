@@ -4,10 +4,6 @@ plugins {
   `java-test-fixtures`
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut

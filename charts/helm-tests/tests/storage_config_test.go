@@ -19,7 +19,6 @@ func TestDefaultStorage(t *testing.T) {
 	cm := getConfigMap(chartYaml, "airbyte-airbyte-env")
 
 	expect := map[string]string{
-		"LOG4J_CONFIGURATION_FILE":        "log4j2-minio.xml",
 		"MINIO_ENDPOINT":                  "http://airbyte-minio-svc:9000",
 		"S3_PATH_STYLE_ACCESS":            "true",
 		"STORAGE_BUCKET_ACTIVITY_PAYLOAD": "airbyte-storage",
@@ -44,7 +43,6 @@ func TestGcsStorage(t *testing.T) {
 	cm := getConfigMap(chartYaml, "airbyte-airbyte-env")
 	expect := map[string]string{
 		"GOOGLE_APPLICATION_CREDENTIALS":  "/secrets/gcs-log-creds/gcp.json",
-		"LOG4J_CONFIGURATION_FILE":        "log4j2-gcs.xml",
 		"S3_PATH_STYLE_ACCESS":            "",
 		"STORAGE_BUCKET_ACTIVITY_PAYLOAD": "airbyte-storage",
 		"STORAGE_BUCKET_LOG":              "airbyte-storage",
@@ -69,7 +67,6 @@ func TestS3Storage(t *testing.T) {
 	cm := getConfigMap(chartYaml, "airbyte-airbyte-env")
 	expect := map[string]string{
 		"AWS_DEFAULT_REGION":              "",
-		"LOG4J_CONFIGURATION_FILE":        "log4j2-s3.xml",
 		"S3_PATH_STYLE_ACCESS":            "",
 		"STORAGE_BUCKET_ACTIVITY_PAYLOAD": "airbyte-storage",
 		"STORAGE_BUCKET_LOG":              "airbyte-storage",

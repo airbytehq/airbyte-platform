@@ -23,10 +23,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  exclude(group="org.apache.logging.log4j")
-}
-
 val airbyteProtocol by configurations.creating
 
 dependencies {
