@@ -11,11 +11,11 @@ import java.nio.file.Path
 /** The default log file name. */
 const val DEFAULT_LOG_FILENAME = "logs.log"
 
-/** The default MDC key that holds the job log path for cloud storage. */
-const val DEFAULT_JOB_LOG_PATH_MDC_KEY = "cloud_job_log_path"
+/** The default MDC key that holds the job log path for log storage. */
+const val DEFAULT_JOB_LOG_PATH_MDC_KEY = "job_log_path"
 
-/** The default MDC key that holds the workspace path for cloud storage. */
-const val DEFAULT_WORKSPACE_MDC_KEY = "cloud_workspace_app_root"
+/** The default MDC key that holds the workspace path for log storage. */
+const val DEFAULT_WORKSPACE_MDC_KEY = "workspace_app_root"
 
 /**
  * Defines methods for setting various MDC key/values related to logging
