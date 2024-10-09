@@ -98,7 +98,7 @@ export const unifyWorkspaceUserData = (
 
 export const unifyOrganizationUserData = (
   organizationUsers: OrganizationUserRead[],
-  workspaceInvitations: UserInvitationRead[]
+  organizationInvitations: UserInvitationRead[]
 ): UnifiedUserModel[] => {
   const normalizedUsers = organizationUsers.map((user) => {
     return {
@@ -114,7 +114,7 @@ export const unifyOrganizationUserData = (
     };
   });
 
-  const normalizedInvitations = workspaceInvitations.map((invitation) => {
+  const normalizedInvitations = organizationInvitations.map((invitation) => {
     return {
       id: invitation.inviteCode,
       userEmail: invitation.invitedEmail,

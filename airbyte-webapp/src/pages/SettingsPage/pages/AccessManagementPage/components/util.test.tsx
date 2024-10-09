@@ -23,6 +23,7 @@ describe("unifyWorkspaceUserData", () => {
         id: "workspaceUser1",
         userEmail: "wsuser1@test.com",
         userName: "Ws User 1",
+        organizationPermission: undefined,
         workspacePermission: {
           permissionId: "permission4",
           permissionType: "workspace_admin",
@@ -37,6 +38,7 @@ describe("unifyWorkspaceUserData", () => {
           permissionType: "organization_reader",
           userId: "orgUser2",
         },
+        workspacePermission: undefined,
         userEmail: "orguser2@test.com",
         userName: "Org User 2",
       },
@@ -59,7 +61,7 @@ describe("unifyWorkspaceUserData", () => {
         id: "code1",
         invitationPermissionType: "workspace_reader",
         invitationStatus: "pending",
-        userEmail: "invite1@example.com",
+        userEmail: "userInvite1@example.com",
       },
     ]);
   });
@@ -123,7 +125,7 @@ describe("unifyOrganizationUserData", () => {
         id: "code1",
         invitationPermissionType: "organization_reader",
         invitationStatus: "pending",
-        userEmail: "invite1@example.com",
+        userEmail: "userInvite1@example.com",
       },
     ]);
   });

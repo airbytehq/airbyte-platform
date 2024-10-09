@@ -6,13 +6,14 @@ import { Box } from "components/ui/Box";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { PermissionType, ScopeType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
 
 import { AddUserFormValues } from "./AddUserModal";
 import styles from "./AddUserModalBody.module.scss";
 import { InviteUserRow } from "./InviteUserRow";
+import { UnifiedUserModel } from "./util";
 interface AddUserModalBodyProps {
-  usersToList: WorkspaceUserAccessInfoRead[];
+  usersToList: UnifiedUserModel[];
   showInviteNewUser: boolean;
   selectedRow: string | null;
   setSelectedRow: (value: string | null) => void;
@@ -42,7 +43,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
       selectedRow === "inviteNewUser" && deferredSearchValue !== getValues("email"),
 
       // user had selected a user and that user is no longer visible
-      selectedRow && selectedRow !== "inviteNewUser" && !usersToList.find((user) => user.userId === selectedRow),
+      selectedRow && selectedRow !== "inviteNewUser" && !usersToList.find((user) => user.id === selectedRow),
     ];
 
     if (resetPredicates.some(Boolean)) {
@@ -73,9 +74,9 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
         <ul className={styles.addUserModalBody__list}>
           {usersToList.map((user) => {
             return (
-              <li className={styles.addUserModalBody__listItem} key={user.userId}>
+              <li className={styles.addUserModalBody__listItem} key={user.id}>
                 <InviteUserRow
-                  id={user.userId}
+                  id={user.id}
                   name={user.userName}
                   email={user.userEmail}
                   selectedRow={selectedRow}

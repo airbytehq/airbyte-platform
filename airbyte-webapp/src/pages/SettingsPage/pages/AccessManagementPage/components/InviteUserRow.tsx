@@ -9,7 +9,7 @@ import { Icon } from "components/ui/Icon";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { PermissionType, ScopeType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
@@ -23,7 +23,7 @@ import {
   getOrganizationAccessLevel,
   getWorkspaceAccessLevel,
   permissionsByResourceType,
-  unifyWorkspaceUserData,
+  UnifiedUserModel,
 } from "./util";
 import { ViewOnlyUserRow } from "./ViewOnlyUserRow";
 
@@ -33,7 +33,7 @@ interface InviteUserRowProps {
   email: string;
   selectedRow: string | null;
   setSelectedRow: (value: string | null) => void;
-  user?: WorkspaceUserAccessInfoRead;
+  user?: UnifiedUserModel;
   scope: ScopeType;
 }
 
@@ -46,7 +46,6 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
   user,
   scope,
 }) => {
-  const transformedUser = !!user ? unifyWorkspaceUserData([user], [])[0] : null;
   const allowAllRBACRoles = useFeature(FeatureItem.AllowAllRBACRoles);
 
   const [selectedPermissionType, setPermissionType] = useState<PermissionType>(
@@ -56,7 +55,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
   const { setValue } = useFormContext<AddUserFormValues>();
   const { formatMessage } = useIntl();
   const { userId: currentUserId } = useCurrentUser();
-  const isCurrentUser = user?.userId === currentUserId;
+  const isCurrentUser = user?.id === currentUserId;
 
   const isOrgAdmin = user?.organizationPermission?.permissionType === PermissionType.organization_admin;
 
@@ -80,8 +79,8 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
     if (scope === "workspace") {
       const isUserOrgAdmin = isOrgAdmin;
       const hasWorkspacePermission = user?.workspacePermission?.permissionType !== undefined;
-
-      if (isUserOrgAdmin || hasWorkspacePermission) {
+      const isInvitedUser = user?.invitationStatus !== undefined;
+      if (isUserOrgAdmin || hasWorkspacePermission || isInvitedUser) {
         return true;
       }
       // in an organization, never allow inviting existing org members
@@ -90,7 +89,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
     }
     // allow all other cases (new user, or existing user that didn't trigger the workspace check)
     return false;
-  }, [isCurrentUser, scope, id, isOrgAdmin, user?.workspacePermission?.permissionType]);
+  }, [isCurrentUser, scope, id, isOrgAdmin, user?.workspacePermission?.permissionType, user?.invitationStatus]);
 
   const highestPermissionType = useMemo(() => {
     if (user) {
@@ -115,6 +114,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
         isOrgAdmin={isOrgAdmin}
         scope={scope}
         highestPermissionType={highestPermissionType}
+        isPending={user?.invitationStatus !== undefined}
       />
     );
   }
@@ -171,9 +171,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
                       <ChangeRoleMenuItemContent
                         permissionType={optionPermissionType}
                         roleIsInvalid={
-                          !!user
-                            ? disallowedRoles(transformedUser, scope, isCurrentUser).includes(optionPermissionType)
-                            : false
+                          !!user ? disallowedRoles(user, scope, isCurrentUser).includes(optionPermissionType) : false
                         }
                         roleIsActive={optionPermissionType === selectedPermissionType}
                       />

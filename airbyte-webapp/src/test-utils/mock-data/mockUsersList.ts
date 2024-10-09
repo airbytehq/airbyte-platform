@@ -132,7 +132,7 @@ export const mockWorkspaceAccessUsers: WorkspaceUserAccessInfoRead[] = [
 export const mockWorkspaceUserInvitations: UserInvitationRead[] = [
   {
     inviteCode: "code1",
-    invitedEmail: "invite1@example.com",
+    invitedEmail: "userInvite1@example.com",
     status: "pending",
     permissionType: "workspace_reader",
     createdAt: 1727469930,
@@ -147,7 +147,7 @@ export const mockWorkspaceUserInvitations: UserInvitationRead[] = [
 export const mockOrganizationUserInvitations: UserInvitationRead[] = [
   {
     inviteCode: "code1",
-    invitedEmail: "invite1@example.com",
+    invitedEmail: "userInvite1@example.com",
     status: "pending",
     permissionType: "organization_reader",
     createdAt: 1727469930,

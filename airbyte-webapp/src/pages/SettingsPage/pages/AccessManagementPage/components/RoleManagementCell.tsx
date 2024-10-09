@@ -33,9 +33,33 @@ interface RoleManagementCellProps {
   resourceType: ResourceType;
 }
 
+export const PendingInvitationBadge: React.FC<{ scope: ResourceType }> = ({ scope }) => {
+  return (
+    <Tooltip
+      control={
+        <Box px="sm">
+          <Text italicized color="grey400">
+            <FormattedMessage id="userInvitations.pendingInvitation" />
+          </Text>
+        </Box>
+      }
+    >
+      <Text bold italicized inverseColor>
+        <FormattedMessage id="userInvitations.pendingInvitation.tooltipMain" />
+      </Text>
+      <Text italicized inverseColor>
+        <FormattedMessage
+          id="userInvitations.pendingInvitation.tooltipAdditionalInfo"
+          values={{
+            scope,
+          }}
+        />
+      </Text>
+    </Tooltip>
+  );
+};
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
   const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
-  const allowAllRbacRoles = useFeature(FeatureItem.AllowAllRBACRoles);
   const { workspaceId, organizationId } = useCurrentWorkspace();
   const workspaceAccessLevel = getWorkspaceAccessLevel(user);
   const organizationAccessLevel = getOrganizationAccessLevel(user);
@@ -52,11 +76,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
   const cannotDemoteUser =
     resourceType === "workspace" && organizationAccessLevel === "ADMIN" && user.invitationStatus === undefined;
 
-  const showViewOnlyBox =
-    cannotDemoteUser ||
-    !canEditPermissions ||
-    user.id === currentUser.userId ||
-    (resourceType === "organization" && !allowAllRbacRoles); // we should still show this for workspaces so a user can be removed
+  const showViewOnlyBox = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions
@@ -89,24 +109,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
       {canListOrganizationUsers && indicateGuestUsers && (
         <GuestBadge userId={user.id} organizationId={organizationId} />
       )}
-      {user.invitationStatus === "pending" && (
-        <Tooltip
-          control={
-            <Box px="sm">
-              <Text italicized color="grey400">
-                <FormattedMessage id="userInvitations.pendingInvitation" />
-              </Text>
-            </Box>
-          }
-        >
-          <Text bold italicized inverseColor>
-            <FormattedMessage id="userInvitations.pendingInvitation.tooltipMain" />
-          </Text>
-          <Text italicized inverseColor>
-            <FormattedMessage id="userInvitations.pendingInvitation.tooltipAdditionalInfo" />
-          </Text>
-        </Tooltip>
-      )}
+      {user.invitationStatus === "pending" && <PendingInvitationBadge scope={resourceType} />}
     </FlexContainer>
   );
 };

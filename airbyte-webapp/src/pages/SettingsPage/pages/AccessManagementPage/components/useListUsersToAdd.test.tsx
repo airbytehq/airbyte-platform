@@ -1,8 +1,17 @@
 import { renderHook } from "@testing-library/react";
 
-import { mockOrganizationUsers, mockWorkspaceAccessUsers } from "test-utils/mock-data/mockUsersList";
+import {
+  mockOrganizationUsers,
+  mockWorkspaceAccessUsers,
+  mockWorkspaceUserInvitations,
+} from "test-utils/mock-data/mockUsersList";
 
-import { useCurrentWorkspace, useListUsersInOrganization, useListWorkspaceAccessUsers } from "core/api";
+import {
+  useCurrentWorkspace,
+  useListUserInvitations,
+  useListUsersInOrganization,
+  useListWorkspaceAccessUsers,
+} from "core/api";
 import { useIntent } from "core/utils/rbac";
 
 import { useListUsersToAdd } from "./useListUsersToAdd";
@@ -11,6 +20,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: jest.fn(),
   useListUsersInOrganization: jest.fn(),
   useListWorkspaceAccessUsers: jest.fn(),
+  useListUserInvitations: jest.fn(),
 }));
 
 jest.mock("core/utils/rbac", () => ({
@@ -30,6 +40,7 @@ describe("#useListUsersToAdd", () => {
       usersWithAccess: mockWorkspaceAccessUsers,
     });
     (useIntent as jest.Mock).mockReturnValue(true);
+    (useListUserInvitations as jest.Mock).mockReturnValue(mockWorkspaceUserInvitations);
   });
 
   describe("Scope: workspace", () => {
@@ -46,13 +57,13 @@ describe("#useListUsersToAdd", () => {
             organizationId: "org-id",
             userId: "orgUser2",
           },
-          userId: "orgUser2",
+          id: "orgUser2",
           userName: "Org User 2",
           userEmail: "orguser2@test.com",
           workspacePermission: undefined,
         },
         {
-          userId: "orgUser1",
+          id: "orgUser1",
           userName: "Org User 1",
           userEmail: "orguser1@test.com",
           organizationPermission: {
@@ -72,7 +83,7 @@ describe("#useListUsersToAdd", () => {
 
       expect(mappedUsers).toEqual([
         {
-          userId: "workspaceUser1",
+          id: "workspaceUser1",
           userName: "Ws User 1",
           userEmail: "wsuser1@test.com",
           organizationPermission: undefined,
@@ -83,7 +94,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser2",
+          id: "orgUser2",
           userName: "Org User 2",
           userEmail: "orguser2@test.com",
           workspacePermission: undefined,
@@ -95,7 +106,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgAndWorkspaceUser",
+          id: "orgAndWorkspaceUser",
           userName: "Org And Workspace User",
           userEmail: "organdworkspaceuser@test.com",
           workspacePermission: {
@@ -110,7 +121,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser1",
+          id: "orgUser1",
           userName: "Org User 1",
           userEmail: "orguser1@test.com",
           organizationPermission: {
@@ -119,6 +130,12 @@ describe("#useListUsersToAdd", () => {
             organizationId: "org-id",
             userId: "orgUser1",
           },
+        },
+        {
+          id: "code1",
+          invitationPermissionType: "workspace_reader",
+          invitationStatus: "pending",
+          userEmail: "userInvite1@example.com",
         },
       ]);
     });
@@ -129,7 +146,7 @@ describe("#useListUsersToAdd", () => {
 
       expect(mappedUsers).toEqual([
         {
-          userId: "orgUser2",
+          id: "orgUser2",
           userName: "Org User 2",
           userEmail: "orguser2@test.com",
           workspacePermission: undefined,
@@ -141,7 +158,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser1",
+          id: "orgUser1",
           userName: "Org User 1",
           userEmail: "orguser1@test.com",
           organizationPermission: {
@@ -170,7 +187,7 @@ describe("#useListUsersToAdd", () => {
 
       expect(mappedUsers).toEqual([
         {
-          userId: "orgUser1",
+          id: "orgUser1",
           userName: "Org User 1",
           userEmail: "orguser1@test.com",
           organizationPermission: {
@@ -181,7 +198,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser2",
+          id: "orgUser2",
           userName: "Org User 2",
           userEmail: "orguser2@test.com",
           organizationPermission: {
@@ -192,7 +209,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser3",
+          id: "orgUser3",
           userName: "Org User 3",
           userEmail: "orguser3@test.com",
           organizationPermission: {
@@ -203,7 +220,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgAndWorkspaceUser",
+          id: "orgAndWorkspaceUser",
           userName: "Org And Workspace User",
           userEmail: "organdworkspaceuser@test.com",
           organizationPermission: {
@@ -212,6 +229,12 @@ describe("#useListUsersToAdd", () => {
             organizationId: "org-id",
             userId: "orgAndWorkspaceUser",
           },
+        },
+        {
+          id: "code1",
+          invitationPermissionType: "workspace_reader",
+          invitationStatus: "pending",
+          userEmail: "userInvite1@example.com",
         },
       ]);
     });
@@ -222,7 +245,7 @@ describe("#useListUsersToAdd", () => {
 
       expect(mappedUsers).toEqual([
         {
-          userId: "orgUser1",
+          id: "orgUser1",
           userName: "Org User 1",
           userEmail: "orguser1@test.com",
           organizationPermission: {
@@ -233,7 +256,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser2",
+          id: "orgUser2",
           userName: "Org User 2",
           userEmail: "orguser2@test.com",
           organizationPermission: {
@@ -244,7 +267,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          userId: "orgUser3",
+          id: "orgUser3",
           userName: "Org User 3",
           userEmail: "orguser3@test.com",
           organizationPermission: {
