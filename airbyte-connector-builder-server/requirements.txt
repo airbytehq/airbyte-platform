@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==5.11.1
+airbyte-cdk==5.12.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
@@ -34,7 +34,7 @@ certifi==2024.8.30
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via requests
 click==8.1.7
     # via nltk
@@ -79,7 +79,7 @@ langchain-core==0.1.42
     # via airbyte-cdk
 langsmith==0.1.132
     # via langchain-core
-markupsafe==3.0.0
+markupsafe==3.0.1
     # via jinja2
 nltk==3.8.1
     # via airbyte-cdk
@@ -174,6 +174,8 @@ wcmatch==8.4
     # via airbyte-cdk
 wrapt==1.16.0
     # via deprecated
+xmltodict==0.13.0
+    # via airbyte-cdk
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
