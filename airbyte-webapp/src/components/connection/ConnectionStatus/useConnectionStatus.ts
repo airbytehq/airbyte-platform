@@ -1,23 +1,16 @@
 import dayjs from "dayjs";
 
-import { useGetConnection, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
-import { ConnectionStatus, FailureReason, FailureType, JobStatus } from "core/api/types/AirbyteClient";
+import { useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
+import { ConnectionSyncStatus, FailureReason } from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-
-import { ConnectionStatusType } from "../ConnectionStatusIndicator";
 
 export interface UIConnectionStatus {
   // user-facing status reflecting the state of the connection
-  status: ConnectionStatusType;
-  // status of the last completed sync job, useful for distinguishing failed jobs, first job since reset, etc.
-  lastSyncJobStatus: JobStatus | undefined;
+  status: ConnectionSyncStatus;
   // unix timestamp of the last successful sync job
   lastSuccessfulSync: number | undefined;
   // expected time the next scheduled sync will start (basic schedule only)
   nextSync: number | undefined;
-  // is the connection currently running a job
-  isRunning: boolean;
   // for displaying error message and linking to the relevant logs
   failureReason?: FailureReason;
   lastSyncJobId?: number;
@@ -27,120 +20,39 @@ export interface UIConnectionStatus {
 }
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
-  const connection = useGetConnection(connectionId);
-
   const connectionStatuses = useListConnectionsStatuses([connectionId]);
   const connectionStatus = connectionStatuses[0];
 
   const {
-    isRunning,
-    isLastCompletedJobReset,
-    lastSyncJobStatus,
+    connectionSyncStatus: status,
     lastSuccessfulSync,
     failureReason,
     lastSyncJobId,
     lastSyncAttemptNumber,
+    lastSyncJobCreatedAt,
+    scheduleData,
   } = connectionStatus;
 
-  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, isRunning);
-
-  const hasConfigError = failureReason?.failureType === FailureType.config_error;
-
-  const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, status === ConnectionSyncStatus.running);
 
   // calculate the time we expect the next sync to start (basic schedule only)
-  const latestSyncJobCreatedAt = connection.latestSyncJobCreatedAt;
   let nextSync;
-  if (latestSyncJobCreatedAt && connection.scheduleData?.basicSchedule) {
-    const latestSync = dayjs(latestSyncJobCreatedAt * 1000);
+  if (lastSyncJobCreatedAt && scheduleData?.basicSchedule) {
+    const latestSync = dayjs(lastSyncJobCreatedAt * 1000);
     nextSync = moveTimeToFutureByPeriod(
-      latestSync.subtract(connection.scheduleData.basicSchedule.units, connection.scheduleData.basicSchedule.timeUnit),
-      connection.scheduleData.basicSchedule.units,
-      connection.scheduleData.basicSchedule.timeUnit
+      latestSync.subtract(scheduleData.basicSchedule.units, scheduleData.basicSchedule.timeUnit),
+      scheduleData.basicSchedule.units,
+      scheduleData.basicSchedule.timeUnit
     ).valueOf();
   }
 
-  if (isRunning) {
-    return {
-      status: ConnectionStatusType.Syncing,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsEmitted,
-      recordsLoaded: syncProgress?.recordsCommitted,
-    };
-  }
-
-  if (hasBreakingSchemaChange || hasConfigError) {
-    return {
-      status: ConnectionStatusType.Failed,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
-  if (connection.status !== ConnectionStatus.active) {
-    return {
-      status: ConnectionStatusType.Paused,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
-  if (lastSyncJobStatus == null || isLastCompletedJobReset) {
-    return {
-      status: ConnectionStatusType.Pending,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
-  if (lastSyncJobStatus === JobStatus.failed) {
-    return {
-      status: ConnectionStatusType.Incomplete,
-      lastSyncJobStatus,
-      nextSync,
-      lastSuccessfulSync,
-      isRunning,
-      failureReason,
-      lastSyncJobId,
-      lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
-    };
-  }
-
   return {
-    status: ConnectionStatusType.Synced,
-    lastSyncJobStatus,
+    status,
     nextSync,
     lastSuccessfulSync,
-    isRunning,
+    failureReason,
+    lastSyncJobId,
+    lastSyncAttemptNumber,
     recordsExtracted: syncProgress?.recordsCommitted,
     recordsLoaded: syncProgress?.recordsEmitted,
   };

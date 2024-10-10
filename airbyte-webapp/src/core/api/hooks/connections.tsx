@@ -48,6 +48,7 @@ import {
   ConnectionStateCreateOrUpdate,
   ConnectionStatusesRead,
   ConnectionStream,
+  ConnectionSyncStatus,
   DestinationRead,
   JobConfigType,
   JobReadList,
@@ -199,7 +200,7 @@ export const useSyncConnection = () => {
       });
 
       await syncConnection({ connectionId: connection.connectionId }, requestOptions);
-      setConnectionRunState(connection.connectionId, true);
+      setConnectionRunState(connection.connectionId, ConnectionSyncStatus.running);
       queryClient.setQueriesData<JobReadList>(
         jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
         (prevJobList) => prependArtificialJobToStatus({ configType: "sync", status: JobStatus.running }, prevJobList)
@@ -264,7 +265,7 @@ export const useClearConnection = () => {
   const setConnectionRunState = useSetConnectionRunState();
   const mutation = useMutation(["useClearConnection"], async (connectionId: string) => {
     await clearConnection({ connectionId }, requestOptions);
-    setConnectionRunState(connectionId, true);
+    setConnectionRunState(connectionId, ConnectionSyncStatus.running);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
       prependArtificialJobToStatus({ status: JobStatus.running, configType: "clear" }, prevJobList)
     );
@@ -279,7 +280,7 @@ export const useClearConnectionStream = (connectionId: string) => {
   const setConnectionRunState = useSetConnectionRunState();
   return useMutation(async (streams: ConnectionStream[]) => {
     await clearConnectionStream({ connectionId, streams }, requestOptions);
-    setConnectionRunState(connectionId, true);
+    setConnectionRunState(connectionId, ConnectionSyncStatus.running);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
       prependArtificialJobToStatus({ status: JobStatus.running, configType: "clear" }, prevJobList)
     );
@@ -299,7 +300,7 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
     },
     {
       onSuccess: () => {
-        setConnectionRunState(connectionId, true);
+        setConnectionRunState(connectionId, ConnectionSyncStatus.running);
         queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
           prependArtificialJobToStatus({ status: JobStatus.running, configType: "refresh" }, prevJobList)
         );
@@ -633,7 +634,9 @@ export const useListConnectionsStatuses = (connectionIds: string[]) => {
   return useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
     refetchInterval: (data) => {
       // when any of the polled connections is running, refresh 2.5s instead of 10s
-      return data?.some(({ isRunning }) => isRunning) ? 2500 : 10000;
+      return data?.some(({ connectionSyncStatus }) => connectionSyncStatus === ConnectionSyncStatus.running)
+        ? 2500
+        : 10000;
     },
   });
 };
@@ -641,13 +644,13 @@ export const useListConnectionsStatuses = (connectionIds: string[]) => {
 export const useSetConnectionRunState = () => {
   const queryClient = useQueryClient();
 
-  return (connectionId: string, isRunning: boolean) => {
+  return (connectionId: string, status: ConnectionSyncStatus) => {
     queryClient.setQueriesData([SCOPE_WORKSPACE, "connections", "status"], ((data) => {
       if (data) {
         data = data.map((connectionStatus) => {
           if (connectionStatus.connectionId === connectionId) {
             const nextConnectionStatus = structuredClone(connectionStatus); // don't mutate existing object
-            nextConnectionStatus.isRunning = isRunning; // set run state
+            nextConnectionStatus.connectionSyncStatus = status; // set run state
             delete nextConnectionStatus.failureReason; // new runs reset failure state
             return nextConnectionStatus;
           }

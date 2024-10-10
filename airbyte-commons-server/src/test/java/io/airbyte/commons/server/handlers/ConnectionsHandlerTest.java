@@ -13,7 +13,6 @@ import static io.airbyte.config.Job.REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +54,7 @@ import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionSyncStatus;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
@@ -2707,15 +2707,17 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testConnectionStatus() throws IOException {
-      final UUID connectionId = UUID.randomUUID();
+    void testConnectionStatus() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
       final AttemptFailureSummary failureSummary = new AttemptFailureSummary();
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
       final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
           new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(2L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2725,10 +2727,277 @@ class ConnectionsHandlerTest {
 
       final ConnectionStatusRead connectionStatus = status.get(0);
       assertEquals(connectionId, connectionStatus.getConnectionId());
-      assertEquals(Enums.convertTo(JobStatus.FAILED, io.airbyte.api.model.generated.JobStatus.class), connectionStatus.getLastSyncJobStatus());
       assertEquals(802L, connectionStatus.getLastSuccessfulSync());
-      assertEquals(true, connectionStatus.getIsRunning());
-      assertNull(connectionStatus.getNextSync());
+    }
+
+    @Test
+    void testConnectionStatus_syncing() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.RUNNING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_failed_breakingSchemaChange() throws IOException, JsonValidationException, ConfigNotFoundException {
+      final StandardSync standardSyncWithBreakingSchemaChange = Jsons.clone(standardSync).withBreakingChange(true);
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncWithBreakingSchemaChange);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.FAILED, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_failed_hasConfigError() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final AttemptFailureSummary failureSummary = new AttemptFailureSummary();
+      failureSummary.setFailures(List.of(new FailureReason().withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+          .withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.FAILED, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_paused_inactive() throws IOException, JsonValidationException, ConfigNotFoundException {
+      final StandardSync standardSyncPaused = Jsons.clone(standardSync).withStatus(Status.INACTIVE);
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncPaused);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PAUSED, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_paused_deprecated() throws IOException, JsonValidationException, ConfigNotFoundException {
+      final StandardSync standardSyncPaused = Jsons.clone(standardSync).withStatus(Status.DEPRECATED);
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncPaused);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PAUSED, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_pending_nosyncs() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final List<Job> jobs = List.of();
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PENDING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_pending_afterSuccessfulReset() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PENDING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_pending_afterFailedReset() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
+              JobStatus.FAILED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PENDING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_pending_afterSuccessfulClear() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PENDING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_pending_afterFailedClear() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
+              JobStatus.FAILED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.PENDING, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_incomplete_afterCancelledReset() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt resetAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
+      final Attempt successAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(resetAttempt),
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(successAttempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_incomplete_failed() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 1001L, 1000L, 1002L),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_incomplete_cancelled() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt),
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
+    }
+
+    @Test
+    void testConnectionStatus_synced() throws IOException, JsonValidationException, ConfigNotFoundException {
+      when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+      final UUID connectionId = standardSync.getConnectionId();
+      final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
+      final List<Job> jobs = List.of(
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 1001L, 1000L, 1002L));
+      when(jobPersistence.listJobsLight(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusRead connectionStatus = status.get(0);
+      assertEquals(Enums.convertTo(ConnectionSyncStatus.SYNCED, io.airbyte.api.model.generated.ConnectionSyncStatus.class),
+          connectionStatus.getConnectionSyncStatus());
     }
 
     private AirbyteStreamAndConfiguration getStreamAndConfig(final String name, final AirbyteStreamConfiguration config) {

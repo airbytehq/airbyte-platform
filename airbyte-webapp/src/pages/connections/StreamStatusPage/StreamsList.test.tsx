@@ -3,12 +3,12 @@ import dayjs from "dayjs";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
+import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { StreamsList } from "./StreamsList";
@@ -31,7 +31,7 @@ jest.mock("components/connection/ConnectionStatus/useConnectionStatus");
 jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => ({ supportsRefreshes: true }),
   useListStreamsStatuses: () => [],
-  useGetConnectionSyncProgress: () => ({ data: {} }),
+  useGetConnectionSyncProgress: () => ({ data: { streams: [] } }),
   useGetConnection: () => mockConnection,
   useCurrentConnection: () => mockConnection,
 }));
@@ -175,7 +175,7 @@ describe("StreamsList", () => {
       });
 
       (useConnectionStatus as jest.Mock).mockReturnValue({
-        status: ConnectionStatusType.Syncing,
+        status: ConnectionSyncStatus.running,
         nextSync: Math.floor(Date.now() / 1000),
         recordsExtracted: 1000,
         recordsLoaded: 900,

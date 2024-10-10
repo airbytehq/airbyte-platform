@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
-import { ConnectionEvent } from "core/api/types/AirbyteClient";
+import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 
 import { EventLineItem } from "./components/EventLineItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
@@ -31,8 +31,11 @@ export const ConnectionTimelineAllEventsList: React.FC<{
   scrollElement: HTMLDivElement | null;
 }> = ({ filterValues, scrollElement }) => {
   const connection = useCurrentConnection();
-  const { isRunning } = useConnectionStatus(connection.connectionId);
-  const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
+  const { status } = useConnectionStatus(connection.connectionId);
+  const { data: syncProgressData } = useGetConnectionSyncProgress(
+    connection.connectionId,
+    status === ConnectionSyncStatus.running
+  );
 
   const eventTypesToFetch = useMemo(() => {
     const statusEventTypes = filterValues.status !== "" ? eventTypeByStatusFilterValue[filterValues.status] : [];
@@ -68,6 +71,8 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     (filterValues.eventCategory === "clear" && syncProgressData?.configType === "reset_connection");
 
   const filtersShouldShowRunningJob = startDateShowRunningJob && endDateShowRunningJob && statusFilterShowRunningJob;
+
+  const isRunning = status === ConnectionSyncStatus.running;
 
   const showRunningJob = isRunning && !!syncProgressData && filtersShouldShowRunningJob;
 

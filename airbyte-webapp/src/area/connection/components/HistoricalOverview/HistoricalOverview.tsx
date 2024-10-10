@@ -17,7 +17,11 @@ import {
   useGetConnectionSyncProgress,
   useGetConnectionUptimeHistory,
 } from "core/api";
-import { ConnectionSyncProgressRead, ConnectionUptimeHistoryRead } from "core/api/types/AirbyteClient";
+import {
+  ConnectionSyncProgressRead,
+  ConnectionSyncStatus,
+  ConnectionUptimeHistoryRead,
+} from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 
 import styles from "./HistoricalOverview.module.scss";
@@ -70,7 +74,8 @@ export const HistoricalOverview: React.FC = () => {
   const connection = useCurrentConnection();
 
   // generate any placeholder
-  const { isRunning } = useConnectionStatus(connection.connectionId);
+  const { status } = useConnectionStatus(connection.connectionId);
+  const isRunning = status === ConnectionSyncStatus.running;
   const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
   const placeholderHistory = useMemo(
     () => generatePlaceholderHistory(isRunning ? syncProgressData : undefined),

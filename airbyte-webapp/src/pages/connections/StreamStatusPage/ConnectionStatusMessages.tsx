@@ -14,7 +14,12 @@ import { Text } from "components/ui/Text";
 import { useStreamsStatuses } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentConnection, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { ActorDefinitionVersionRead, FailureOrigin, StreamStatusRead } from "core/api/types/AirbyteClient";
+import {
+  ActorDefinitionVersionRead,
+  ConnectionSyncStatus,
+  FailureOrigin,
+  StreamStatusRead,
+} from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -69,9 +74,7 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   const workspaceId = useCurrentWorkspaceId();
   const connection = useCurrentConnection();
-  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
-    connection.connectionId
-  );
+  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, status } = useConnectionStatus(connection.connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -145,7 +148,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         ]
       : [];
 
-    if (isRunning) {
+    if (status === ConnectionSyncStatus.running) {
       return [...rateLimitedMessages];
     }
 
@@ -324,7 +327,7 @@ export const ConnectionStatusMessages: React.FC = () => {
       return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
     });
   }, [
-    isRunning,
+    status,
     failureReason,
     hasBreakingSchemaChange,
     sourceActorDefinitionVersion,

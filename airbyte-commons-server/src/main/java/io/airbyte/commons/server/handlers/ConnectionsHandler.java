@@ -40,6 +40,7 @@ import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionSyncStatus;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationSyncMode;
@@ -1070,7 +1071,7 @@ public class ConnectionsHandler {
   @Trace
   public List<ConnectionStatusRead> getConnectionStatuses(
                                                           final ConnectionStatusesRequestBody connectionStatusesRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_IDS, connectionStatusesRequestBody.getConnectionIds().toString()));
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
@@ -1083,18 +1084,22 @@ public class ConnectionsHandler {
       final Optional<Job> lastSucceededOrFailedJob =
           jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus()) && job.getStatus() != JobStatus.CANCELLED).findFirst();
       final Optional<JobStatus> lastSyncStatus = lastSucceededOrFailedJob.map(Job::getStatus);
+      final io.airbyte.api.model.generated.JobStatus lastSyncJobStatus = Enums.convertTo(lastSyncStatus.orElse(null),
+          io.airbyte.api.model.generated.JobStatus.class);
+      final boolean lastJobWasCancelled = !jobs.isEmpty() && jobs.getFirst().getStatus() == JobStatus.CANCELLED;
+      final boolean lastJobWasResetOrClear = !jobs.isEmpty()
+          && (jobs.getFirst().getConfigType() == ConfigType.RESET_CONNECTION || jobs.getFirst().getConfigType() == ConfigType.CLEAR);
 
       final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
       final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(Job::getUpdatedAtInSecond);
 
+      final ConnectionRead connectionRead = buildConnectionRead(connectionId);
+      final boolean hasBreakingSchemaChange = connectionRead.getBreakingChange() != null && connectionRead.getBreakingChange();
+
       final ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
           .connectionId(connectionId)
-          .isRunning(isRunning)
-          .lastSyncJobStatus(Enums.convertTo(lastSyncStatus.orElse(null),
-              io.airbyte.api.model.generated.JobStatus.class))
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
-          .nextSync(null)
-          .isLastCompletedJobReset(lastSucceededOrFailedJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
+          .scheduleData(connectionRead.getScheduleData());
       if (lastSucceededOrFailedJob.isPresent()) {
         connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().getId());
         final Optional<Attempt> lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt();
@@ -1107,6 +1112,44 @@ public class ConnectionsHandler {
       if (failureReason.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
         connectionStatus.setFailureReason(failureReason.get());
       }
+
+      boolean hasConfigError = false;
+      if (lastSucceededOrFailedJob.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
+        final Optional<List<io.airbyte.api.model.generated.FailureReason>> failureReasons =
+            lastSucceededOrFailedJob.flatMap(Job::getLastFailedAttempt)
+                .flatMap(Attempt::getFailureSummary)
+                .map(s -> s.getFailures().stream()
+                    .map(this::mapFailureReason)
+                    .collect(Collectors.toList()));
+
+        if (failureReasons.isPresent() && !failureReasons.get().isEmpty()) {
+          connectionStatus.setFailureReason(failureReasons.get().getFirst());
+
+          hasConfigError = failureReasons.get().stream().anyMatch(reason -> reason.getFailureType() == FailureType.CONFIG_ERROR);
+        }
+      }
+
+      final Optional<JobRead> latestSyncJob = jobPersistence.getLastSyncJob(connectionId).map(JobConverter::getJobRead);
+      latestSyncJob.ifPresent(job -> {
+        connectionStatus.setLastSyncJobCreatedAt(job.getCreatedAt());
+      });
+
+      if (isRunning) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.RUNNING);
+      } else if (hasBreakingSchemaChange || hasConfigError) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.FAILED);
+      } else if (connectionRead.getStatus() != ConnectionStatus.ACTIVE) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.PAUSED);
+      } else if (lastJobWasCancelled) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.INCOMPLETE);
+      } else if (lastSyncJobStatus == null || lastJobWasResetOrClear) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.PENDING);
+      } else if (lastSyncJobStatus == io.airbyte.api.model.generated.JobStatus.FAILED) {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.INCOMPLETE);
+      } else {
+        connectionStatus.setConnectionSyncStatus(ConnectionSyncStatus.SYNCED);
+      }
+
       result.add(connectionStatus);
     }
 

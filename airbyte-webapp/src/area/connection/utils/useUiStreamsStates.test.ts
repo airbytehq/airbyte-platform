@@ -2,12 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 
 import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
-import { StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
+import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
 import { useStreamsListContext } from "pages/connections/StreamStatusPage/StreamsListContext";
 
 import { useHistoricalStreamData } from "./useStreamsHistoricalData";
@@ -68,10 +67,10 @@ describe("useUiStreamStates", () => {
 
   it.each`
     description                             | connectionStatus                                              | historicalStreamsData | syncProgress                         | streamSyncProgress        | streamStatuses                                                                                                               | expectedRecordsExtracted | expectedRecordsLoaded | expectedBytesExtracted | expectedBytesLoaded | expectedStatus              | expectedIsLoadingHistoricalData | expectedDataFreshAsOf
-    ${"not running, no historical data"}    | ${{ status: ConnectionStatusType.Pending, isRunning: false }} | ${new Map()}          | ${new Map()}                         | ${new Map()}              | ${new Map([["stream1-namespace1", { status: StreamStatusType.Pending }]])}                                                   | ${undefined}             | ${undefined}          | ${undefined}           | ${undefined}        | ${StreamStatusType.Pending} | ${false}                        | ${undefined}
-    ${"not running, with historical data"}  | ${{ status: ConnectionStatusType.Synced, isRunning: false }}  | ${mockHistoricalData} | ${new Map()}                         | ${new Map()}              | ${new Map([["stream1-namespace1", { status: StreamStatusType.Synced, relevantHistory: [], lastSuccessfulSyncAt: 12345 }]])}  | ${undefined}             | ${1200}               | ${undefined}           | ${10200}            | ${StreamStatusType.Synced}  | ${false}                        | ${12345}
-    ${"sync running, no historical data"}   | ${{ status: ConnectionStatusType.Syncing, isRunning: true }}  | ${new Map()}          | ${{ activeSyncJobId: "active-job" }} | ${mockStreamSyncProgress} | ${new Map([["stream1-namespace1", { status: StreamStatusType.Syncing, relevantHistory: [] }]])}                              | ${1000}                  | ${950}                | ${10200}               | ${9540}             | ${StreamStatusType.Syncing} | ${false}                        | ${undefined}
-    ${"sync running, with historical data"} | ${{ status: ConnectionStatusType.Syncing, isRunning: true }}  | ${mockHistoricalData} | ${{ activeSyncJobId: "active-job" }} | ${mockStreamSyncProgress} | ${new Map([["stream1-namespace1", { status: StreamStatusType.Syncing, relevantHistory: [], lastSuccessfulSyncAt: 12345 }]])} | ${1000}                  | ${950}                | ${10200}               | ${9540}             | ${StreamStatusType.Syncing} | ${false}                        | ${undefined}
+    ${"not running, no historical data"}    | ${{ status: ConnectionSyncStatus.pending, isRunning: false }} | ${new Map()}          | ${new Map()}                         | ${new Map()}              | ${new Map([["stream1-namespace1", { status: StreamStatusType.Pending }]])}                                                   | ${undefined}             | ${undefined}          | ${undefined}           | ${undefined}        | ${StreamStatusType.Pending} | ${false}                        | ${undefined}
+    ${"not running, with historical data"}  | ${{ status: ConnectionSyncStatus.synced, isRunning: false }}  | ${mockHistoricalData} | ${new Map()}                         | ${new Map()}              | ${new Map([["stream1-namespace1", { status: StreamStatusType.Synced, relevantHistory: [], lastSuccessfulSyncAt: 12345 }]])}  | ${undefined}             | ${1200}               | ${undefined}           | ${10200}            | ${StreamStatusType.Synced}  | ${false}                        | ${12345}
+    ${"sync running, no historical data"}   | ${{ status: ConnectionSyncStatus.running, isRunning: true }}  | ${new Map()}          | ${{ activeSyncJobId: "active-job" }} | ${mockStreamSyncProgress} | ${new Map([["stream1-namespace1", { status: StreamStatusType.Syncing, relevantHistory: [] }]])}                              | ${1000}                  | ${950}                | ${10200}               | ${9540}             | ${StreamStatusType.Syncing} | ${false}                        | ${undefined}
+    ${"sync running, with historical data"} | ${{ status: ConnectionSyncStatus.running, isRunning: true }}  | ${mockHistoricalData} | ${{ activeSyncJobId: "active-job" }} | ${mockStreamSyncProgress} | ${new Map([["stream1-namespace1", { status: StreamStatusType.Syncing, relevantHistory: [], lastSuccessfulSyncAt: 12345 }]])} | ${1000}                  | ${950}                | ${10200}               | ${9540}             | ${StreamStatusType.Syncing} | ${false}                        | ${undefined}
   `(
     "$description",
     async ({
@@ -147,7 +146,7 @@ it("should handle post-job fetching correctly", async () => {
     invalidateQueries: mockInvalidateQueries,
   };
   (useConnectionStatus as jest.Mock).mockReturnValueOnce({
-    status: ConnectionStatusType.Syncing,
+    status: ConnectionSyncStatus.running,
     isRunning: true,
   });
   (useQueryClient as jest.Mock).mockReturnValue(mockQueryClient);
@@ -182,7 +181,7 @@ it("should handle post-job fetching correctly", async () => {
 
   // Simulate job completion by updating the connection status
   (useConnectionStatus as jest.Mock).mockReturnValue({
-    status: ConnectionStatusType.Synced,
+    status: ConnectionSyncStatus.synced,
     isRunning: false,
   });
 

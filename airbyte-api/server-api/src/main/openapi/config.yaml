@@ -10141,16 +10141,14 @@ components:
       type: object
       required:
         - connectionId
-        - lastSyncJobStatus
-        - lastSuccessfulSync
-        - nextSync
-        - isRunning
-        - isLastCompletedJobReset
+        - connectionSyncStatus
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
-        lastSyncJobStatus:
-          $ref: "#/components/schemas/JobStatus"
+        connectionSyncStatus:
+          $ref: "#/components/schemas/ConnectionSyncStatus"
+        scheduleData:
+          $ref: "#/components/schemas/ConnectionScheduleData"
         lastSuccessfulSync:
           type: integer
           format: int64
@@ -10158,13 +10156,9 @@ components:
           $ref: "#/components/schemas/JobId"
         lastSyncAttemptNumber:
           $ref: "#/components/schemas/AttemptNumber"
-        nextSync:
+        lastSyncJobCreatedAt:
           type: integer
           format: int64
-        isRunning:
-          type: boolean
-        isLastCompletedJobReset:
-          type: boolean
         failureReason:
           $ref: "#/components/schemas/FailureReason"
     ConnectionSyncProgressRead:
@@ -10632,6 +10626,23 @@ components:
               type: string
             cronTimeZone:
               type: string
+    ConnectionSyncStatus:
+      description: >
+        The first of the following that matches for a given connection:
+          * `RUNNING` - a job is currently running
+          * `FAILED` - user action is required due to a breaking change or config error
+          * `PAUSED` - connection is not active (inactive or deprecated)
+          * `PENDING` - there is no previous sync job or the last completed job was a reset
+          * `INCOMPLETE` - the last sync job's status is `failed`, user is not expected to be able to fix the issue
+          * `SYNCED` - connection did not meet any of the above conditions, it has synced and is currently at rest
+      type: string
+      enum:
+        - running
+        - failed
+        - paused
+        - pending
+        - incomplete
+        - synced
     NamespaceDefinitionType:
       type: string
       description: Method used for computing final namespace in destination

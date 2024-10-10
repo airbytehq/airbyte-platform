@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useDeleteConnection, useDestinationDefinitionVersion } from "core/api";
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -119,7 +119,7 @@ export const ConnectionActionsBlock: React.FC = () => {
         ? undefined
         : connection.status !== ConnectionStatus.active
         ? "connection.actions.clearYourData.disabledConnectionTooltip"
-        : connectionStatus.isRunning
+        : connectionStatus.status === ConnectionSyncStatus.running
         ? "connection.actions.clearYourData.runningJobTooltip"
         : undefined;
 
@@ -156,7 +156,7 @@ export const ConnectionActionsBlock: React.FC = () => {
         ? "connection.actions.refreshData.notAvailable.streams"
         : connection.status !== ConnectionStatus.active
         ? "connection.actions.refreshData.disabledConnectionTooltip"
-        : connectionStatus.isRunning
+        : connectionStatus.status === ConnectionSyncStatus.running
         ? "connection.actions.refreshData.runningJobTooltip"
         : undefined;
 

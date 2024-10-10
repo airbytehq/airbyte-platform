@@ -1,6 +1,8 @@
 import { Meta, StoryObj } from "@storybook/react";
 
-import { ConnectionStatusIndicator, ConnectionStatusType } from "./ConnectionStatusIndicator";
+import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+
+import { ConnectionStatusIndicator } from "./ConnectionStatusIndicator";
 
 export default {
   title: "connection/ConnectionStatusIndicator",
@@ -11,6 +13,6 @@ type Story = StoryObj<typeof ConnectionStatusIndicator>;
 
 export const Primary: Story = {
   args: {
-    status: ConnectionStatusType.Synced,
+    status: ConnectionSyncStatus.synced,
   },
 };

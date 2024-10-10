@@ -9,7 +9,7 @@ import { SwitchNext } from "components/ui/SwitchNext";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -84,7 +84,7 @@ export const ConnectionHeaderControls: React.FC = () => {
       >
         <FormattedMessage id="connection.header.frequency.tooltip" />
       </Tooltip>
-      {!connectionStatus.isRunning && (
+      {connectionStatus.status !== ConnectionSyncStatus.running && (
         <Button
           onClick={syncConnection}
           variant="clear"
@@ -99,7 +99,7 @@ export const ConnectionHeaderControls: React.FC = () => {
           </Text>
         </Button>
       )}
-      {connectionStatus.isRunning && cancelJob && (
+      {connectionStatus.status === ConnectionSyncStatus.running && cancelJob && (
         <Button
           onClick={cancelJob}
           disabled={isDisabled}

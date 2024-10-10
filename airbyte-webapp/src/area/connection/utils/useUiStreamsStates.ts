@@ -12,7 +12,12 @@ import { useConnectionStatus } from "components/connection/ConnectionStatus/useC
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
-import { JobConfigType, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
+import {
+  ConnectionSyncStatus,
+  JobConfigType,
+  StreamStatusJobType,
+  StreamStatusRunState,
+} from "core/api/types/AirbyteClient";
 import { useStreamsListContext } from "pages/connections/StreamStatusPage/StreamsListContext";
 
 import { getStreamKey } from "./computeStreamStatus";
@@ -44,15 +49,18 @@ export type UIStreamState = BaseUIStreamState | RateLimitedUIStreamState;
 export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const connectionStatus = useConnectionStatus(connectionId);
   const { filteredStreamsByName } = useStreamsListContext();
-  const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.isRunning);
+  const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.status === ConnectionSyncStatus.running);
   const [isFetchingPostJob, setIsFetchingPostJob] = useState<boolean>(false);
-  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(connectionId, connectionStatus.isRunning);
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
+    connectionId,
+    connectionStatus.status === ConnectionSyncStatus.running
+  );
   const currentJobId = connectionSyncProgress?.jobId;
 
   const queryClient = useQueryClient();
 
   const { streamStatuses } = useStreamsStatuses(connectionId);
-  const syncProgress = useStreamsSyncProgress(connectionId, connectionStatus.isRunning);
+  const syncProgress = useStreamsSyncProgress(connectionId, connectionStatus.status === ConnectionSyncStatus.running);
   const isClearOrResetJob = (configType?: JobConfigType) =>
     configType === JobConfigType.clear || configType === JobConfigType.reset_connection;
 
@@ -60,14 +68,14 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
 
   // if we just finished a job, re-fetch the historical data and set wasRunning to false
   useEffect(() => {
-    if (wasRunning && !connectionStatus.isRunning) {
+    if (wasRunning && connectionStatus.status !== ConnectionSyncStatus.running) {
       setIsFetchingPostJob(true);
       queryClient.invalidateQueries(connectionsKeys.lastJobPerStream(connectionId));
       queryClient.invalidateQueries(connectionsKeys.uptimeHistory(connectionId));
       queryClient.invalidateQueries(connectionsKeys.dataHistory(connectionId));
     }
-    setWasRunning(connectionStatus.isRunning);
-  }, [wasRunning, connectionStatus.isRunning, queryClient, connectionId]);
+    setWasRunning(connectionStatus.status === ConnectionSyncStatus.running);
+  }, [wasRunning, connectionStatus.status, queryClient, connectionId]);
 
   // after we've fetched the data
   useEffect(() => {
@@ -75,7 +83,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       queryClient.invalidateQueries(connectionsKeys.syncProgress(connectionId));
       setIsFetchingPostJob(false);
     }
-  }, [wasRunning, connectionStatus.isRunning, queryClient, connectionId, isFetchingPostJob, isLoadingHistoricalData]);
+  }, [wasRunning, connectionStatus.status, queryClient, connectionId, isFetchingPostJob, isLoadingHistoricalData]);
 
   const uiStreamStates = filteredStreamsByName.map((streamItem) => {
     // initialize the state as undefined

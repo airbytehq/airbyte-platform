@@ -4,14 +4,17 @@ import { useEffect, useRef } from "react";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 
 import { useGetConnectionSyncProgress } from "core/api";
-import { ConnectionSyncProgressRead } from "core/api/types/AirbyteClient";
+import { ConnectionSyncProgressRead, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 export const useTrackSyncProgress = (connectionId: string, trackCountRef: React.MutableRefObject<number>) => {
   const { connection } = useConnectionFormService();
-  const { isRunning } = useConnectionStatus(connectionId);
-  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(connectionId, isRunning);
+  const { status } = useConnectionStatus(connectionId);
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
+    connectionId,
+    status === ConnectionSyncStatus.running
+  );
   const analyticsService = useAnalyticsService();
 
   const prevSyncProgressRef = useRef<ConnectionSyncProgressRead | null>(null);
