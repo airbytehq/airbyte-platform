@@ -57,12 +57,14 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -394,6 +396,22 @@ class ReplicationInputHydratorTest {
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
     CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
         .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
+  }
+
+  @Test
+  void testMapActivityInputToReplInput() {
+    ReplicationActivityInput replicationActivityInput = getDefaultReplicationActivityInputForTest();
+    final JsonNode sourceConfig = Jsons.jsonNode(Map.of("source", "configuration"));
+    replicationActivityInput.setSourceConfiguration(sourceConfig);
+    final JsonNode destinationConfig = Jsons.jsonNode(Map.of("destination", "configuration"));
+    replicationActivityInput.setDestinationConfiguration(destinationConfig);
+
+    ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+
+    ReplicationInput replicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
+
+    assertEquals(sourceConfig, replicationInput.getSourceConfiguration());
+    assertEquals(destinationConfig, replicationInput.getDestinationConfiguration());
   }
 
   private void mockEnableBackfillForConnection(final boolean withRefresh) throws IOException {

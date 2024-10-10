@@ -262,9 +262,9 @@ public class ReplicationWorkerFactory {
   /**
    * Create MessageTracker.
    */
-  private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                            final ReplicationInput replicationInput,
-                                                            final FeatureFlagClient featureFlagClient) {
+  private AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
+                                                     final ReplicationInput replicationInput,
+                                                     final FeatureFlagClient featureFlagClient) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final ReplicationFeatureFlagReader replicationFeatureFlagReader = new ReplicationFeatureFlagReader(featureFlagClient, flagContext);
     final var ffs = replicationFeatureFlagReader.readReplicationFeatureFlags();

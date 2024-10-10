@@ -44,12 +44,13 @@ class ReplicationPodFactory(
     sourceRuntimeEnvVars: List<EnvVar>,
     destRuntimeEnvVars: List<EnvVar>,
     connectionId: UUID,
+    isFileTransfer: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
-    val isFileTransfer = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
+    val isFileTransferFF = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransferFF && isFileTransfer)
     val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars)
 
     val orchContainer =
@@ -114,12 +115,13 @@ class ReplicationPodFactory(
     orchRuntimeEnvVars: List<EnvVar>,
     destRuntimeEnvVars: List<EnvVar>,
     connectionId: UUID,
+    isFileTransfer: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
-    val isFileTransfer = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
+    val isFileTransferFF = featureFlagClient.boolVariation(UseFileTransferMode, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer && isFileTransferFF)
     val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars)
 
     val orchContainer =

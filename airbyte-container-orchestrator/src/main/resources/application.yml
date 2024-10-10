@@ -104,6 +104,7 @@ airbyte:
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
+  use-file-transfer: ${USE_FILE_TRANSFER:false}
   worker:
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}

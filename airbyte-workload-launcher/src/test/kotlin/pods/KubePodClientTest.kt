@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
@@ -114,6 +115,7 @@ class KubePodClientTest {
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withConnectionId(UUID.randomUUID())
         .withWorkspaceId(UUID.randomUUID())
+        .withSourceConfiguration(Jsons.emptyObject())
 
     resetInput =
       ReplicationInput()
@@ -203,6 +205,7 @@ class KubePodClientTest {
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replInput.connectionId,
+        false,
       )
     } returns pod
     client.launchReplication(
@@ -220,7 +223,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -236,7 +239,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -278,6 +281,7 @@ class KubePodClientTest {
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replInput.connectionId,
+        false,
       )
     } returns pod
     client.launchReset(
@@ -295,7 +299,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(),
+        any(), any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -311,7 +315,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(),
+        any(), any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")

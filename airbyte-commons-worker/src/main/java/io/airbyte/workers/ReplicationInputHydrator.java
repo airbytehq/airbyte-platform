@@ -33,6 +33,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
@@ -199,6 +200,7 @@ public class ReplicationInputHydrator {
    * any hydration. Does not copy unhydrated config.
    */
   public ReplicationInput mapActivityInputToReplInput(final ReplicationActivityInput replicationActivityInput) {
+    final SourceActorConfig sourceConfiguration = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
     return new ReplicationInput()
         .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
         .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
@@ -212,7 +214,10 @@ public class ReplicationInputHydrator {
         .withJobRunConfig(replicationActivityInput.getJobRunConfig())
         .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
         .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
-        .withSignalInput(replicationActivityInput.getSignalInput());
+        .withSignalInput(replicationActivityInput.getSignalInput())
+        .withSourceConfiguration(replicationActivityInput.getSourceConfiguration())
+        .withDestinationConfiguration(replicationActivityInput.getDestinationConfiguration())
+        .withUseFileTransfer(sourceConfiguration.getUseFileTransfer());
   }
 
   @VisibleForTesting

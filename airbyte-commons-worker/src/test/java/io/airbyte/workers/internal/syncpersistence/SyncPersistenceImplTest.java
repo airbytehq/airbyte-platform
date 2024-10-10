@@ -80,7 +80,7 @@ class SyncPersistenceImplTest {
     when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS)))
         .thenReturn(mock(ScheduledFuture.class));
 
-    syncStatsTracker = new ParallelStreamStatsTracker(mock(), mock());
+    syncStatsTracker = new ParallelStreamStatsTracker(mock(), mock(), false);
 
     // Setting syncPersistence
     stateApi = mock(StateApi.class);

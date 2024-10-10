@@ -31,6 +31,7 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.usesCustomConnector
@@ -80,6 +81,7 @@ class PayloadKubeInputMapper(
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
         EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, input.useFileTransfer.toString(), null),
       )
 
     val sourceImage = input.sourceLauncherConfig.dockerImage

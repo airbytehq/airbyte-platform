@@ -100,7 +100,7 @@ class ParallelStreamStatsTrackerTest {
         jobId = JOB_ID,
         attemptNumber = ATTEMPT_NUMBER,
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, false)
   }
 
   @Test

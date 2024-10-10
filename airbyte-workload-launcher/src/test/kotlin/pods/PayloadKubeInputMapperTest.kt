@@ -32,6 +32,7 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -139,6 +140,7 @@ class PayloadKubeInputMapperTest {
     every { input.destinationLauncherConfig } returns destLauncherConfig
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
+    every { input.useFileTransfer } returns false
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
@@ -172,6 +174,7 @@ class PayloadKubeInputMapperTest {
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
         EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, false.toString(), null),
       )
 
     assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)

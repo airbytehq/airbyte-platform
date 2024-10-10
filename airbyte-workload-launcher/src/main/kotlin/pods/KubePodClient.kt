@@ -62,7 +62,6 @@ class KubePodClient(
     val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
-
     var pod =
       replicationPodFactory.create(
         kubeInput.podName,
@@ -79,6 +78,7 @@ class KubePodClient(
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.connectionId,
+        replicationInput.useFileTransfer,
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
@@ -111,7 +111,6 @@ class KubePodClient(
     launcherInput: LauncherInput,
   ) {
     val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
-
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
 
     var pod =
@@ -127,6 +126,7 @@ class KubePodClient(
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.connectionId,
+        replicationInput.useFileTransfer,
       )
 
     logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }
