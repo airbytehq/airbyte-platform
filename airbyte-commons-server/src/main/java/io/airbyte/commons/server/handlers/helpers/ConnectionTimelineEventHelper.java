@@ -35,6 +35,7 @@ import io.airbyte.data.services.shared.ConnectionEnabledEvent;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
+import io.airbyte.data.services.shared.FinalStatusEvent.FinalStatus;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
@@ -186,6 +187,7 @@ public class ConnectionTimelineEventHelper {
       final Optional<AttemptFailureSummary> lastAttemptFailureSummary = job.getLastAttempt().flatMap(Attempt::getFailureSummary);
       final Optional<FailureReason> firstFailureReasonOfLastAttempt =
           lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
+      final String jobEventFailureStatus = stats.bytes > 0 ? FinalStatus.INCOMPLETE.name() : FinalStatus.FAILED.name();
       final FailedEvent event = new FailedEvent(
           job.getId(),
           job.getCreatedAtInSecond(),
@@ -194,7 +196,7 @@ public class ConnectionTimelineEventHelper {
           stats.records,
           job.getAttemptsCount(),
           job.getConfigType().name(),
-          job.getStatus().name(), // FAILED or INCOMPLETE
+          jobEventFailureStatus,
           JobConverter.getStreamsAssociatedWithJob(job),
           firstFailureReasonOfLastAttempt);
       connectionTimelineEventService.writeEvent(connectionId, event, null);
@@ -263,7 +265,11 @@ public class ConnectionTimelineEventHelper {
                                         final Object oldValue,
                                         final Object newValue) {
     if (newValue != null && !newValue.equals(oldValue)) {
-      patches.put(fieldName, Map.of("from", oldValue, "to", newValue));
+      final Map<String, Object> patchMap = new HashMap<>();
+      // oldValue could be null
+      patchMap.put("from", oldValue);
+      patchMap.put("to", newValue);
+      patches.put(fieldName, patchMap);
     }
   }
 
@@ -298,7 +304,7 @@ public class ConnectionTimelineEventHelper {
       // 2. log event for other connection settings changes
       final Map<String, Map<String, Object>> patches = new HashMap<>();
       addPatchIfFieldIsChanged(patches, "scheduleType", originalConnectionRead.getScheduleType(), patch.getScheduleType());
-      addPatchIfFieldIsChanged(patches, "schedule", originalConnectionRead.getSchedule(), patch.getSchedule());
+      addPatchIfFieldIsChanged(patches, "scheduleData", originalConnectionRead.getScheduleData(), patch.getScheduleData());
       addPatchIfFieldIsChanged(patches, "name", originalConnectionRead.getName(), patch.getName());
       addPatchIfFieldIsChanged(patches, "namespaceDefinition", originalConnectionRead.getNamespaceDefinition(), patch.getNamespaceDefinition());
       addPatchIfFieldIsChanged(patches, "namespaceFormat", originalConnectionRead.getNamespaceFormat(), patch.getNamespaceFormat());
