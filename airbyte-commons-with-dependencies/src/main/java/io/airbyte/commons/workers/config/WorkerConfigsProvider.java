@@ -153,7 +153,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   @Singleton
   record WorkerConfigsDefaults(
                                @Named("default") KubeResourceConfig defaultKubeResourceConfig,
-                               List<TolerationPOJO> jobKubeTolerations,
+                               @Value("${airbyte.worker.job.kube.tolerations}") String jobKubeTolerations,
                                @Value("${airbyte.worker.isolated.kube.node-selectors}") String isolatedNodeSelectors,
                                @Value("${airbyte.worker.isolated.kube.use-custom-node-selector}") boolean useCustomNodeSelector,
                                @Value("${airbyte.worker.job.kube.main.container.image-pull-secret}") List<String> mainContainerImagePullSecret,
@@ -224,7 +224,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
     return new WorkerConfigs(
         getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
-        workerConfigsDefaults.jobKubeTolerations(),
+        TolerationPOJO.getJobKubeTolerations(workerConfigsDefaults.jobKubeTolerations()),
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         annotations,
