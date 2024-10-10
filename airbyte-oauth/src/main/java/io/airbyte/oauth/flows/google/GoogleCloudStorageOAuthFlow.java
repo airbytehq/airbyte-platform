@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 public class GoogleCloudStorageOAuthFlow extends GoogleOAuthFlow {
 
   @VisibleForTesting
-  static final String SCOPE_URL = "https://www.googleapis.com/auth/cloud-platform.read-only";
+  static final String SCOPE_URL = "https://www.googleapis.com/auth/devstorage.read_only";
 
   public GoogleCloudStorageOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
