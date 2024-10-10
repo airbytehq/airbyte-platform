@@ -15,7 +15,15 @@ export const RefreshSchemaControl: React.FC = () => {
   return (
     <Tooltip
       placement="top"
-      control={<Button variant="secondary" icon="rotate" type="button" onClick={refreshSchema} />}
+      control={
+        <Button
+          variant="secondary"
+          icon="rotate"
+          type="button"
+          onClick={refreshSchema}
+          data-testid="refresh-schema-btn"
+        />
+      }
     >
       <FormattedMessage id="connection.updateSchema" />
     </Tooltip>

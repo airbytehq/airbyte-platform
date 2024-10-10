@@ -6,7 +6,7 @@ import { InlineListBox } from "components/ui/ListBox/InlineListBox";
 
 import { SyncModeSelectProps, SyncModeValue } from "../../../syncCatalog/SyncModeSelect";
 
-export const SyncModeButton: React.FC<SyncModeSelectProps> = ({ options, value, onChange, disabled }) => {
+export const SyncModeButton: React.FC<SyncModeSelectProps> = ({ options, value, onChange, disabled, ...restProps }) => {
   const { formatMessage } = useIntl();
 
   const syncModeOptions: Array<Option<SyncModeValue>> = useMemo(
@@ -22,6 +22,7 @@ export const SyncModeButton: React.FC<SyncModeSelectProps> = ({ options, value, 
 
   return (
     <InlineListBox<SyncModeValue>
+      {...restProps}
       isDisabled={disabled}
       options={syncModeOptions}
       selectedValue={value}

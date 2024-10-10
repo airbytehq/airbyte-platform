@@ -45,7 +45,7 @@ export const FieldPKCell: React.FC<FieldPKCellProps> = ({ row }) => {
   ) : null;
 
   return (
-    <FlexContainer alignItems="center" justifyContent="flex-start">
+    <FlexContainer alignItems="center" justifyContent="flex-start" data-testid="field-pk-cell">
       {isSelectedPrimaryKey && !primaryKeyDefined ? (
         <Tooltip placement="bottom" control={pkLabel}>
           <FormattedMessage id="form.field.sourceDefinedPK" />

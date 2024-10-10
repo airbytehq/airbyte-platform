@@ -1,3 +1,5 @@
+import { getTestId } from "@cy/utils/selectors";
+
 export type ConnectorType = "source" | "destination";
 const getExistingConnectorItemButton = (connectorType: ConnectorType, connectorName: string) =>
   `button[data-testid='select-existing-${connectorType}-${connectorName}']`;
@@ -9,7 +11,7 @@ const getNewConnectorTypeOption = (connectorType: ConnectorType) =>
 
 const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
-export const nextButton = `a[data-testid='next-creation-page']`;
+export const nextButton = getTestId("next-creation-page");
 export const selectExistingConnectorFromList = (connectorType: ConnectorType, connectorName: string) => {
   cy.get(getExistingConnectorItemButton(connectorType, connectorName)).click();
 };
@@ -22,6 +24,10 @@ export const isExistingConnectorTypeSelected = (connectorType: ConnectorType) =>
 export const isNewConnectorTypeSelected = (connectorType: ConnectorType) => {
   cy.get(getExistingConnectorTypeOption(connectorType)).should("not.be.checked");
   cy.get(getNewConnectorTypeOption(connectorType)).should("be.checked");
+};
+
+export const isNextPageButtonEnabled = (expectedResult: boolean) => {
+  cy.get(nextButton).should(expectedResult ? "not.be.disabled" : "be.disabled");
 };
 
 export const getNoStreamsSelectedError = () => cy.contains("Select at least 1 stream to sync.");

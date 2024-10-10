@@ -1,7 +1,10 @@
+import { Row } from "@tanstack/react-table";
+
 import { AirbyteStreamAndConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 
-import { getFieldChangeStatus, getStreamChangeStatus } from "./utils";
+import { SyncCatalogUIModel } from "./SyncCatalogTable";
+import { generateTestId, getFieldChangeStatus, getStreamChangeStatus } from "./utils";
 import { SyncStreamFieldWithId } from "../formConfig";
 
 const FIELD_ONE: SyncSchemaField = {
@@ -299,5 +302,37 @@ describe(`${getFieldChangeStatus.name}`, () => {
     expect(resultFieldOne).toBe("removed");
     expect(resultFieldTwo).toBe("unchanged");
     expect(resultFieldThree).toBe("added");
+  });
+});
+
+describe(`${generateTestId.name}`, () => {
+  it("returns correct test id for namespace row", () => {
+    const row = { original: { rowType: "namespace", name: "public" }, depth: 0 } as Row<SyncCatalogUIModel>;
+    const result = generateTestId(row);
+    expect(result).toBe("row-depth-0-namespace-public");
+  });
+
+  it("returns correct test id for namespace row with no name", () => {
+    const row = { original: { rowType: "namespace", name: "" }, depth: 0 } as Row<SyncCatalogUIModel>;
+    const result = generateTestId(row);
+    expect(result).toBe("row-depth-0-namespace-no-name");
+  });
+
+  it("returns correct test id for stream row", () => {
+    const row = { original: { rowType: "stream", name: "activities" }, depth: 1 } as Row<SyncCatalogUIModel>;
+    const result = generateTestId(row);
+    expect(result).toBe("row-depth-1-stream-activities");
+  });
+
+  it("returns correct test id for field row", () => {
+    const row = { original: { rowType: "field", name: "id" }, depth: 2 } as Row<SyncCatalogUIModel>;
+    const result = generateTestId(row);
+    expect(result).toBe("row-depth-2-field-id");
+  });
+
+  it("returns unknown type for unrecognized row type", () => {
+    const row = { original: { rowType: "nestedField", name: "id" }, depth: 3 } as Row<SyncCatalogUIModel>;
+    const result = generateTestId(row);
+    expect(result).toBe("row-unknown-type");
   });
 });

@@ -127,7 +127,13 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
           <Tooltip
             control={
               <FlexContainer alignItems="center">
-                <CheckBox checkboxSize="sm" disabled checked={isFieldSelected} readOnly />
+                <CheckBox
+                  checkboxSize="sm"
+                  disabled
+                  checked={isFieldSelected}
+                  readOnly
+                  data-testid="sync-field-checkbox"
+                />
               </FlexContainer>
             }
           >

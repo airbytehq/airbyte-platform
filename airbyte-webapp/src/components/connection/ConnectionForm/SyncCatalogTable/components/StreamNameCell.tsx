@@ -66,6 +66,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         variant="clear"
         onClick={onToggleExpand}
         disabled={!row.getCanExpand()}
+        data-testid="expand-collapse-stream-btn"
+        aria-expanded={row.getIsExpanded()}
       />
       <TextWithOverflowTooltip>
         <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />

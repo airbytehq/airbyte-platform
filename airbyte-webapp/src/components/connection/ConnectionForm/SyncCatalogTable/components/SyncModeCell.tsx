@@ -66,6 +66,7 @@ export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamFie
       onChange={onSelectSyncMode}
       value={syncSchema}
       disabled={mode === "readonly"}
+      data-testid="sync-mode-select"
     />
   ) : null;
 };

@@ -52,6 +52,7 @@ import { useNamespaceRowInView } from "./hooks/useNamespaceRowInView";
 import styles from "./SyncCatalogTable.module.scss";
 import {
   findRow,
+  generateTestId,
   getNamespaceRowId,
   getRowChangeStatus,
   getSyncCatalogRows,
@@ -437,11 +438,6 @@ export const SyncCatalogTable: FC = () => {
     const { rowChangeStatus } = getRowChangeStatus(row);
     const { ref } = useNamespaceRowInView(index, stickyRowIndex, stickyIndexes, setStickyRowIndex, customScrollParent);
 
-    // the first row is the namespace row, we don't need to render it since header has the same content
-    if (index === 0 && isNamespaceRow(row)) {
-      return null;
-    }
-
     const rowStatusStyle = classnames(styles.tr, {
       [styles.added]: rowChangeStatus === "added" && mode !== "create",
       [styles.removed]: rowChangeStatus === "removed" && mode !== "create",
@@ -451,7 +447,15 @@ export const SyncCatalogTable: FC = () => {
     });
 
     return (
-      <tr ref={ref} key={`${row.id}-${row.depth}`} className={rowStatusStyle} {...props}>
+      <tr
+        ref={ref}
+        key={`${row.id}-${row.depth}`}
+        className={rowStatusStyle}
+        {...props}
+        // the first row is the namespace row, we need to hide it since header has the same content
+        style={index === 0 && isNamespaceRow(row) ? { display: "none" } : undefined}
+        data-testid={generateTestId(row)}
+      >
         {row.getVisibleCells().map((cell) => {
           const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
           return (

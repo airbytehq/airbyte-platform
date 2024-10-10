@@ -45,7 +45,7 @@ export const FieldCursorCell: React.FC<FieldCursorCellProps> = ({ row }) => {
   ) : null;
 
   return (
-    <FlexContainer alignItems="center" justifyContent="flex-start">
+    <FlexContainer alignItems="center" justifyContent="flex-start" data-testid="field-cursor-cell">
       {isSelectedCursor && !cursorDefined ? (
         <Tooltip placement="bottom" control={cursorLabel}>
           <FormattedMessage id="form.field.sourceDefinedCursor" />

@@ -15,6 +15,9 @@ const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
 const saveButton = getTestId("save-edit-button", "button");
 export const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
+/**
+ * @deprecated doesn't exist on the page use {@link nextButton} instead
+ */
 export const nextButtonOrLink = getTestId("next-creation-page");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {

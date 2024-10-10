@@ -260,3 +260,29 @@ export const getRowChangeStatus = (row: Row<SyncCatalogUIModel>) => {
     rowChangeStatus,
   };
 };
+
+/**
+ * Generate test id for row
+ * @param row
+ * @example row-depth-0-namespace-public
+ * @example row-depth-0-namespace-no-name
+ * @example row-depth-1-stream-activities
+ * @example row-depth-2-field-id
+ */
+export const generateTestId = (row: Row<SyncCatalogUIModel>): string => {
+  const {
+    original: { rowType, name },
+    depth,
+  } = row;
+
+  switch (rowType) {
+    case "namespace":
+      return `row-depth-${depth}-namespace-${name || "no-name"}`;
+    case "stream":
+      return `row-depth-${depth}-stream-${name}`;
+    case "field":
+      return `row-depth-${depth}-field-${name}`;
+    default:
+      return `row-unknown-type`;
+  }
+};

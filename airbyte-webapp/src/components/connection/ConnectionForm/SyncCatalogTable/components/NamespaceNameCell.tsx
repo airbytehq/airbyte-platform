@@ -113,6 +113,7 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
           type="button"
           variant="clear"
           disabled={mode === "readonly"}
+          data-testid="destination-namespace-modal-btn"
           onClick={() =>
             openModal<void>({
               size: "lg",
