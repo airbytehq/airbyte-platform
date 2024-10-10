@@ -72,8 +72,10 @@ export const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
   lists: (filters: string[] = []) => [...connectionsKeys.all, "list", ...filters],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
-  dataHistory: (connectionId: string) => [...connectionsKeys.all, "dataHistory", connectionId] as const,
-  uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
+  dataHistory: (connectionId: string, jobCount?: number) =>
+    [...connectionsKeys.all, "dataHistory", connectionId, ...(jobCount == null ? [] : [jobCount])] as const,
+  uptimeHistory: (connectionId: string, jobCount?: number) =>
+    [...connectionsKeys.all, "uptimeHistory", connectionId, ...(jobCount == null ? [] : [jobCount])] as const,
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
@@ -604,21 +606,23 @@ export const useCreateOrUpdateState = () => {
   );
 };
 
-const DEFAULT_NUMBER_OF_HISTORY_JOBS = 8;
-
-export const useGetConnectionDataHistory = (connectionId: string, numberOfJobs = DEFAULT_NUMBER_OF_HISTORY_JOBS) => {
+export const useGetConnectionDataHistory = (connectionId: string, numberOfJobs: number) => {
   const options = useRequestOptions();
 
-  return useSuspenseQuery(connectionsKeys.dataHistory(connectionId), () =>
-    getConnectionDataHistory({ connectionId, numberOfJobs }, options)
+  return useQuery(
+    connectionsKeys.dataHistory(connectionId, numberOfJobs),
+    () => getConnectionDataHistory({ connectionId, numberOfJobs }, options),
+    { keepPreviousData: true, staleTime: 30_000 }
   );
 };
 
-export const useGetConnectionUptimeHistory = (connectionId: string, numberOfJobs = DEFAULT_NUMBER_OF_HISTORY_JOBS) => {
+export const useGetConnectionUptimeHistory = (connectionId: string, numberOfJobs: number) => {
   const options = useRequestOptions();
 
-  return useSuspenseQuery(connectionsKeys.uptimeHistory(connectionId), () =>
-    getConnectionUptimeHistory({ connectionId, numberOfJobs }, options)
+  return useQuery(
+    connectionsKeys.uptimeHistory(connectionId, numberOfJobs),
+    () => getConnectionUptimeHistory({ connectionId, numberOfJobs }, options),
+    { keepPreviousData: true, staleTime: 30_000 }
   );
 };
 

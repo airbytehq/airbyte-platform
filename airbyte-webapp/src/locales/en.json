@@ -882,6 +882,8 @@
   "connection.overview.graph.uptimeStatus.failed": "{count, plural, one {# stream} other {# streams}} stopped (action required)",
   "connection.overview.graph.uptimeStatus.synced": "{count, plural, one {# stream} other {# streams}} synced",
 
+  "connection.overview.graph.syncsCount": "{count, plural, one {# sync} other {# syncs}}",
+
   "form.scheduleType": "Schedule type",
   "form.scheduleTypeNext": "Sync schedule",
   "form.scheduleType.message": "Choose how syncs for this connection should be scheduled",

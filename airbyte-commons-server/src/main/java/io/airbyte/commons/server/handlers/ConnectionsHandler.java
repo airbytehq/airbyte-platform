@@ -1269,7 +1269,7 @@ public class ConnectionsHandler {
     final List<Job> jobs;
     try {
       jobs = jobPersistence.listJobs(
-          Set.of(ConfigType.SYNC),
+          Job.SYNC_REPLICATION_TYPES,
           Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
           connectionDataHistoryRequestBody.getConnectionId().toString(),
           connectionDataHistoryRequestBody.getNumberOfJobs());

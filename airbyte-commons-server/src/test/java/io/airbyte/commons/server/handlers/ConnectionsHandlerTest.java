@@ -1988,10 +1988,10 @@ class ConnectionsHandlerTest {
         final long jobTwoId = 2L;
 
         final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
-        final Job jobTwo = new Job(2, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L);
+        final Job jobTwo = new Job(2, ConfigType.REFRESH, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L);
 
         when(jobPersistence.listJobs(
-            Set.of(ConfigType.SYNC),
+            Job.SYNC_REPLICATION_TYPES,
             Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
             apiReq.getConnectionId().toString(),
             apiReq.getNumberOfJobs())).thenReturn(List.of(jobOne, jobTwo));
