@@ -57,7 +57,7 @@ export const AuthButton: React.FC<{
   const { selectedConnectorDefinition } = useConnectorForm();
 
   const { hiddenAuthFieldErrors } = useAuthentication();
-  const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
+  const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { loading, done, run } = useFormOauthAdapter(

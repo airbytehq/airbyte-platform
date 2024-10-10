@@ -92,7 +92,7 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
+          fieldMeta: { [accessTokenField]: { error: { type: "required", message: "Field is required" } } },
           submitCount: 0,
         });
         const result = useAuthentication();
@@ -104,11 +104,11 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
+          fieldMeta: { [accessTokenField]: { error: { type: "required", message: "Field is empty" } } },
           submitCount: 1,
         });
         const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({ [accessTokenField]: "form.empty.error" });
+        expect(result.hiddenAuthFieldErrors).toEqual({ [accessTokenField]: "required" });
       });
     });
 
@@ -160,8 +160,8 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 0,
         });
@@ -176,15 +176,15 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 1,
         });
         const result = useAuthentication();
         expect(result.hiddenAuthFieldErrors).toEqual({
-          [accessTokenField]: "form.empty.error",
-          [clientIdField]: "another.error",
+          [accessTokenField]: "required",
+          [clientIdField]: "validate",
         });
       });
 
@@ -195,8 +195,8 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "token" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 1,
         });
