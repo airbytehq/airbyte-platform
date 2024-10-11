@@ -112,19 +112,39 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     [getAssistValues, createAndNavigate, setSubmittedAssistValues, assistSessionId]
   );
 
+  const formSchema = yup.object().shape({
+    name: yup.string().required("form.empty.error"),
+    docsUrl: yup
+      .string()
+      .test("oneOfDocsOrOpenApi", "connectorBuilder.assist.config.docsUrl.oneOf.error", (value, context) => {
+        const { openapiSpecUrl } = context.parent;
+        return Boolean(value?.trim()) || Boolean(openapiSpecUrl?.trim());
+      }),
+    openapiSpecUrl: yup.string(),
+    firstStream: yup.string().required("form.empty.error"),
+  });
+
+  const defaultValues = {
+    name: "",
+    docsUrl: "",
+    openapiSpecUrl: "",
+    firstStream: "",
+  };
+
   return (
     <FlexContainer direction="column" gap="2xl" className={styles.container}>
       <AirbyteTitle title={<FormattedMessage id="connectorBuilder.generatePage.prompt" />} />
-      {isLoadingWithDelay ? (
-        <AssistWaiting onSkip={onSkip} />
-      ) : (
-        <ConnectorBuilderGenerateForm
-          isLoading={isCreateLoading}
-          onSubmit={onFormSubmit}
-          onCancel={onCancel}
-          assistApiErrors={assistApiErrors}
-        />
-      )}
+      <Form defaultValues={defaultValues} schema={formSchema} onSubmit={onFormSubmit}>
+        {isLoadingWithDelay ? (
+          <AssistWaiting onSkip={onSkip} />
+        ) : (
+          <ConnectorBuilderGenerateForm
+            isLoading={isCreateLoading}
+            onCancel={onCancel}
+            assistApiErrors={assistApiErrors}
+          />
+        )}
+      </Form>
     </FlexContainer>
   );
 };
@@ -185,72 +205,48 @@ const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormE
 const ConnectorBuilderGenerateForm: React.FC<{
   isLoading: boolean;
   assistApiErrors?: AssistErrorFormError[];
-  onSubmit: (values: GeneratorFormResponse) => Promise<void>;
   onCancel: () => void;
-}> = ({ isLoading, onSubmit, onCancel, assistApiErrors }) => {
-  const { formatMessage } = useIntl();
-
-  const formSchema = yup.object().shape({
-    name: yup.string().required("form.empty.error"),
-    docsUrl: yup
-      .string()
-      .test("oneOfDocsOrOpenApi", "connectorBuilder.assist.config.docsUrl.oneOf.error", (value, context) => {
-        const { openapiSpecUrl } = context.parent;
-        return Boolean(value?.trim()) || Boolean(openapiSpecUrl?.trim());
-      }),
-    openapiSpecUrl: yup.string(),
-    firstStream: yup.string().required("form.empty.error"),
-  });
-
-  const defaultValues = {
-    name: "",
-    docsUrl: "",
-    openapiSpecUrl: "",
-    firstStream: "",
-  };
-
+}> = ({ isLoading, onCancel, assistApiErrors }) => {
   return (
-    <Form defaultValues={defaultValues} schema={formSchema} onSubmit={onSubmit}>
-      <FlexContainer direction="column" gap="xl">
-        <Card className={styles.formCard} noPadding>
-          <FlexContainer className={styles.form} direction="column" gap="lg">
-            <FlexContainer direction="row" alignItems="center" gap="sm">
-              <Icon type="aiStars" color="magic" size="md" />
-              <Heading as="h3" size="sm" className={styles.assistTitle}>
-                {formatMessage({ id: "connectorBuilder.generatePage.title" })}
-              </Heading>
-              <Badge variant="blue">
-                <FormattedMessage id="ui.badge.beta" />
-              </Badge>
-            </FlexContainer>
-            <Text size="sm" color="grey">
-              <FormattedMessage id="connectorBuilder.generatePage.description" />
-            </Text>
-            <Text size="sm" color="grey">
-              <FormattedMessage
-                id="connectorBuilder.generatePage.description.docsLink"
-                values={{
-                  lnk: (children: React.ReactNode) => (
-                    <ExternalLink href={links.connectorBuilderAssist}>{children}</ExternalLink>
-                  ),
-                }}
-              />
-            </Text>
-            <FlexContainer direction="column" gap="none" className={styles.formFields}>
-              <GenerateConnectorFormFields assistApiErrors={assistApiErrors} />
-            </FlexContainer>
+    <FlexContainer direction="column" gap="xl">
+      <Card className={styles.formCard} noPadding>
+        <FlexContainer className={styles.form} direction="column" gap="lg">
+          <FlexContainer direction="row" alignItems="center" gap="sm">
+            <Icon type="aiStars" color="magic" size="md" />
+            <Heading as="h3" size="sm" className={styles.assistTitle}>
+              <FormattedMessage id="connectorBuilder.generatePage.title" />
+            </Heading>
+            <Badge variant="blue">
+              <FormattedMessage id="ui.badge.beta" />
+            </Badge>
           </FlexContainer>
-        </Card>
-        <FlexContainer direction="row" alignItems="center" justifyContent="space-between">
-          <Button disabled={isLoading} isLoading={isLoading} variant="secondary" type="reset" onClick={onCancel}>
-            <FormattedMessage id="connectorBuilder.generatePage.skipLabel" />
-          </Button>
-          <Button disabled={isLoading} isLoading={isLoading} type="submit">
-            <FormattedMessage id="form.create" />
-          </Button>
+          <Text size="sm" color="grey">
+            <FormattedMessage id="connectorBuilder.generatePage.description" />
+          </Text>
+          <Text size="sm" color="grey">
+            <FormattedMessage
+              id="connectorBuilder.generatePage.description.docsLink"
+              values={{
+                lnk: (children: React.ReactNode) => (
+                  <ExternalLink href={links.connectorBuilderAssist}>{children}</ExternalLink>
+                ),
+              }}
+            />
+          </Text>
+          <FlexContainer direction="column" gap="none" className={styles.formFields}>
+            <GenerateConnectorFormFields assistApiErrors={assistApiErrors} />
+          </FlexContainer>
         </FlexContainer>
+      </Card>
+      <FlexContainer direction="row" alignItems="center" justifyContent="space-between">
+        <Button disabled={isLoading} isLoading={isLoading} variant="secondary" type="reset" onClick={onCancel}>
+          <FormattedMessage id="connectorBuilder.generatePage.skipLabel" />
+        </Button>
+        <Button disabled={isLoading} isLoading={isLoading} type="submit">
+          <FormattedMessage id="form.create" />
+        </Button>
       </FlexContainer>
-    </Form>
+    </FlexContainer>
   );
 };
 
