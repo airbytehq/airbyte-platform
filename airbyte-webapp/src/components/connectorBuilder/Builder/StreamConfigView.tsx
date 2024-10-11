@@ -215,7 +215,7 @@ const StreamControls = ({
         onAddStream={(addedStreamNum) => {
           setValue("view", addedStreamNum);
         }}
-        initialValues={streams[streamNum]}
+        streamToDuplicate={streams[streamNum]}
         button={
           <button className={styles.controlButton} type="button" disabled={permission === "readOnly"}>
             <Icon type="copy" />
