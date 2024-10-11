@@ -27,7 +27,6 @@ import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.persistence.BreakingChangesHelper;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -173,8 +172,6 @@ class BootloaderTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService);
-    val configRepository = new ConfigRepository(
-        workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -189,7 +186,7 @@ class BootloaderTest {
     val protocolVersionChecker =
         new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
             destinationService);
-    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
+    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(workspaceService, featureFlagClient);
     val breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangeHelper,
@@ -214,7 +211,7 @@ class BootloaderTest {
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
             jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
@@ -277,8 +274,6 @@ class BootloaderTest {
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
-    val configRepository = new ConfigRepository(
-        workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -290,7 +285,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
+    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(workspaceService, featureFlagClient);
     val breakingChangesHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangesHelper,
@@ -313,7 +308,7 @@ class BootloaderTest {
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
             jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
 
@@ -387,12 +382,15 @@ class BootloaderTest {
         connectionService,
         actorDefinitionService,
         scopedConfigurationService);
-    val configRepository = new ConfigRepository(
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)));
+
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    val workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
@@ -430,7 +428,7 @@ class BootloaderTest {
 
     };
     val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
             jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();

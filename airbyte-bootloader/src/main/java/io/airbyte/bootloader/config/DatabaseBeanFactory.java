@@ -12,7 +12,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
@@ -115,9 +114,8 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final WorkspaceService workspaceService) {
-    return new ConfigRepository(
-        workspaceService);
+  public ConfigRepository configRepository() {
+    return new ConfigRepository();
   }
 
   @Singleton

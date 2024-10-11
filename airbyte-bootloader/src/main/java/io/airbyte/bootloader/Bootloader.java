@@ -12,9 +12,9 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseMigrator;
@@ -43,7 +43,7 @@ public class Bootloader {
       new AirbyteVersion("0.37.0-alpha"));
 
   private final boolean autoUpgradeConnectors;
-  private final ConfigRepository configRepository;
+  private final WorkspaceService workspaceService;
   private final DatabaseMigrator configsDatabaseMigrator;
   private final DatabaseInitializer configsDatabaseInitializer;
   private final AirbyteVersion currentAirbyteVersion;
@@ -58,7 +58,7 @@ public class Bootloader {
 
   public Bootloader(
                     @Value("${airbyte.bootloader.auto-upgrade-connectors}") final boolean autoUpgradeConnectors,
-                    final ConfigRepository configRepository,
+                    final WorkspaceService workspaceService,
                     @Named("configsDatabaseInitializer") final DatabaseInitializer configsDatabaseInitializer,
                     @Named("configsDatabaseMigrator") final DatabaseMigrator configsDatabaseMigrator,
                     final AirbyteVersion currentAirbyteVersion,
@@ -71,7 +71,7 @@ public class Bootloader {
                     @Value("${airbyte.auth.default-realm}") final String defaultRealm,
                     final PostLoadExecutor postLoadExecution) {
     this.autoUpgradeConnectors = autoUpgradeConnectors;
-    this.configRepository = configRepository;
+    this.workspaceService = workspaceService;
     this.configsDatabaseInitializer = configsDatabaseInitializer;
     this.configsDatabaseMigrator = configsDatabaseMigrator;
     this.currentAirbyteVersion = currentAirbyteVersion;
@@ -113,7 +113,7 @@ public class Bootloader {
     runFlywayMigration(runMigrationOnStartup, configsDatabaseMigrator, jobsDatabaseMigrator);
 
     log.info("Creating workspace (if none exists)...");
-    createWorkspaceIfNoneExists(configRepository);
+    createWorkspaceIfNoneExists(workspaceService);
 
     log.info("Creating deployment (if none exists)...");
     createDeploymentIfNoneExists(jobPersistence);
@@ -195,8 +195,8 @@ public class Bootloader {
         .withKeycloakRealm(defaultRealm));
   }
 
-  private void createWorkspaceIfNoneExists(final ConfigRepository configRepository) throws JsonValidationException, IOException {
-    if (!configRepository.listStandardWorkspaces(true).isEmpty()) {
+  private void createWorkspaceIfNoneExists(final WorkspaceService workspaceService) throws JsonValidationException, IOException {
+    if (!workspaceService.listStandardWorkspaces(true).isEmpty()) {
       log.info("Workspace already exists for the deployment.");
       return;
     }
@@ -221,7 +221,7 @@ public class Bootloader {
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID);
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
   }
 
   private void initializeDatabases() throws DatabaseInitializationException {

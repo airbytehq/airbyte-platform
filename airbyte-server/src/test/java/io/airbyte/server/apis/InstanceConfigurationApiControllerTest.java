@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;

@@ -7,7 +7,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.config.Notification
-import io.airbyte.config.persistence.ConfigRepository
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
 import io.airbyte.featureflag.Workspace
@@ -42,23 +42,23 @@ class BreakingChangeNotificationHelper {
     DISABLED,
   }
 
-  private val configRepository: ConfigRepository
+  private val workspaceService: WorkspaceService
   private val notificationClient: NotificationClient
   private val featureFlagClient: FeatureFlagClient
 
-  constructor(configRepository: ConfigRepository, featureFlagClient: FeatureFlagClient) {
-    this.configRepository = configRepository
+  constructor(workspaceService: WorkspaceService, featureFlagClient: FeatureFlagClient) {
+    this.workspaceService = workspaceService
     this.featureFlagClient = featureFlagClient
     this.notificationClient = CustomerioNotificationClient()
   }
 
   @VisibleForTesting
   internal constructor(
-    configRepository: ConfigRepository,
+    workspaceService: WorkspaceService,
     featureFlagClient: FeatureFlagClient,
     notificationClient: NotificationClient,
   ) {
-    this.configRepository = configRepository
+    this.workspaceService = workspaceService
     this.featureFlagClient = featureFlagClient
     this.notificationClient = notificationClient
   }
@@ -113,7 +113,7 @@ class BreakingChangeNotificationHelper {
     actorType: ActorType,
     notificationType: BreakingChangeNotificationType,
   ) {
-    val workspaces = configRepository.listStandardWorkspacesWithIds(workspaceIds, false)
+    val workspaces = workspaceService.listStandardWorkspacesWithIds(workspaceIds, false)
     val receiverEmails: MutableList<String> = ArrayList()
 
     for (workspace in workspaces) {

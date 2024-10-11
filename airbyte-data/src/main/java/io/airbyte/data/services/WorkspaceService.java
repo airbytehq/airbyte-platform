@@ -41,7 +41,7 @@ public interface WorkspaceService {
 
   void writeStandardWorkspaceNoSecrets(StandardWorkspace workspace) throws JsonValidationException, IOException;
 
-  void setFeedback(UUID workspaceId) throws IOException;
+  void setFeedback(UUID workspaceId) throws IOException, ConfigNotFoundException;
 
   boolean workspaceCanUseDefinition(UUID actorDefinitionId, UUID workspaceId) throws IOException;
 

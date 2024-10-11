@@ -7,7 +7,6 @@ package io.airbyte.cron.config;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DataSourceUnwrapper;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
@@ -79,9 +78,8 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final WorkspaceService workspaceService) {
-    return new ConfigRepository(
-        workspaceService);
+  public ConfigRepository configRepository() {
+    return new ConfigRepository();
   }
 
   /**

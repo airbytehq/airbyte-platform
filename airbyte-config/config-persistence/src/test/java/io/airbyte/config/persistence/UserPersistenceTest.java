@@ -20,6 +20,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -43,7 +44,7 @@ import org.junit.jupiter.api.Test;
 class UserPersistenceTest extends BaseConfigDatabaseTest {
 
   private UserPersistence userPersistence;
-  private ConfigRepository configRepository;
+  private WorkspaceService workspaceService;
   private OrganizationService organizationService;
 
   @BeforeEach
@@ -53,12 +54,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
-    configRepository = new ConfigRepository(
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+    workspaceService =
+        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService);
     userPersistence = new UserPersistence(database);
     organizationService = new OrganizationServiceJooqImpl(database);
   }
@@ -77,7 +74,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       organizationService.writeOrganization(MockData.defaultOrganization());
       // write workspace table
       for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
-        configRepository.writeStandardWorkspaceNoSecrets(workspace);
+        workspaceService.writeStandardWorkspaceNoSecrets(workspace);
       }
       // write user table
       for (final AuthenticatedUser user : MockData.users()) {
@@ -300,7 +297,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       organizationPersistence.createOrganization(ORG_2);
 
       for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_ORG_2)) {
-        configRepository.writeStandardWorkspaceNoSecrets(workspace);
+        workspaceService.writeStandardWorkspaceNoSecrets(workspace);
       }
 
       for (final AuthenticatedUser user : List.of(ORG_MEMBER_USER, ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER)) {
