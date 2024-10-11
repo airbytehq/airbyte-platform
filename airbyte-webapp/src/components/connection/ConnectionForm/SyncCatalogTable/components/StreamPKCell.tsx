@@ -12,6 +12,7 @@ import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { MultiCatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamPKCell.module.scss";
@@ -27,8 +28,9 @@ interface NextPKCellProps {
 }
 
 export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) => {
-  const [optionsMenuOpened, setOptionsMenuOpened] = useState(false);
+  const { mode } = useConnectionFormService();
   const { errors } = useFormState<FormConnectionFormValues>();
+  const [optionsMenuOpened, setOptionsMenuOpened] = useState(false);
 
   if (!row.original.streamNode) {
     return null;
@@ -78,7 +80,7 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
     config?.selected && pkType ? (
       <MultiCatalogComboBox
         options={pkOptions}
-        disabled={!shouldDefinePk}
+        disabled={!shouldDefinePk || mode === "readonly"}
         value={config?.primaryKey?.map(pathDisplayName)}
         onChange={onChange}
         maxSelectedLabels={1}

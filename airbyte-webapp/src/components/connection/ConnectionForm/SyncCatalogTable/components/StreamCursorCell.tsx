@@ -12,6 +12,7 @@ import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamCursorCell.module.scss";
@@ -27,6 +28,7 @@ interface NextCursorCellProps {
 }
 
 export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamField }) => {
+  const { mode } = useConnectionFormService();
   const { errors } = useFormState<FormConnectionFormValues>();
 
   if (!row.original?.streamNode) {
@@ -79,7 +81,7 @@ export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStr
   const cursorButton =
     config?.selected && cursorType ? (
       <CatalogComboBox
-        disabled={!shouldDefineCursor}
+        disabled={!shouldDefineCursor || mode === "readonly"}
         options={cursorOptions}
         value={cursorValue}
         onChange={onChange}

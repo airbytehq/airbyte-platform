@@ -7,6 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { TextHighlighter } from "./TextHighlighter";
 import { SyncStreamFieldWithId } from "../../formConfig";
@@ -25,6 +26,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
+  const { mode } = useConnectionFormService();
+
   if (!row.original.streamNode) {
     return null;
   }
@@ -59,6 +62,7 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
           })
         }
         data-testid="sync-stream-checkbox"
+        disabled={mode === "readonly"}
       />
       <Button
         type="button"

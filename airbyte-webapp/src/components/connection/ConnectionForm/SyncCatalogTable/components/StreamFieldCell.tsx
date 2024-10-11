@@ -118,7 +118,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
           <CheckBox
             checkboxSize="sm"
             checked={isFieldSelected}
-            disabled={isDisabled}
+            disabled={isDisabled || mode === "readonly"}
             onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
             data-testid="sync-field-checkbox"
           />

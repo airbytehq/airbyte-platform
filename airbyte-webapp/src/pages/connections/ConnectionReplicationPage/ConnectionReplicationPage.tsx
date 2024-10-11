@@ -255,7 +255,6 @@ export const ConnectionReplicationPage: React.FC = () => {
         schema={validationSchema}
         onSubmit={onFormSubmit}
         trackDirtyChanges
-        disabled={mode === "readonly"}
         onError={onError}
         onSuccess={onSuccess}
       >
