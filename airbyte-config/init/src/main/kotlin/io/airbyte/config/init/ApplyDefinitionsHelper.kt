@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Helper class used to apply actor definitions from a DefinitionsProvider to the database. This is
@@ -216,12 +217,18 @@ class ApplyDefinitionsHelper(
       try {
         val connectorRollout =
           when (rcDef) {
-            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.get())
-            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.get())
+            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.getOrNull())
+            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.getOrNull())
             else -> throw IllegalArgumentException("Unsupported type: ${rcDef!!::class.java}")
           }
         connectorRolloutService.insertConnectorRollout(connectorRollout)
-        log.info("Inserted release candidate rollout configuration for {}:{}", insertedAdv.dockerRepository, insertedAdv.dockerImageTag)
+        log.info(
+          "Inserted release candidate rollout configuration for {}:{}; rcActorDefinitionVersion={} defaultActorDefinitionVersion={}",
+          insertedAdv.dockerRepository,
+          insertedAdv.dockerImageTag,
+          insertedAdv.versionId,
+          initialAdv.getOrNull()?.versionId,
+        )
       } catch (e: Exception) {
         log.error("An error occurred on connector rollout object creation", e)
       }

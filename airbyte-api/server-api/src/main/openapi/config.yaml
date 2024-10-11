@@ -7369,7 +7369,6 @@ components:
         - id
         - actor_definition_id
         - release_candidate_version_id
-        - initial_version_id
         - state
       properties:
         docker_repository:

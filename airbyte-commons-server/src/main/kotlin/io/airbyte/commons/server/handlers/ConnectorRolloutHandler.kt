@@ -4,7 +4,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
@@ -89,33 +88,6 @@ open class ConnectorRolloutHandler
         .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
         .errorMsg(connectorRollout.errorMsg)
         .failedReason(connectorRollout.failedReason)
-    }
-
-    @VisibleForTesting
-    open fun buildConnectorRollout(connectorRolloutCreate: ConnectorRolloutCreateRequestBody): ConnectorRollout {
-      val defaultVersion = actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(connectorRolloutCreate.actorDefinitionId)
-      val rolloutVersion =
-        actorDefinitionService.getActorDefinitionVersion(
-          connectorRolloutCreate.actorDefinitionId,
-          connectorRolloutCreate.dockerImageTag,
-        )
-      if (rolloutVersion.isEmpty) {
-        throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message(
-            "Could not find actor definition version for actor definition id: " +
-              "${connectorRolloutCreate.actorDefinitionId} and docker image tag: ${connectorRolloutCreate.dockerImageTag}",
-          ),
-        )
-      }
-
-      return ConnectorRollout()
-        .withId(UUID.randomUUID())
-        .withWorkflowRunId(null) // This will be populated once the workflow has started
-        .withActorDefinitionId(connectorRolloutCreate.actorDefinitionId)
-        .withReleaseCandidateVersionId(rolloutVersion.get().versionId)
-        .withInitialVersionId(defaultVersion.orElse(null)?.versionId)
-        .withState(ConnectorEnumRolloutState.INITIALIZED)
-        .withHasBreakingChanges(connectorRolloutCreate.hasBreakingChanges)
     }
 
     @VisibleForTesting
@@ -233,6 +205,7 @@ open class ConnectorRolloutHandler
       }
       return connectorRollout
         .withWorkflowRunId(connectorRolloutStart.workflowRunId)
+        .withInitialVersionId(connectorRollout.initialVersionId)
         .withState(ConnectorEnumRolloutState.WORKFLOW_STARTED)
         .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutStart.rolloutStrategy.toString()))
     }
