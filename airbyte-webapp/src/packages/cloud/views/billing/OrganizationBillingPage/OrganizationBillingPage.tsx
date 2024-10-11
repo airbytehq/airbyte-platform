@@ -39,9 +39,7 @@ export const OrganizationBillingPage: React.FC = () => {
           <BillingBanners />
 
           <BorderedTiles>
-            <BorderedTile>
-              <AccountBalance />
-            </BorderedTile>
+            <AccountBalance />
 
             <BorderedTile>
               <BillingInformation />

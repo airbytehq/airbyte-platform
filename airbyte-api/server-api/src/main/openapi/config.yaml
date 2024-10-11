@@ -10940,9 +10940,12 @@ components:
     OrganizationBalanceRead:
       type: object
       required:
-        - upcomingInvoice
+        - hidden
         - planType
       properties:
+        hidden:
+          description: Whether the organization balance is hidden and should not be shown to the user.
+          type: boolean
         planType:
           description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
           type: string
@@ -10952,6 +10955,7 @@ components:
           deprecated: true
         upcomingInvoice:
           type: object
+          description: Describe the current state of the upcoming invoice. If `hidden` is `true`, this will be `null`, since no balance should be shown.
           required:
             - currency
             - amount

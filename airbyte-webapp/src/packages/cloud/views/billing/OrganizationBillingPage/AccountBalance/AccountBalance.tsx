@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import React, { useMemo } from "react";
 import { FormattedDate, FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
+import { BorderedTile } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -27,8 +28,12 @@ export const AccountBalance = () => {
   const hasPositiveCreditBalance = !!balance?.credits?.balance && balance.credits.balance > 0;
   const showCreditBalance = hasPositiveCreditBalance || balance?.planType === "prepaid";
 
+  if (balance?.hidden) {
+    return null;
+  }
+
   return (
-    <>
+    <BorderedTile>
       <Heading as="h2" size="sm">
         <FormattedMessage id="settings.organization.billing.accountBalance" />
       </Heading>
@@ -58,7 +63,7 @@ export const AccountBalance = () => {
                 </Text>
               </FlexItem>
             )}
-            {balance.planType === "in_arrears" && (
+            {balance.planType === "in_arrears" && balance.upcomingInvoice && (
               <>
                 <FlexItem>
                   <Text size="sm">
@@ -96,7 +101,7 @@ export const AccountBalance = () => {
           </DataLoadingError>
         )}
       </Box>
-    </>
+    </BorderedTile>
   );
 };
 
