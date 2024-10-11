@@ -18,6 +18,7 @@ import io.airbyte.publicApi.server.generated.models.GeographyEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
+import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
 import java.util.UUID
@@ -47,11 +48,16 @@ object ConnectionReadMapper {
                   streamAndConfiguration.config!!.syncMode,
                   streamAndConfiguration.config!!.destinationSyncMode,
                 )
+              val selectedFields: List<SelectedFieldInfo>? =
+                streamAndConfiguration.config!!.selectedFields?.map {
+                  selectedFieldInfoConverter(it)
+                }
               StreamConfiguration(
                 name = streamAndConfiguration.stream.name,
                 primaryKey = streamAndConfiguration.config.primaryKey,
                 cursorField = streamAndConfiguration.config.cursorField,
                 syncMode = connectionSyncMode,
+                selectedFields = selectedFields,
               )
             }.toList(),
         )
@@ -118,6 +124,15 @@ object ConnectionReadMapper {
     } else {
       NonBreakingSchemaUpdatesBehaviorEnum.valueOf(nonBreakingChangesPreference.toString().uppercase())
     }
+  }
+
+  /**
+   * Convert selected fields from airbyte_api model to public_api model
+   * */
+  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.model.generated.SelectedFieldInfo): SelectedFieldInfo {
+    return SelectedFieldInfo(
+      fieldPath = selectedField.fieldPath,
+    )
   }
 
   /**
