@@ -34,7 +34,7 @@ class VerifyDefaultVersionActivityImplTest {
   }
 
   @Test
-  fun `test verifyDefaultVersion calls actorDefinitionVersionApi`() {
+  fun `test verifyDefaultVersion`() {
     every {
       actorDefinitionVersionApi.getActorDefinitionVersionDefault(any())
     } returns
@@ -46,6 +46,7 @@ class VerifyDefaultVersionActivityImplTest {
         supportsRefreshes = true,
       )
 
+    // Test without "-rc" suffix in the input dockerImageTag
     val input =
       ConnectorRolloutActivityInputVerifyDefaultVersion(
         dockerRepository = DOCKER_REPOSITORY,
@@ -57,6 +58,19 @@ class VerifyDefaultVersionActivityImplTest {
     verifyDefaultVersionActivity.verifyDefaultVersion(input)
 
     verify { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
+
+    // Test with "-rc" suffix in the input dockerImageTag
+    val inputWithRcSuffix =
+      ConnectorRolloutActivityInputVerifyDefaultVersion(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = "$DOCKER_IMAGE_TAG-rc.1",
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        rolloutId = ROLLOUT_ID,
+      )
+
+    verifyDefaultVersionActivity.verifyDefaultVersion(inputWithRcSuffix)
+
+    verify(exactly = 2) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
   }
 
   @Test

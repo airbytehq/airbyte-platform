@@ -120,7 +120,8 @@ Start and advance rollout manually: {
             t.unpin -> ab.finalize: success
           }
       }
-      ab.finalize -> c.finalize: done
+      c.status -> ab.status: get status
+      ab.status -> c.status: done
     }
   }
 
