@@ -14,7 +14,6 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,7 +27,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
-        analyticsMessageTracker, Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
+        analyticsMessageTracker, "workload-id", airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
         recordMapper, featureFlagClient, destinationCatalogGenerator));
     return new BufferedReplicationWorker(
         JOB_ID,

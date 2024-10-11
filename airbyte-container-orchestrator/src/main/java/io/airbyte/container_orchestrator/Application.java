@@ -7,7 +7,7 @@ package io.airbyte.container_orchestrator;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
-import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
+import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Singleton;
@@ -47,10 +47,10 @@ public class Application {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final String application;
-  private final JobOrchestrator<?> jobOrchestrator;
+  private final ReplicationJobOrchestrator jobOrchestrator;
 
   public Application(@Value("${airbyte.application}") final String application,
-                     final JobOrchestrator<?> jobOrchestrator) {
+                     final ReplicationJobOrchestrator jobOrchestrator) {
     this.application = application;
     this.jobOrchestrator = jobOrchestrator;
   }

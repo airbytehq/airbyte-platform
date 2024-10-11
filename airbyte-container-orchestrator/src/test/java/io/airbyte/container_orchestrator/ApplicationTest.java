@@ -9,18 +9,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
+import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ApplicationTest {
 
   private String application;
-  private JobOrchestrator<?> jobOrchestrator;
+  private ReplicationJobOrchestrator jobOrchestrator;
 
   @BeforeEach
   void setup() {
-    jobOrchestrator = mock(JobOrchestrator.class);
+    jobOrchestrator = mock(ReplicationJobOrchestrator.class);
   }
 
   @Test

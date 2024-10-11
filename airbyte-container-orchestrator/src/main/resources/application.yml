@@ -35,6 +35,7 @@ micronaut:
 
 airbyte:
   application: ${WORKER_APPLICATION:replication-orchestrator}
+  workload-id: ${WORKLOAD_ID:}
   job-id: ${JOB_ID:}
   attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}

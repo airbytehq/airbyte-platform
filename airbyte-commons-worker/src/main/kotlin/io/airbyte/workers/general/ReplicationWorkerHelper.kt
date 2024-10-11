@@ -96,7 +96,7 @@ class ReplicationWorkerHelper(
   private val onReplicationRunning: VoidCallable,
   private val workloadApiClient: WorkloadApiClient,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
-  private val workloadId: Optional<String>,
+  private val workloadId: String,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
@@ -142,7 +142,7 @@ class ReplicationWorkerHelper(
 
   private fun getWorkloadStatusHeartbeat(
     heartbeatInterval: Duration,
-    workloadId: Optional<String>,
+    workloadId: String,
     mdc: Map<String, String>,
   ): Runnable {
     return Runnable {
@@ -153,12 +153,9 @@ class ReplicationWorkerHelper(
       do {
         ctx?.let {
           try {
-            if (workloadId.isEmpty) {
-              throw RuntimeException("workloadId should always be present")
-            }
             logger.debug { "Sending workload heartbeat" }
             workloadApiClient.workloadApi.workloadHeartbeat(
-              WorkloadHeartbeatRequest(workloadId.get()),
+              WorkloadHeartbeatRequest(workloadId),
             )
             lastSuccessfulHeartbeat = Instant.now()
           } catch (e: Exception) {

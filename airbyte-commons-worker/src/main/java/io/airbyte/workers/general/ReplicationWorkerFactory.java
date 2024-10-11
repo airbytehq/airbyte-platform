@@ -151,7 +151,7 @@ public class ReplicationWorkerFactory {
                                           final IntegrationLauncherConfig sourceLauncherConfig,
                                           final IntegrationLauncherConfig destinationLauncherConfig,
                                           final VoidCallable onReplicationRunning,
-                                          final Optional<String> workloadId)
+                                          final String workloadId)
       throws IOException {
     final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(
         new SourceIdRequestBody(replicationInput.getSourceId())).getSourceDefinitionId();
@@ -312,7 +312,7 @@ public class ReplicationWorkerFactory {
                                                                    final DestinationTimeoutMonitor destinationTimeout,
                                                                    final WorkloadApiClient workloadApiClient,
                                                                    final AnalyticsMessageTracker analyticsMessageTracker,
-                                                                   final Optional<String> workloadId,
+                                                                   final String workloadId,
                                                                    final AirbyteApiClient airbyteApiClient,
                                                                    final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                    final StreamStatusTrackerFactory streamStatusTrackerFactory,
@@ -395,7 +395,7 @@ public class ReplicationWorkerFactory {
                                                                           final DestinationTimeoutMonitor destinationTimeout,
                                                                           final WorkloadApiClient workloadApiClient,
                                                                           final AnalyticsMessageTracker analyticsMessageTracker,
-                                                                          final Optional<String> workloadId,
+                                                                          final String workloadId,
                                                                           final AirbyteApiClient airbyteApiClient,
                                                                           final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                           final StreamStatusTrackerFactory streamStatusTrackerFactory,

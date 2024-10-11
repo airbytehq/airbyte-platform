@@ -129,7 +129,7 @@ class ReplicationWorkerHelperTest {
         mock(VoidCallable.class),
         workloadApiClient,
         analyticsMessageTracker,
-        Optional.empty(),
+        "workload-id",
         airbyteApiClient,
         streamStatusCompletionTracker,
         streamStatusTrackerFactory,

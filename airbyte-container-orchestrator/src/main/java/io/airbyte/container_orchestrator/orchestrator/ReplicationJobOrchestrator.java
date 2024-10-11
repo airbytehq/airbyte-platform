@@ -30,6 +30,8 @@ import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -41,23 +43,27 @@ import org.slf4j.LoggerFactory;
 /**
  * Runs replication worker.
  */
-public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationInput> {
+@Singleton
+public class ReplicationJobOrchestrator {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private final Path configDir;
+  private final ReplicationInput replicationInput;
   private final Configs configs;
   private final JobRunConfig jobRunConfig;
   private final ReplicationWorkerFactory replicationWorkerFactory;
   private final WorkloadApiClient workloadApiClient;
   private final JobOutputDocStore jobOutputDocStore;
+  private final String workloadId;
 
-  public ReplicationJobOrchestrator(final String configDir,
+  public ReplicationJobOrchestrator(final ReplicationInput replicationInput,
+                                    @Named("workloadId") final String workloadId,
                                     final Configs configs,
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final WorkloadApiClient workloadApiClient,
                                     final JobOutputDocStore jobOutputDocStore) {
-    this.configDir = Path.of(configDir);
+    this.replicationInput = replicationInput;
+    this.workloadId = workloadId;
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
@@ -65,20 +71,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.jobOutputDocStore = jobOutputDocStore;
   }
 
-  @Override
-  public Path getConfigDir() {
-    return configDir;
-  }
-
-  @Override
-  public Class<ReplicationInput> getInputClass() {
-    return ReplicationInput.class;
-  }
-
   @Trace(operationName = JOB_ORCHESTRATOR_OPERATION_NAME)
-  @Override
   public Optional<String> runJob() throws Exception {
-    final var replicationInput = readInput();
 
     final var sourceLauncherConfig = replicationInput.getSourceLauncherConfig();
 
@@ -88,7 +82,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
-    final Optional<String> workloadId = Optional.of(JobOrchestrator.workloadId());
     final BufferedReplicationWorker replicationWorker =
         replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {},
             workloadId);
@@ -98,9 +91,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
 
     final ReplicationOutput replicationOutput;
-    replicationOutput = run(replicationWorker, replicationInput, jobRoot, workloadId.get());
-    jobOutputDocStore.writeSyncOutput(workloadId.get(), replicationOutput);
-    updateStatusInWorkloadApi(replicationOutput, workloadId.get());
+    replicationOutput = run(replicationWorker, replicationInput, jobRoot, workloadId);
+    jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput);
+    updateStatusInWorkloadApi(replicationOutput, workloadId);
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));
