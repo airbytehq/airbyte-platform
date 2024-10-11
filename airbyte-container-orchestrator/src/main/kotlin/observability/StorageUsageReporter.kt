@@ -7,6 +7,7 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -27,6 +28,7 @@ class StorageUsageReporter(
   @Value("\${airbyte.connection-id}") private val connectionId: String,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
+  private val input: ReplicationInput,
 ) {
   @Scheduled(fixedDelay = "60s")
   fun reportConnectorDiskUsage() {
@@ -44,11 +46,13 @@ class StorageUsageReporter(
     val connectionIdAttr = MetricAttribute(MetricTags.CONNECTION_ID, connectionId)
     sourceMbUsed?.let {
       val typeAttr = MetricAttribute(MetricTags.CONNECTOR_TYPE, "source")
-      metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, connectionIdAttr)
+      val imageAttr = MetricAttribute(MetricTags.CONNECTOR_IMAGE, input.sourceLauncherConfig.dockerImage)
+      metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, imageAttr, connectionIdAttr)
     }
     destMbUsed?.let {
       val typeAttr = MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination")
-      metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, connectionIdAttr)
+      val imageAttr = MetricAttribute(MetricTags.CONNECTOR_IMAGE, input.destinationLauncherConfig.dockerImage)
+      metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, imageAttr, connectionIdAttr)
     }
   }
 
