@@ -28,6 +28,7 @@ import {
   useBuilderAssistStreamMetadata,
   useBuilderAssistStreamResponse,
   parseAssistErrorToFormErrors,
+  computeStreamResponse,
 } from "./assist";
 import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
 
@@ -168,27 +169,46 @@ const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
   },
   metadata: {
     useHook: useBuilderAssistStreamMetadata,
-    useHookParams: ["stream_name"],
+    useHookParams: ["stream_name", "stream_response"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}`,
     propertiesToPluck: ["urlPath", "httpMethod", "primaryKey"],
   },
   record_selector: {
     useHook: useBuilderAssistStreamResponse,
-    useHookParams: ["stream_name"],
+    useHookParams: ["stream_name", "stream_response"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.recordSelector`,
   },
   paginator: {
     useHook: useBuilderAssistFindStreamPaginator,
-    useHookParams: ["stream_name"],
+    useHookParams: ["stream_name", "stream_response"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.paginator`,
   },
 };
 
+/**
+ * This is a helper hook that allows us to use the stream data without having to specify the stream number.
+ * If the stream number is not specified, the stream data will be undefined.
+ */
+const useOptionalStreamData = (streamNum?: number) => {
+  const noStreamSpecified = streamNum === undefined;
+  const stream_name = useWatch({ name: `formValues.streams.${streamNum}.name`, disabled: noStreamSpecified });
+  const stream_response_json_string = useWatch({
+    name: `formValues.streams.${streamNum}.schema`,
+    disabled: noStreamSpecified,
+  });
+  const stream_response = !noStreamSpecified ? computeStreamResponse(stream_response_json_string) : undefined;
+
+  return { stream_name, stream_response };
+};
+
 export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
-  const stream_name = useWatch({ name: `formValues.streams.${streamNum}.name` });
+  const { stream_name, stream_response } = useOptionalStreamData(streamNum);
 
   const config = assistButtonConfigs[assistKey];
-  const hookParams = useMemo(() => pick({ stream_name }, config.useHookParams), [stream_name, config.useHookParams]);
+  const hookParams = useMemo(
+    () => pick({ stream_name, stream_response }, config.useHookParams),
+    [stream_name, stream_response, config.useHookParams]
+  );
 
   const { assistEnabled } = useConnectorBuilderFormState();
   if (!assistEnabled) {

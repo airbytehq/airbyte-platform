@@ -84,6 +84,7 @@ export interface BuilderAssistProjectMetadataParams {
 }
 export interface BuilderAssistInputStreamParams {
   stream_name: string;
+  stream_response?: object;
 }
 type BuilderAssistUseProject = BuilderAssistCoreParams & BuilderAssistProjectMetadataParams;
 type BuilderAssistUseProjectStream = BuilderAssistUseProject & BuilderAssistInputStreamParams;
@@ -306,4 +307,36 @@ export const parseAssistErrorToFormErrors = (assistError: Error | null): AssistE
 
   const validationErrors = details?.validation_errors;
   return validationErrors?.map(safeCastAssistValidationError) ?? [];
+};
+
+const safeJsonParse = (jsonString?: string): object | undefined => {
+  if (!jsonString) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Surpressed Error parsing JSON string:", error);
+    return undefined;
+  }
+};
+
+/**
+ * Compute the stream response value expected by the assist API from the stream response body and header.
+ */
+export const computeStreamResponse = (
+  streamResponseBodyJsonString: string,
+  streamResponseHeaderJsonString: string = "{}"
+): object | undefined => {
+  const streamResponseBody = safeJsonParse(streamResponseBodyJsonString);
+  if (streamResponseBody === undefined) {
+    return undefined;
+  }
+
+  const stream_response = {
+    header_schema: safeJsonParse(streamResponseHeaderJsonString),
+    body_schema: streamResponseBody,
+  };
+  return stream_response;
 };
