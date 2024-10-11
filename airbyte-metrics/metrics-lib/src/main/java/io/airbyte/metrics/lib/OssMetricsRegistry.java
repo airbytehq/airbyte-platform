@@ -495,7 +495,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   CONNECTOR_FAILURE_EXIT_VALUE(MetricEmittingApps.ORCHESTRATOR,
       "connector_failure_exit_value",
-      "Count of failure exit codes produced by a connector.");
+      "Count of failure exit codes produced by a connector."),
+
+  CONNECTOR_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connector_storage_usage_mb",
+      "Storage in mb used by a connector.");
 
   private final MetricEmittingApp application;
   private final String metricName;

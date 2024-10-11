@@ -183,3 +183,5 @@ object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicat
 object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)
 
 object UseFileTransferMode : Temporary<Boolean>(key = "platform.use-file-transfer-mode", default = false)
+
+object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)

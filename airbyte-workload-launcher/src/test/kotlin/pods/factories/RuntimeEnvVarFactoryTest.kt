@@ -5,14 +5,18 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConcurrentSourceStreamRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
+import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companion.MYSQL_SOURCE_NAME
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCH_JAVA_OPTS
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.connectorAwsAssumedRoleSecretEnvList
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.workspaceId
@@ -48,7 +52,10 @@ class RuntimeEnvVarFactoryTest {
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
 
-    factory = spyk(RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingFolder, connectorApmSupportHelper, ffClient))
+    factory =
+      spyk(
+        RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingFolder, CONTAINER_ORCH_JAVA_OPTS, connectorApmSupportHelper, ffClient),
+      )
   }
 
   @Test
@@ -259,8 +266,42 @@ class RuntimeEnvVarFactoryTest {
     )
   }
 
+  @ParameterizedTest
+  @MethodSource("orchestratorEnvVarMatrix")
+  fun `builds expected env vars for orchestrator container`(
+    optsOverride: String,
+    expectedOpts: String,
+    useFileTransfer: Boolean,
+  ) {
+    every { ffClient.stringVariation(ContainerOrchestratorJavaOpts, any()) } returns optsOverride
+    val jobRunConfig =
+      JobRunConfig()
+        .withJobId("2324")
+        .withAttemptId(1)
+    val input =
+      ReplicationInput()
+        .withJobRunConfig(jobRunConfig)
+        .withConnectionId(UUID.randomUUID())
+        .withUseFileTransfer(useFileTransfer)
+    val result = factory.orchestratorEnvVars(input, WORKLOAD_ID)
+
+    assertEquals(
+      listOf(
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobRunConfig.jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), jobRunConfig.attemptId.toString(), null),
+        EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), input.connectionId.toString(), null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
+        EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
+      ),
+      result,
+    )
+  }
+
   object Fixtures {
     const val WORKLOAD_ID = "test-workload-id"
+    const val CONTAINER_ORCH_JAVA_OPTS = "OPTS"
     val workspaceId = UUID.randomUUID()!!
     val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "creds", null))
   }
@@ -291,6 +332,18 @@ class RuntimeEnvVarFactoryTest {
         Arguments.of(null),
         Arguments.of(mapOf("key-1" to "value-1")),
         Arguments.of(mapOf("key-1" to "value-1", "key-2" to "value-2")),
+      )
+    }
+
+    @JvmStatic
+    private fun orchestratorEnvVarMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true),
+        Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false),
+        Arguments.of("opts 1", "opts 1", true),
+        Arguments.of("opts 2", "opts 2", false),
+        Arguments.of("opts 3 ", "opts 3", true),
+        Arguments.of("  opts 4  ", "opts 4", true),
       )
     }
   }

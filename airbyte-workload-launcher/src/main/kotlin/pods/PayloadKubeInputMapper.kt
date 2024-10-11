@@ -3,7 +3,6 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
@@ -31,7 +30,6 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.usesCustomConnector
@@ -42,7 +40,6 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
-import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -75,14 +72,7 @@ class PayloadKubeInputMapper(
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
     val orchestratorReqs = PodUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
-    val orchRuntimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, input.useFileTransfer.toString(), null),
-      )
+    val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
     val sourceReqs = PodUtils.buildResourceRequirements(input.getSourceResourceReqs())

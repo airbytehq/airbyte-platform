@@ -204,7 +204,6 @@ class KubePodClientTest {
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
-        replInput.connectionId,
         false,
       )
     } returns pod
@@ -223,7 +222,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -239,7 +238,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -280,7 +279,6 @@ class KubePodClientTest {
         kubeInput.destinationReqs,
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
-        replInput.connectionId,
         false,
       )
     } returns pod
@@ -299,7 +297,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(),
+        any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -315,7 +313,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(),
+        any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")

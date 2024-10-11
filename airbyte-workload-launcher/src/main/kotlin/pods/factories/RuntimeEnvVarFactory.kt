@@ -7,12 +7,16 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.ConcurrentSourceStreamRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
+import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
+import io.airbyte.workers.input.getAttemptId
+import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
@@ -31,9 +35,28 @@ import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 class RuntimeEnvVarFactory(
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Value("\${airbyte.container.orchestrator.staging-folder}") private val stagingFolder: String,
+  @Value("\${airbyte.container.orchestrator.java-opts}") private val containerOrchestratorJavaOpts: String,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
 ) {
+  fun orchestratorEnvVars(
+    replicationInput: ReplicationInput,
+    workloadId: String,
+  ): List<EnvVar> {
+    val optionsOverride: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
+    val javaOpts = optionsOverride.trim().ifEmpty { containerOrchestratorJavaOpts }
+
+    return listOf(
+      EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+      EnvVar(AirbyteEnvVar.JOB_ID.toString(), replicationInput.getJobId(), null),
+      EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), replicationInput.getAttemptId().toString(), null),
+      EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), replicationInput.connectionId.toString(), null),
+      EnvVar(EnvVarConstants.USE_FILE_TRANSFER, replicationInput.useFileTransfer.toString(), null),
+      EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
+    )
+  }
+
   fun replicationConnectorEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
     val awsEnvVars = resolveAwsAssumedRoleEnvVars(launcherConfig)
     val apmEnvVars = getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId))

@@ -15,7 +15,6 @@ import io.fabric8.kubernetes.api.model.Toleration
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.util.UUID
 
 @Singleton
 class ReplicationPodFactory(
@@ -43,7 +42,6 @@ class ReplicationPodFactory(
     orchRuntimeEnvVars: List<EnvVar>,
     sourceRuntimeEnvVars: List<EnvVar>,
     destRuntimeEnvVars: List<EnvVar>,
-    connectionId: UUID,
     isFileTransfer: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -59,7 +57,6 @@ class ReplicationPodFactory(
         replicationVolumes.orchVolumeMounts,
         orchRuntimeEnvVars,
         orchImage,
-        connectionId,
       )
 
     val sourceContainer =
@@ -114,7 +111,6 @@ class ReplicationPodFactory(
     destResourceReqs: ResourceRequirements?,
     orchRuntimeEnvVars: List<EnvVar>,
     destRuntimeEnvVars: List<EnvVar>,
-    connectionId: UUID,
     isFileTransfer: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -130,7 +126,6 @@ class ReplicationPodFactory(
         replicationVolumes.orchVolumeMounts,
         orchRuntimeEnvVars,
         orchImage,
-        connectionId,
       )
 
     val destContainer =

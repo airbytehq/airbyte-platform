@@ -7,7 +7,6 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
@@ -32,7 +31,6 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodUtils
 import io.airbyte.workers.serde.ObjectSerializer
-import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -50,7 +48,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
-import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -99,6 +96,7 @@ class PayloadKubeInputMapperTest {
     mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
+    val workloadId = UUID.randomUUID().toString()
     val resourceReqs1 =
       ResourceRequirements()
         .withCpuLimit("1")
@@ -126,8 +124,17 @@ class PayloadKubeInputMapperTest {
       listOf(
         EnvVar("env-3", "val-3", null),
       )
+    val expectedOrchestratorRuntimeEnvVars =
+      listOf(
+        EnvVar("env-4", "val-4", null),
+        EnvVar("env-5", "val-5", null),
+        EnvVar("env-6", "val-6", null),
+        EnvVar("env-7", "val-7", null),
+      )
+
     every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig) } returns expectedSrcRuntimeEnvVars
     every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig) } returns expectedDestRuntimeEnvVars
+    every { envVarFactory.orchestratorEnvVars(input, workloadId) } returns expectedOrchestratorRuntimeEnvVars
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
@@ -140,7 +147,6 @@ class PayloadKubeInputMapperTest {
     every { input.destinationLauncherConfig } returns destLauncherConfig
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
-    every { input.useFileTransfer } returns false
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
@@ -154,7 +160,6 @@ class PayloadKubeInputMapperTest {
         destLauncherConfig.dockerImage,
       )
     } returns replLabels
-    val workloadId = UUID.randomUUID().toString()
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assertEquals(podName, result.podName)
@@ -167,15 +172,6 @@ class PayloadKubeInputMapperTest {
     assertEquals(PodUtils.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
     assertEquals(PodUtils.buildResourceRequirements(resourceReqs2), result.sourceReqs)
     assertEquals(PodUtils.buildResourceRequirements(resourceReqs3), result.destinationReqs)
-
-    val expectedOrchestratorRuntimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, false.toString(), null),
-      )
 
     assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
     assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars)

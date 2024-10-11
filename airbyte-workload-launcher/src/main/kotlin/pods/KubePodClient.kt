@@ -77,7 +77,6 @@ class KubePodClient(
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
-        replicationInput.connectionId,
         replicationInput.useFileTransfer,
       )
 
@@ -125,7 +124,6 @@ class KubePodClient(
         kubeInput.destinationReqs,
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
-        replicationInput.connectionId,
         replicationInput.useFileTransfer,
       )
 
