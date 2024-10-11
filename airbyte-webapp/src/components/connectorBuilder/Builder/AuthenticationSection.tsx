@@ -44,6 +44,7 @@ import {
   BuilderFormOAuthAuthenticator,
   builderAuthenticatorToManifest,
   builderInputsToSpec,
+  BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES,
 } from "../types";
 import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
@@ -194,6 +195,7 @@ export const AuthenticationSection: React.FC = () => {
                   },
                 },
               },
+              decoder: "JSON",
               session_token_path: [],
               expiration_duration: "",
               request_authentication: {
@@ -337,6 +339,13 @@ const SessionTokenForm = () => {
           path={authPath("login_requester.httpMethod")}
           options={getOptionsByManifest("HttpRequester.properties.http_method")}
           manifestPath="HttpRequester.properties.http_method"
+        />
+        <BuilderField
+          type="enum"
+          path={authPath("decoder")}
+          label={formatMessage({ id: "connectorBuilder.decoder.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
+          options={[...BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES]}
         />
         <BuilderOneOf<BuilderFormAuthenticator>
           path={authPath("login_requester.authenticator")}
