@@ -574,7 +574,7 @@ internal class ConnectorRolloutHandlerTest {
     val connectorRollout = createMockConnectorRollout(rolloutId)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutClient.startWorkflow(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput()
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     every {
@@ -588,7 +588,7 @@ internal class ConnectorRolloutHandlerTest {
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
-      connectorRolloutClient.startWorkflow(any())
+      connectorRolloutClient.startRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       connectorRolloutService.listConnectorRollouts(any(), any())
       actorDefinitionService.getActorDefinitionVersion(any())
@@ -628,7 +628,7 @@ internal class ConnectorRolloutHandlerTest {
     }
 
     // Verify that startWorkflow() was not called because the rollout is already in progress
-    verify(exactly = 0) { connectorRolloutClient.startWorkflow(any()) }
+    verify(exactly = 0) { connectorRolloutClient.startRollout(any()) }
   }
 
   @Test
@@ -647,7 +647,7 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been initialized, but workflow hasn't been started
     connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
 
-    every { connectorRolloutClient.startWorkflow(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput()
     every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -656,7 +656,7 @@ internal class ConnectorRolloutHandlerTest {
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
-      connectorRolloutClient.startWorkflow(any())
+      connectorRolloutClient.startRollout(any())
       connectorRolloutClient.doRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())

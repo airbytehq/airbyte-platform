@@ -6,6 +6,7 @@ package io.airbyte.connector.rollout.worker
 
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
@@ -33,7 +34,7 @@ import java.time.Duration
 private val logger = KotlinLogging.logger {}
 
 class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
-  private val activityOptions =
+  private val defaultActivityOptions =
     ActivityOptions.newBuilder()
       .setStartToCloseTimeout(Duration.ofSeconds(10))
       .setRetryOptions(
@@ -48,43 +49,48 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   private val startRolloutActivity =
     Workflow.newActivityStub(
       StartRolloutActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
 
   private val findRolloutActivity =
     Workflow.newActivityStub(
       FindRolloutActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
 
   private val getRolloutActivity =
     Workflow.newActivityStub(
       GetRolloutActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
 
   private val doRolloutActivity =
     Workflow.newActivityStub(
       DoRolloutActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
 
   private val finalizeRolloutActivity =
     Workflow.newActivityStub(
       FinalizeRolloutActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
 
   private val promoteOrRollbackActivity =
     Workflow.newActivityStub(
       PromoteOrRollbackActivity::class.java,
-      activityOptions,
+      defaultActivityOptions,
     )
+
+  private val verifyActivityOptions =
+    defaultActivityOptions.toBuilder().setStartToCloseTimeout(
+      Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
+    ).build()
 
   private val verifyDefaultVersionActivity =
     Workflow.newActivityStub(
       VerifyDefaultVersionActivity::class.java,
-      activityOptions,
+      verifyActivityOptions,
     )
 
   private var succeeded = false

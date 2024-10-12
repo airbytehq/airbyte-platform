@@ -56,7 +56,7 @@ class ConnectorRolloutClient
       }
     }
 
-    fun startWorkflow(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
+    fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
       logger.info { "ConnectorRolloutService.startWorkflow with input: $input" }
       if (input.rolloutId == null) {
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
