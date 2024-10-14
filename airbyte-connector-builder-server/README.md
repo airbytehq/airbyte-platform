@@ -16,6 +16,8 @@ To set up a local CDK environment, navigate to the airbyte-cdk/python folder in 
 poetry install
 ```
 
+If `poetry` cannot be found, run `pip install poetry` first.
+
 You will need to add the path to this environment in the next steps. You can run `poetry show -v` to verify it.
 
 #### Setting your Python version
@@ -60,33 +62,50 @@ If you experience any issues, try running the full command as:
 ```bash
 sudo CDK_PYTHON=<path_to_CDK_virtual_environment> CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py> ./gradlew :oss:airbyte-connector-builder-server:run
 ```
+(note that you will need to use full paths in this case, i.e. not starting with `~`)
 
 The server is now reachable on localhost:8080
 
 ### Run the full platform locally
 
-If you want to run the full platform with this local instance, you must edit the `.env` file as follows:
+If you want to run the full platform locally using your local python CDK code, first follow the steps laid out above to get a locally-running gradle builder server pointing at your local CDK code. 
 
-``` bash
-# replace this
-CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:8080
+You must then make two changes:
+1. The `airbyte-server` makes requests to the builder server (e.g. read_stream), so these must be redirected to the locally-running gradle builder server by editing the `oss/charts/airbyte/templates/env-configmap.yaml` as follows:
+    ```bash
+    # replace this
+    CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
+    
+    # with this
+    CONNECTOR_BUILDER_SERVER_API_HOST: http://host.docker.internal:8080
+    ```
+    Then recreate your local deploy with
+    ```bash
+    make dev.up.oss
+    ```
+2. The `airbyte-webapp` also makes requests directly to the builder server (e.g. resolve_manifest), so these must be redirected to the locally-running gradle builder server by editing the `oss/airbyte-webapp/.env.development-k8s` as follows:
+    ```bash
+    # replace this
+    REACT_APP_CONNECTOR_BUILDER_API_URL=https://local.airbyte.dev/connector-builder-api
+    
+    # with this
+    REACT_APP_CONNECTOR_BUILDER_API_URL=http://localhost:8080
+    ```
+    Then restart your local dev webapp with
+    ```
+    cd oss/airbyte-webapp
+    pnpm install
+    pnpm start oss-k8s
+    ```
 
-# with this
-CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:8080
-```
+If you then go to https://localhost:3000/ in your browser, and navigate to the connector builder, all requests directed toward the connector builder server will now be sent to your locally-running gradle builder server that uses your local CDK code.
 
-To run the platform, use the following command. Replace the PATH_TO_CONNECTORS placeholder with the actual path to your connectors folder in the airbyte repo (at airbyte-integrations/connectors):
+From this point forward, you can simply edit python files under the `airbyte-cdk/python` directory, and those changes will immediately be reflected in any requests that are sent from the Builder UI.
 
-```bash
-BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" PATH_TO_CONNECTORS=~<path_to_airbyte_repo>/airbyte/airbyte-integrations/connectors VERSION=dev docker compose -f docker-compose.yaml -f docker-compose.builder.yaml up
-```
+### Running the platform with support for custom components
 
-Note: there are two different, but very similarly-named, environment variables; you must edit `CONNECTOR_BUILDER_SERVER_API_HOST`, not `CONNECTOR_BUILDER_API_HOST`.
-
-### Running the platform with support for custom components (docker-compose only)
-
-1. Run the OSS platform locally with builder docker-compose extension
-    1. Example command: PATH_TO_CONNECTORS=/Users/alex/code/airbyte/airbyte-integrations/connectors docker compose -f docker-compose.yaml -f docker-compose.builder.yaml up
+1. Run the OSS platform locally with the PATH_TO_CONNECTORS env var set
+    1. Example command: PATH_TO_CONNECTORS=$HOME/Developer/github/airbytehq/airbyte/airbyte-integrations/connectors make deploy.oss
     2. Where PATH_TO_CONNECTORS points to the airbyte-integrations/connectors subdirectory in the opensource airbyte repository
 2. Open the connector builder and develop your connector
 3. When needing a custom componentt:
@@ -97,27 +116,7 @@ Note: there are two different, but very similarly-named, environment variables; 
 
 Note that connector modules are added to the path at startup time. The platform instance must be restarted if you add a new connector module.
 
-Follow these additional instructions if the connector requires 3rd party libraries that are not available in the CDK:
-
-Developing connectors that require 3rd party libraries can be done by running the connector-builder-server locally and pointing to a custom virtual environment.
-
-1. Create a virtual environment and install the CDK + any 3rd party library required
-2. export CDK_PYTHON=<path_to_virtual_environment>
- - `CDK_PYTHON` should point to the virtual environment's python executable (example: `export CDK_PYTHON=~/code/airbyte/airbyte-cdk/python/.venv/bin/python`)
-3. export CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py>
-4. ./gradlew -p :oss:airbyte-connector-builder-server:run
-    1. The server is now reachable on localhost:8080
-5. Update the server to point to port 8080 by editing .env and replacing
-    
-    ```
-    CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:8080
-    ```
-    with
-    ```
-    CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:8080
-    ```
-    
-6. Follow the standard instructions
+Also note that this approach is not currently compatible with the above approach to use your local CDK code, so it is not currently possible to run with both local CDK code and custom component support. 
 
 ### Developing in a K8S Deployment
 _**⚠️ Warning**: Using Local CDKs, or Custom Components is not supported at this time_
