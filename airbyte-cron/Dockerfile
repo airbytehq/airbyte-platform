@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.0
 
 FROM scratch as builder
 WORKDIR /app
@@ -9,4 +9,4 @@ WORKDIR /app
 COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
-ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/airbyte-cron"]
+CMD ["/bin/bash", "-c", "airbyte-app/bin/airbyte-cron"]

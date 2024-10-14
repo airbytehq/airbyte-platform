@@ -1,4 +1,4 @@
-ARG JAVA_PYTHON_BASE_IMAGE_VERSION=2.1.7
+ARG JAVA_PYTHON_BASE_IMAGE_VERSION=2.2.0
 FROM airbyte/airbyte-base-java-python-image:${JAVA_PYTHON_BASE_IMAGE_VERSION} AS connector-builder-server
 
 # Set up CDK requirements
@@ -24,7 +24,7 @@ RUN chown -R airbyte:airbyte /app
 USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server
-ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
+CMD ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
 
 LABEL io.airbyte.version=${VERSION}
 LABEL io.airbyte.name=airbyte/connector-builder-server

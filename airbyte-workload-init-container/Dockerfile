@@ -17,4 +17,4 @@ ENV VERSION=${VERSION}
 COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
-ENTRYPOINT ["/bin/bash", "-c", "/app/airbyte-app/bin/${APPLICATION}"]
+CMD ["/bin/bash", "-c", "/app/airbyte-app/bin/${APPLICATION}"]

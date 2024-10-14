@@ -1,4 +1,4 @@
-ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.2.2
+ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.3.0
 
 FROM scratch as builder
 WORKDIR /app
@@ -14,4 +14,4 @@ COPY --chown=airbyte:airbyte WellKnownTypes.json /app
 COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
-ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
+CMD ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]

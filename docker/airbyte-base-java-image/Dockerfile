@@ -15,6 +15,8 @@ useradd --uid 1000 --gid airbyte --shell /bin/bash --create-home airbyte
 mkdir /secrets
 chown -R airbyte:airbyte /secrets
 chown -R airbyte:airbyte /app
+chown -R airbyte:airbyte /usr/share/pki/ca-trust-source
+chown -R airbyte:airbyte /etc/pki/ca-trust
 EOF
 
 # Add the Datadog Java APM agent
@@ -23,4 +25,8 @@ ADD --chown=airbyte:airbyte https://dtdg.co/latest-java-tracer dd-java-agent.jar
 # Add the OpenTelemetry Java APM agent
 ADD --chown=airbyte:airbyte https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 
+ADD --chown=airbyte:airbyte oss/docker/airbyte-base-java-image/entrypoint.sh /entrypoint.sh
+
 USER airbyte:airbyte
+
+ENTRYPOINT ["/entrypoint.sh"]
