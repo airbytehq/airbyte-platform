@@ -283,6 +283,7 @@ abstract class ReplicationWorkerTest {
     var resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse(UUID.randomUUID(),
         "dockerRepository",
         "dockerImageTag",
+        false,
         false);
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(resolveActorDefinitionVersionResponse);
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);

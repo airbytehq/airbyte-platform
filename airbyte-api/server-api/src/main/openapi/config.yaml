@@ -9620,6 +9620,7 @@ components:
         - supportsRefreshes
         - supportState
         - isVersionOverrideApplied
+        - supportsFileTransfer
       properties:
         dockerRepository:
           type: string
@@ -9641,6 +9642,8 @@ components:
         cdkVersion:
           description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
           type: string
+        supportsFileTransfer:
+          type: boolean
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -9648,6 +9651,7 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportRefreshes
+        - supportFileTransfer
       properties:
         versionId:
           $ref: "#/components/schemas/ActorDefinitionVersionId"
@@ -9656,6 +9660,8 @@ components:
         dockerImageTag:
           type: string
         supportRefreshes:
+          type: boolean
+        supportFileTransfers:
           type: boolean
     ActorDefinitionBreakingChange:
       type: object

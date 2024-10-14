@@ -124,7 +124,8 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(false);
+        .supportsRefreshes(false)
+        .supportsFileTransfer(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mSourceService).getSourceConnection(sourceId);
@@ -163,7 +164,8 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(false);
+        .supportsRefreshes(false)
+        .supportsFileTransfer(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -201,7 +203,8 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes());
+        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
+        .supportsFileTransfer(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -233,7 +236,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(false)
-        .breakingChanges(breakingChanges);
+        .breakingChanges(breakingChanges)
+        .supportsFileTransfer(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion);

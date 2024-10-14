@@ -87,6 +87,7 @@ public class ConnectorMetadataJooqHelper {
           .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
           .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
           .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, actorDefinitionVersion.getSupportsFileTransfer())
           .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
           .execute();
     } else {
@@ -127,6 +128,7 @@ public class ConnectorMetadataJooqHelper {
                   .orElseThrow())
           .set(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.getInternalSupportLevel())
           .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, actorDefinitionVersion.getSupportsFileTransfer())
           .execute();
     }
 

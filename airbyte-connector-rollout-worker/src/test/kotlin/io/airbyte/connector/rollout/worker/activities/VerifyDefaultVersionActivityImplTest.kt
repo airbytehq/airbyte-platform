@@ -44,6 +44,7 @@ class VerifyDefaultVersionActivityImplTest {
         isVersionOverrideApplied = true,
         supportState = SupportState.SUPPORTED,
         supportsRefreshes = true,
+        supportsFileTransfer = false,
       )
 
     // Test without "-rc" suffix in the input dockerImageTag
@@ -85,6 +86,7 @@ class VerifyDefaultVersionActivityImplTest {
         isVersionOverrideApplied = true,
         supportState = SupportState.SUPPORTED,
         supportsRefreshes = true,
+        supportsFileTransfer = false,
       )
 
     val input =

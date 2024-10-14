@@ -63,3 +63,7 @@ properties:
   language:
     description: The language that the connector is written in.
     type: string
+  supportsFileTransfer:
+    description: an optional flag indicating whether a destination connector supports file transfer.
+    type: boolean
+    default: false

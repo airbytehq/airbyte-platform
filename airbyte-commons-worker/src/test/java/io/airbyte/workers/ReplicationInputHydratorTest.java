@@ -435,7 +435,8 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
-        true));
+        true,
+        false));
   }
 
   private void mockNonRefresh() throws IOException {
@@ -447,6 +448,7 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
+        false,
         false));
   }
 

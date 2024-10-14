@@ -371,7 +371,8 @@ class ReplicationWorkerHelperTest {
             UUID.randomUUID(),
             "dockerRepository",
             "dockerImageTag",
-            supportsRefreshes));
+            supportsRefreshes,
+            false));
   }
 
   private ConfiguredAirbyteCatalog buildConfiguredAirbyteCatalog() {
