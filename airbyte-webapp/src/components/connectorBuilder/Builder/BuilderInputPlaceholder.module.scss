@@ -4,5 +4,9 @@
 .tooltipTrigger {
   color: colors.$blue-500;
   margin-right: variables.$spacing-md;
-  height: 0.8em;
+  padding: 0;
+}
+
+.tooltipIcon {
+  height: 0.8rem;
 }
