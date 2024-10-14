@@ -5,11 +5,15 @@ import { PageContainer } from "components/PageContainer";
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
+import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useGetOrganizationBillingBalance } from "core/api";
+import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 
 import { AccountBalance } from "./AccountBalance";
@@ -32,9 +36,24 @@ export const OrganizationBillingPage: React.FC = () => {
     <PageContainer>
       {billing && billing.paymentStatus !== "uninitialized" ? (
         <FlexContainer direction="column" gap="xl">
-          <Heading as="h1" size="md">
-            <FormattedMessage id="settings.organization.billing.title" />
-          </Heading>
+          <FlexContainer justifyContent="space-between" alignItems="center">
+            <Heading as="h1" size="md">
+              <FormattedMessage id="settings.organization.billing.title" />
+            </Heading>
+            <FlexItem>
+              <Text size="sm">
+                <ExternalLink
+                  href={links.billingNotificationsForm.replace("{organizationId}", organizationId)}
+                  opensInNewTab
+                >
+                  <FlexContainer alignItems="center" gap="xs">
+                    <Icon type="bell" size="sm" />
+                    <FormattedMessage id="settings.organization.billing.setupNotifications" />
+                  </FlexContainer>
+                </ExternalLink>
+              </Text>
+            </FlexItem>
+          </FlexContainer>
 
           <BillingBanners />
 

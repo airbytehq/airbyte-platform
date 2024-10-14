@@ -1077,6 +1077,7 @@
   "settings.organization.billing.filter.lastTwelveMonths": "Last 12 months",
   "settings.organization.billing.filter.allSources": "All sources",
   "settings.organization.billing.filter.allDestinations": "All destinations",
+  "settings.organization.billing.setupNotifications": "Set up billing alerts",
   "settings.organization.diagnostics.title": "Download diagnostics",
   "settings.organization.diagnostics.description": "Export a .zip file with the diagnostics information of your configuration to share with the support team.",
   "settings.organization.diagnostics.download": "Download diagnostics report",

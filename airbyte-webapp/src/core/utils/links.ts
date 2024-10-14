@@ -62,6 +62,8 @@ export const links = {
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
   enterpriseTalkToSales:
     "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=enterprise-connector",
+  billingNotificationsForm:
+    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}",
 } as const;
 
 export type OutboundLinks = typeof links;
