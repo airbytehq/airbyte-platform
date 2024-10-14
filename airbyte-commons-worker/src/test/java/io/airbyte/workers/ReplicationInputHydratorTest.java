@@ -5,6 +5,7 @@
 package io.airbyte.workers;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -49,6 +50,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
@@ -58,6 +60,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -310,6 +313,18 @@ class ReplicationInputHydratorTest {
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+  }
+
+  @Test
+  void testGenerateReplicationFailsIfNonCompatibleFileTransfer() throws Exception {
+    mockNonRefresh();
+
+    // Verify that we get the state and catalog from the API.
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+
+    final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
+    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(true)));
+    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
   }
 
   @Test

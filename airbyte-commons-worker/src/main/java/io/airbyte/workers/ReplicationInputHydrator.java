@@ -47,6 +47,7 @@ import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.JobInput;
@@ -131,6 +132,12 @@ public class ReplicationInputHydrator {
     final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
     final var resolvedDestinationVersion = airbyteApiClient.getActorDefinitionVersionApi().resolveActorDefinitionVersionByTag(
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
+
+    final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
+    if (sourceActorConfig.getUseFileTransfer() && !resolvedDestinationVersion.getSupportFileTransfers()) {
+      LOGGER.error("Destination does not support file transfers, but source requires it.");
+      throw new WorkerException("Destination does not support file transfers, but source requires it.");
+    }
 
     // Retrieve the connection, which we need in a few places.
     final long jobId = Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId());
