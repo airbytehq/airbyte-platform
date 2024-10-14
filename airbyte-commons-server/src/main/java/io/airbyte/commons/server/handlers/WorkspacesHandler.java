@@ -45,13 +45,14 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
@@ -340,7 +341,7 @@ public class WorkspacesHandler {
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByOrganizationIdPaginated(
-              new ConfigRepository.ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
+              new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()
@@ -389,7 +390,7 @@ public class WorkspacesHandler {
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByUserIdPaginated(
-              new ConfigRepository.ResourcesByUserQueryPaginated(request.getUserId(),
+              new ResourcesByUserQueryPaginated(request.getUserId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()

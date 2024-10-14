@@ -11,7 +11,6 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
-import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
@@ -24,7 +23,6 @@ import org.slf4j.LoggerFactory;
  * database or remotely in the DefinitionsProvider.
  */
 @Singleton
-@Requires(bean = ConfigRepository.class)
 public class ActorDefinitionVersionResolver {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionResolver.class);

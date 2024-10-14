@@ -52,7 +52,6 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
@@ -60,6 +59,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
@@ -923,7 +923,7 @@ class WorkspacesHandlerTest {
     final List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
     when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-        new ConfigRepository.ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        new ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
         Optional.empty()))
             .thenReturn(expectedWorkspaces);
     final WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
@@ -937,7 +937,7 @@ class WorkspacesHandlerTest {
     final List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
     when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-        new ConfigRepository.ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        new ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
         Optional.of("nameContains")))
             .thenReturn(expectedWorkspaces);
     final WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);

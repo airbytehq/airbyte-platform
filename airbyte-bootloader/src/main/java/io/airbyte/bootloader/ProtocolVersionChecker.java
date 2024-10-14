@@ -12,7 +12,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
@@ -51,8 +50,10 @@ public class ProtocolVersionChecker {
    *
    * @param jobPersistence A {@link JobPersistence} instance.
    * @param airbyteProtocolTargetVersionRange The target Airbyte protocol version range.
-   * @param configRepository A {@link ConfigRepository} instance.
+   * @param actorDefinitionService The service for actor definitions {@link ActorDefinitionService}
    * @param definitionsProvider The {@link DefinitionsProvider} used for seeding.
+   * @param sourceService The service for sources {@link SourceService}
+   * @param destinationService The Service for destinations {@link DestinationService}
    */
   public ProtocolVersionChecker(final JobPersistence jobPersistence,
                                 final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange,

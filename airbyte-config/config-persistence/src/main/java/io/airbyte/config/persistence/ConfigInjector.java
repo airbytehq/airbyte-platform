@@ -7,7 +7,6 @@ package io.airbyte.config.persistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.data.services.ConnectorBuilderService;
-import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.UUID;
@@ -17,7 +16,6 @@ import java.util.UUID;
  * given configuration under the specified path.
  */
 @Singleton
-@Requires(bean = ConfigRepository.class)
 public class ConfigInjector {
 
   private final ConnectorBuilderService connectorBuilderService;

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
-import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricAttribute
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.UUID
 
 internal class SecretsRepositoryWriterTest {
-  private lateinit var configRepository: ConfigRepository
   private lateinit var secretPersistence: MemorySecretPersistence
   private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
   private lateinit var secretsHydrator: RealSecretsHydrator
@@ -40,7 +38,6 @@ internal class SecretsRepositoryWriterTest {
 
   @BeforeEach
   fun setup() {
-    configRepository = mockk()
     secretPersistence = spyk(MemorySecretPersistence())
     metricClient = mockk()
     featureFlagClient = mockk()

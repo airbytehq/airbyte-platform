@@ -18,7 +18,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
@@ -45,7 +44,6 @@ public abstract class BaseOAuthFlowTest {
   private static final String EXPECTED_BUT_GOT = "Expected %s values but got\n\t%s\ninstead of\n\t%s";
 
   private HttpClient httpClient;
-  private ConfigRepository configRepository;
   private OAuthService oAuthService;
   private BaseOAuthFlow oauthFlow;
 
@@ -58,14 +56,9 @@ public abstract class BaseOAuthFlowTest {
     return httpClient;
   }
 
-  protected ConfigRepository getConfigRepository() {
-    return configRepository;
-  }
-
   @BeforeEach
   void setup() throws JsonValidationException, IOException {
     httpClient = mock(HttpClient.class);
-    configRepository = mock(ConfigRepository.class);
     oAuthService = mock(OAuthService.class);
     oauthFlow = getOAuthFlow();
 

@@ -45,6 +45,8 @@ import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
@@ -305,7 +307,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-        new ConfigRepository.ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.empty());
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.empty());
     assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(false));
 
     assertEquals(1, workspaces.size());
@@ -325,7 +327,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-        new ConfigRepository.ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
 
     assertEquals(1, workspaces.size());
     assertWorkspaceEquals(workspace, workspaces.get(0));
@@ -344,7 +346,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-        new ConfigRepository.ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
 
     assertEquals(1, workspaces.size());
     assertWorkspaceEquals(workspace, workspaces.get(0));
@@ -459,7 +461,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     // workspace 4 does not have any permissions associated with it
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByUserIdPaginated(
-        new ConfigRepository.ResourcesByUserQueryPaginated(userId, false, 10, 0), Optional.of("keyWord"));
+        new ResourcesByUserQueryPaginated(userId, false, 10, 0), Optional.of("keyWord"));
 
     // workspace 3 excluded because of lacking keyword, and workspace 4 excluded because no permission
     // despite keyword

@@ -4,7 +4,6 @@
 
 package io.airbyte.server.config;
 
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.StatePersistence;
@@ -22,7 +21,6 @@ import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource;
 import io.micronaut.flyway.FlywayConfigurationProperties;
@@ -83,13 +81,6 @@ public class DatabaseBeanFactory {
         .installedBy(INSTALLED_BY)
         .table(String.format("airbyte_%s_migrations", "jobs"))
         .load();
-  }
-
-  @Singleton
-  @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository() {
-    return new ConfigRepository();
-
   }
 
   @Singleton
