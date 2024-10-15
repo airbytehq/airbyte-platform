@@ -123,7 +123,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
             data-testid="sync-field-checkbox"
           />
         )}
-        {showTooltip && !isNestedField && (
+        {showTooltip && !isNestedField && isColumnSelectionEnabled && (
           <Tooltip
             control={
               <FlexContainer alignItems="center">
