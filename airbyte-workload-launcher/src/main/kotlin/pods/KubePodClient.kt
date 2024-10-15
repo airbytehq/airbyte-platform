@@ -78,6 +78,7 @@ class KubePodClient(
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.useFileTransfer,
+        replicationInput.workspaceId,
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
@@ -125,6 +126,7 @@ class KubePodClient(
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.useFileTransfer,
+        replicationInput.workspaceId,
       )
 
     logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }
@@ -231,6 +233,7 @@ class KubePodClient(
         kubeInput.annotations,
         kubeInput.extraEnv,
         useFetchingInit,
+        kubeInput.workspaceId,
       )
     try {
       pod = kubePodLauncher.create(pod)

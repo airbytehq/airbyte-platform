@@ -4,6 +4,9 @@
 
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.PlatformInitContainerImage
+import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
@@ -16,6 +19,7 @@ import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
 class InitContainerFactory(
@@ -23,6 +27,7 @@ class InitContainerFactory(
   @Named("initEnvVars") private val envVars: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.images.busybox}") private val imageName: String,
   @Named("initContainerInfo") private val initContainerInfo: KubeContainerInfo,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   fun createWaiting(
     resourceReqs: ResourceRequirements,
@@ -70,10 +75,13 @@ class InitContainerFactory(
     resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,
+    workspaceId: UUID,
   ): Container {
+    val initContainerImageOverride = featureFlagClient.stringVariation(PlatformInitContainerImage, Workspace(workspaceId))
+
     return ContainerBuilder()
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
-      .withImage(initContainerInfo.image)
+      .withImage(if (initContainerImageOverride.isEmpty()) initContainerInfo.image else initContainerImageOverride)
       .withImagePullPolicy(initContainerInfo.pullPolicy)
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withResources(resourceReqs)

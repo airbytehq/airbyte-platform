@@ -28,6 +28,7 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replLauncher
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replicationKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.specLauncherInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workspaceId
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -114,7 +115,7 @@ class KubePodClientTest {
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withConnectionId(UUID.randomUUID())
-        .withWorkspaceId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId)
         .withSourceConfiguration(Jsons.emptyObject())
 
     resetInput =
@@ -123,24 +124,27 @@ class KubePodClientTest {
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withIsReset(true)
         .withConnectionId(UUID.randomUUID())
-        .withWorkspaceId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId)
 
     checkInput =
       CheckConnectionInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
-        IntegrationLauncherConfig().withDockerImage("dockerImage"),
+        IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
         null,
       )
 
     discoverInput =
       DiscoverCatalogInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
-        IntegrationLauncherConfig().withDockerImage("dockerImage"),
+        IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
         null,
       )
 
     specInput =
-      SpecInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"))
+      SpecInput(
+        JobRunConfig().withJobId("jobId").withAttemptId(1),
+        IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
+      )
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
@@ -157,6 +161,7 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
         any(),
       )
     } returns pod
@@ -205,6 +210,7 @@ class KubePodClientTest {
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         false,
+        workspaceId,
       )
     } returns pod
     client.launchReplication(
@@ -222,7 +228,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -238,7 +244,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.create(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
+        any(), any(), any(), any(), any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -280,6 +286,7 @@ class KubePodClientTest {
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
         false,
+        workspaceId,
       )
     } returns pod
     client.launchReset(
@@ -297,7 +304,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(),
+        any(), any(), any(), any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -313,7 +320,7 @@ class KubePodClientTest {
     every {
       replicationPodFactory.createReset(
         any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(),
+        any(), any(), any(), any(), any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -335,6 +342,7 @@ class KubePodClientTest {
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
         any(),
+        workspaceId,
       )
     } returns pod
 
@@ -355,6 +363,7 @@ class KubePodClientTest {
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
         any(),
+        workspaceId,
       )
     } returns pod
 
@@ -375,6 +384,7 @@ class KubePodClientTest {
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
         any(),
+        workspaceId,
       )
     } returns pod
 
@@ -403,6 +413,7 @@ class KubePodClientTest {
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
         any(),
+        workspaceId,
       )
     } returns connector
 
@@ -495,6 +506,7 @@ class KubePodClientTest {
         emptyList(),
       )
 
+    val workspaceId = UUID.randomUUID()
     val connectorKubeInput =
       ConnectorKubeInput(
         mapOf("test-connector-label" to "val2"),
@@ -503,7 +515,7 @@ class KubePodClientTest {
         mapOf("test-file" to "val4"),
         mapOf("test-annotation" to "val5"),
         listOf(EnvVar("extra-env", "val6", null)),
-        UUID.randomUUID(),
+        workspaceId,
       )
 
     const val WORKLOAD_ID = "workload-id"

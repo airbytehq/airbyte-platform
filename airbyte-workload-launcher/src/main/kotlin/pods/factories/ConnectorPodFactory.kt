@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
+import java.util.UUID
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class ConnectorPodFactory(
@@ -45,6 +46,7 @@ class ConnectorPodFactory(
     annotations: Map<String, String>,
     runtimeEnvVars: List<EnvVar>,
     useFetchingInit: Boolean,
+    workspaceId: UUID,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -71,7 +73,7 @@ class ConnectorPodFactory(
 
     val init: Container =
       if (useFetchingInit) {
-        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars)
+        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars, workspaceId)
       } else {
         initContainerFactory.createWaiting(connectorResourceReqs, internalVolumeMounts)
       }
