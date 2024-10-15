@@ -198,7 +198,7 @@ export const statusFilterOptions = (filterValues: TimelineFilterValues) => {
   ];
 };
 
-export const eventTypeFilterOptions = (filterValues: TimelineFilterValues, showSchemaEvents: boolean) => {
+export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
   return [
     {
       label: (
@@ -214,9 +214,7 @@ export const eventTypeFilterOptions = (filterValues: TimelineFilterValues, showS
     ...(filterValues.status === ""
       ? [
           generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings"),
-          ...(showSchemaEvents
-            ? [generateEventTypeFilterOption("schema_update", "connection.timeline.filters.schema_update")]
-            : []),
+          generateEventTypeFilterOption("schema_update", "connection.timeline.filters.schema_update"),
         ]
       : []),
   ];

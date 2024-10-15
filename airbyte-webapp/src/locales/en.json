@@ -305,7 +305,6 @@
   "connectionForm.advancedSettings": "Advanced settings",
   "connectionForm.advancedSettings.subtitle": "We've chosen defaults for these settings. Most users don't need to change them.",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
-  "connectionForm.jobHistory": "Job History",
   "connectionForm.update.success": "Connection update succeeded",
   "connectionForm.update.failed": "Connection update failed",
 
@@ -430,7 +429,6 @@
   "sources.schemaUnselectAll": "unselect all",
   "sources.settings": "Settings",
   "sources.source": "Source",
-  "sources.noSync": "No jobs",
   "sources.emptySchema": "Schema is empty",
   "sources.noSources": "Source list is empty",
   "sources.sourceSettings": "Source Settings",
@@ -442,9 +440,6 @@
   "sources.request.prioritize.erd": "We're still building this feature for you. Let us know if you're interested in a Entity Relationship Diagram (ERD) for this source.",
   "sources.request.prioritize.schema": "We're still building this feature for you. Let us know if you're interested in a schema for this source.",
   "sources.request.thankYou": "Thank you for your request.",
-  "jobs.noJobs": "No jobs",
-  "jobs.noJobsDescription": "Start a sync to see jobs here",
-  "jobs.noJobsFilterDescription": "No jobs match your filters",
   "jobs.jobId": "Job id: {id}",
   "jobs.attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
   "jobs.jobStatus.refresh.failed": "Refresh Failed ({count, plural, =0 {0 streams} one {# stream} other {# streams}})",
@@ -660,8 +655,6 @@
   "connection.cancelSync": "Cancel Sync",
   "connection.cancelRefresh": "Cancel Refresh",
   "connection.cancelDataClear": "Cancel Clearing Data",
-  "connection.linkedJobNotFound": "Job not found",
-  "connection.returnToJobHistory": "Return to Job History",
   "connection.updateFailed": "Failed to update connection",
 
   "connection.progress.percentage": "{percent} percent progress",
@@ -1931,13 +1924,6 @@
   "jobHistory.copyLinkToEvent.success": "Link copied to clipboard",
   "jobHistory.viewLogs": "View logs",
   "jobHistory.downloadLogs": "Download logs",
-  "jobHistory.statusFilter.label": "Job status",
-  "jobHistory.statusFilter.allJobs": "All jobs",
-  "jobHistory.statusFilter.failed": "Failed",
-  "jobHistory.statusFilter.successful": "Successful",
-  "jobHistory.statusFilter.cancelled": "Cancelled",
-  "jobHistory.rangeDateFilter": "All jobs to date",
-  "jobHistory.count": "{count, plural, =0 {0 jobs} one {# job} other {# jobs}}",
 
   "auth.authError": "An error occurred during authentication: {errorMessage}",
 

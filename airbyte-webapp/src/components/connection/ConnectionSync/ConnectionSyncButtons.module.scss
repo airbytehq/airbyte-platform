@@ -1,9 +1,0 @@
-@use "scss/colors";
-
-:export {
-  syncIconHeight: 15px;
-}
-
-.clearDataLabel > p {
-  color: colors.$red;
-}

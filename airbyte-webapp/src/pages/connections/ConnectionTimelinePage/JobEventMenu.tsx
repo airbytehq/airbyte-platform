@@ -25,7 +25,7 @@ enum JobMenuOptions {
   DownloadLogs = "DownloadLogs",
 }
 
-export const nextOpenJobLogsModal = ({
+export const openJobLogsModal = ({
   openModal,
   jobId,
   eventId,
@@ -90,7 +90,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   const onChangeHandler = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
       case JobMenuOptions.OpenLogsModal:
-        nextOpenJobLogsModal({
+        openJobLogsModal({
           openModal,
           jobId,
           eventId,

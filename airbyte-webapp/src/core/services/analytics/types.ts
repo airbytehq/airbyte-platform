@@ -34,8 +34,6 @@ export const enum Action {
   NO_MATCHING_CONNECTOR = "NoMatchingConnector",
   SELECTION_OPENED = "SelectionOpened",
   CHECKOUT_START = "CheckoutStart",
-  LOAD_MORE_JOBS = "LoadMoreJobs",
-  LOAD_MORE_EVENTS = "LoadMoreEvents",
   INVITE = "Invite",
   OAUTH_ATTEMPT = "OAuthAttempt",
   OAUTH_SUCCESS = "OAuthSuccess",

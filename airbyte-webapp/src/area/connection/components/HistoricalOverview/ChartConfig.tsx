@@ -3,14 +3,9 @@ import { CategoricalChartState } from "recharts/types/chart/generateCategoricalC
 import { BaseAxisProps } from "recharts/types/util/types";
 import { scaleLinear } from "victory-vendor/d3-scale";
 
-import { Link } from "components/ui/Link";
-
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCurrentConnection } from "core/api";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
-import { nextOpenJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
-import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+import { openJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
 
 import styles from "./ChartConfig.module.scss";
 
@@ -118,10 +113,8 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   const { top: offsetTop = 0, bottom: offsetBottom = 0 } = offset!;
   const availableHeight = height - offsetTop - offsetBottom;
   const { openModal } = useModalService();
-  const isTimelineEnabled = useExperiment("connection.timeline");
 
   const connection = useCurrentConnection();
-  const createLink = useCurrentWorkspaceLink();
 
   const jobId = chartState.activePayload?.at(0)?.payload?.jobId;
 
@@ -129,33 +122,13 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
     return null;
   }
 
-  const pathname = createLink(
-    `/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}`
-  );
-  const hash = jobId.toString();
-
   const handleOpenLogs = () =>
-    nextOpenJobLogsModal({
+    openJobLogsModal({
       openModal,
       jobId,
       connectionId: connection.connectionId,
       connectionName: connection.name,
     });
-
-  if (!isTimelineEnabled) {
-    return (
-      <Link to={`${pathname}#${hash}`}>
-        <rect
-          x={0}
-          y={offsetTop}
-          width="100%"
-          height={availableHeight}
-          fill="transparent"
-          data-testid="streams-graph-to-jobs-link"
-        />
-      </Link>
-    );
-  }
 
   return (
     <rect

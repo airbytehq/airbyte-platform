@@ -10,7 +10,6 @@ import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useCurrentConnection } from "core/api";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionTimelineFilters.module.scss";
 import { eventTypeFilterOptions, statusFilterOptions, TimelineFilterValues } from "./utils";
@@ -31,8 +30,6 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
   resetFilters,
   filtersAreDefault,
 }) => {
-  const areSchemaChangeEventsEnabled = useExperiment("connection.timeline.schemaUpdates");
-
   const { createdAt: connectionCreatedAt } = useCurrentConnection();
   const dayConnectionCreatedAt = dayjs(connectionCreatedAt ?? 0).startOf("day");
   const filterStart = EARLIEST_TIMELINE_EVENTS_AVAILABLE_DATE.isAfter(dayConnectionCreatedAt)
@@ -87,7 +84,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               buttonClassName={styles.filterButton}
               optionClassName={styles.filterOption}
               optionTextAs="span"
-              options={eventTypeFilterOptions(filterValues, areSchemaChangeEventsEnabled)}
+              options={eventTypeFilterOptions(filterValues)}
               selectedValue={filterValues.eventCategory}
               onSelect={(value) => setFilterValue("eventCategory", value)}
             />

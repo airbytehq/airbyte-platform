@@ -209,6 +209,7 @@ export const ConnectionStatusMessages: React.FC = () => {
               </FlexItem>
               <FlexContainer direction="row" gap="sm">
                 <CopyButton content={failureUiDetails.secondaryMessage!} />
+                {/* TODO */}
                 <Link
                   to={`../${ConnectionRoutePaths.JobHistory}#${lastSyncJobId}::${lastSyncAttemptNumber}`}
                   title={formatMessage({ id: "connection.stream.status.seeLogs" })}

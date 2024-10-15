@@ -5,7 +5,6 @@ import { useDebounce } from "react-use";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { buildAttemptLink } from "area/connection/utils/attemptLink";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { copyToClipboard } from "core/utils/clipboard";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -15,16 +14,9 @@ interface Props {
   jobId: string | number;
   attemptId?: number;
   eventId?: string;
-  connectionTimelineEnabled?: boolean;
 }
 
-export const LinkToAttemptButton: React.FC<Props> = ({
-  connectionId,
-  jobId,
-  attemptId,
-  eventId,
-  connectionTimelineEnabled,
-}) => {
+export const LinkToAttemptButton: React.FC<Props> = ({ connectionId, jobId, attemptId, eventId }) => {
   const { formatMessage } = useIntl();
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false);
   const [hideTooltip] = useDebounce(() => setShowCopiedTooltip(false), 3000, [showCopiedTooltip]);
@@ -33,19 +25,15 @@ export const LinkToAttemptButton: React.FC<Props> = ({
   const onCopyLink = async () => {
     const url = new URL(window.location.href);
 
-    if (connectionTimelineEnabled) {
-      url.pathname = `${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${connectionId}/${ConnectionRoutePaths.Timeline}`;
-      url.searchParams.set("openLogs", "true");
-      if (eventId) {
-        url.searchParams.set("eventId", eventId);
-      } else {
-        url.searchParams.set("jobId", jobId.toString());
-      }
-      if (attemptId) {
-        url.searchParams.set("attemptNumber", attemptId.toString());
-      }
+    url.pathname = `${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${connectionId}/${ConnectionRoutePaths.Timeline}`;
+    url.searchParams.set("openLogs", "true");
+    if (eventId) {
+      url.searchParams.set("eventId", eventId);
     } else {
-      url.hash = buildAttemptLink(jobId, attemptId);
+      url.searchParams.set("jobId", jobId.toString());
+    }
+    if (attemptId) {
+      url.searchParams.set("attemptNumber", attemptId.toString());
     }
 
     await copyToClipboard(url.href);

@@ -30,7 +30,7 @@ export const enum ConnectionRoutePaths {
   Transformation = "transformation",
   Replication = "replication",
   Settings = "settings",
-  JobHistory = "job-history",
+  JobHistory = "job-history", // deprecated, used to support legacy logs links
   ConnectionNew = "new-connection",
   Configure = "configure",
   ConfigureContinued = "continued",

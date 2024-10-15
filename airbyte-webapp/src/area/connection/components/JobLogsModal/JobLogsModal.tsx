@@ -27,16 +27,9 @@ interface JobLogsModalProps {
   jobId: number;
   initialAttemptId?: number;
   eventId?: string;
-  connectionTimelineEnabled?: boolean;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({
-  jobId,
-  initialAttemptId,
-  eventId,
-  connectionId,
-  connectionTimelineEnabled,
-}) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, connectionId }) => {
   const job = useJobInfoWithoutLogs(jobId);
 
   if (job.attempts.length === 0) {
@@ -55,18 +48,11 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({
       initialAttemptId={initialAttemptId}
       eventId={eventId}
       connectionId={connectionId}
-      connectionTimelineEnabled={connectionTimelineEnabled}
     />
   );
 };
 
-const JobLogsModalInner: React.FC<JobLogsModalProps> = ({
-  jobId,
-  initialAttemptId,
-  eventId,
-  connectionId,
-  connectionTimelineEnabled,
-}) => {
+const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, connectionId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const job = useJobInfoWithoutLogs(jobId);
 
@@ -252,7 +238,6 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({
               jobId={jobId}
               attemptId={selectedAttemptId}
               eventId={eventId}
-              connectionTimelineEnabled={connectionTimelineEnabled}
             />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
