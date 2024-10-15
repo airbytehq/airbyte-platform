@@ -137,7 +137,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
     final var replicationInput = mock(ReplicationInput.class);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false, false));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false));
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();

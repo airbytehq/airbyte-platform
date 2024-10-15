@@ -4,16 +4,12 @@
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.LogStateMsgs;
-import io.airbyte.featureflag.UseFileTransferMode;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
@@ -38,7 +34,7 @@ public class ReplicationFeatureFlagReader {
    */
   public ReplicationFeatureFlags readReplicationFeatureFlags() {
     return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate(), getWorkloadHeartbeatTimeout(),
-        failOnInvalidChecksum(), logStateMessages(), logConnectorMessages(), useFileTransfer());
+        failOnInvalidChecksum(), logStateMessages(), logConnectorMessages());
   }
 
   private int getWorkloadHeartbeatRate() {
@@ -63,16 +59,6 @@ public class ReplicationFeatureFlagReader {
 
   private boolean logConnectorMessages() {
     return featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, flagContext);
-  }
-
-  /**
-   * This is a very temporary flag to test the file transfer mode. It will be removed once we have a
-   * good way to read the need to use file transfer mode from the actor config. This flag is anonymous
-   * because for our test we don't have to scope it. It is also use in the
-   * {@link ReplicationPodFactory} with an anonymous scope.
-   */
-  private boolean useFileTransfer() {
-    return featureFlagClient.boolVariation(UseFileTransferMode.INSTANCE, new Connection(ANONYMOUS));
   }
 
 }
