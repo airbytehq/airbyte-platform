@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
+import { AnyObject } from "yup/lib/types";
 
 import {
   ListPartitionRouter,
@@ -15,6 +16,7 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 
 import {
   API_KEY_AUTHENTICATOR,
+  BuilderStream,
   CURSOR_PAGINATION,
   CUSTOM_PARTITION_ROUTER,
   LIST_PARTITION_ROUTER,
@@ -109,7 +111,17 @@ export const useBuilderValidationSchema = () => {
   const streamSchema = useMemo(
     () =>
       yup.object().shape({
-        name: yup.string().required(REQUIRED_ERROR),
+        name: yup
+          .string()
+          .required(REQUIRED_ERROR)
+          .test(
+            "unique-stream-name",
+            "connectorBuilder.unique",
+            (value: string | undefined, testContext: AnyObject) => {
+              const allStreamNames = testContext.from[1].value.streams.map((stream: BuilderStream) => stream.name);
+              return allStreamNames.filter((name: string) => name === value).length === 1;
+            }
+          ),
         urlPath: yup.string().required(REQUIRED_ERROR),
         primaryKey: yup.array().of(yup.string()),
         httpMethod: httpMethodSchema,
