@@ -11,7 +11,7 @@ data class ConnectorRolloutOutput(
   var actorDefinitionId: UUID? = null,
   var releaseCandidateVersionId: UUID? = null,
   var initialVersionId: UUID? = null,
-  var state: ConnectorEnumRolloutState? = null,
+  var state: ConnectorEnumRolloutState,
   var initialRolloutPct: Int? = null,
   var currentTargetRolloutPct: Int? = null,
   var finalTargetRolloutPct: Int? = null,

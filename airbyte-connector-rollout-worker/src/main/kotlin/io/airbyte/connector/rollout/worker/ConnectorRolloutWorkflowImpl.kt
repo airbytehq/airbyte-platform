@@ -8,6 +8,7 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ActionType
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputCleanup
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
@@ -16,6 +17,7 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputR
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputVerifyDefaultVersion
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.worker.activities.CleanupActivity
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivity
@@ -93,25 +95,28 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       verifyActivityOptions,
     )
 
-  private var succeeded = false
-  private var canceled = false
-  private var errored = false
-  private var failed = false
+  private val cleanupActivity =
+    Workflow.newActivityStub(
+      CleanupActivity::class.java,
+      defaultActivityOptions,
+    )
+
   private var startRolloutFailed = false
+  private var state = ConnectorEnumRolloutState.INITIALIZED
 
   override fun run(input: ConnectorRolloutActivityInputStart): ConnectorEnumRolloutState {
     val workflowId = "${input.dockerRepository}:${input.dockerImageTag}:${input.actorDefinitionId.toString().substring(0, 8)}"
     logger.info { "Initialized rollout for $workflowId" }
-    Workflow.await { startRolloutFailed || failed || errored || canceled || succeeded }
-    return when {
-      startRolloutFailed -> throw ApplicationFailure.newFailure(
+    // End the workflow if we were unable to start the rollout, or we've reached a terminal state
+    Workflow.await { startRolloutFailed || ConnectorRolloutFinalState.entries.any { it.value() == state.value() } }
+    if (startRolloutFailed) {
+      throw ApplicationFailure.newFailure(
         "Failure starting rollout for $workflowId",
-        ConnectorEnumRolloutState.ERRORED.value(),
+        ConnectorEnumRolloutState.CANCELED_ROLLED_BACK.value(),
       )
-      failed -> ConnectorEnumRolloutState.FAILED_ROLLED_BACK
-      canceled -> ConnectorEnumRolloutState.CANCELED_ROLLED_BACK
-      else -> ConnectorEnumRolloutState.SUCCEEDED
     }
+    logger.info { "Rollout for $workflowId has reached a terminal state: $state" }
+    return state
   }
 
   override fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
@@ -120,14 +125,22 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     return try {
       val output = startRolloutActivity.startRollout(workflowRunId, input)
       logger.info { "startRolloutActivity.startRollout" }
+      state = output.state
       output
     } catch (e: Exception) {
+      val newState = ConnectorEnumRolloutState.CANCELED_ROLLED_BACK
+      cleanupActivity.cleanup(
+        ConnectorRolloutActivityInputCleanup(
+          newState = newState,
+          dockerRepository = input.dockerRepository,
+          dockerImageTag = input.dockerImageTag,
+          actorDefinitionId = input.actorDefinitionId,
+          rolloutId = input.rolloutId,
+          errorMsg = "Failed to start rollout.",
+        ),
+      )
       startRolloutFailed = true
-      if (e.cause != null) {
-        throw e.cause!!
-      } else {
-        throw e
-      }
+      throw e
     }
   }
 
@@ -169,6 +182,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   override fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
     logger.info { "doRollout: calling doRolloutActivity" }
     val output = doRolloutActivity.doRollout(input)
+    state = output.state
     logger.info { "doRolloutActivity.doRollout pinned_connections = ${output.actorIds}" }
     return output
   }
@@ -184,23 +198,29 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     // Start a GH workflow to make the release candidate available as `latest`, if the rollout was successful
     // Delete the release candidate on either success or failure (but not cancellation)
     if (input.result == ConnectorRolloutFinalState.SUCCEEDED || input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
-      logger.info { "finalizeRollout: calling promoteOrRollback" }
-      promoteOrRollbackActivity.promoteOrRollback(
-        ConnectorRolloutActivityInputPromoteOrRollback(
-          dockerRepository = input.dockerRepository,
-          technicalName = input.dockerRepository.substringAfter("airbyte/"),
-          dockerImageTag = input.dockerImageTag,
-          action =
-            if (input.result == ConnectorRolloutFinalState.SUCCEEDED) {
-              ActionType.PROMOTE
-            } else if (input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
-              ActionType.ROLLBACK
-            } else {
-              throw IllegalArgumentException("Unrecognized status: $input.result")
-            },
-          rolloutId = input.rolloutId,
-        ),
-      )
+      if (state == ConnectorEnumRolloutState.FINALIZING) {
+        logger.info { "finalizeRollout: already promoted/rolled back, skipping; if you need to re-run the GHA please do so manually " }
+      } else {
+        logger.info { "finalizeRollout: calling promoteOrRollback" }
+        val output =
+          promoteOrRollbackActivity.promoteOrRollback(
+            ConnectorRolloutActivityInputPromoteOrRollback(
+              dockerRepository = input.dockerRepository,
+              technicalName = input.dockerRepository.substringAfter("airbyte/"),
+              dockerImageTag = input.dockerImageTag,
+              action =
+                if (input.result == ConnectorRolloutFinalState.SUCCEEDED) {
+                  ActionType.PROMOTE
+                } else if (input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
+                  ActionType.ROLLBACK
+                } else {
+                  throw IllegalArgumentException("Unrecognized status: $input.result")
+                },
+              rolloutId = input.rolloutId,
+            ),
+          )
+        state = output.state
+      }
     }
 
     // Verify the release candidate is the default version
@@ -220,12 +240,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     logger.info { "finalizeRollout: calling finalizeRolloutActivity" }
     val rolloutResult = finalizeRolloutActivity.finalizeRollout(input)
     logger.info { "finalizeRolloutActivity.finalizeRollout rolloutResult = $rolloutResult" }
-    when (input.result) {
-      ConnectorRolloutFinalState.SUCCEEDED -> succeeded = true
-      ConnectorRolloutFinalState.FAILED_ROLLED_BACK -> failed = true
-      ConnectorRolloutFinalState.CANCELED_ROLLED_BACK -> canceled = true
-      else -> errored = true
-    }
+    state = rolloutResult.state
     return rolloutResult
   }
 

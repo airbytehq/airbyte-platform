@@ -5255,13 +5255,13 @@ paths:
       tags:
         - connector_rollout
 
-  /v1/connector_rollout/update_finalizing:
+  /v1/connector_rollout/update_state:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectorRolloutUpdateFinalizingRequestBody"
+              $ref: "#/components/schemas/ConnectorRolloutUpdateStateRequestBody"
       responses:
         "200":
           description: Updated connector rollout object
@@ -5274,8 +5274,8 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-      summary: Update rollout state to indicate that a request was sent to finalize the release candidate.
-      operationId: updateConnectorRolloutFinalizing
+      summary: Update rollout state
+      operationId: updateConnectorRolloutState
       tags:
         - connector_rollout
 
@@ -7604,13 +7604,26 @@ components:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
 
-    ConnectorRolloutUpdateFinalizingRequestBody:
+    ConnectorRolloutUpdateStateRequestBody:
       required:
-        - id
+        - state
       properties:
         id:
           type: string
           format: uuid
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutState"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
 
     ConnectorRolloutFinalizeRequestBody:
       type: object

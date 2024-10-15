@@ -1,6 +1,5 @@
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
@@ -10,7 +9,6 @@ import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateFinalizingRequestBody
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -24,7 +22,6 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.ScopedConfigurationService
-import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -36,31 +33,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
-
-class ActiveStatesProvider : ArgumentsProvider {
-  override fun provideArguments(context: org.junit.jupiter.api.extension.ExtensionContext): Stream<out Arguments> {
-    val terminalStateLiterals =
-      ConnectorRolloutFinalState.entries
-        .map { it.value() }
-        .toSet()
-
-    return ConnectorRolloutStateType.entries
-      .filterNot {
-        it.literal in terminalStateLiterals
-      }
-      .map { Arguments.of(it) }
-      .stream()
-  }
-}
 
 internal class ConnectorRolloutHandlerTest {
   private val connectorRolloutService = mockk<ConnectorRolloutService>()
@@ -524,7 +502,7 @@ internal class ConnectorRolloutHandlerTest {
 
   @ParameterizedTest
   @MethodSource("validFinalizeStates")
-  fun `test getAndValidateFinalizingRequest with valid state`(state: ConnectorEnumRolloutState) {
+  fun `test getAndValidateUpdateStateRequest with valid state`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
@@ -534,7 +512,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
 
     val result =
-      connectorRolloutHandler.getAndValidateFinalizingRequest(rolloutId)
+      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.FINALIZING, null, null)
 
     assertEquals(connectorRollout, result)
 
@@ -545,7 +523,7 @@ internal class ConnectorRolloutHandlerTest {
 
   @ParameterizedTest
   @MethodSource("invalidFinalizeStates")
-  fun `test getAndValidateFinalizingRequest with invalid state throws exception`(state: ConnectorEnumRolloutState) {
+  fun `test getAndValidateUpdateStateRequest with invalid state throws exception`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
@@ -555,7 +533,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getAndValidateFinalizingRequest(rolloutId)
+      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.SUCCEEDED, null, null)
     }
 
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
@@ -574,7 +552,7 @@ internal class ConnectorRolloutHandlerTest {
     val connectorRollout = createMockConnectorRollout(rolloutId)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     every {
@@ -614,11 +592,11 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been started
     connectorRollout.apply { this.state = state }
 
-    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.IN_PROGRESS)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
 
-    val result = connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate)
+    val result = connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutWorkflowUpdate)
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
@@ -647,12 +625,12 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been initialized, but workflow hasn't been started
     connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
 
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput()
-    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput()
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.IN_PROGRESS)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
 
-    val result = connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate)
+    val result = connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutWorkflowUpdate)
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
@@ -779,14 +757,8 @@ internal class ConnectorRolloutHandlerTest {
 
   @Test
   fun `test getOrCreateAndValidateManualStartInput throws ConnectorRolloutInvalidRequestProblem when docker repository doesn't match`() {
-    val rolloutId = UUID.randomUUID()
     val dockerRepository = "wrong-repo"
     val actorDefinitionVersion = createMockActorDefinitionVersion()
-
-    val connectorRollout =
-      createMockConnectorRollout(rolloutId).apply {
-        this.state = ConnectorEnumRolloutState.INITIALIZED
-      }
 
     every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
 
@@ -821,18 +793,6 @@ internal class ConnectorRolloutHandlerTest {
     }
   }
 
-  private fun createMockConnectorRolloutCreateRequestBody(): ConnectorRolloutCreateRequestBody {
-    return ConnectorRolloutCreateRequestBody()
-      .dockerRepository(DOCKER_REPOSITORY)
-      .dockerImageTag(DOCKER_IMAGE_TAG)
-      .actorDefinitionId(ACTOR_DEFINITION_ID)
-      .initialRolloutPct(10)
-      .finalTargetRolloutPct(100)
-      .hasBreakingChanges(false)
-      .maxStepWaitTimeMins(60)
-      .expiresAt(OffsetDateTime.now().plusDays(1))
-  }
-
   private fun createMockConnectorRolloutStartRequestBody(): ConnectorRolloutStartRequestBody {
     return ConnectorRolloutStartRequestBody()
       .id(UUID.randomUUID())
@@ -863,10 +823,6 @@ internal class ConnectorRolloutHandlerTest {
       .rolloutStrategy(rolloutStrategy)
       .errorMsg(errorMsg)
       .failedReason(failedReason)
-  }
-
-  private fun createMockConnectorRolloutFinalizingRequestBody(rolloutId: UUID): ConnectorRolloutUpdateFinalizingRequestBody {
-    return ConnectorRolloutUpdateFinalizingRequestBody().id(rolloutId)
   }
 
   private fun createMockActorDefinitionVersion(): ActorDefinitionVersion {

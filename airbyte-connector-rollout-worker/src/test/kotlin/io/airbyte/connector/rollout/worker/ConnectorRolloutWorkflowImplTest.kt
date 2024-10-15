@@ -1,12 +1,15 @@
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
+import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.worker.activities.CleanupActivity
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivity
@@ -31,6 +34,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.Mockito
+import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import java.util.UUID
 
 class ConnectorRolloutWorkflowImplTest {
@@ -73,6 +79,11 @@ class ConnectorRolloutWorkflowImplTest {
       VerifyDefaultVersionActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
+  val cleanupActivity: CleanupActivity =
+    Mockito.mock<CleanupActivity>(
+      CleanupActivity::class.java,
+      Mockito.withSettings().withoutAnnotations(),
+    )
 
   companion object {
     private const val TEST_TASK_QUEUE = "test_task_queue"
@@ -97,6 +108,7 @@ class ConnectorRolloutWorkflowImplTest {
     worker = testEnv.newWorker(TEST_TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
     worker.registerActivitiesImplementations(
+      cleanupActivity,
       doRolloutActivity,
       finalizeRolloutActivity,
       findRolloutActivity,
@@ -142,6 +154,17 @@ class ConnectorRolloutWorkflowImplTest {
   @ParameterizedTest
   @EnumSource(ConnectorRolloutFinalState::class)
   fun `test ConnectorRolloutWorkflow state`(finalState: ConnectorRolloutFinalState) {
+    `when`(startRolloutActivity.startRollout(Mockito.anyString(), MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
+    if (finalState != ConnectorRolloutFinalState.CANCELED_ROLLED_BACK) {
+      `when`(
+        promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()),
+      ).thenReturn(ConnectorRolloutOutput(state = ConnectorEnumRolloutState.FINALIZING))
+    }
+    `when`(
+      finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.fromValue(finalState.value())))
+
     // Send a request to the startRollout `update` handler
     workflowStub.startRollout(
       ConnectorRolloutActivityInputStart(
@@ -151,7 +174,6 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
       ),
     )
-
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
         DOCKER_REPOSITORY,
@@ -166,10 +188,16 @@ class ConnectorRolloutWorkflowImplTest {
 
     val result = workflowById.getResult(String::class.java)
     assertEquals(finalState.toString(), result)
+
+    verify(startRolloutActivity).startRollout(Mockito.anyString(), MockitoHelper.anyObject())
+    if (finalState != ConnectorRolloutFinalState.CANCELED_ROLLED_BACK) {
+      verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
+    }
+    verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
   @Test
-  fun `test startRollout fails causes workflow failure`() {
+  fun `test startRollout fails causes workflow failure and calls cleanup activity`() {
     testEnv =
       TestWorkflowEnvironment.newInstance(
         TestEnvironmentOptions.newBuilder().setWorkflowClientOptions(
@@ -186,14 +214,16 @@ class ConnectorRolloutWorkflowImplTest {
         StartRolloutActivity::class.java,
         Mockito.withSettings().withoutAnnotations(),
       )
-    Mockito.`when`(
+    `when`(
       startRolloutActivity.startRollout(
         Mockito.anyString(),
         MockitoHelper.anyObject(),
       ),
     ).thenThrow(RuntimeException("Simulated failure in startRollout"))
+    doNothing().`when`(cleanupActivity).cleanup(MockitoHelper.anyObject())
 
     worker.registerActivitiesImplementations(
+      cleanupActivity,
       doRolloutActivity,
       finalizeRolloutActivity,
       findRolloutActivity,
@@ -248,6 +278,9 @@ class ConnectorRolloutWorkflowImplTest {
     }
     val workflowById: WorkflowStub = testEnv.workflowClient.newUntypedWorkflowStub(WORKFLOW_ID)
 
+    // Verify that the cleanup activity was called
+    verify(cleanupActivity).cleanup(MockitoHelper.anyObject())
+
     // Verify that the exception causes the workflow to fail
     assertThrows(WorkflowFailedException::class.java) {
       workflowById.getResult(String::class.java)
@@ -256,6 +289,8 @@ class ConnectorRolloutWorkflowImplTest {
 
   @Test
   fun `test doRollout update handler`() {
+    `when`(doRolloutActivity.doRollout(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.IN_PROGRESS))
     workflowStub.doRollout(
       ConnectorRolloutActivityInputRollout(
         DOCKER_REPOSITORY,
@@ -265,7 +300,7 @@ class ConnectorRolloutWorkflowImplTest {
         ACTOR_IDS,
       ),
     )
-    Mockito.verify(doRolloutActivity).doRollout(MockitoHelper.anyObject())
+    verify(doRolloutActivity).doRollout(MockitoHelper.anyObject())
   }
 
   @Test
@@ -278,7 +313,7 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
       ),
     )
-    Mockito.verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
+    verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
   }
 
   @Test
@@ -290,11 +325,16 @@ class ConnectorRolloutWorkflowImplTest {
         ACTOR_DEFINITION_ID,
       ),
     )
-    Mockito.verify(findRolloutActivity).findRollout(MockitoHelper.anyObject())
+    verify(findRolloutActivity).findRollout(MockitoHelper.anyObject())
   }
 
   @Test
   fun `test finalizeRollout update handler calls promote and verify and finalize on SUCCEEDED`() {
+    `when`(promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.FINALIZING))
+    `when`(finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.SUCCEEDED))
+
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
         DOCKER_REPOSITORY,
@@ -304,13 +344,18 @@ class ConnectorRolloutWorkflowImplTest {
         ConnectorRolloutFinalState.SUCCEEDED,
       ),
     )
-    Mockito.verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
-    Mockito.verify(verifyDefaultVersionActivity).verifyDefaultVersion(MockitoHelper.anyObject())
-    Mockito.verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
+    verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
   @Test
   fun `test finalizeRollout update handler calls rollback and finalize on FAILED_ROLLED_BACK`() {
+    `when`(promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.FINALIZING))
+    `when`(finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.FAILED_ROLLED_BACK))
+
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
         DOCKER_REPOSITORY,
@@ -320,13 +365,16 @@ class ConnectorRolloutWorkflowImplTest {
         ConnectorRolloutFinalState.FAILED_ROLLED_BACK,
       ),
     )
-    Mockito.verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
-    Mockito.verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
-    Mockito.verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
+    verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
   @Test
   fun `test finalizeRollout update handler only calls finalize on CANCELED_ROLLED_BACK`() {
+    `when`(finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.CANCELED_ROLLED_BACK))
+
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
         DOCKER_REPOSITORY,
@@ -336,9 +384,9 @@ class ConnectorRolloutWorkflowImplTest {
         ConnectorRolloutFinalState.CANCELED_ROLLED_BACK,
       ),
     )
-    Mockito.verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
-    Mockito.verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
-    Mockito.verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
+    verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
   object MockitoHelper {
@@ -349,5 +397,9 @@ class ConnectorRolloutWorkflowImplTest {
 
     @Suppress("UNCHECKED_CAST")
     fun <T> uninitialized(): T = null as T
+  }
+
+  fun getMockOutput(state: ConnectorEnumRolloutState): ConnectorRolloutOutput {
+    return ConnectorRolloutOutput(state = state)
   }
 }

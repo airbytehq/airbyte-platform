@@ -635,7 +635,7 @@ components:
               default: Invalid Connector Rollout request
             detail:
               type: string
-              default: Invalid connector rollout request. Check the logs for more information.
+              default: Invalid connector rollout request.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ProblemCronData:

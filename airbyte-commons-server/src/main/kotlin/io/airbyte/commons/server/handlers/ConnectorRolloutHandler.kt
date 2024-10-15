@@ -14,7 +14,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutState
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateFinalizingRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -23,6 +23,7 @@ import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTION
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
@@ -32,6 +33,8 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.transaction.annotation.Transactional
+import io.temporal.client.WorkflowUpdateException
+import io.temporal.failure.ApplicationFailure
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -272,19 +275,26 @@ open class ConnectorRolloutHandler
     }
 
     @VisibleForTesting
-    open fun getAndValidateFinalizingRequest(id: UUID): ConnectorRollout {
+    open fun getAndValidateUpdateStateRequest(
+      id: UUID,
+      state: ConnectorEnumRolloutState,
+      errorMsg: String?,
+      failedReason: String?,
+    ): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(id)
-      val invalidFinalizeStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
-      if (connectorRollout.state in invalidFinalizeStates
+      val invalidUpdateStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
+      if (connectorRollout.state in invalidUpdateStates
       ) {
         throw ConnectorRolloutInvalidRequestProblem(
           ProblemMessageData().message(
-            "Connector rollout may not be in a terminal state when finalizing the rollout, but was in state " + connectorRollout.state.toString(),
+            "Connector rollout may not be in a terminal state when updating the rollout state, but was in state " + connectorRollout.state.toString(),
           ),
         )
       }
       return connectorRollout
-        .withState(ConnectorEnumRolloutState.FINALIZING)
+        .withState(state)
+        .withErrorMsg(errorMsg)
+        .withFailedReason(failedReason)
     }
 
     private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime {
@@ -350,8 +360,24 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRollout)
     }
 
-    open fun updateStateFinalizing(connectorRolloutUpdateFinalizingRequestBody: ConnectorRolloutUpdateFinalizingRequestBody): ConnectorRolloutRead {
-      val connectorRollout = getAndValidateFinalizingRequest(connectorRolloutUpdateFinalizingRequestBody.id)
+    open fun updateState(connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
+      val rollout: ConnectorRollout
+      if (connectorRolloutUpdateStateRequestBody.id == null) {
+        rollout =
+          getRolloutByActorDefinitionIdAndDockerImageTag(
+            connectorRolloutUpdateStateRequestBody.actorDefinitionId,
+            connectorRolloutUpdateStateRequestBody.dockerImageTag,
+          )
+      } else {
+        rollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdateStateRequestBody.id)
+      }
+      val connectorRollout =
+        getAndValidateUpdateStateRequest(
+          rollout.id,
+          ConnectorEnumRolloutState.fromValue(connectorRolloutUpdateStateRequestBody.state.toString()),
+          connectorRolloutUpdateStateRequestBody.errorMsg,
+          connectorRolloutUpdateStateRequestBody.failedReason,
+        )
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return buildConnectorRolloutRead(updatedConnectorRollout)
     }
@@ -364,40 +390,54 @@ open class ConnectorRolloutHandler
           connectorRolloutWorkflowStart.dockerImageTag,
           connectorRolloutWorkflowStart.updatedBy,
         )
-      connectorRolloutClient.startRollout(
-        ConnectorRolloutActivityInputStart(
-          connectorRolloutWorkflowStart.dockerRepository,
-          connectorRolloutWorkflowStart.dockerImageTag,
-          connectorRolloutWorkflowStart.actorDefinitionId,
-          rollout.id,
-        ),
-      )
+      try {
+        connectorRolloutClient.startRollout(
+          ConnectorRolloutActivityInputStart(
+            connectorRolloutWorkflowStart.dockerRepository,
+            connectorRolloutWorkflowStart.dockerImageTag,
+            connectorRolloutWorkflowStart.actorDefinitionId,
+            rollout.id,
+          ),
+        )
+      } catch (e: WorkflowUpdateException) {
+        rollout.state = ConnectorEnumRolloutState.CANCELED_ROLLED_BACK
+        connectorRolloutService.writeConnectorRollout(rollout)
+        throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
+      }
 
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(rollout.id))
     }
 
-    open fun manualDoConnectorRolloutWorkflowUpdate(connectorRolloutWorkflowUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
-      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutWorkflowUpdate.id)
+    open fun manualDoConnectorRolloutUpdate(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id)
       if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
-        connectorRolloutClient.startRollout(
-          ConnectorRolloutActivityInputStart(
-            connectorRolloutWorkflowUpdate.dockerRepository,
-            connectorRolloutWorkflowUpdate.dockerImageTag,
-            connectorRolloutWorkflowUpdate.actorDefinitionId,
-            connectorRolloutWorkflowUpdate.id,
+        try {
+          connectorRolloutClient.startRollout(
+            ConnectorRolloutActivityInputStart(
+              connectorRolloutUpdate.dockerRepository,
+              connectorRolloutUpdate.dockerImageTag,
+              connectorRolloutUpdate.actorDefinitionId,
+              connectorRolloutUpdate.id,
+            ),
+          )
+        } catch (e: WorkflowUpdateException) {
+          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
+        }
+      }
+      try {
+        connectorRolloutClient.doRollout(
+          ConnectorRolloutActivityInputRollout(
+            connectorRolloutUpdate.dockerRepository,
+            connectorRolloutUpdate.dockerImageTag,
+            connectorRolloutUpdate.actorDefinitionId,
+            connectorRolloutUpdate.id,
+            connectorRolloutUpdate.actorIds,
           ),
         )
+      } catch (e: WorkflowUpdateException) {
+        throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
       }
-      connectorRolloutClient.doRollout(
-        ConnectorRolloutActivityInputRollout(
-          connectorRolloutWorkflowUpdate.dockerRepository,
-          connectorRolloutWorkflowUpdate.dockerImageTag,
-          connectorRolloutWorkflowUpdate.actorDefinitionId,
-          connectorRolloutWorkflowUpdate.id,
-          connectorRolloutWorkflowUpdate.actorIds,
-        ),
-      )
-      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutWorkflowUpdate.id))
+      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id))
     }
 
     open fun manualFinalizeConnectorRolloutWorkflowUpdate(
@@ -409,15 +449,19 @@ open class ConnectorRolloutHandler
           "dockerImageTag=${connectorRolloutFinalizeWorkflowUpdate.dockerImageTag}" +
           "actorDefinitionId=${connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId}"
       }
-      connectorRolloutClient.finalizeRollout(
-        ConnectorRolloutActivityInputFinalize(
-          connectorRolloutFinalizeWorkflowUpdate.dockerRepository,
-          connectorRolloutFinalizeWorkflowUpdate.dockerImageTag,
-          connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId,
-          connectorRolloutFinalizeWorkflowUpdate.id,
-          ConnectorRolloutFinalState.fromValue(connectorRolloutFinalizeWorkflowUpdate.state.toString()),
-        ),
-      )
+      try {
+        connectorRolloutClient.finalizeRollout(
+          ConnectorRolloutActivityInputFinalize(
+            connectorRolloutFinalizeWorkflowUpdate.dockerRepository,
+            connectorRolloutFinalizeWorkflowUpdate.dockerImageTag,
+            connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId,
+            connectorRolloutFinalizeWorkflowUpdate.id,
+            ConnectorRolloutFinalState.fromValue(connectorRolloutFinalizeWorkflowUpdate.state.toString()),
+          ),
+        )
+      } catch (e: WorkflowUpdateException) {
+        throw throwAirbyteApiClientExceptionIfExists("finalizeRollout", e)
+      }
       val response = ConnectorRolloutManualFinalizeResponse()
       response.status("ok")
       return response
@@ -432,5 +476,69 @@ open class ConnectorRolloutHandler
         ConnectorEnumRolloutStrategy.MANUAL -> userPersistence.getUser(updatedById).get().email
         else -> ""
       }
+    }
+
+    private fun isTerminalState(state: ConnectorEnumRolloutState): Boolean {
+      return ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }.contains(state)
+    }
+
+    private fun getRolloutByActorDefinitionIdAndDockerImageTag(
+      actorDefinitionId: UUID,
+      dockerImageTag: String,
+    ): ConnectorRollout {
+      val actorDefinitionVersion =
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
+          .orElseThrow {
+            throw ConnectorRolloutInvalidRequestProblem(
+              ProblemMessageData().message(
+                "Actor definition version not found for actor definition id: $actorDefinitionId and docker image tag: $dockerImageTag",
+              ),
+            )
+          }
+      val rollouts =
+        connectorRolloutService.listConnectorRollouts(actorDefinitionId, actorDefinitionVersion.versionId).filter {
+          !isTerminalState(it.state)
+        }
+      if (rollouts.size != 1) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "Expected 1 rollout in a non-terminal state, found ${rollouts.size}.",
+          ),
+        )
+      }
+      return rollouts.first()
+    }
+
+    private fun throwAirbyteApiClientExceptionIfExists(
+      handlerName: String,
+      e: WorkflowUpdateException,
+    ): Throwable {
+      if (isAirbyteApiClientException(e)) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          extractAirbyteApiClientException(e),
+          ProblemMessageData().message("An error occurred in the `$handlerName` update handler."),
+        )
+      } else {
+        throw e
+      }
+    }
+
+    @VisibleForTesting
+    fun extractAirbyteApiClientException(e: WorkflowUpdateException): String {
+      val exc = getAirbyteApiClientException(e) as ApplicationFailure
+      logger.error { "AirbyteApiClientException: $exc" }
+      return exc.originalMessage
+    }
+
+    private fun isAirbyteApiClientException(e: WorkflowUpdateException): Boolean {
+      val cause = e.cause?.cause
+      if (cause is ApplicationFailure) {
+        return cause.type == AIRBYTE_API_CLIENT_EXCEPTION
+      }
+      return false
+    }
+
+    private fun getAirbyteApiClientException(e: WorkflowUpdateException): Throwable {
+      return e.cause?.cause ?: e.cause ?: e
     }
   }

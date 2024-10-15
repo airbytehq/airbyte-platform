@@ -280,7 +280,7 @@ class ActorDefinitionVersionUpdater(
 
     val ineligibleActorIds = actorIds.toSet() - allEligibleActorIds
     if (ineligibleActorIds.isNotEmpty()) {
-      throw InvalidRequestException("Rollout update failed; the following actors are already pinned: $ineligibleActorIds")
+      throw InvalidRequestException("Rollout update failed; the following actors do not exist or are already pinned: $ineligibleActorIds")
     }
 
     val scopedConfigurationsToCreate =

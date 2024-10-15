@@ -57,7 +57,7 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
     } catch (e: IOException) {
       throw Activity.wrap(e)
     } catch (e: ClientException) {
-      throw Activity.wrap(e)
+      handleAirbyteApiClientException(e)
     }
   }
 }

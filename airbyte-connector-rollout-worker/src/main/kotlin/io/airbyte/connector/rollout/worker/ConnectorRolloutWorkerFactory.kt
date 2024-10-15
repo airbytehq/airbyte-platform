@@ -5,6 +5,7 @@
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.connector.rollout.shared.Constants
+import io.airbyte.connector.rollout.worker.activities.CleanupActivityImpl
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl
@@ -35,6 +36,7 @@ class ConnectorRolloutWorkerFactory {
     finalizeRolloutActivityImpl: FinalizeRolloutActivityImpl,
     promoteOrRollbackActivityImpl: PromoteOrRollbackActivityImpl,
     verifyDefaultVersionActivityImpl: VerifyDefaultVersionActivityImpl,
+    cleanupActivityImpl: CleanupActivityImpl,
   ): WorkerFactory {
     logger.info { "ConnectorRolloutWorkerFactory registering workflow" }
     val workerFactory = WorkerFactory.newInstance(workflowClient)
@@ -48,6 +50,7 @@ class ConnectorRolloutWorkerFactory {
       finalizeRolloutActivityImpl,
       promoteOrRollbackActivityImpl,
       verifyDefaultVersionActivityImpl,
+      cleanupActivityImpl,
     )
     return workerFactory
   }

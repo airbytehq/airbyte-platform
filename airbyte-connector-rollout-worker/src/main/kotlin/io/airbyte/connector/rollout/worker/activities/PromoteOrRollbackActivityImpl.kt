@@ -2,9 +2,12 @@ package io.airbyte.connector.rollout.worker.activities
 
 import com.google.gson.Gson
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.ConnectorRolloutUpdateFinalizingRequestBody
+import io.airbyte.api.client.model.generated.ConnectorRolloutState
+import io.airbyte.api.client.model.generated.ConnectorRolloutUpdateStateRequestBody
+import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -35,11 +38,13 @@ class PromoteOrRollbackActivityImpl(
     logger.info { "Initialized PromotePromoteOrRollbackActivityImpl" }
   }
 
-  override fun promoteOrRollback(input: ConnectorRolloutActivityInputPromoteOrRollback) {
+  override fun promoteOrRollback(input: ConnectorRolloutActivityInputPromoteOrRollback): ConnectorRolloutOutput {
     triggerGitHubWorkflow(input.dockerRepository, input.dockerImageTag, input.technicalName, input.action)
-    airbyteApiClient.connectorRolloutApi.updateConnectorRolloutFinalizing(
-      ConnectorRolloutUpdateFinalizingRequestBody(input.rolloutId),
-    )
+    val response =
+      airbyteApiClient.connectorRolloutApi.updateConnectorRolloutState(
+        ConnectorRolloutUpdateStateRequestBody(ConnectorRolloutState.FINALIZING, input.rolloutId),
+      )
+    return ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
   }
 
   private fun triggerGitHubWorkflow(

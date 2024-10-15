@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutStartResponse;
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateFinalizingRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody;
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -144,14 +144,14 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   }
 
   @SuppressWarnings("LineLength")
-  @Post("/update_finalizing")
+  @Post("/update_state")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutResponse updateConnectorRolloutFinalizing(@Body final ConnectorRolloutUpdateFinalizingRequestBody connectorRolloutUpdateFinalizingRequestBody) {
+  public ConnectorRolloutResponse updateConnectorRolloutState(@Body final ConnectorRolloutUpdateStateRequestBody connectorRolloutUpdateStateRequestBody) {
     return ApiHelper.execute(() -> {
       final ConnectorRolloutRead updatedConnectorRollout =
-          connectorRolloutHandler.updateStateFinalizing(connectorRolloutUpdateFinalizingRequestBody);
+          connectorRolloutHandler.updateState(connectorRolloutUpdateStateRequestBody);
 
       final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
       response.setData(updatedConnectorRollout);
@@ -182,7 +182,7 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   public ConnectorRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
     return ApiHelper.execute(() -> {
       final ConnectorRolloutRead updatedConnectorRollout =
-          connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutManualRolloutRequestBody);
+          connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody);
 
       final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
       response.setData(updatedConnectorRollout);

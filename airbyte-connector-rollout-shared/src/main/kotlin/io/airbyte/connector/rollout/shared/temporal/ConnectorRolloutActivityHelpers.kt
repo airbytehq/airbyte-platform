@@ -10,7 +10,6 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
-import java.util.ArrayList
 
 object ConnectorRolloutActivityHelpers {
   fun mapToConnectorRollout(rolloutRead: ConnectorRolloutRead): ConnectorRolloutOutput {
@@ -38,8 +37,8 @@ object ConnectorRolloutActivityHelpers {
     )
   }
 
-  private fun mapState(state: ConnectorRolloutState?): ConnectorEnumRolloutState? {
-    return state?.let { ConnectorEnumRolloutState.valueOf(it.name) }
+  private fun mapState(state: ConnectorRolloutState): ConnectorEnumRolloutState {
+    return state.let { ConnectorEnumRolloutState.valueOf(it.name) }
   }
 
   private fun mapRolloutStrategy(strategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy? {
