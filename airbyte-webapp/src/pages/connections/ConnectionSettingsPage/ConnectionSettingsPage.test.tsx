@@ -70,6 +70,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    RunAndCancelConnectionSyncAndRefresh: "RunAndCancelConnectionSyncAndRefresh",
+  },
 }));
 
 jest.mock("components/connection/ConnectionStatus/useConnectionStatus", () => ({

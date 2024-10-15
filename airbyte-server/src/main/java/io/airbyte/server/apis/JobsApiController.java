@@ -5,10 +5,8 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.JobsApi;
@@ -32,6 +30,8 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.model.generated.ReportJobStartRequest;
 import io.airbyte.api.model.generated.SyncInput;
+import io.airbyte.commons.auth.generated.Intent;
+import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.JobInputHandler;
 import io.airbyte.commons.server.handlers.JobsHandler;
@@ -72,16 +72,16 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/cancel")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @Override
   public JobInfoRead cancelJob(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.cancelJob(jobIdRequestBody));
   }
 
   @Post("/create")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @Override
   public JobInfoRead createJob(@Body final JobCreate jobCreate) {
     return ApiHelper.execute(() -> schedulerHandler.createJob(jobCreate));

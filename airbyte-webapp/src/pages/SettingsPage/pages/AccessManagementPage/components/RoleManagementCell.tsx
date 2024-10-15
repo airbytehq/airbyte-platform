@@ -10,15 +10,14 @@ import { useCurrentWorkspace } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { GuestBadge } from "./GuestBadge";
 import { RoleManagementMenu } from "./RoleManagementMenu";
 import { UserRoleText } from "./UserRoleText";
 import { ResourceType, UnifiedUserModel, getOrganizationAccessLevel, getWorkspaceAccessLevel } from "./util";
 
-const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "READER" | "EDITOR" }> = ({
-  highestPermissionType,
-}) => {
+const ViewOnlyRoleBox: React.FC<{ highestPermissionType: RbacRole }> = ({ highestPermissionType }) => {
   return (
     <Box pl="md" pr="sm">
       <FlexContainer gap="md" alignItems="center" justifyContent="flex-start">

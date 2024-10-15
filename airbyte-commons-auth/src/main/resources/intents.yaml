@@ -19,6 +19,7 @@ intents:
     description: Ability to see the trial status of an organization
     roles:
       - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - ADMIN
@@ -40,4 +41,16 @@ intents:
     # This intent can only be used for instance admin at the moment, since the API it's used on are not all using
     # POST request bodies, thus our authentication logic might not find the organizationId in the request.
     roles:
+      - ADMIN
+
+  RunAndCancelConnectionSyncAndRefresh:
+    name: Run and cancel connection sync and refresh
+    description: Allow user to run/cancel syncs and refreshes
+    roles:
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_RUNNER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
       - ADMIN

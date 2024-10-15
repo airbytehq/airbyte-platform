@@ -45,10 +45,12 @@ export const disallowedRoles = (
     return [
       "organization_admin",
       "organization_editor",
+      "organization_runner",
       "organization_reader",
       "organization_member",
       "workspace_admin",
       "workspace_editor",
+      "workspace_runner",
       "workspace_reader",
     ];
   }
@@ -67,14 +69,22 @@ export const disallowedRoles = (
     return [];
   }
 
-  if (organizationRole === "organization_editor") {
+  if (organizationRole === "organization_runner") {
     if (!workspaceRole) {
-      return ["workspace_editor", "workspace_reader"];
+      return ["workspace_runner", "workspace_reader"];
     }
     return ["workspace_reader"];
   }
+
+  if (organizationRole === "organization_editor") {
+    if (!workspaceRole) {
+      return ["workspace_editor", "workspace_runner", "workspace_reader"];
+    }
+    return ["workspace_runner", "workspace_reader"];
+  }
+
   if (organizationRole === "organization_admin") {
-    return ["workspace_admin", "workspace_editor", "workspace_reader"];
+    return ["workspace_admin", "workspace_editor", "workspace_runner", "workspace_reader"];
   }
 
   return [];

@@ -36,5 +36,5 @@ export const intentToRbacQuery = {
   // connection
   CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
+  ClearData: { resourceType: "WORKSPACE", role: "EDITOR" },
 } as const;

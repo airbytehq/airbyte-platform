@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ScopeType } from "core/api/types/AirbyteClient";
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { ExistingUserIndicator } from "./ExistingUserIndicator";
 import { PendingInvitationBadge } from "./RoleManagementCell";
@@ -17,7 +18,7 @@ interface ViewOnlyUserRowProps {
   email: string;
   isCurrentUser: boolean;
   isOrgAdmin: boolean;
-  highestPermissionType?: "ADMIN" | "EDITOR" | "READER" | "MEMBER";
+  highestPermissionType?: RbacRole;
   scope: ScopeType;
   isPending: boolean;
 }

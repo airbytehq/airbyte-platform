@@ -24,12 +24,14 @@ export const useGeneratedIntent = (intentName: Intent, metaOverride?: MetaOverri
       switch (permission.permissionType) {
         case "organization_admin":
         case "organization_editor":
+        case "organization_runner":
         case "organization_reader":
         case "organization_member":
           return permission.permissionType === role && permission.organizationId === organizationId;
         case "workspace_owner":
         case "workspace_admin":
         case "workspace_editor":
+        case "workspace_runner":
         case "workspace_reader":
           return permission.permissionType === role && permission.workspaceId === workspaceId;
         // instance_reader is a frontend-only role that is used to support the admin "viewing/editing" feature. We will need to re-engineer that feature now that we are moving away from hierarchical permissions. But for now, this is here to avoid a runtime error when a useGeneratedIntent() encounters an instance_reader permission.

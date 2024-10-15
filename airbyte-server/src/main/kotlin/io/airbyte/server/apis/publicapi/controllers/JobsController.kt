@@ -60,7 +60,7 @@ open class JobsController(
       listOf(jobId.toString()),
       Scope.JOB,
       userId,
-      PermissionType.WORKSPACE_EDITOR,
+      PermissionType.WORKSPACE_RUNNER,
     )
 
     val jobResponse: JobResponse? =
@@ -89,12 +89,23 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobCreateRequest.connectionId),
-      Scope.CONNECTION,
-      userId,
-      PermissionType.WORKSPACE_EDITOR,
-    )
+    // Only Editor and above should be able to run a Clear.
+    when (jobCreateRequest.jobType) {
+      JobTypeEnum.CLEAR ->
+        apiAuthorizationHelper.checkWorkspacePermissions(
+          listOf(jobCreateRequest.connectionId),
+          Scope.CONNECTION,
+          userId,
+          PermissionType.WORKSPACE_EDITOR,
+        )
+      else ->
+        apiAuthorizationHelper.checkWorkspacePermissions(
+          listOf(jobCreateRequest.connectionId),
+          Scope.CONNECTION,
+          userId,
+          PermissionType.WORKSPACE_RUNNER,
+        )
+    }
 
     val connectionResponse: ConnectionResponse =
       trackingHelper.callWithTracker(

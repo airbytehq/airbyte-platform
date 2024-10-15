@@ -11,11 +11,13 @@ export const permissionStringDictionary: Record<PermissionType, Record<string, s
   instance_admin: { resource: "resource.instance", role: "role.admin" },
   organization_admin: { resource: "resource.organization", role: "role.admin" },
   organization_editor: { resource: "resource.organization", role: "role.editor" },
+  organization_runner: { resource: "resource.organization", role: "role.runner" },
   organization_reader: { resource: "resource.organization", role: "role.reader" },
   organization_member: { resource: "resource.organization", role: "role.member" },
   workspace_admin: { resource: "resource.workspace", role: "role.admin" },
   workspace_owner: { resource: "resource.workspace", role: "role.admin" },
   workspace_editor: { resource: "resource.workspace", role: "role.editor" },
+  workspace_runner: { resource: "resource.workspace", role: "role.runner" },
   workspace_reader: { resource: "resource.workspace", role: "role.reader" },
 };
 
@@ -27,18 +29,26 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   instance_admin: { id: "role.admin.description", values: { resourceType: "instance" } },
   organization_admin: { id: "role.admin.description", values: { resourceType: "organization" } },
   organization_editor: { id: "role.editor.description", values: { resourceType: "organization" } },
+  organization_runner: { id: "role.runner.description", values: { resourceType: "organization" } },
   organization_reader: { id: "role.reader.description", values: { resourceType: "organization" } },
   organization_member: { id: "role.member.description", values: { resourceType: "organization" } },
   workspace_admin: { id: "role.admin.description", values: { resourceType: "workspace" } },
-  workspace_owner: { id: "role.admin.description", values: { resourceType: "workspace" } }, // is not and should not be referenced in code.  required by types but will be deprecated soon.
+  workspace_owner: { id: "role.admin.description", values: { resourceType: "workspace" } },
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },
+  workspace_runner: { id: "role.runner.description", values: { resourceType: "workspace" } },
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
 };
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
-  workspace: [PermissionType.workspace_admin, PermissionType.workspace_editor, PermissionType.workspace_reader],
+  workspace: [
+    PermissionType.workspace_admin,
+    PermissionType.workspace_editor,
+    PermissionType.workspace_runner,
+    PermissionType.workspace_reader,
+  ],
   organization: [
     PermissionType.organization_admin,
     PermissionType.organization_editor,
+    PermissionType.organization_runner,
     PermissionType.organization_reader,
     PermissionType.organization_member,
   ],

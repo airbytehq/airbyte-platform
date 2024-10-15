@@ -6,6 +6,7 @@ import { useConnectionStatus } from "components/connection/ConnectionStatus/useC
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
+import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
@@ -34,6 +35,13 @@ jest.mock("core/api", () => ({
   useGetConnectionSyncProgress: () => ({ data: { streams: [] } }),
   useGetConnection: () => mockConnection,
   useCurrentConnection: () => mockConnection,
+  useCurrentWorkspace: () => mockWorkspace,
+}));
+jest.mock("core/utils/rbac", () => ({
+  useGeneratedIntent: () => true,
+  Intent: {
+    RunAndCancelConnectionSyncAndRefresh: "RunAndCancelConnectionSyncAndRefresh",
+  },
 }));
 jest.mock("area/connection/utils/useUiStreamsStates");
 jest.mock("area/connection/utils/useStreamsTableAnalytics");
