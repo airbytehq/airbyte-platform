@@ -2,6 +2,7 @@ import * as yup from "yup";
 
 import {
   ConnectionEventType,
+  ConnectionScheduleDataBasicScheduleTimeUnit,
   ConnectionScheduleType,
   FailureOrigin,
   FailureReason,
@@ -204,11 +205,30 @@ export const connectionDisabledEventSummarySchema = yup.object({
   disabledReason: yup.string().oneOf(connectionAutoDisabledReasons),
 });
 
+const ConnectionScheduleDataBasicScheduleSchema = yup.object().shape({
+  timeUnit: yup
+    .mixed<ConnectionScheduleDataBasicScheduleTimeUnit>()
+    .oneOf(["minutes", "hours", "days", "weeks", "months"])
+    .optional(),
+  units: yup.number().optional(),
+});
+
+const ConnectionScheduleDataCronSchema = yup.object().shape({
+  cronExpression: yup.string().optional(),
+  cronTimeZone: yup.string().optional(),
+});
+
+export const scheduleDataSchema = yup.object().shape({
+  basicSchedule: ConnectionScheduleDataBasicScheduleSchema.optional(),
+  cron: ConnectionScheduleDataCronSchema.optional(),
+});
+
 export const connectionSettingsUpdateEventSummaryPatchesShape = {
   scheduleType: yup.object({
     from: yup.string().oneOf(Object.values(ConnectionScheduleType)),
     to: yup.string().oneOf(Object.values(ConnectionScheduleType)),
   }),
+  scheduleData: yup.object().shape({ from: scheduleDataSchema, to: scheduleDataSchema }),
   name: yup.object().shape({ from: yup.string(), to: yup.string() }),
   namespaceDefinition: yup.object().shape({
     from: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
@@ -224,6 +244,7 @@ export const connectionSettingsUpdateEventSummaryPatchesShape = {
     from: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
     to: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
   }),
+
   backfillPreference: yup.object().shape({ from: yup.string(), to: yup.string() }),
 } as const;
 

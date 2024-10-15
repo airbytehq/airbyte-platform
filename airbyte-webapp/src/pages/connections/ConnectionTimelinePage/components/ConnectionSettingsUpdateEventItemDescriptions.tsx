@@ -3,10 +3,13 @@ import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { InferType } from "yup";
 
+import { FormattedScheduleDataMessage } from "components/connection/ConnectionHeaderControls/FormattedScheduleDataMessage";
 import { Text } from "components/ui/Text";
 
+import { ConnectionScheduleData } from "core/api/types/AirbyteClient";
+
 import { TimelineEventUser } from "./TimelineEventUser";
-import { patchFields, generalEventSchema } from "../types";
+import { patchFields, generalEventSchema, scheduleDataSchema } from "../types";
 
 const patchedFieldToI8n: Record<string, string> = {
   scheduleType: "form.scheduleType",
@@ -18,12 +21,26 @@ const patchedFieldToI8n: Record<string, string> = {
   notifySchemaChanges: "connection.schemaUpdateNotifications.title",
   nonBreakingChangesPreference: "connectionForm.nonBreakingChangesPreference.autopropagation.label",
   backfillPreference: "connectionForm.backfillColumns.title",
+  scheduleData: "frequency.syncSchedule",
+};
+
+const translateScheduleData = (scheduleData?: ConnectionScheduleData) => {
+  if (!scheduleData) {
+    return null;
+  }
+
+  return (
+    <FormattedScheduleDataMessage
+      scheduleData={scheduleData}
+      scheduleType={scheduleData.basicSchedule ? "basic" : scheduleData.cron ? "cron" : "manual"}
+    />
+  );
 };
 
 function translateFieldValues(
   field: string,
-  from: string | boolean | undefined,
-  to: string | boolean | undefined,
+  from: string | boolean | InferType<typeof scheduleDataSchema> | undefined,
+  to: string | boolean | InferType<typeof scheduleDataSchema> | undefined,
   formatMessage: ReturnType<typeof useIntl>["formatMessage"]
 ) {
   switch (field) {
@@ -31,6 +48,11 @@ function translateFieldValues(
       return {
         from: formatMessage({ id: `frequency.${from}` }),
         to: formatMessage({ id: `frequency.${to}` }),
+      };
+    case "scheduleData":
+      return {
+        from: translateScheduleData(from as ConnectionScheduleData),
+        to: translateScheduleData(to as ConnectionScheduleData),
       };
     case "namespaceDefinition":
       return {
@@ -55,8 +77,8 @@ function translateFieldValues(
 interface ConnectionSettingsUpdateEventItemDescriptionProps {
   user: InferType<typeof generalEventSchema>["user"];
   field: (typeof patchFields)[number];
-  to?: string | boolean;
-  from?: string | boolean;
+  to?: string | InferType<typeof scheduleDataSchema> | boolean;
+  from?: string | InferType<typeof scheduleDataSchema> | boolean;
 }
 
 export const ConnectionSettingsUpdateEventItemDescription: React.FC<
@@ -65,11 +87,17 @@ export const ConnectionSettingsUpdateEventItemDescription: React.FC<
   const { formatMessage } = useIntl();
 
   const translated = translateFieldValues(field, from, to, formatMessage);
+  const id =
+    !!translated.from && !!translated.to
+      ? "connection.timeline.connection_settings_update.descriptionWithUser"
+      : !!translated.from
+      ? "connection.timeline.connection_settings_remove.descriptionWithUser"
+      : "connection.timeline.connection_settings_add.descriptionWithUser";
 
   return (
     <Text as="span" size="sm" color="grey400">
       <FormattedMessage
-        id="connection.timeline.connection_settings_update.descriptionWithUser"
+        id={id}
         values={{
           user: <TimelineEventUser user={user} />,
           field: formatMessage({ id: patchedFieldToI8n[field] }).toLowerCase(),
@@ -92,11 +120,16 @@ export const MultiConnectionSettingsUpdateEventItemDescription: React.FC<
   const { formatMessage } = useIntl();
 
   const translated = translateFieldValues(field, from, to, formatMessage);
-
+  const id =
+    !!translated.from && !!translated.to
+      ? "connection.timeline.connection_settings_update.descriptionWithUserMulti"
+      : !!translated.from
+      ? "connection.timeline.connection_settings_remove.descriptionWithUserMulti"
+      : "connection.timeline.connection_settings_add.descriptionWithUserMulti";
   return (
     <Text as="span" size="sm" color="grey400">
       <FormattedMessage
-        id="connection.timeline.connection_settings_update.descriptionWithUserMulti"
+        id={id}
         values={{
           user: <TimelineEventUser user={user} />,
           field: formatMessage({ id: patchedFieldToI8n[field] }).toLowerCase(),
@@ -120,11 +153,16 @@ export const ShortConnectionSettingsUpdateEventItemDescription: React.FC<
   const { formatMessage } = useIntl();
 
   const translated = translateFieldValues(field, from, to, formatMessage);
-
+  const id =
+    !!translated.from && !!translated.to
+      ? "connection.timeline.connection_settings_update.descriptionWithoutUser"
+      : !!translated.from
+      ? "connection.timeline.connection_settings_remove.descriptionWithoutUser"
+      : "connection.timeline.connection_settings_add.descriptionWithoutUser";
   return (
     <Text as="span" size="sm" color="grey400">
       <FormattedMessage
-        id="connection.timeline.connection_settings_update.descriptionWithoutUser"
+        id={id}
         values={{
           field: capitalize(formatMessage({ id: patchedFieldToI8n[field] }).toLowerCase()),
           from: translated.from,
