@@ -5,7 +5,6 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.logging.LogClientType
 import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -32,7 +31,7 @@ internal class GcsStorageConfigTest {
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
-    assertEquals(LogClientType.GCS.name, envVarMap[EnvVar.STORAGE_TYPE.name])
+    assertEquals(StorageType.GCS.name, envVarMap[EnvVar.STORAGE_TYPE.name])
     assertEquals(applicationCredentials, envVarMap[EnvVar.GOOGLE_APPLICATION_CREDENTIALS.name])
   }
 

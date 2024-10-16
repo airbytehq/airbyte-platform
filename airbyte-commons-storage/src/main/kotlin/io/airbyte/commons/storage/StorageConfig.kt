@@ -8,7 +8,6 @@ import io.airbyte.commons.envvar.EnvVar
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
-import io.airbyte.commons.logging.LogClientType as StorageType
 
 interface StorageConfig {
   /**

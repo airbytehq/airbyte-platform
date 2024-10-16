@@ -5,7 +5,6 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.logging.LogClientType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -31,7 +30,7 @@ class LocalStorageConfigTest {
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
-    assertEquals(LogClientType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
+    assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
     assertEquals(root, envVarMap[EnvVar.LOCAL_ROOT.name])
   }
 }

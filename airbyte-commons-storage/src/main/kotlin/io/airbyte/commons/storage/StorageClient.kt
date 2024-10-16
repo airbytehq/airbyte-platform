@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.ByteArrayInputStream
@@ -40,7 +41,21 @@ import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
-import io.airbyte.commons.logging.LogClientType as StorageType
+import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
+
+fun prependIfMissing(
+  prefix: String,
+  id: String,
+) = if (id.startsWith(prefix)) id else "${prefix.trimEnd('/')}/${id.trimStart('/')}"
+
+enum class StorageType {
+  AZURE,
+  GCS,
+  LOCAL,
+  MINIO,
+  S3,
+}
 
 /**
  * Factory for creating a [StorageClient] based on the value of [STORAGE_TYPE] and a [DocumentType].
@@ -88,6 +103,14 @@ enum class DocumentType(
  */
 interface StorageClient {
   /**
+   * Lists the documents stored at the given id.
+   *
+   * @param id of the document path
+   * @return the list of documents at the provided id.
+   */
+  fun list(id: String): List<String>
+
+  /**
    * Writes a document with a given id. If a document already exists at this id it will be
    * overwritten.
    *
@@ -114,6 +137,28 @@ interface StorageClient {
    * @return true if deletes something, otherwise false.
    */
   fun delete(id: String): Boolean
+
+  /**
+   * The [DocumentType] supported by this client.
+   *
+   * @return the associated [DocumentType] of the client.
+   */
+  fun documentType(): DocumentType
+
+  /**
+   * The client storage type.
+   *
+   * @return the associated [StorageType] of the client
+   */
+  fun storageType(): StorageType
+
+  /**
+   * Generates a file ID.
+   *
+   * @param id a relative file path
+   * @return the file ID including any configured storage prefix
+   */
+  fun key(id: String): String = prependIfMissing(prefix = documentType().prefix.toString(), id = id)
 }
 
 /**
@@ -141,6 +186,13 @@ class AzureStorageClient(
     runCatching { createBucketIfNotExists() }
   }
 
+  override fun list(id: String): List<String> {
+    val blobKey = key(id)
+    // azure needs the trailing `/` in order for the list call to return the correct blobs
+    val directory = if (blobKey.endsWith("/")) blobKey else "$blobKey/"
+    return azureClient.getBlobContainerClient(bucketName).listBlobsByHierarchy(directory).map { it.name }.sortedBy { it }
+  }
+
   override fun write(
     id: String,
     document: String,
@@ -166,7 +218,9 @@ class AzureStorageClient(
       .getBlobClient(key(id))
       .deleteIfExists()
 
-  internal fun key(id: String): String = "${type.prefix}/$id"
+  override fun documentType(): DocumentType = type
+
+  override fun storageType(): StorageType = StorageType.AZURE
 
   private fun createBucketIfNotExists() {
     val blobContainerClient = azureClient.getBlobContainerClient(bucketName)
@@ -201,6 +255,14 @@ class GcsStorageClient(
     runCatching { createBucketIfNotExists() }
   }
 
+  override fun list(id: String): List<String> =
+    gcsClient
+      .list(
+        bucketName,
+        Storage.BlobListOption.prefix(key(id)),
+      ).iterateAll()
+      .map { it.name }
+
   override fun write(
     id: String,
     document: String,
@@ -210,7 +272,7 @@ class GcsStorageClient(
   }
 
   override fun read(id: String): String? {
-    val blobId = blobId(id)
+    val blobId = blobId(key(id))
 
     return gcsClient
       .get(blobId)
@@ -220,7 +282,9 @@ class GcsStorageClient(
 
   override fun delete(id: String): Boolean = gcsClient.delete(BlobId.of(bucketName, key(id)))
 
-  internal fun key(id: String): String = "${type.prefix}/$id"
+  override fun documentType(): DocumentType = type
+
+  override fun storageType(): StorageType = StorageType.GCS
 
   @VisibleForTesting
   internal fun blobId(id: String): BlobId = BlobId.of(bucketName, key(id))
@@ -241,10 +305,14 @@ class GcsStorageClient(
 @Prototype
 class LocalStorageClient(
   config: LocalStorageConfig,
-  @Parameter type: DocumentType,
+  @Parameter private val type: DocumentType,
 ) : StorageClient {
   // internal for testing
   internal val root: Path = Path.of(config.root, type.prefix.toString())
+
+  override fun list(id: String): List<String> {
+    return root.resolve(id).listDirectoryEntries().filter { !it.isDirectory() }.map { it.toFile().name }
+  }
 
   override fun write(
     id: String,
@@ -263,6 +331,10 @@ class LocalStorageClient(
   override fun delete(id: String): Boolean =
     path(id)
       .deleteIfExists()
+
+  override fun documentType(): DocumentType = type
+
+  override fun storageType(): StorageType = StorageType.LOCAL
 
   /** Converts [String] to a [Path] relative to the [root]. */
   private fun path(id: String): Path = root.resolve(id)
@@ -286,6 +358,8 @@ class MinioStorageClient(
     config: MinioStorageConfig,
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, s3Client = config.s3Client())
+
+  override fun storageType(): StorageType = StorageType.MINIO
 }
 
 /**
@@ -306,6 +380,8 @@ class S3StorageClient(
     config: S3StorageConfig,
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, s3Client = config.s3Client())
+
+  override fun storageType(): StorageType = StorageType.S3
 }
 
 /**
@@ -326,6 +402,22 @@ abstract class AbstractS3StorageClient internal constructor(
 
   init {
     runCatching { createBucketIfNotExists() }
+  }
+
+  override fun list(id: String): List<String> {
+    val listObjReq =
+      ListObjectsV2Request
+        .builder()
+        .bucket(bucketName)
+        .prefix(key(id))
+        .build()
+
+    return s3Client
+      .listObjectsV2Paginator(listObjReq)
+      // Objects are returned in lexicographical order.
+      .flatMap { it.contents() }
+      .map { it.key() }
+      .toList()
   }
 
   override fun write(
@@ -381,7 +473,7 @@ abstract class AbstractS3StorageClient internal constructor(
     return exists
   }
 
-  internal fun key(id: String): String = "${type.prefix}/$id"
+  override fun documentType(): DocumentType = type
 
   private fun createBucketIfNotExists() {
     if (!doesBucketExist(bucketName=bucketName)) {

@@ -8,6 +8,8 @@ import com.azure.core.util.BinaryData
 import com.azure.storage.blob.BlobClient
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.BlobItem
+import com.google.api.gax.paging.Page
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
@@ -33,12 +35,19 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectResponse
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.S3Object
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.createTempFile
+import kotlin.io.path.pathString
 import com.google.cloud.storage.Bucket as GcsBucket
 
 private const val KEY = "a"
@@ -47,7 +56,7 @@ private const val DOC2 = "bye"
 
 private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
 
-class DocumentTypeTest {
+internal class DocumentTypeTest {
   @Test
   fun `prefixes are correct`() {
     assertEquals(DocumentType.APPLICATION_LOGS.prefix, Path.of("app-logging"))
@@ -57,7 +66,7 @@ class DocumentTypeTest {
   }
 }
 
-class AzureStorageClientTest {
+internal class AzureStorageClientTest {
   private val config = AzureStorageConfig(buckets = buckets, connectionString = "connect")
 
   @Test
@@ -178,9 +187,37 @@ class AzureStorageClientTest {
       }
     assertTrue(client.delete(KEY))
   }
+
+  @Test
+  fun `list docs`() {
+    val files = listOf("file1", "file2", "file3")
+    val blobs =
+      files.map {
+        mockk<BlobItem> {
+          every { name } returns it
+        }
+      }
+    val blobContainerClient: BlobContainerClient =
+      mockk {
+        every { listBlobsByHierarchy(any<String>()) } returns
+          mockk {
+            every { iterator() } returns blobs.toMutableList().iterator()
+          }
+      }
+
+    val azureClient: BlobServiceClient =
+      mockk {
+        every { getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+      }
+
+    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+
+    val result = client.list(id = KEY)
+    assertEquals(files, result)
+  }
 }
 
-class GcsStorageClientTest {
+internal class GcsStorageClientTest {
   private val config = GcsStorageConfig(buckets = buckets, applicationCredentials = "app-creds")
 
   @Test
@@ -208,7 +245,7 @@ class GcsStorageClientTest {
     val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
 
     // verify no blob is returned
-    every { gcsClient.get(client.blobId(KEY)) } returns null
+    every { gcsClient.get(any<BlobId>()) } returns null
     assertNull(client.read(KEY), "key $KEY should be null")
 
     // verify blob is returned by exists is false
@@ -278,9 +315,34 @@ class GcsStorageClientTest {
     every { gcsClient.delete(blobId) } returns true
     assertTrue(client.delete(KEY))
   }
+
+  @Test
+  fun `list docs`() {
+    // GCS returns files in reversed order
+    val files = listOf("file3", "file2", "file1")
+    val blobs =
+      files.map {
+        mockk<Blob> {
+          every { name } returns it
+        }
+      }
+    val page =
+      mockk<Page<Blob>> {
+        every { iterateAll() } returns blobs
+      }
+    val gcsClient =
+      mockk<Storage> {
+        every { list(any<String>(), any()) } returns page
+      }
+
+    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+
+    val result = client.list(id = KEY)
+    assertEquals(files, result)
+  }
 }
 
-class LocalStorageClientTest {
+internal class LocalStorageClientTest {
   @Test
   fun `happy path`(
     @TempDir tempDir: Path,
@@ -311,9 +373,24 @@ class LocalStorageClientTest {
       assertNull(this, "key $KEY should not exist")
     }
   }
+
+  @Test
+  fun `list docs`() {
+    val root = createTempDirectory(prefix = "local-test")
+    // Create subdirectory to ensure it is not included in list results
+    createTempDirectory(directory = root, prefix = "subdir-test")
+    val file = createTempFile(directory = root, prefix = "logs", suffix = ".log")
+    file.toFile().writeText(text = "log line")
+
+    val config = LocalStorageConfig(buckets = buckets, root = root.pathString)
+    val client = LocalStorageClient(config = config, type = DocumentType.STATE)
+
+    val result = client.list(id = root.pathString)
+    assertEquals(listOf(file.fileName.toString()), result)
+  }
 }
 
-class MinioStorageClientTest {
+internal class MinioStorageClientTest {
   private val config = MinioStorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", endpoint = "endpoint")
 
   @Test
@@ -436,9 +513,37 @@ class MinioStorageClientTest {
     every { s3Client.deleteObject(deleteRequest) } returns mockk()
     assertTrue(client.delete(KEY))
   }
+
+  @Test
+  fun `list docs`() {
+    val files = listOf("file1", "file2", "file3")
+    val keys =
+      files.map {
+        mockk<S3Object> {
+          every { key() } returns it
+        }
+      }
+    val page =
+      mockk<ListObjectsV2Response> {
+        every { contents() } returns keys
+      }
+    val iterable =
+      mockk<ListObjectsV2Iterable> {
+        every { iterator() } returns mutableListOf(page).iterator()
+      }
+    val s3Client =
+      mockk<S3Client> {
+        every { listObjectsV2Paginator(any<ListObjectsV2Request>()) } returns iterable
+      }
+
+    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+
+    val result = client.list(id = KEY)
+    assertEquals(files, result)
+  }
 }
 
-class S3StorageClientTest {
+internal class S3StorageClientTest {
   private val config = S3StorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", region = "us-east-1")
 
   @Test
@@ -560,5 +665,33 @@ class S3StorageClientTest {
     every { s3Client.headObject(existsRequest) } returns mockk()
     every { s3Client.deleteObject(deleteRequest) } returns mockk()
     assertTrue(client.delete(KEY))
+  }
+
+  @Test
+  fun `list docs`() {
+    val files = listOf("file1", "file2", "file3")
+    val keys =
+      files.map {
+        mockk<S3Object> {
+          every { key() } returns it
+        }
+      }
+    val page =
+      mockk<ListObjectsV2Response> {
+        every { contents() } returns keys
+      }
+    val iterable =
+      mockk<ListObjectsV2Iterable> {
+        every { iterator() } returns mutableListOf(page).iterator()
+      }
+    val s3Client =
+      mockk<S3Client> {
+        every { listObjectsV2Paginator(any<ListObjectsV2Request>()) } returns iterable
+      }
+
+    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+
+    val result = client.list(id = KEY)
+    assertEquals(files, result)
   }
 }

@@ -5,7 +5,6 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.logging.LogClientType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -35,7 +34,7 @@ internal class MinioStorageConfigTest {
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
-    assertEquals(LogClientType.MINIO.name, envVarMap[EnvVar.STORAGE_TYPE.name])
+    assertEquals(StorageType.MINIO.name, envVarMap[EnvVar.STORAGE_TYPE.name])
     assertEquals(accessKey, envVarMap[EnvVar.AWS_ACCESS_KEY_ID.name])
     assertEquals(secretAccessKey, envVarMap[EnvVar.AWS_SECRET_ACCESS_KEY.name])
     assertEquals(endpoint, envVarMap[EnvVar.MINIO_ENDPOINT.name])
