@@ -15,6 +15,7 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
+  implementation(libs.bundles.apache)
   implementation(libs.bundles.micronaut.light)
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.jackson.databind)

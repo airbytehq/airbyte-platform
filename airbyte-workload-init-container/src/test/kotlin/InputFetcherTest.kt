@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import org.apache.commons.lang3.time.StopWatch
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -26,6 +27,8 @@ class InputFetcherTest {
 
   @MockK
   lateinit var systemClient: SystemClient
+
+  val stopWatch = StopWatch()
 
   private lateinit var fetcher: InputFetcher
 
@@ -44,7 +47,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch(WORKLOAD_ID, stopWatch)
 
     verify { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) }
     verify { inputProcessor.process(workload) }
@@ -56,7 +59,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch(WORKLOAD_ID, stopWatch)
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -69,7 +72,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch(WORKLOAD_ID, stopWatch)
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -81,7 +84,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } throws Exception("bang 1")
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch(WORKLOAD_ID, stopWatch)
 
     verify { systemClient.exitProcess(1) }
   }

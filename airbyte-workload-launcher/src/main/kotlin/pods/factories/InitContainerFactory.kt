@@ -16,10 +16,13 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.VolumeMount
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+
+val logger = KotlinLogging.logger {}
 
 @Singleton
 class InitContainerFactory(
@@ -78,6 +81,8 @@ class InitContainerFactory(
     workspaceId: UUID,
   ): Container {
     val initContainerImageOverride = featureFlagClient.stringVariation(PlatformInitContainerImage, Workspace(workspaceId))
+
+    logger.info { "[initContainer] image: ${if (initContainerImageOverride.isEmpty()) initContainerInfo.image else initContainerImageOverride}" }
 
     return ContainerBuilder()
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
