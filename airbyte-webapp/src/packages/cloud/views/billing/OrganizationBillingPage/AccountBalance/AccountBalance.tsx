@@ -88,7 +88,7 @@ export const AccountBalance = () => {
                     <FormattedMessage id="settings.organization.billing.invoiceDate" />
                   </Text>
                   <Text size="lg">
-                    <FormattedDate value={balance.upcomingInvoice.dueDate} dateStyle="medium" />
+                    <FormattedDate value={dayjs(balance.upcomingInvoice.dueDate).toDate()} dateStyle="medium" />
                   </Text>
                 </FlexItem>
               </>
