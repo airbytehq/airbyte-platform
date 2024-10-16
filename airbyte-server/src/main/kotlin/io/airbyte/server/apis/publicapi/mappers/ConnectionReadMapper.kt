@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
+import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.DestinationSyncMode
@@ -21,6 +22,7 @@ import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
 import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import java.util.UUID
 
 /**
@@ -56,6 +58,7 @@ object ConnectionReadMapper {
                 name = streamAndConfiguration.stream.name,
                 primaryKey = streamAndConfiguration.config.primaryKey,
                 cursorField = streamAndConfiguration.config.cursorField,
+                mappers = convertMappers(streamAndConfiguration.config.mappers),
                 syncMode = connectionSyncMode,
                 selectedFields = selectedFields,
               )
@@ -123,6 +126,15 @@ object ConnectionReadMapper {
       NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION
     } else {
       NonBreakingSchemaUpdatesBehaviorEnum.valueOf(nonBreakingChangesPreference.toString().uppercase())
+    }
+  }
+
+  private fun convertMappers(mappers: List<ConfiguredStreamMapper>?): List<io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper>? {
+    return mappers?.map { mapper ->
+      io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper(
+        type = StreamMapperType.decode(mapper.type.toString()) ?: throw IllegalArgumentException("Invalid stream mapper type"),
+        mapperConfiguration = mapper.mapperConfiguration,
+      )
     }
   }
 

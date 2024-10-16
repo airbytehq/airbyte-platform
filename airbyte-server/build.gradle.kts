@@ -69,6 +69,7 @@ dependencies {
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-notification"))
   implementation(project(":oss:airbyte-oauth"))
   implementation(libs.airbyte.protocol)

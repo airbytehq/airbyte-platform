@@ -75,10 +75,11 @@ val genPublicApiServer = tasks.register<GenerateTask>("generatePublicApiServer")
     )
 
     schemaMappings = mapOf(
-            "SourceConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "OAuthInputConfiguration"      to "com.fasterxml.jackson.databind.JsonNode",
+            "SourceConfiguration"           to "com.fasterxml.jackson.databind.JsonNode",
+            "OAuthInputConfiguration"       to "com.fasterxml.jackson.databind.JsonNode",
             "OAuthCredentialsConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"     to "com.fasterxml.jackson.databind.JsonNode",
+            "DestinationConfiguration"      to "com.fasterxml.jackson.databind.JsonNode",
+            "MapperConfiguration"           to "com.fasterxml.jackson.databind.JsonNode",
             "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
     )
 }

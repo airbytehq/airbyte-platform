@@ -23,11 +23,13 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -307,6 +309,17 @@ object AirbyteCatalogHelper {
     }
   }
 
+  private fun mapperTypeConverter(publicApiMapperType: StreamMapperType): io.airbyte.api.model.generated.StreamMapperType {
+    return io.airbyte.api.model.generated.StreamMapperType.fromValue(publicApiMapperType.toString())
+  }
+
+  private fun configuredMapperConverter(publicApiMappers: ConfiguredStreamMapper): io.airbyte.api.model.generated.ConfiguredStreamMapper {
+    return io.airbyte.api.model.generated.ConfiguredStreamMapper().apply {
+      type = mapperTypeConverter(publicApiMappers.type)
+      mapperConfiguration = publicApiMappers.mapperConfiguration
+    }
+  }
+
   fun updateAirbyteStreamConfiguration(
     config: AirbyteStreamConfiguration,
     airbyteStream: AirbyteStream,
@@ -318,12 +331,18 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
     updatedStreamConfiguration.selectedFields = config.selectedFields
+
     if (streamConfiguration.selectedFields != null) {
       // Override and update
       updatedStreamConfiguration.fieldSelectionEnabled = true
       updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields!!.map { selectedFieldInfoConverter(it) }
     }
     updatedStreamConfiguration.suggested = config.suggested
+
+    updatedStreamConfiguration.mappers = config.mappers
+    if (streamConfiguration.mappers != null) {
+      updatedStreamConfiguration.mappers = streamConfiguration.mappers!!.map { configuredMapperConverter(it) }
+    }
 
     if (streamConfiguration.syncMode == null) {
       updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH

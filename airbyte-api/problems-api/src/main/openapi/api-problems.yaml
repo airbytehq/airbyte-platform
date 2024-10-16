@@ -440,6 +440,27 @@ components:
               default: The specified cron timezone is invalid
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
+    MapperValidationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation
+            title:
+              type: string
+              default: Mapper validation failed
+            detail:
+              type: string
+              default: The mapper configuration is invalid
+            data:
+              $ref: "#/components/schemas/ProblemMapperErrorsData"
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -667,6 +688,36 @@ components:
           type: string
         cronTimezone:
           type: string
+    ProblemMapperErrorsData:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemMapperErrorData"
+    ProblemMapperErrorData:
+      type: object
+      required:
+        - stream
+        - error
+        - mapper
+      properties:
+        stream:
+          type: string
+        error:
+          type: string
+        mapper:
+          type: object
+          required:
+            - type
+            - mapperConfiguration
+          properties:
+            type:
+              type: string
+            mapperConfiguration:
+              type: object
     ProblemEmailData:
       type: object
       required:

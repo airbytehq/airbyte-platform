@@ -15,10 +15,12 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -609,6 +611,57 @@ internal class AirbyteCatalogHelperTest {
       )
     assertEquals(1, combinedSyncModes.size)
     assertEquals(listOf(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE).first(), combinedSyncModes.first())
+  }
+
+  @Test
+  internal fun `test that the updated configuration includes configured mappers if provided`() {
+    val airbyteStream = AirbyteStream()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        mappers =
+          listOf(
+            ConfiguredStreamMapper(StreamMapperType.HASHING, Jsons.emptyObject()),
+            ConfiguredStreamMapper(StreamMapperType.FIELD_MINUS_RENAMING, Jsons.emptyObject()),
+          ),
+      )
+
+    val airbyteStreamConfiguration =
+      AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+        config = createAirbyteStreamConfiguration(),
+        airbyteStream = airbyteStream,
+        streamConfiguration = streamConfiguration,
+      )
+
+    assertEquals(2, airbyteStreamConfiguration.mappers.size)
+    assertEquals(io.airbyte.api.model.generated.StreamMapperType.HASHING, airbyteStreamConfiguration.mappers[0].type)
+    assertEquals(io.airbyte.api.model.generated.StreamMapperType.FIELD_RENAMING, airbyteStreamConfiguration.mappers[1].type)
+  }
+
+  @Test
+  internal fun `test that old mappers are kept if mappers are not provided`() {
+    val airbyteStream = AirbyteStream()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        mappers = null,
+      )
+
+    val originalStreamConfiguration = createAirbyteStreamConfiguration()
+    originalStreamConfiguration.mappers =
+      listOf(
+        io.airbyte.api.model.generated.ConfiguredStreamMapper().type(io.airbyte.api.model.generated.StreamMapperType.HASHING),
+      )
+
+    val airbyteStreamConfiguration =
+      AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+        config = originalStreamConfiguration,
+        airbyteStream = airbyteStream,
+        streamConfiguration = streamConfiguration,
+      )
+
+    assertEquals(1, airbyteStreamConfiguration.mappers.size)
+    assertEquals(io.airbyte.api.model.generated.StreamMapperType.HASHING, airbyteStreamConfiguration.mappers[0].type)
   }
 
   @Nested

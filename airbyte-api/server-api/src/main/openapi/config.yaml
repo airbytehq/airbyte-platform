@@ -11663,6 +11663,7 @@ components:
           $ref: "#/components/schemas/StreamMapperType"
         mapperConfiguration:
           $ref: "#/components/schemas/MapperConfiguration"
+      x-sdk-component: true
     MapperConfiguration:
       type: object
       description: The values required to configure the mapper.
@@ -14979,6 +14980,11 @@ components:
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
       x-sdk-component: true
     StreamConfigurations:
       description: A list of configured stream options for a connection.

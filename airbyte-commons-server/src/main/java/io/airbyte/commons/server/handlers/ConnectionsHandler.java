@@ -62,7 +62,11 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
+import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
+import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -133,7 +137,8 @@ import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.mappers.helpers.MapperHelperKt;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -212,6 +217,7 @@ public class ConnectionsHandler {
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
   private final WorkspaceService workspaceService;
+  private final DestinationCatalogGenerator destinationCatalogGenerator;
 
   // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
@@ -240,7 +246,8 @@ public class ConnectionsHandler {
                             final SourceService sourceService,
                             final DestinationService destinationService,
                             final ConnectionService connectionService,
-                            final WorkspaceService workspaceService) {
+                            final WorkspaceService workspaceService,
+                            final DestinationCatalogGenerator destinationCatalogGenerator) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -267,6 +274,7 @@ public class ConnectionsHandler {
     this.destinationService = destinationService;
     this.connectionService = connectionService;
     this.workspaceService = workspaceService;
+    this.destinationCatalogGenerator = destinationCatalogGenerator;
   }
 
   /**
@@ -291,7 +299,7 @@ public class ConnectionsHandler {
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
       final ConfiguredAirbyteCatalog configuredCatalog = CatalogConverter.toConfiguredInternal(patch.getSyncCatalog());
-      MapperHelperKt.validateConfiguredMappers(configuredCatalog);
+      validateConfiguredMappers(configuredCatalog);
 
       sync.setCatalog(configuredCatalog);
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
@@ -529,6 +537,27 @@ public class ConnectionsHandler {
         || (!successExists && prevFailureOlderThanFirstJobByMaxWarningDays);
   }
 
+  private void validateConfiguredMappers(final ConfiguredAirbyteCatalog configuredCatalog) {
+    final CatalogGenerationResult result = destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog);
+    if (result.getErrors().isEmpty()) {
+      return;
+    }
+
+    final List<ProblemMapperErrorData> errors = result.getErrors().entrySet().stream()
+        .flatMap(streamErrors -> streamErrors.getValue().entrySet().stream().map(mapperError -> new ProblemMapperErrorData()
+            .stream(streamErrors.getKey().getName())
+            .error(mapperError.getValue().name())
+            .mapper(
+                new ProblemMapperErrorDataMapper()
+                    .type(mapperError.getKey().getName())
+                    .mapperConfiguration(mapperError.getKey().getConfig()))))
+        .toList();
+
+    if (!errors.isEmpty()) {
+      throw new MapperValidationProblem(new ProblemMapperErrorsData().errors(errors));
+    }
+  }
+
   public ConnectionRead createConnection(final ConnectionCreate connectionCreate)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
 
@@ -584,7 +613,7 @@ public class ConnectionsHandler {
 
       final ConfiguredAirbyteCatalog configuredCatalog =
           CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
-      MapperHelperKt.validateConfiguredMappers(configuredCatalog);
+      validateConfiguredMappers(configuredCatalog);
       standardSync.withCatalog(configuredCatalog);
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {

@@ -81,6 +81,10 @@ import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
+import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
+import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
+import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -124,6 +128,7 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobWithStatusAndTimestamp;
+import io.airbyte.config.MapperOperationName;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
@@ -167,6 +172,9 @@ import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.mappers.helpers.MapperHelperKt;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -284,6 +292,7 @@ class ConnectionsHandlerTest {
   private StatePersistence statePersistence;
   private CatalogService catalogService;
   private ConnectionService connectionService;
+  private DestinationCatalogGenerator destinationCatalogGenerator;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -439,6 +448,10 @@ class ConnectionsHandlerTest {
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(otherOperationId)).thenReturn(workspaceId);
+
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
+        .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(), Map.of()));
   }
 
   @Nested
@@ -472,7 +485,8 @@ class ConnectionsHandlerTest {
           sourceService,
           destinationService,
           connectionService,
-          workspaceService);
+          workspaceService,
+          destinationCatalogGenerator);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1241,11 +1255,25 @@ class ConnectionsHandlerTest {
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
-        catalog.getStreams().getFirst().getConfig().hashedFields(List.of(new SelectedFieldInfo().addFieldPathItem("missing_field")));
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
 
-        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.createConnection(connectionCreate));
+        final String streamName = "stream-name";
+        when(destinationCatalogGenerator.generateDestinationCatalog(CatalogConverter.toConfiguredInternal(catalog)))
+            .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
+                Map.of(
+                    new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
+                        new ConfiguredMapper(MapperOperationName.HASHING, Map.of()), MapperError.INVALID_MAPPER_CONFIG))));
+
+        final MapperValidationProblem exception =
+            assertThrows(MapperValidationProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+        final MapperValidationProblemResponse problem = (MapperValidationProblemResponse) exception.getProblem();
+        assertEquals(problem.getData().getErrors().size(), 1);
+        assertEquals(problem.getData().getErrors().getFirst(),
+            new ProblemMapperErrorData()
+                .stream(streamName)
+                .error(MapperError.INVALID_MAPPER_CONFIG.name())
+                .mapper(new ProblemMapperErrorDataMapper().type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
       }
 
       @Test
@@ -1667,17 +1695,28 @@ class ConnectionsHandlerTest {
       void testUpdateConnectionPatchValidatesMappers() throws Exception {
         standardSync.setCatalog(ConnectionHelpers.generateAirbyteCatalogWithTwoFields());
 
-        // hash a field that doesn't exist in the catalog
         final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateApiCatalogWithTwoFields();
-        catalogForUpdate.getStreams().getFirst().getConfig().hashedFields(List.of(new SelectedFieldInfo().addFieldPathItem("invalid_field")));
-
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
             .connectionId(standardSync.getConnectionId())
             .syncCatalog(catalogForUpdate);
 
+        final String streamName = "stream-name";
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+        when(destinationCatalogGenerator.generateDestinationCatalog(CatalogConverter.toConfiguredInternal(catalogForUpdate)))
+            .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
+                Map.of(
+                    new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
+                        new ConfiguredMapper(MapperOperationName.HASHING, Map.of()), MapperError.INVALID_MAPPER_CONFIG))));
 
-        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+        final MapperValidationProblem exception =
+            assertThrows(MapperValidationProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+        final MapperValidationProblemResponse problem = (MapperValidationProblemResponse) exception.getProblem();
+        assertEquals(problem.getData().getErrors().size(), 1);
+        assertEquals(problem.getData().getErrors().getFirst(),
+            new ProblemMapperErrorData()
+                .stream(streamName)
+                .error(MapperError.INVALID_MAPPER_CONFIG.name())
+                .mapper(new ProblemMapperErrorDataMapper().type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
       }
 
       @Test
@@ -1949,7 +1988,8 @@ class ConnectionsHandlerTest {
           sourceService,
           destinationService,
           connectionService,
-          workspaceService);
+          workspaceService,
+          destinationCatalogGenerator);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2187,7 +2227,8 @@ class ConnectionsHandlerTest {
           sourceService,
           destinationService,
           connectionService,
-          workspaceService);
+          workspaceService,
+          destinationCatalogGenerator);
     }
 
     @Test
@@ -3112,7 +3153,8 @@ class ConnectionsHandlerTest {
           sourceService,
           destinationService,
           connectionService,
-          workspaceService);
+          workspaceService,
+          destinationCatalogGenerator);
     }
 
     @Test
@@ -3327,7 +3369,8 @@ class ConnectionsHandlerTest {
           sourceService,
           destinationService,
           connectionService,
-          workspaceService);
+          workspaceService,
+          destinationCatalogGenerator);
     }
 
     @Test
