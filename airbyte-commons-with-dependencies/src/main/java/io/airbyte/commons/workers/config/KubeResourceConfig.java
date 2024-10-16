@@ -23,6 +23,8 @@ public final class KubeResourceConfig {
   private String cpuRequest;
   private String memoryLimit;
   private String memoryRequest;
+  private String ephemeralStorageLimit;
+  private String ephemeralStorageRequest;
 
   public KubeResourceConfig(@Parameter final String name) {
     this.name = name;
@@ -60,6 +62,14 @@ public final class KubeResourceConfig {
     return memoryRequest;
   }
 
+  public String getEphemeralStorageLimit() {
+    return ephemeralStorageLimit;
+  }
+
+  public String getEphemeralStorageRequest() {
+    return ephemeralStorageRequest;
+  }
+
   public void setAnnotations(final String annotations) {
     this.annotations = annotations;
   }
@@ -86,6 +96,14 @@ public final class KubeResourceConfig {
 
   public void setMemoryRequest(final String memoryRequest) {
     this.memoryRequest = memoryRequest;
+  }
+
+  public void setEphemeralStorageLimit(final String ephemeralStorageLimit) {
+    this.ephemeralStorageLimit = ephemeralStorageLimit;
+  }
+
+  public void setEphemeralStorageRequest(final String ephemeralStorageRequest) {
+    this.ephemeralStorageRequest = ephemeralStorageRequest;
   }
 
 }

@@ -113,15 +113,25 @@ class ResourceRequirementsUtilsTest {
 
   @Test
   void testConnectionResourceRequirementsOverrideWorker() {
-    final ResourceRequirements workerDefaultReqs = new ResourceRequirements().withCpuRequest("1").withCpuLimit("1");
-    final ResourceRequirements connectionResourceRequirements = new ResourceRequirements().withCpuLimit("2").withMemoryLimit(FIVE_HUNDRED_MEM);
+    final ResourceRequirements workerDefaultReqs = new ResourceRequirements()
+        .withCpuRequest("1")
+        .withCpuLimit("1")
+        .withEphemeralStorageLimit("2G")
+        .withEphemeralStorageRequest("4G");
+    final ResourceRequirements connectionResourceRequirements = new ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryLimit(FIVE_HUNDRED_MEM)
+        .withEphemeralStorageLimit("1G")
+        .withEphemeralStorageRequest("5G");
 
     final ResourceRequirements result = ResourceRequirementsUtils.getResourceRequirements(connectionResourceRequirements, workerDefaultReqs);
 
     final ResourceRequirements expectedReqs = new ResourceRequirements()
         .withCpuRequest("1")
         .withCpuLimit("2")
-        .withMemoryLimit(FIVE_HUNDRED_MEM);
+        .withMemoryLimit(FIVE_HUNDRED_MEM)
+        .withEphemeralStorageLimit("1G")
+        .withEphemeralStorageRequest("5G");
     assertEquals(expectedReqs, result);
   }
 

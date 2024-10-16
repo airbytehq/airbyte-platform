@@ -9,7 +9,7 @@ import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.PodUtils
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -68,7 +68,7 @@ class ConnectorPodFactory(
       secretVolumeMounts.add(dataPlaneCreds.mount)
     }
 
-    val connectorResourceReqs = PodUtils.getResourceRequirementsBuilder(connectorReqs).build()
+    val connectorResourceReqs = ResourceConversionUtils.buildResourceRequirements(connectorReqs)
     val internalVolumeMounts = volumeMounts + secretVolumeMounts
 
     val init: Container =
@@ -145,7 +145,7 @@ class ConnectorPodFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
-      .withResources(PodUtils.getResourceRequirementsBuilder(sidecarReqs).build())
+      .withResources(ResourceConversionUtils.buildResourceRequirements(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }

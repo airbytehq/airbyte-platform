@@ -499,7 +499,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   CONNECTOR_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
       "connector_storage_usage_mb",
-      "Storage in mb used by a connector.");
+      "Storage in mb used by a connector."),
+
+  CONNECTION_STAGING_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connection_staging_storage_usage_mb",
+      "Staging storage in mb used by a connection.");
 
   private final MetricEmittingApp application;
   private final String metricName;

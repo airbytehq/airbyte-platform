@@ -26,6 +26,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class StorageUsageReporter(
   @Value("\${airbyte.connection-id}") private val connectionId: String,
+  @Value("\${airbyte.staging-dir}") private val stagingDir: String?,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
   private val input: ReplicationInput,
@@ -38,21 +39,35 @@ class StorageUsageReporter(
     }
 
     val sourceMbUsed = measureDirMbViaProc(SOURCE_DIR)
-    logger.debug { "Disk used by source: $sourceMbUsed MB" }
 
     val destMbUsed = measureDirMbViaProc(DEST_DIR)
-    logger.debug { "Disk used by dest: $destMbUsed MB" }
 
     val connectionIdAttr = MetricAttribute(MetricTags.CONNECTION_ID, connectionId)
     sourceMbUsed?.let {
+      logger.debug { "Disk used by source: $sourceMbUsed MB" }
+
       val typeAttr = MetricAttribute(MetricTags.CONNECTOR_TYPE, "source")
       val imageAttr = MetricAttribute(MetricTags.CONNECTOR_IMAGE, input.sourceLauncherConfig.dockerImage)
       metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, imageAttr, connectionIdAttr)
     }
     destMbUsed?.let {
+      logger.debug { "Disk used by dest: $destMbUsed MB" }
+
       val typeAttr = MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination")
       val imageAttr = MetricAttribute(MetricTags.CONNECTOR_IMAGE, input.destinationLauncherConfig.dockerImage)
       metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, imageAttr, connectionIdAttr)
+    }
+
+    // conditionally record staging usage as separate metric
+    stagingDir?.let {
+      val stagingMbUsed = measureDirMbViaProc(stagingDir)
+      stagingMbUsed?.let {
+        logger.debug { "Disk used by staging: $stagingMbUsed MB" }
+
+        val sourceImageAttr = MetricAttribute(MetricTags.SOURCE_IMAGE, input.sourceLauncherConfig.dockerImage)
+        val destImageAttr = MetricAttribute(MetricTags.DESTINATION_IMAGE, input.destinationLauncherConfig.dockerImage)
+        metricClient.gauge(OssMetricsRegistry.CONNECTION_STAGING_STORAGE_USAGE_MB, it, sourceImageAttr, destImageAttr, connectionIdAttr)
+      }
     }
   }
 

@@ -13,6 +13,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companion.MYSQL_SOURCE_NAME
@@ -32,10 +33,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.anyList
 import java.util.UUID
 import java.util.stream.Stream
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class RuntimeEnvVarFactoryTest {
   private lateinit var connectorApmSupportHelper: ConnectorApmSupportHelper
@@ -44,7 +47,7 @@ class RuntimeEnvVarFactoryTest {
 
   private lateinit var factory: RuntimeEnvVarFactory
 
-  private val stagingFolder = "staging-folder"
+  private val stagingMountPath = "/staging-dir"
 
   @BeforeEach
   fun setup() {
@@ -54,7 +57,7 @@ class RuntimeEnvVarFactoryTest {
 
     factory =
       spyk(
-        RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingFolder, CONTAINER_ORCH_JAVA_OPTS, connectorApmSupportHelper, ffClient),
+        RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingMountPath, CONTAINER_ORCH_JAVA_OPTS, connectorApmSupportHelper, ffClient),
       )
   }
 
@@ -168,7 +171,7 @@ class RuntimeEnvVarFactoryTest {
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingFolder, null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "true", null),
       )
 
@@ -188,8 +191,27 @@ class RuntimeEnvVarFactoryTest {
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingFolder, null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "false", null),
+      )
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["1G", "2Mi", "5G", "10G", "87Ki"])
+  fun `builds connector resource requirement env vars `(kubeStorageLimit: String) {
+    val reqs =
+      AirbyteResourceRequirements()
+        .withEphemeralStorageLimit(kubeStorageLimit)
+
+    val result = factory.getResourceEnvVars(reqs)
+
+    val expectedStorageBytes = ResourceConversionUtils.kubeQuantityStringToBytes(kubeStorageLimit)
+
+    val expected =
+      listOf(
+        EnvVar(EnvVarConstants.CONNECTOR_STORAGE_LIMIT_BYTES, expectedStorageBytes.toString(), null),
       )
 
     assertEquals(expected, result)
@@ -202,11 +224,13 @@ class RuntimeEnvVarFactoryTest {
     val apmEnvVars = listOf(EnvVar("apm-var", "2", null))
     val configurationEnvVars = listOf(EnvVar("config-var", "3", null))
     val metadataEnvVars = listOf(EnvVar("metadata-var", "4", null))
+    val resourceEnvVars = listOf(EnvVar("resource-var", "5", null))
     val passThroughVars = passThroughEnvMap?.toEnvVarList().orEmpty()
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns awsEnvVars
     every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
     every { factory.getConfigurationEnvVars(any(), any()) } returns configurationEnvVars
     every { factory.getMetadataEnvVars(any()) } returns metadataEnvVars
+    every { factory.getResourceEnvVars(any()) } returns resourceEnvVars
 
     val config =
       IntegrationLauncherConfig()
@@ -214,9 +238,11 @@ class RuntimeEnvVarFactoryTest {
         .withDockerImage("image-name")
         .withWorkspaceId(workspaceId)
 
-    val result = factory.replicationConnectorEnvVars(config)
+    val resourceReqs = AirbyteResourceRequirements()
 
-    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + passThroughVars
+    val result = factory.replicationConnectorEnvVars(config, resourceReqs)
+
+    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars
 
     assertEquals(expected, result)
   }
@@ -294,6 +320,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), input.connectionId.toString(), null),
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
       ),
       result,
     )

@@ -350,7 +350,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .withCpuLimit(useDefaultIfEmpty(kubeResourceConfig.getCpuLimit(), defaultConfig.getCpuLimit()))
         .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
         .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
-        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
+        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()))
+        .withEphemeralStorageLimit(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageLimit(), defaultConfig.getEphemeralStorageLimit()))
+        .withEphemeralStorageRequest(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageRequest(), defaultConfig.getEphemeralStorageRequest()));
   }
 
   private static String useDefaultIfEmpty(final String value, final String defaultValue) {

@@ -193,6 +193,17 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("fileTransferReqs")
+  fun fileTransferReqs(
+    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-limit}") ephemeralStorageLimit: String,
+    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-request}") ephemeralStorageRequest: String,
+  ): ResourceRequirements {
+    return ResourceRequirements()
+      .withEphemeralStorageLimit(ephemeralStorageLimit)
+      .withEphemeralStorageRequest(ephemeralStorageRequest)
+  }
+
+  @Singleton
   @Named("replicationPodTolerations")
   fun replicationPodTolerations(
     @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,

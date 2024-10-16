@@ -43,6 +43,7 @@ airbyte:
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+  staging-dir: ${AIRBYTE_STAGING_DIRECTORY}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

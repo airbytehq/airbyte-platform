@@ -29,11 +29,12 @@ import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.pod.PodUtils
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
+import io.airbyte.workload.launcher.pods.PayloadKubeInputMapperTest.Fixtures.fileTransferReqs
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
@@ -48,11 +49,15 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `builds a kube input from a replication payload`(customConnector: Boolean) {
+  @MethodSource("replicationFlagsInputMatrix")
+  fun `builds a kube input from a replication payload`(
+    useCustomConnector: Boolean,
+    useFileTransfer: Boolean,
+  ) {
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
@@ -87,6 +92,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
+        fileTransferReqs,
         envVarFactory,
         ffClient,
         listOf(),
@@ -132,8 +138,8 @@ class PayloadKubeInputMapperTest {
         EnvVar("env-7", "val-7", null),
       )
 
-    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig) } returns expectedSrcRuntimeEnvVars
-    every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig) } returns expectedDestRuntimeEnvVars
+    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig, any()) } returns expectedSrcRuntimeEnvVars
+    every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig, resourceReqs3) } returns expectedDestRuntimeEnvVars
     every { envVarFactory.orchestratorEnvVars(input, workloadId) } returns expectedOrchestratorRuntimeEnvVars
 
     every { input.getJobId() } returns jobId
@@ -141,12 +147,13 @@ class PayloadKubeInputMapperTest {
     every { input.getOrchestratorResourceReqs() } returns resourceReqs1
     every { input.getSourceResourceReqs() } returns resourceReqs2
     every { input.getDestinationResourceReqs() } returns resourceReqs3
-    every { input.usesCustomConnector() } returns customConnector
+    every { input.usesCustomConnector() } returns useCustomConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.sourceLauncherConfig } returns srcLauncherConfig
     every { input.destinationLauncherConfig } returns destLauncherConfig
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
+    every { input.useFileTransfer } returns useFileTransfer
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
@@ -164,14 +171,22 @@ class PayloadKubeInputMapperTest {
 
     assertEquals(podName, result.podName)
     assertEquals(replLabels + sharedLabels, result.labels)
-    assertEquals(if (customConnector) replCustomSelectors else replSelectors, result.nodeSelectors)
+    assertEquals(if (useCustomConnector) replCustomSelectors else replSelectors, result.nodeSelectors)
     assertEquals(annotations, result.annotations)
     assertEquals(containerInfo.image, result.orchestratorImage)
     assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
     assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
-    assertEquals(PodUtils.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
-    assertEquals(PodUtils.buildResourceRequirements(resourceReqs2), result.sourceReqs)
-    assertEquals(PodUtils.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+    assertEquals(ResourceConversionUtils.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
+    assertEquals(ResourceConversionUtils.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+    val expectedSourceReqs =
+      if (useFileTransfer) {
+        resourceReqs2
+          .withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
+          .withEphemeralStorageRequest(fileTransferReqs.ephemeralStorageRequest)
+      } else {
+        resourceReqs2
+      }
+    assertEquals(ResourceConversionUtils.buildResourceRequirements(expectedSourceReqs), result.sourceReqs)
 
     assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
     assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars)
@@ -225,6 +240,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
+        fileTransferReqs,
         envVarFactory,
         ffClient,
         listOf(),
@@ -344,6 +360,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
+        fileTransferReqs,
         envVarFactory,
         ffClient,
         listOf(),
@@ -468,6 +485,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
+        fileTransferReqs,
         envVarFactory,
         ffClient,
         listOf(),
@@ -540,6 +558,16 @@ class PayloadKubeInputMapperTest {
 
   companion object {
     @JvmStatic
+    private fun replicationFlagsInputMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(true, true),
+        Arguments.of(false, false),
+        Arguments.of(true, false),
+        Arguments.of(false, true),
+      )
+    }
+
+    @JvmStatic
     private fun connectorInputMatrix(): Stream<Arguments> {
       return Stream.of(
         Arguments.of(true, WorkloadPriority.HIGH, true),
@@ -551,5 +579,12 @@ class PayloadKubeInputMapperTest {
         Arguments.of(false, WorkloadPriority.DEFAULT, true),
       )
     }
+  }
+
+  object Fixtures {
+    val fileTransferReqs: AirbyteResourceRequirements =
+      AirbyteResourceRequirements()
+        .withEphemeralStorageLimit("1G")
+        .withEphemeralStorageRequest("1G")
   }
 }

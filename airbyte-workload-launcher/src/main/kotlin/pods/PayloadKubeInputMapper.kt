@@ -28,7 +28,7 @@ import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.pod.PodUtils
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -40,6 +40,7 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -55,6 +56,7 @@ class PayloadKubeInputMapper(
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
+  @Named("fileTransferReqs") private val fileTransferReqs: AirbyteResourceRequirements,
   private val runTimeEnvVarFactory: RuntimeEnvVarFactory,
   private val featureFlagClient: FeatureFlagClient,
   @Named("infraFlagContexts") private val contexts: List<Context>,
@@ -71,16 +73,26 @@ class PayloadKubeInputMapper(
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = PodUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchestratorReqs = ResourceConversionUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
     val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
-    val sourceReqs = PodUtils.buildResourceRequirements(input.getSourceResourceReqs())
-    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig)
+    val sourceBaseReqs =
+      if (input.useFileTransfer) {
+        addEphemeralStorageReqLimits(input.getSourceResourceReqs())
+      } else {
+        input.getSourceResourceReqs()
+      }
+    val sourceReqs = ResourceConversionUtils.buildResourceRequirements(sourceBaseReqs)
+    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceBaseReqs)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
-    val destinationReqs = PodUtils.buildResourceRequirements(input.getDestinationResourceReqs())
-    val destinationRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig)
+    val destinationReqs = ResourceConversionUtils.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationRuntimeEnvVars =
+      runTimeEnvVarFactory.replicationConnectorEnvVars(
+        input.destinationLauncherConfig,
+        input.getDestinationResourceReqs(),
+      )
 
     val labels =
       labeler.getReplicationLabels(
@@ -347,6 +359,13 @@ class PayloadKubeInputMapper(
         addAll(contexts)
       },
     )
+  }
+
+  private fun addEphemeralStorageReqLimits(airbyteSourceReqs: AirbyteResourceRequirements?): AirbyteResourceRequirements {
+    return airbyteSourceReqs
+      ?.withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
+      ?.withEphemeralStorageRequest(fileTransferReqs.ephemeralStorageRequest)
+      ?: fileTransferReqs
   }
 }
 
