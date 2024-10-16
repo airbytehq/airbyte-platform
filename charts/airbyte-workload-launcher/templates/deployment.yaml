@@ -316,6 +316,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
