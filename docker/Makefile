@@ -44,6 +44,7 @@ image.airbyte-base-java-python-image: buildx.start
 	fi
 
 image.airbyte-base-java-worker-image: ## Build the airbyte/airbyte-base-java-worker-image
+image.airbyte-base-java-worker-image: buildx.start
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/airbyte-base-java-worker-image:$(VERSION) \
 			--build-arg JDK_IMAGE=$(BASE_JAVA_IMAGE) \
@@ -58,6 +59,7 @@ image.airbyte-base-java-worker-image: ## Build the airbyte/airbyte-base-java-wor
 	fi
 
 image.airbyte-busybox: ## Build the airbyte/busybox image
+image.airbyte-busybox: buildx.start 
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/busybox:$(VERSION) \
 			--build-arg BASE_BUSYBOX_IMAGE_VERSION=$(BASE_BUSYBOX_IMAGE_VERSION) \
@@ -72,6 +74,7 @@ image.airbyte-busybox: ## Build the airbyte/busybox image
 	fi
 
 image.airbyte-mc: ## Build the airbyte/mc image
+image.airbyte-mc: buildx.start
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/mc:$(VERSION) \
 			--build-arg ALPINE_IMAGE_VERSION=$(ALPINE_IMAGE_VERSION) \
