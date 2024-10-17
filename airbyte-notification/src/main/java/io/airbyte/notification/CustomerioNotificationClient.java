@@ -15,7 +15,6 @@ import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.notification.messages.SchemaUpdateNotification;
@@ -137,20 +136,26 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   @Override
   public boolean notifyJobFailure(final SyncSummary summary,
-                                  final String receiverEmail)
-      throws IOException {
+                                  final String receiverEmail) {
     final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID);
     final String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    try {
+      return notifyByEmail(payload);
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyJobSuccess(final SyncSummary summary,
-                                  final String receiverEmail)
-      throws IOException {
+                                  final String receiverEmail) {
     final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID);
     final String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    try {
+      return notifyByEmail(payload);
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   // Once the configs are editable through the UI, the reciever email should be stored in
@@ -158,62 +163,77 @@ public class CustomerioNotificationClient extends NotificationClient {
   // instead of being passed in
   @Override
   public boolean notifyConnectionDisabled(final SyncSummary summary,
-                                          final String receiverEmail)
-      throws IOException {
+                                          final String receiverEmail) {
     final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID);
     final String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    try {
+      return notifyByEmail(payload);
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
-                                                final String receiverEmail)
-      throws IOException {
+                                                final String receiverEmail) {
     final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID);
     final String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    try {
+      return notifyByEmail(payload);
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyBreakingChangeWarning(final List<String> receiverEmails,
                                              final String connectorName,
                                              final ActorType actorType,
-                                             final ActorDefinitionBreakingChange breakingChange)
-      throws IOException {
-    return notifyByEmailBroadcast(BREAKING_CHANGE_WARNING_BROADCAST_ID, receiverEmails, Map.of(
-        "connector_name", connectorName,
-        "connector_type", actorType.value(),
-        "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
-        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
-        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+                                             final ActorDefinitionBreakingChange breakingChange) {
+    try {
+      return notifyByEmailBroadcast(BREAKING_CHANGE_WARNING_BROADCAST_ID, receiverEmails, Map.of(
+          "connector_name", connectorName,
+          "connector_type", actorType.value(),
+          "connector_version_new", breakingChange.getVersion().serialize(),
+          "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
+          "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
+          "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyBreakingChangeSyncsDisabled(final List<String> receiverEmails,
                                                    final String connectorName,
                                                    final ActorType actorType,
-                                                   final ActorDefinitionBreakingChange breakingChange)
-      throws IOException {
-    return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID, receiverEmails, Map.of(
-        "connector_name", connectorName,
-        "connector_type", actorType.value(),
-        "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
-        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+                                                   final ActorDefinitionBreakingChange breakingChange) {
+    try {
+      return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID, receiverEmails, Map.of(
+          "connector_name", connectorName,
+          "connector_type", actorType.value(),
+          "connector_version_new", breakingChange.getVersion().serialize(),
+          "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
+          "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
-                                        final String recipient)
-      throws IOException {
+                                        final String recipient) {
     final String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
 
     final ObjectNode node =
         buildSchemaPropagationJson(notification, recipient, transactionalMessageId);
 
     final String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    try {
+      return notifyByEmail(payload);
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   static ObjectNode buildSyncCompletedJson(final SyncSummary syncSummary,
@@ -370,12 +390,6 @@ public class CustomerioNotificationClient extends NotificationClient {
         throw new IOException(errorMessage);
       }
     }
-  }
-
-  @Override
-  public String renderTemplate(final String templateFile, final String... data) throws IOException {
-    final String template = MoreResources.readResource(templateFile);
-    return String.format(template, data);
   }
 
   private String convertMarkdownToHtml(final String message) {
