@@ -4607,13 +4607,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerPortalRead"
-  /v1/billing/complete_checkout_session:
+  /v1/billing/handle_webhook:
     post:
-      summary: Complete a checkout session
+      summary: Handle an external billing event (ie a webhook from an external payment provider service)
       tags:
         - billing
         - cloud-only
-      operationId: completeCheckoutSession
+      operationId: handleWebhook
       requestBody:
         content:
           application/json:
@@ -4626,7 +4626,7 @@ paths:
           description: Invalid payload
         "401":
           description: Invalid signature
-      # This route is unsecured as it accepts webhook events from Stripe, which are validated by their signature.
+      # This route is unsecured as it accepts webhook events from an external service, which are validated by their signature.
       security: []
 
   /v1/billing/list_invoices:

@@ -48,9 +48,9 @@ open class BillingController : BillingApi {
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationBalanceRead = throw ApiNotImplementedInOssProblem()
 
-  @Post("/complete_checkout_session")
+  @Post("/handle_webhook")
   @ExecuteOn(AirbyteTaskExecutors.WEBHOOK)
-  override fun completeCheckoutSession(
+  override fun handleWebhook(
     @Body event: JsonNode,
   ): Unit = throw ApiNotImplementedInOssProblem()
 
