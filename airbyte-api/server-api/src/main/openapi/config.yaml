@@ -9676,7 +9676,7 @@ components:
           type: string
         supportRefreshes:
           type: boolean
-        supportFileTransfers:
+        supportFileTransfer:
           type: boolean
     ActorDefinitionBreakingChange:
       type: object

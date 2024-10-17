@@ -134,7 +134,7 @@ public class ReplicationInputHydrator {
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
 
     final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    if (sourceActorConfig.getUseFileTransfer() && !resolvedDestinationVersion.getSupportFileTransfers()) {
+    if (sourceActorConfig.getUseFileTransfer() && !resolvedDestinationVersion.getSupportFileTransfer()) {
       LOGGER.error("Destination does not support file transfers, but source requires it.");
       throw new WorkerException("Destination does not support file transfers, but source requires it.");
     }
