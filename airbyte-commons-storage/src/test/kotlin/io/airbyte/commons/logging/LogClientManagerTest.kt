@@ -113,24 +113,6 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testSettingWorkspaceMdc() {
-    val logPath = Path.of("/some/path")
-    val logClient = mockk<LogClient> { }
-    val logMdcHelper =
-      mockk<LogMdcHelper> {
-        every { setWorkspaceMdc(any()) } returns Unit
-      }
-    val logClientManager =
-      LogClientManager(
-        logClient = logClient,
-        logMdcHelper = logMdcHelper,
-        logTailSize = 100,
-      )
-    logClientManager.setWorkspaceMdc(path = logPath)
-    verify(exactly = 1) { logMdcHelper.setWorkspaceMdc(logPath) }
-  }
-
-  @Test
   internal fun testGettingFullPath() {
     val logPath = Path.of("/some/path")
     val logFilename = DEFAULT_LOG_FILENAME

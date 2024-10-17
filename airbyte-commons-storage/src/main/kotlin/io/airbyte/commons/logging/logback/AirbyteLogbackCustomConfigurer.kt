@@ -27,10 +27,8 @@ import ch.qos.logback.core.util.Duration
 import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
-import io.airbyte.commons.logging.DEFAULT_WORKSPACE_MDC_KEY
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
-import java.io.File
 
 /**
  * Custom Logback [Configurator] that configures Logback appenders and loggers for use in the platform.  This configurator allows us to
@@ -50,7 +48,6 @@ class AirbyteLogbackCustomConfigurer :
     val appenders =
       listOf(
         createPlatformAppender(loggerContext = loggerContext),
-        createApplicationAppender(loggerContext = loggerContext),
         createOperationsJobAppender(loggerContext = loggerContext),
       )
 
@@ -64,31 +61,6 @@ class AirbyteLogbackCustomConfigurer :
     // Do not allow any other configurators to run after this.
     // This prevents Logback from creating the default console appender for the root logger.
     return Configurator.ExecutionStatus.DO_NOT_INVOKE_NEXT_IF_ANY
-  }
-
-  /**
-   * Builds the appender for application log messages.  This appender logs all messages to remote storage.
-   *
-   * @param loggerContext The logging context.
-   * @return The application appender.
-   */
-  private fun createApplicationAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
-    val appenderFactory = { context: Context, discriminatorValue: String ->
-      createCloudAppender(
-        context = context,
-        discriminatorValue = discriminatorValue,
-        layout = AirbytePlatformLogbackMessageLayout(),
-        documentType = DocumentType.APPLICATION_LOGS,
-        appenderName = CLOUD_APPLICATION_LOGGER_NAME,
-      )
-    }
-
-    return createSiftingAppender(
-      appenderFactory = appenderFactory,
-      appenderName = CLOUD_APPLICATION_LOGGER_NAME,
-      contextKey = DEFAULT_WORKSPACE_MDC_KEY,
-      loggerContext = loggerContext,
-    )
   }
 
   /**
@@ -286,13 +258,6 @@ class AirbyteLogbackCustomConfigurer :
 }
 
 private const val DEFAULT_APPENDER_TIMEOUT_MIN = "15"
-const val DEFAULT_MAX_LOG_FILE_SIZE = "100MB"
-const val LOG_FILE_EXTENSION = ".log"
-const val ROLLING_FILE_NAME_PATTERN = ".%i$LOG_FILE_EXTENSION.gz"
 val APPENDER_TIMEOUT = EnvVar.LOG_IDLE_ROUTE_TTL.fetchNotNull(default = DEFAULT_APPENDER_TIMEOUT_MIN)
 
 private fun getLogLevel(): Level = Level.toLevel(EnvVar.LOG_LEVEL.fetchNotNull(default = Level.INFO.toString()))
-
-private fun touchFile(file: String) {
-  File(file).createNewFile()
-}

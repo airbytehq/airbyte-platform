@@ -59,7 +59,6 @@ private val buckets = StorageBucketConfig(log = "log", state = "state", workload
 internal class DocumentTypeTest {
   @Test
   fun `prefixes are correct`() {
-    assertEquals(DocumentType.APPLICATION_LOGS.prefix, Path.of("app-logging"))
     assertEquals(DocumentType.LOGS.prefix, Path.of("job-logging"))
     assertEquals(DocumentType.STATE.prefix, Path.of("/state"))
     assertEquals(DocumentType.WORKLOAD_OUTPUT.prefix, Path.of("/workload/output"))

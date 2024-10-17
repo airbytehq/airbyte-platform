@@ -86,12 +86,11 @@ class StorageClientFactory(
 enum class DocumentType(
   val prefix: Path,
 ) {
-  // Note that app logs and job logs should not have a leading slash to ensure
+  // Note that job logs should not have a leading slash to ensure
   // that GCS/Azure can find these files in blob storage.  Both of those
   // cloud providers treat the leading slash as a directory.  Currently, logs
   // are retrieved by the LogClient, which uses a path set on the attempt that
   // does NOT contain a leading slash.  Therefor, these paths need to match that logic.
-  APPLICATION_LOGS(prefix = Path.of("app-logging")),
   LOGS(prefix = Path.of("job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
@@ -560,7 +559,6 @@ fun StorageConfig.bucketName(type: DocumentType): String =
   when (type) {
     DocumentType.STATE -> this.buckets.state
     DocumentType.WORKLOAD_OUTPUT -> this.buckets.workloadOutput
-    DocumentType.APPLICATION_LOGS -> this.buckets.log
     DocumentType.LOGS -> this.buckets.log
     DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
   }

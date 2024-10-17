@@ -7,7 +7,6 @@ package io.airbyte.workers;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.GlobalTracer;
 import datadog.trace.api.Tracer;
-import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.TemporalInitializationUtils;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalUtils;
@@ -37,7 +36,6 @@ import io.temporal.worker.WorkflowImplementationOptions;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -56,8 +54,6 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(notEnv = {Environment.TEST})
 @Slf4j
 public class ApplicationInitializer implements ApplicationEventListener<ServiceReadyEvent> {
-
-  private static final String SCHEDULER_LOGS = "scheduler/logs";
 
   @Inject
   @Named("checkConnectionActivities")
@@ -110,8 +106,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private TemporalUtils temporalUtils;
   @Inject
   private WorkerFactory workerFactory;
-  @Value("${airbyte.workspace.root}")
-  private String workspaceRoot;
   @Value("${airbyte.data.sync.task-queue}")
   private String syncTaskQueue;
 
@@ -120,8 +114,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
   @Value("${airbyte.data.discover.task-queue}")
   private String discoverTaskQueue;
-  @Inject
-  private LogClientManager logClientManager;
 
   @Override
   public void onApplicationEvent(final ServiceReadyEvent event) {
@@ -152,9 +144,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private void initializeCommonDependencies()
       throws ExecutionException, InterruptedException, TimeoutException {
     log.info("Initializing common worker dependencies.");
-
-    // Configure logging client
-    logClientManager.setWorkspaceMdc(Path.of(workspaceRoot, SCHEDULER_LOGS));
 
     configureTemporal(temporalUtils, temporalService);
   }

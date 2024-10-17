@@ -14,9 +14,6 @@ const val DEFAULT_LOG_FILENAME = "logs.log"
 /** The default MDC key that holds the job log path for log storage. */
 const val DEFAULT_JOB_LOG_PATH_MDC_KEY = "job_log_path"
 
-/** The default MDC key that holds the workspace path for log storage. */
-const val DEFAULT_WORKSPACE_MDC_KEY = "workspace_app_root"
-
 /**
  * Defines methods for setting various MDC key/values related to logging
  */
@@ -28,10 +25,6 @@ class LogMdcHelper {
 
   fun setJobMdc(path: Path?) {
     path?.let { MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, fullLogPath(path)) } ?: MDC.remove(DEFAULT_JOB_LOG_PATH_MDC_KEY)
-  }
-
-  fun setWorkspaceMdc(path: Path) {
-    MDC.put(DEFAULT_WORKSPACE_MDC_KEY, path.toString())
   }
 
   fun fullLogPath(path: Path): String {

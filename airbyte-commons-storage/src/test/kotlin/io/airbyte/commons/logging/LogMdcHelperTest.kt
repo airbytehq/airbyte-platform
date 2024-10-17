@@ -36,15 +36,4 @@ internal class LogMdcHelperTest {
     assertEquals(Path.of(path.toString(), logFilename).toString(), MDC.get(jobLogMdcKey))
     MDC.remove(jobLogMdcKey)
   }
-
-  @Test
-  internal fun testSettingWorkspaceLogMdcKey() {
-    val path = Path.of("/some/path")
-    val workspaceMdcKey = DEFAULT_WORKSPACE_MDC_KEY
-    val logMdcHelper =
-      LogMdcHelper()
-    logMdcHelper.setWorkspaceMdc(path = path)
-    assertEquals(path.toString(), MDC.get(workspaceMdcKey))
-    MDC.remove(workspaceMdcKey)
-  }
 }

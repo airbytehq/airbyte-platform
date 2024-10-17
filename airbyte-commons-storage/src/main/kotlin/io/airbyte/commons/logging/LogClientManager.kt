@@ -56,14 +56,5 @@ class LogClientManager(
     logMdcHelper.setJobMdc(path = path)
   }
 
-  /**
-   * Set workspace MDC.
-   *
-   * @param path log path
-   */
-  fun setWorkspaceMdc(path: Path) {
-    logMdcHelper.setWorkspaceMdc(path = path)
-  }
-
   fun fullLogPath(path: Path): String = logMdcHelper.fullLogPath(path = path)
 }
