@@ -5,7 +5,7 @@ import { useConnectionStatus } from "components/connection/ConnectionStatus/useC
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 
-import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
+import { connectionsKeys, useGetConnectionSyncProgress, useCurrentConnection } from "core/api";
 import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
 import { useStreamsListContext } from "pages/connections/StreamStatusPage/StreamsListContext";
 
@@ -62,7 +62,7 @@ const mockFilteredStreams = [
 describe("useUiStreamStates", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (useStreamsListContext as jest.Mock).mockReturnValue({ filteredStreamsByName: mockFilteredStreams });
+    (useStreamsListContext as jest.Mock).mockReturnValue({ enabledStreamsByName: mockFilteredStreams });
   });
 
   it.each`
@@ -87,6 +87,7 @@ describe("useUiStreamStates", () => {
       expectedIsLoadingHistoricalData,
       expectedDataFreshAsOf,
     }) => {
+      (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
       (useConnectionStatus as jest.Mock).mockReturnValue(connectionStatus);
       (useGetConnectionSyncProgress as jest.Mock).mockReturnValue(syncProgress);
       (useStreamsSyncProgress as jest.Mock).mockReturnValue(streamSyncProgress);
@@ -111,6 +112,7 @@ describe("useUiStreamStates", () => {
 });
 
 it("should handle RateLimited status", () => {
+  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
   (useStreamsStatuses as jest.Mock).mockReturnValue({
     streamStatuses: new Map([
       [
@@ -145,12 +147,13 @@ it("should handle post-job fetching correctly", async () => {
   const mockQueryClient = {
     invalidateQueries: mockInvalidateQueries,
   };
+  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
   (useConnectionStatus as jest.Mock).mockReturnValueOnce({
     status: ConnectionSyncStatus.running,
     isRunning: true,
   });
   (useQueryClient as jest.Mock).mockReturnValue(mockQueryClient);
-  (useStreamsListContext as jest.Mock).mockReturnValue({ filteredStreamsByName: mockFilteredStreams });
+  (useStreamsListContext as jest.Mock).mockReturnValue({ enabledStreamsByName: mockFilteredStreams });
 
   (useGetConnectionSyncProgress as jest.Mock).mockReturnValue(new Map());
   (useStreamsSyncProgress as jest.Mock).mockReturnValue(new Map());

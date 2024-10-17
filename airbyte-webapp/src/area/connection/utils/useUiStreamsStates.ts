@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
-import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
+import { connectionsKeys, useCurrentConnection, useGetConnectionSyncProgress } from "core/api";
 import {
   ConnectionSyncStatus,
   JobConfigType,
@@ -47,8 +47,9 @@ export interface RateLimitedUIStreamState extends Omit<BaseUIStreamState, "statu
 export type UIStreamState = BaseUIStreamState | RateLimitedUIStreamState;
 
 export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
+  const { prefix } = useCurrentConnection();
   const connectionStatus = useConnectionStatus(connectionId);
-  const { filteredStreamsByName } = useStreamsListContext();
+  const { enabledStreamsByName } = useStreamsListContext();
   const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.status === ConnectionSyncStatus.running);
   const [isFetchingPostJob, setIsFetchingPostJob] = useState<boolean>(false);
   const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
@@ -85,10 +86,10 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     }
   }, [wasRunning, connectionStatus.status, queryClient, connectionId, isFetchingPostJob, isLoadingHistoricalData]);
 
-  const uiStreamStates = filteredStreamsByName.map((streamItem) => {
+  const uiStreamStates = enabledStreamsByName.map((streamItem) => {
     // initialize the state as undefined
     const uiState: UIStreamState = {
-      streamName: streamItem.streamName,
+      streamName: `${prefix ? prefix : ""}${streamItem.streamName}`,
       streamNamespace: streamItem.streamNamespace,
       activeJobConfigType: undefined,
       activeJobStartedAt: undefined,

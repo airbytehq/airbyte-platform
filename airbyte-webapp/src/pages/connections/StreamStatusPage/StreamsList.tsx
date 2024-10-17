@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, useMemo, useContext } from "react";
+import { useRef, useMemo, useContext, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -12,6 +12,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ScrollParentContext } from "components/ui/ScrollParent";
+import { SearchInput } from "components/ui/SearchInput";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -24,7 +25,6 @@ import { useCurrentConnection } from "core/api";
 import { DataFreshnessCell } from "./DataFreshnessCell";
 import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
-import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
@@ -154,6 +154,7 @@ export const StreamsList: React.FC = () => {
     recordsLoaded,
   } = useConnectionStatus(connection.connectionId);
 
+  const [filtering, setFiltering] = useState("");
   const customScrollParent = useContext(ScrollParentContext);
 
   return (
@@ -171,8 +172,9 @@ export const StreamsList: React.FC = () => {
               recordsExtracted={recordsExtracted}
             />
           </FlexContainer>
-
-          <StreamSearchFiltering className={styles.search} />
+          <div className={styles.search}>
+            <SearchInput value={filtering} onChange={({ target: { value } }) => setFiltering(value)} />
+          </div>
         </FlexContainer>
       </Box>
       <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
@@ -188,6 +190,7 @@ export const StreamsList: React.FC = () => {
             })
           }
           sorting={false}
+          columnFilters={[{ id: "streamName", value: filtering }]}
           virtualized
           virtualizedProps={{ customScrollParent: customScrollParent ?? undefined, useWindowScroll: true }}
         />
