@@ -8,16 +8,24 @@ import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
 /**
  * Input/Output object for LaunchPipeline.
- * @param msg - input msg
- * @param logCtx - string key value pairs to add to logging context
- * @param skip - whether to skip the stage
  */
 sealed class StageIO {
+  /** msg - input message */
   abstract val msg: LauncherInput
+
+  /** logCtx - string key value pairs to add to logging context */
   abstract val logCtx: Map<String, String>
+
+  /** skip - whether to skip the stage */
   var skip: Boolean = false
 }
 
+/**
+ * Input/Output object for LaunchPipeline.
+ * @param msg - input msg
+ * @param logCtx - string key value pairs to add to logging context
+ * @param payload - workload payload
+ */
 data class LaunchStageIO(
   override val msg: LauncherInput,
   override val logCtx: Map<String, String> = mapOf(),

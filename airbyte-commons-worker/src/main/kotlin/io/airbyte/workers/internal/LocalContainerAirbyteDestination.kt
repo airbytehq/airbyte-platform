@@ -6,7 +6,6 @@ package io.airbyte.workers.internal
 
 import com.google.common.annotations.VisibleForTesting
 import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedRunnable
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
@@ -44,7 +43,8 @@ class LocalContainerAirbyteDestination(
     const val CALLER = "airbyte-destination"
 
     val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope.Builder()
+      MdcScope
+        .Builder()
         .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
         .setPrefixColor(Color.YELLOW_BACKGROUND)
   }
@@ -80,10 +80,11 @@ class LocalContainerAirbyteDestination(
     // TODO are these the correct pipes?
     writer = messageWriterFactory.createWriter(BufferedWriter(OutputStreamWriter(containerIOHandle.getOutputStream(), Charsets.UTF_8)))
 
-    Failsafe.with<Any, RetryPolicy<Any>>(LOCAL_CONTAINER_RETRY_POLICY).run(
+    Failsafe.with(LOCAL_CONTAINER_RETRY_POLICY).run(
       CheckedRunnable {
         messageIterator =
-          streamFactory.create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
+          streamFactory
+            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
             .filter { message: AirbyteMessage -> ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },
@@ -115,9 +116,7 @@ class LocalContainerAirbyteDestination(
     return !messageIterator.hasNext() && containerIOHandle.exitCodeExists()
   }
 
-  override fun getExitValue(): Int {
-    return containerIOHandle.getExitCode()
-  }
+  override fun getExitValue(): Int = containerIOHandle.getExitCode()
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null

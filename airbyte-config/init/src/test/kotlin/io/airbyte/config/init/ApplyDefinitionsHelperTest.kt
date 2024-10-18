@@ -187,13 +187,15 @@ internal class ApplyDefinitionsHelperTest {
     val fakeAdvId = UUID.randomUUID()
     val fakeInitialAdvId = UUID.randomUUID()
     val insertedAdvSource =
-      ConnectorRegistryConverters.toActorDefinitionVersion(
-        SOURCE_POSTGRES_RC,
-      ).withVersionId(fakeAdvId)
+      ConnectorRegistryConverters
+        .toActorDefinitionVersion(
+          SOURCE_POSTGRES_RC,
+        ).withVersionId(fakeAdvId)
     val insertedInitialAdvSource =
-      ConnectorRegistryConverters.toActorDefinitionVersion(
-        SOURCE_POSTGRES_RC,
-      ).withVersionId(fakeInitialAdvId)
+      ConnectorRegistryConverters
+        .toActorDefinitionVersion(
+          SOURCE_POSTGRES_RC,
+        ).withVersionId(fakeInitialAdvId)
     val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
     val insertedInitialAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeInitialAdvId)
 
@@ -302,9 +304,10 @@ internal class ApplyDefinitionsHelperTest {
     val fakeAdvId = UUID.randomUUID()
 
     val insertedAdvSource =
-      ConnectorRegistryConverters.toActorDefinitionVersion(
-        SOURCE_POSTGRES_RC,
-      ).withVersionId(fakeAdvId)
+      ConnectorRegistryConverters
+        .toActorDefinitionVersion(
+          SOURCE_POSTGRES_RC,
+        ).withVersionId(fakeAdvId)
     val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
 
     every {
@@ -387,7 +390,7 @@ internal class ApplyDefinitionsHelperTest {
     every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns
       Optional.of(versionDefinition1)
 
-    applyDefinitionsHelper.apply(false, true)
+    applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true)
 
     verify {
       sourceService.writeConnectorMetadata(any(), eq(versionDefinition1), any())
@@ -640,9 +643,17 @@ internal class ApplyDefinitionsHelperTest {
     }
 
     val anotherNewSourceDefinition =
-      Jsons.clone(SOURCE_POSTGRES).withName("new").withDockerRepository("airbyte/source-new").withSourceDefinitionId(UUID.randomUUID())
+      Jsons
+        .clone(SOURCE_POSTGRES)
+        .withName("new")
+        .withDockerRepository("airbyte/source-new")
+        .withSourceDefinitionId(UUID.randomUUID())
     val anotherNewDestinationDefinition =
-      Jsons.clone(DESTINATION_S3).withName("new").withDockerRepository("airbyte/destination-new").withDestinationDefinitionId(UUID.randomUUID())
+      Jsons
+        .clone(DESTINATION_S3)
+        .withName("new")
+        .withDockerRepository("airbyte/destination-new")
+        .withDestinationDefinitionId(UUID.randomUUID())
 
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES, malformedRegistrySourceDefinition, anotherNewSourceDefinition)
     every {
@@ -721,14 +732,18 @@ internal class ApplyDefinitionsHelperTest {
       BreakingChanges().withAdditionalProperty(
         BREAKING_CHANGE_VERSION,
         VersionBreakingChange()
-          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"),
+          .withMessage("Sample message")
+          .withUpgradeDeadline("2023-07-20")
+          .withMigrationDocumentationUrl("https://example.com"),
       )
 
     private val destinationRegistryBreakingChanges: BreakingChanges =
       BreakingChanges().withAdditionalProperty(
         BREAKING_CHANGE_VERSION,
         VersionBreakingChange()
-          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"),
+          .withMessage("Sample message")
+          .withUpgradeDeadline("2023-07-20")
+          .withMigrationDocumentationUrl("https://example.com"),
       )
 
     private val SOURCE_POSTGRES: ConnectorRegistrySourceDefinition =
@@ -838,13 +853,12 @@ internal class ApplyDefinitionsHelperTest {
         .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationRegistryBreakingChanges))
 
     @JvmStatic
-    fun updateScenario(): Stream<Arguments> {
-      return Stream.of(
+    fun updateScenario(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(true, true),
         Arguments.of(true, false),
         Arguments.of(false, false),
         Arguments.of(false, true),
       )
-    }
   }
 }

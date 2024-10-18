@@ -126,16 +126,16 @@ class WorkloadHandlerImplTest {
             it.dataplaneId == null &&
             it.status == WorkloadStatus.PENDING &&
             it.lastHeartbeatAt == null &&
-            it.workloadLabels!!.get(0).key == workloadLabel1.key &&
-            it.workloadLabels!!.get(0).value == workloadLabel1.value &&
-            it.workloadLabels!!.get(1).key == workloadLabel2.key &&
-            it.workloadLabels!!.get(1).value == workloadLabel2.value &&
+            it.workloadLabels!![0].key == workloadLabel1.key &&
+            it.workloadLabels!![0].value == workloadLabel1.value &&
+            it.workloadLabels!![1].key == workloadLabel2.key &&
+            it.workloadLabels!![1].value == workloadLabel2.value &&
             it.inputPayload == "input payload" &&
             it.logPath == "/log/path" &&
             it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
-            it.deadline!!.equals(now.plusHours(2)) &&
+            it.deadline!! == now.plusHours(2) &&
             it.signalInput == "signal payload"
         },
       )
@@ -166,7 +166,7 @@ class WorkloadHandlerImplTest {
     }.answers {}
     every {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
-    }.throws(InvalidStatusTransitionException("$workloadIdWithFailedFail"))
+    }.throws(InvalidStatusTransitionException(workloadIdWithFailedFail))
     every { workloadRepository.save(any()) }.returns(newWorkload)
     every {
       workloadRepository.searchByMutexKeyAndStatusInList(

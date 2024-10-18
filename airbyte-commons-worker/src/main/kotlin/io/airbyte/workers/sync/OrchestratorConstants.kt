@@ -18,7 +18,7 @@ object OrchestratorConstants {
    */
   @JvmField
   val ENV_VARS_TO_TRANSFER =
-    buildSet<String> {
+    buildSet {
       // add variables defined in this file
       addAll(
         setOf(
@@ -85,8 +85,7 @@ object OrchestratorConstants {
           EnvVar.WORKER_ENVIRONMENT,
           EnvVar.WORKSPACE_DOCKER_MOUNT,
           EnvVar.WORKSPACE_ROOT,
-        )
-          .map { it.name },
+        ).map { it.name },
       )
     }
 }

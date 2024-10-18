@@ -37,16 +37,17 @@ private val logger = KotlinLogging.logger {}
 
 class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   private val defaultActivityOptions =
-    ActivityOptions.newBuilder()
+    ActivityOptions
+      .newBuilder()
       .setStartToCloseTimeout(Duration.ofSeconds(10))
       .setRetryOptions(
-        RetryOptions.newBuilder()
+        RetryOptions
+          .newBuilder()
           .setMaximumInterval(Duration.ofSeconds(20))
           .setMaximumAttempts(1)
           .setDoNotRetry("org.openapitools.client.infrastructure.ClientException")
           .build(),
-      )
-      .build()
+      ).build()
 
   private val startRolloutActivity =
     Workflow.newActivityStub(
@@ -85,9 +86,11 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private val verifyActivityOptions =
-    defaultActivityOptions.toBuilder().setStartToCloseTimeout(
-      Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
-    ).build()
+    defaultActivityOptions
+      .toBuilder()
+      .setStartToCloseTimeout(
+        Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
+      ).build()
 
   private val verifyDefaultVersionActivity =
     Workflow.newActivityStub(
@@ -209,12 +212,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
               technicalName = input.dockerRepository.substringAfter("airbyte/"),
               dockerImageTag = input.dockerImageTag,
               action =
-                if (input.result == ConnectorRolloutFinalState.SUCCEEDED) {
-                  ActionType.PROMOTE
-                } else if (input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
-                  ActionType.ROLLBACK
-                } else {
-                  throw IllegalArgumentException("Unrecognized status: $input.result")
+                when (input.result) {
+                  ConnectorRolloutFinalState.SUCCEEDED -> ActionType.PROMOTE
+                  ConnectorRolloutFinalState.FAILED_ROLLED_BACK -> ActionType.ROLLBACK
+                  else -> throw IllegalArgumentException("Unrecognized status: $input.result")
                 },
               rolloutId = input.rolloutId,
             ),
@@ -266,7 +267,8 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       for (field in fields) {
         try {
           val value = field.get(obj)
-          result.append("${field.name}=")
+          result
+            .append("${field.name}=")
             .append(value?.toString() ?: "null")
             .append(" ")
         } catch (e: IllegalAccessException) {

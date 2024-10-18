@@ -165,7 +165,7 @@ interface StorageClient {
  *
  * @param config The [AzureStorageConfig] for configuring this [StorageConfig]
  * @param type which [DocumentType] this client represents
- * @param gcsClient the [Storage] client, should only be specified for testing purposes
+ * @param azureClient the [Storage] client, should only be specified for testing purposes
  */
 @Prototype
 class AzureStorageClient(
@@ -189,7 +189,11 @@ class AzureStorageClient(
     val blobKey = key(id)
     // azure needs the trailing `/` in order for the list call to return the correct blobs
     val directory = if (blobKey.endsWith("/")) blobKey else "$blobKey/"
-    return azureClient.getBlobContainerClient(bucketName).listBlobsByHierarchy(directory).map { it.name }.sortedBy { it }
+    return azureClient
+      .getBlobContainerClient(bucketName)
+      .listBlobsByHierarchy(directory)
+      .map { it.name }
+      .sortedBy { it }
   }
 
   override fun write(
@@ -309,9 +313,12 @@ class LocalStorageClient(
   // internal for testing
   internal val root: Path = Path.of(config.root, type.prefix.toString())
 
-  override fun list(id: String): List<String> {
-    return root.resolve(id).listDirectoryEntries().filter { !it.isDirectory() }.map { it.toFile().name }
-  }
+  override fun list(id: String): List<String> =
+    root
+      .resolve(id)
+      .listDirectoryEntries()
+      .filter { !it.isDirectory() }
+      .map { it.toFile().name }
 
   override fun write(
     id: String,

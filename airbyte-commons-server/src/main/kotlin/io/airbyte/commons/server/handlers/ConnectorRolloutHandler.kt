@@ -86,8 +86,7 @@ open class ConnectorRolloutHandler
               getUpdatedBy(strategy, updatedBy)
             }
           },
-        )
-        .completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
+        ).completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
         .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
         .errorMsg(connectorRollout.errorMsg)
         .failedReason(connectorRollout.failedReason)
@@ -100,7 +99,8 @@ open class ConnectorRolloutHandler
       actorDefinitionId: UUID,
     ) {
       val actorDefinitionVersion =
-        actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
+        actorDefinitionService
+          .getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
           .orElseThrow {
             throw ConnectorRolloutInvalidRequestProblem(
               ProblemMessageData().message(
@@ -177,9 +177,9 @@ open class ConnectorRolloutHandler
         )
       }
       val finalEnumStates =
-        ConnectorEnumRolloutState.entries.filter {
+        ConnectorEnumRolloutState.entries.filter { rollout ->
           ConnectorRolloutFinalState.entries.map { it.toString() }.contains(
-            it.toString(),
+            rollout.toString(),
           )
         }
       val rolloutsInInvalidState =
@@ -297,9 +297,7 @@ open class ConnectorRolloutHandler
         .withFailedReason(failedReason)
     }
 
-    private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime {
-      return Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
-    }
+    private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime = Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
 
     open fun listConnectorRollouts(): List<ConnectorRolloutRead> {
       val connectorRollouts: List<ConnectorRollout> = connectorRolloutService.listConnectorRollouts()
@@ -361,16 +359,15 @@ open class ConnectorRolloutHandler
     }
 
     open fun updateState(connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
-      val rollout: ConnectorRollout
-      if (connectorRolloutUpdateStateRequestBody.id == null) {
-        rollout =
+      val rollout: ConnectorRollout =
+        if (connectorRolloutUpdateStateRequestBody.id == null) {
           getRolloutByActorDefinitionIdAndDockerImageTag(
             connectorRolloutUpdateStateRequestBody.actorDefinitionId,
             connectorRolloutUpdateStateRequestBody.dockerImageTag,
           )
-      } else {
-        rollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdateStateRequestBody.id)
-      }
+        } else {
+          connectorRolloutService.getConnectorRollout(connectorRolloutUpdateStateRequestBody.id)
+        }
       val connectorRollout =
         getAndValidateUpdateStateRequest(
           rollout.id,
@@ -471,23 +468,25 @@ open class ConnectorRolloutHandler
     open fun getUpdatedBy(
       rolloutStrategy: ConnectorEnumRolloutStrategy,
       updatedById: UUID,
-    ): String {
-      return when (rolloutStrategy) {
+    ): String =
+      when (rolloutStrategy) {
         ConnectorEnumRolloutStrategy.MANUAL -> userPersistence.getUser(updatedById).get().email
         else -> ""
       }
-    }
 
-    private fun isTerminalState(state: ConnectorEnumRolloutState): Boolean {
-      return ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }.contains(state)
-    }
+    private fun isTerminalState(state: ConnectorEnumRolloutState): Boolean =
+      ConnectorRolloutFinalState.entries
+        .map {
+          ConnectorEnumRolloutState.fromValue(it.toString())
+        }.contains(state)
 
     private fun getRolloutByActorDefinitionIdAndDockerImageTag(
       actorDefinitionId: UUID,
       dockerImageTag: String,
     ): ConnectorRollout {
       val actorDefinitionVersion =
-        actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
+        actorDefinitionService
+          .getActorDefinitionVersion(actorDefinitionId, dockerImageTag)
           .orElseThrow {
             throw ConnectorRolloutInvalidRequestProblem(
               ProblemMessageData().message(
@@ -538,7 +537,5 @@ open class ConnectorRolloutHandler
       return false
     }
 
-    private fun getAirbyteApiClientException(e: WorkflowUpdateException): Throwable {
-      return e.cause?.cause ?: e.cause ?: e
-    }
+    private fun getAirbyteApiClientException(e: WorkflowUpdateException): Throwable = e.cause?.cause ?: e.cause ?: e
   }

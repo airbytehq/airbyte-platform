@@ -40,35 +40,35 @@ internal class AirbyteCompatibleConnectorVersionsProviderTest {
 
     assertEquals(3, matrix.size)
 
-    val mysql = matrix.get("4e3b6a13-18db-4a77-b9c8-56b4f10d0b91")!!
+    val mysql = matrix["4e3b6a13-18db-4a77-b9c8-56b4f10d0b91"]!!
     assertTrue(matrix.containsKey("4e3b6a13-18db-4a77-b9c8-56b4f10d0b91"))
     assertEquals("source-mysql", mysql.connectorName)
     assertEquals("source", mysql.connectorType)
     assertEquals(3, mysql.compatibilityMatrix.size)
-    assertEquals("1.0.0", mysql.compatibilityMatrix.get(0).connectorVersion)
-    assertEquals("0.1.0", mysql.compatibilityMatrix.get(0).airbyteVersion)
-    assertEquals("1.1.0", mysql.compatibilityMatrix.get(1).connectorVersion)
-    assertEquals("0.1.0", mysql.compatibilityMatrix.get(1).airbyteVersion)
-    assertEquals("1.2.0", mysql.compatibilityMatrix.get(2).connectorVersion)
-    assertEquals("0.2.0", mysql.compatibilityMatrix.get(2).airbyteVersion)
+    assertEquals("1.0.0", mysql.compatibilityMatrix[0].connectorVersion)
+    assertEquals("0.1.0", mysql.compatibilityMatrix[0].airbyteVersion)
+    assertEquals("1.1.0", mysql.compatibilityMatrix[1].connectorVersion)
+    assertEquals("0.1.0", mysql.compatibilityMatrix[1].airbyteVersion)
+    assertEquals("1.2.0", mysql.compatibilityMatrix[2].connectorVersion)
+    assertEquals("0.2.0", mysql.compatibilityMatrix[2].airbyteVersion)
 
-    val redshift = matrix.get("7e88a0d7-dc48-4d7e-b824-f6e1de317b76")!!
+    val redshift = matrix["7e88a0d7-dc48-4d7e-b824-f6e1de317b76"]!!
     assertTrue(matrix.containsKey("7e88a0d7-dc48-4d7e-b824-f6e1de317b76"))
     assertEquals("destination-redshift", redshift.connectorName)
     assertEquals("destination", redshift.connectorType)
     assertEquals(2, redshift.compatibilityMatrix.size)
-    assertEquals("2.0.0", redshift.compatibilityMatrix.get(0).connectorVersion)
-    assertEquals("0.3.0", redshift.compatibilityMatrix.get(0).airbyteVersion)
-    assertEquals("2.1.0", redshift.compatibilityMatrix.get(1).connectorVersion)
-    assertEquals("0.3.0", redshift.compatibilityMatrix.get(1).airbyteVersion)
+    assertEquals("2.0.0", redshift.compatibilityMatrix[0].connectorVersion)
+    assertEquals("0.3.0", redshift.compatibilityMatrix[0].airbyteVersion)
+    assertEquals("2.1.0", redshift.compatibilityMatrix[1].connectorVersion)
+    assertEquals("0.3.0", redshift.compatibilityMatrix[1].airbyteVersion)
 
-    val s3 = matrix.get("d6964f6e-abe7-4a26-b7eb-f4a74e1c2b75")!!
+    val s3 = matrix["d6964f6e-abe7-4a26-b7eb-f4a74e1c2b75"]!!
     assertTrue(matrix.containsKey("d6964f6e-abe7-4a26-b7eb-f4a74e1c2b75"))
     assertEquals("source-s3", s3.connectorName)
     assertEquals("source", s3.connectorType)
     assertEquals(1, s3.compatibilityMatrix.size)
-    assertEquals("3.0.0", s3.compatibilityMatrix.get(0).connectorVersion)
-    assertEquals("0.5.0", s3.compatibilityMatrix.get(0).airbyteVersion)
+    assertEquals("3.0.0", s3.compatibilityMatrix[0].connectorVersion)
+    assertEquals("0.5.0", s3.compatibilityMatrix[0].airbyteVersion)
   }
 
   @Test
@@ -135,8 +135,8 @@ internal class AirbyteCompatibleConnectorVersionsProviderTest {
     }
   }
 
-  private fun getMockJsonFileOutput(): String {
-    return "{\n" +
+  private fun getMockJsonFileOutput(): String =
+    "{\n" +
       "  \"compatibleConnectors\": [\n" +
       "    {\n" +
       "      \"connectorName\": \"source-mysql\",\n" +
@@ -185,5 +185,4 @@ internal class AirbyteCompatibleConnectorVersionsProviderTest {
       "    }\n" +
       "  ]\n" +
       "}\n"
-  }
 }

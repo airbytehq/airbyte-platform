@@ -35,8 +35,8 @@ class InitContainerFactory(
   fun createWaiting(
     resourceReqs: ResourceRequirements,
     volumeMounts: List<VolumeMount>,
-  ): Container {
-    return ContainerBuilder()
+  ): Container =
+    ContainerBuilder()
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
       .withImage(imageName)
       .withWorkingDir(FileConstants.CONFIG_DIR)
@@ -67,12 +67,10 @@ class InitContainerFactory(
             FileConstants.KUBE_CP_SUCCESS_MARKER_FILE,
           ),
         ),
-      )
-      .withResources(resourceReqs)
+      ).withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
-  }
 
   fun createFetching(
     resourceReqs: ResourceRequirements?,
@@ -82,11 +80,11 @@ class InitContainerFactory(
   ): Container {
     val initContainerImageOverride = featureFlagClient.stringVariation(PlatformInitContainerImage, Workspace(workspaceId))
 
-    logger.info { "[initContainer] image: ${if (initContainerImageOverride.isEmpty()) initContainerInfo.image else initContainerImageOverride}" }
+    logger.info { "[initContainer] image: ${initContainerImageOverride.ifEmpty { initContainerInfo.image }}" }
 
     return ContainerBuilder()
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
-      .withImage(if (initContainerImageOverride.isEmpty()) initContainerInfo.image else initContainerImageOverride)
+      .withImage(initContainerImageOverride.ifEmpty { initContainerInfo.image })
       .withImagePullPolicy(initContainerInfo.pullPolicy)
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withResources(resourceReqs)

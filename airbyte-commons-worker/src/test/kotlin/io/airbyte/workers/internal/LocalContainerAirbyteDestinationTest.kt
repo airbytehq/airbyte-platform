@@ -250,7 +250,7 @@ internal class LocalContainerAirbyteDestinationTest {
     assertEquals(exitValue, destination.exitValue)
 
     exitValueFile.delete()
-    val error = assertThrows(IllegalStateException::class.java, { destination.exitValue })
+    val error = assertThrows(IllegalStateException::class.java) { destination.exitValue }
     assertEquals(EXIT_CODE_CHECK_EXISTS_FAILURE, error.message)
   }
 

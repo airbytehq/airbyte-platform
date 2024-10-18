@@ -7,15 +7,9 @@ import io.airbyte.api.model.generated.CatalogDiff
 class SchemaChangeAutoPropagationEvent(
   private val catalogDiff: CatalogDiff,
 ) : ConnectionEvent {
-  fun getCatalogDiff(): CatalogDiff {
-    return catalogDiff
-  }
+  fun getCatalogDiff(): CatalogDiff = catalogDiff
 
-  fun getUpdateReason(): String? {
-    return ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name
-  }
+  fun getUpdateReason(): String = ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name
 
-  override fun getEventType(): ConnectionEvent.Type {
-    return ConnectionEvent.Type.SCHEMA_UPDATE
-  }
+  override fun getEventType(): ConnectionEvent.Type = ConnectionEvent.Type.SCHEMA_UPDATE
 }

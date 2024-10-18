@@ -650,7 +650,9 @@ internal class AirbyteCatalogHelperTest {
     val originalStreamConfiguration = createAirbyteStreamConfiguration()
     originalStreamConfiguration.mappers =
       listOf(
-        io.airbyte.api.model.generated.ConfiguredStreamMapper().type(io.airbyte.api.model.generated.StreamMapperType.HASHING),
+        io.airbyte.api.model.generated
+          .ConfiguredStreamMapper()
+          .type(io.airbyte.api.model.generated.StreamMapperType.HASHING),
       )
 
     val airbyteStreamConfiguration =
@@ -725,8 +727,10 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
             ),
         )
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
@@ -778,9 +782,12 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf()),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf()),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       val throwable =
@@ -799,8 +806,10 @@ internal class AirbyteCatalogHelperTest {
           selectedFields =
             listOf(
               // f1 -> f2 -> f3 is a nested field path
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1", "f2", "f3")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1", "f2", "f3")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       val throwable =
@@ -818,11 +827,15 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
               // `m1` is a dup field
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
       val throwable =
@@ -840,14 +853,18 @@ internal class AirbyteCatalogHelperTest {
           name = "testStream",
           selectedFields =
             listOf(
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
               // `x1` is not existed in source schema
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("x1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("x1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
-      var throwable =
+      val throwable =
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
@@ -864,11 +881,13 @@ internal class AirbyteCatalogHelperTest {
           selectedFields =
             listOf(
               // "f1" as primary key is missing
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("b1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
             ),
         )
-      var throwable =
+      val throwable =
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
@@ -885,12 +904,15 @@ internal class AirbyteCatalogHelperTest {
           selectedFields =
             listOf(
               // "b1" as cursor field is missing
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("y1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("y1")),
             ),
         )
-      var throwable =
+      val throwable =
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
@@ -907,12 +929,15 @@ internal class AirbyteCatalogHelperTest {
           selectedFields =
             listOf(
               // "b1" as cursor field is missing
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("f1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("m1")),
-              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = listOf("y1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("f1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("y1")),
             ),
         )
-      var throwable =
+      val throwable =
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
@@ -951,21 +976,19 @@ internal class AirbyteCatalogHelperTest {
     return airbyteStreamConfiguration
   }
 
-  private fun getSyncMode(connectionSyncMode: ConnectionSyncModeEnum): SyncMode {
-    return when (connectionSyncMode) {
+  private fun getSyncMode(connectionSyncMode: ConnectionSyncModeEnum): SyncMode =
+    when (connectionSyncMode) {
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE -> SyncMode.FULL_REFRESH
       ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> SyncMode.FULL_REFRESH
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> SyncMode.INCREMENTAL
     }
-  }
 
-  private fun getDestinationSyncMode(connectionSyncMode: ConnectionSyncModeEnum): DestinationSyncMode {
-    return when (connectionSyncMode) {
+  private fun getDestinationSyncMode(connectionSyncMode: ConnectionSyncModeEnum): DestinationSyncMode =
+    when (connectionSyncMode) {
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE -> DestinationSyncMode.OVERWRITE
       ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> DestinationSyncMode.APPEND_DEDUP
     }
-  }
 }

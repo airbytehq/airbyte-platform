@@ -8,7 +8,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class TestFlagsSetter(baseUrl: String) {
+class TestFlagsSetter(
+  baseUrl: String,
+) {
   private val basePath = "/api/v1/feature-flags"
   private val httpClient = OkHttpClient().newBuilder().build()
   private val urlPrefix = if (baseUrl.endsWith("/")) "${baseUrl.trimEnd('/')}$basePath" else "$baseUrl$basePath"
@@ -31,7 +33,7 @@ class TestFlagsSetter(baseUrl: String) {
   class FlagRuleOverride<T>(
     private val flag: Flag<T>,
     private val context: Context,
-    private val value: T,
+    value: T,
     private val testFlags: TestFlagsSetter,
   ) : AutoCloseable {
     init {
@@ -50,12 +52,14 @@ class TestFlagsSetter(baseUrl: String) {
   ) = FlagOverride(flag, context, value, this)
 
   fun <T> deleteFlag(flag: Flag<T>) {
-    httpClient.newCall(
-      Request.Builder()
-        .url("$urlPrefix/${flag.key}")
-        .delete()
-        .build(),
-    ).execute()
+    httpClient
+      .newCall(
+        Request
+          .Builder()
+          .url("$urlPrefix/${flag.key}")
+          .delete()
+          .build(),
+      ).execute()
   }
 
   fun <T> withRule(
@@ -86,34 +90,41 @@ class TestFlagsSetter(baseUrl: String) {
           },
       )
     val response =
-      httpClient.newCall(
-        Request.Builder()
-          .url(urlPrefix)
-          .put(Jsons.serialize(requestFlag).toRequestBody("application/json".toMediaType()))
-          .build(),
-      ).execute()
-    assert(response.code == 200, { "Failed to update the feature flag ${requestFlag.key}, error: ${response.code}: ${response.body?.string()}" })
+      httpClient
+        .newCall(
+          Request
+            .Builder()
+            .url(urlPrefix)
+            .put(Jsons.serialize(requestFlag).toRequestBody("application/json".toMediaType()))
+            .build(),
+        ).execute()
+    assert(response.code == 200) { "Failed to update the feature flag ${requestFlag.key}, error: ${response.code}: ${response.body?.string()}" }
   }
 
-  fun <T> getFlag(flag: Flag<T>): String? {
-    return httpClient.newCall(
-      Request.Builder()
-        .url("$urlPrefix/${flag.key}")
-        .build(),
-    ).execute()
-      .body?.string()
-  }
+  fun <T> getFlag(flag: Flag<T>): String? =
+    httpClient
+      .newCall(
+        Request
+          .Builder()
+          .url("$urlPrefix/${flag.key}")
+          .build(),
+      ).execute()
+      .body
+      ?.string()
 
   fun <T> evalFlag(
     flag: Flag<T>,
     context: Context,
-  ): String? {
-    return httpClient.newCall(
-      Request.Builder()
-        .url("$urlPrefix/${flag.key}/evaluate?kind=${context.kind}&value=${context.key}")
-        .build(),
-    ).execute().body?.string()
-  }
+  ): String? =
+    httpClient
+      .newCall(
+        Request
+          .Builder()
+          .url("$urlPrefix/${flag.key}/evaluate?kind=${context.kind}&value=${context.key}")
+          .build(),
+      ).execute()
+      .body
+      ?.string()
 
   fun <T> setRule(
     flag: Flag<T>,
@@ -126,13 +137,15 @@ class TestFlagsSetter(baseUrl: String) {
         value = value.toString(),
       )
     val response =
-      httpClient.newCall(
-        Request.Builder()
-          .url("$urlPrefix/${flag.key}/rules")
-          .post(Jsons.serialize(requestRule).toRequestBody("application/json".toMediaType()))
-          .build(),
-      ).execute()
-    assert(response.code == 200, { "Failed to update the feature flag ${flag.key}, error: ${response.code}: ${response.body?.string()}" })
+      httpClient
+        .newCall(
+          Request
+            .Builder()
+            .url("$urlPrefix/${flag.key}/rules")
+            .post(Jsons.serialize(requestRule).toRequestBody("application/json".toMediaType()))
+            .build(),
+        ).execute()
+    assert(response.code == 200) { "Failed to update the feature flag ${flag.key}, error: ${response.code}: ${response.body?.string()}" }
   }
 
   fun <T> deleteRule(
@@ -140,17 +153,25 @@ class TestFlagsSetter(baseUrl: String) {
     context: Context,
   ) {
     val requestContext = ApiContext(kind = context.kind, value = context.key)
-    httpClient.newCall(
-      Request.Builder()
-        .url("$urlPrefix/${flag.key}/rules")
-        .delete(Jsons.serialize(requestContext).toRequestBody("application/json".toMediaType()))
-        .build(),
-    ).execute()
+    httpClient
+      .newCall(
+        Request
+          .Builder()
+          .url("$urlPrefix/${flag.key}/rules")
+          .delete(Jsons.serialize(requestContext).toRequestBody("application/json".toMediaType()))
+          .build(),
+      ).execute()
   }
 
-  private data class ApiContext(val kind: String, val value: String)
+  private data class ApiContext(
+    val kind: String,
+    val value: String,
+  )
 
-  private data class ApiRule(val context: ApiContext, val value: String)
+  private data class ApiRule(
+    val context: ApiContext,
+    val value: String,
+  )
 
   private data class ApiFeatureFlag(
     val key: String,

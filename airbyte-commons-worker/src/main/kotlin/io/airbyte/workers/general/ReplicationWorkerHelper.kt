@@ -136,9 +136,8 @@ class ReplicationWorkerHelper(
     onReplicationRunning.call()
   }
 
-  fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable {
-    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
-  }
+  fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable =
+    getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
 
   private fun getWorkloadStatusHeartbeat(
     heartbeatInterval: Duration,
@@ -208,13 +207,14 @@ class ReplicationWorkerHelper(
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
 
     supportRefreshes =
-      airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
-        ResolveActorDefinitionVersionRequestBody(
-          actorDefinitionId = ctx.destinationDefinitionId,
-          actorType = ActorType.DESTINATION,
-          dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
-        ),
-      ).supportRefreshes
+      airbyteApiClient.actorDefinitionVersionApi
+        .resolveActorDefinitionVersionByTag(
+          ResolveActorDefinitionVersionRequestBody(
+            actorDefinitionId = ctx.destinationDefinitionId,
+            actorType = ActorType.DESTINATION,
+            dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
+          ),
+        ).supportRefreshes
 
     if (supportRefreshes) {
       // if configured airbyte catalog has full refresh with state
@@ -235,9 +235,9 @@ class ReplicationWorkerHelper(
     val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
 
     mappersPerStreamDescriptor =
-      catalogWithoutInvalidMappers.catalog.streams.map { stream ->
+      catalogWithoutInvalidMappers.catalog.streams.associate { stream ->
         stream.streamDescriptor to stream.mappers
-      }.toMap()
+      }
   }
 
   fun startDestination(
@@ -247,7 +247,8 @@ class ReplicationWorkerHelper(
   ) {
     timeTracker.trackDestinationWriteStartTime()
     destinationConfig =
-      WorkerUtils.syncToWorkerDestinationConfig(replicationInput)
+      WorkerUtils
+        .syncToWorkerDestinationConfig(replicationInput)
         .apply {
           catalog = mapper.mapCatalog(catalog)
           supportRefreshes = this@ReplicationWorkerHelper.supportRefreshes
@@ -268,7 +269,8 @@ class ReplicationWorkerHelper(
     timeTracker.trackSourceReadStartTime()
 
     val sourceConfig =
-      WorkerUtils.syncToWorkerSourceConfig(replicationInput)
+      WorkerUtils
+        .syncToWorkerSourceConfig(replicationInput)
         .also { fieldSelector.populateFields(it.catalog) }
 
     try {
@@ -314,9 +316,7 @@ class ReplicationWorkerHelper(
     internalProcessMessageFromDestination(message)
   }
 
-  fun getStreamStatusToSend(exitValue: Int): List<AirbyteMessage> {
-    return streamStatusCompletionTracker.finalize(exitValue, mapper)
-  }
+  fun getStreamStatusToSend(exitValue: Int): List<AirbyteMessage> = streamStatusCompletionTracker.finalize(exitValue, mapper)
 
   @JvmOverloads
   @Throws(JsonProcessingException::class)
@@ -363,7 +363,8 @@ class ReplicationWorkerHelper(
     // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
     if (failures.any { f ->
         f.failureOrigin.equals(FailureReason.FailureOrigin.DESTINATION) &&
-          f.internalMessage != null && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
+          f.internalMessage != null &&
+          f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
       }
     ) {
       metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
@@ -461,13 +462,11 @@ class ReplicationWorkerHelper(
       .let { Optional.ofNullable(it) }
   }
 
-  fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {
-    return airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId = sourceId)).sourceDefinitionId
-  }
+  fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID =
+    airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId = sourceId)).sourceDefinitionId
 
-  fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
-    return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
-  }
+  fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID =
+    airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
 
   fun applyTransformationMappers(message: AirbyteRecord) {
     val mappersForStream: List<ConfiguredMapper> =
@@ -482,8 +481,8 @@ class ReplicationWorkerHelper(
   private fun getTotalStats(
     timeTracker: ThreadedTimeTracker,
     hasReplicationCompleted: Boolean,
-  ): SyncStats {
-    return messageTracker.syncStatsTracker.getTotalStats(hasReplicationCompleted).apply {
+  ): SyncStats =
+    messageTracker.syncStatsTracker.getTotalStats(hasReplicationCompleted).apply {
       replicationStartTime = timeTracker.replicationStartTime
       replicationEndTime = timeTracker.replicationEndTime
       sourceReadStartTime = timeTracker.sourceReadStartTime
@@ -491,7 +490,6 @@ class ReplicationWorkerHelper(
       destinationWriteStartTime = timeTracker.destinationWriteStartTime
       destinationWriteEndTime = timeTracker.destinationWriteEndTime
     }
-  }
 
   private fun getFailureReasons(
     replicationFailures: List<FailureReason>,

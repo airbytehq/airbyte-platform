@@ -11,7 +11,9 @@ buildscript {
   }
   dependencies {
     // necessary to convert the well_know_types from yaml to json
-    val jacksonVersion = libs.versions.fasterxml.version.get()
+    val jacksonVersion =
+      libs.versions.fasterxml.version
+        .get()
     classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
   }
@@ -23,8 +25,8 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-val airbyteProtocol by configurations.creating
-val jdbc by configurations.creating
+val airbyteProtocol: Configuration by configurations.creating
+val jdbc: Configuration by configurations.creating
 
 configurations.all {
   // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
@@ -33,7 +35,7 @@ configurations.all {
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -101,7 +103,7 @@ dependencies {
   runtimeOnly(libs.bundles.logback)
 
   testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
+  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -142,7 +144,7 @@ airbyte {
         "AIRBYTE_ROLE" to "undefined",
         "AIRBYTE_VERSION" to "dev",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
-      )
+      ),
     )
   }
   docker {
@@ -160,24 +162,25 @@ tasks.register<Test>("cloudStorageIntegrationTest") {
 }
 
 // Duplicated in :oss:airbyte-container-orchestrator, eventually, this should be handled in :oss:airbyte-protocol
-val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
-  inputs.files(airbyteProtocol) // declaring inputs)
-  val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
-  outputs.file(targetFile) // declaring outputs)
+val generateWellKnownTypes =
+  tasks.register("generateWellKnownTypes") {
+    inputs.files(airbyteProtocol) // declaring inputs)
+    val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
+    outputs.file(targetFile) // declaring outputs)
 
-  doLast {
-    val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
-    airbyteProtocol.files.forEach {
-      val zip = ZipFile(it)
-      val entry = zip.getEntry(wellKnownTypesYamlPath)
+    doLast {
+      val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
+      airbyteProtocol.files.forEach {
+        val zip = ZipFile(it)
+        val entry = zip.getEntry(wellKnownTypesYamlPath)
 
-      val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
-      val rawJson = yamlToJson(wellKnownTypesYaml)
-      targetFile.getParentFile().mkdirs()
-      targetFile.writeText(rawJson)
+        val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
+        val rawJson = yamlToJson(wellKnownTypesYaml)
+        targetFile.getParentFile().mkdirs()
+        targetFile.writeText(rawJson)
+      }
     }
   }
-}
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)

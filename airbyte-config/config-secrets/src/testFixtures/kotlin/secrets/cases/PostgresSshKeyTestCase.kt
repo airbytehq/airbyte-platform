@@ -9,7 +9,7 @@ import io.airbyte.config.secrets.SecretsTestCase
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.function.Consumer
 
-class PostgresSshKeyTestCase() : SecretsTestCase {
+class PostgresSshKeyTestCase : SecretsTestCase {
   override val name: String
     get() = "postgres_ssh_key"
 

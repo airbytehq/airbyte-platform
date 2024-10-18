@@ -73,7 +73,7 @@ class ContributionTemplatesTest {
       assert(docs.contains("| ${stream["name"]} |"))
     }
 
-    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpecification["properties"] as Map<String, Any>
 
     for (prop in properties) {
@@ -98,7 +98,7 @@ class ContributionTemplatesTest {
       assert(prDescription.contains("| ${stream["name"]} |"))
     }
 
-    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpecification["properties"] as Map<String, Any>
 
     for (prop in properties) {

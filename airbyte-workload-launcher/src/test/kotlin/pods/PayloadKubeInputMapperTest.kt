@@ -291,7 +291,7 @@ class PayloadKubeInputMapperTest {
     assertEquals(
       if (customConnector) {
         checkCustomSelectors
-      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+      } else if (WorkloadPriority.DEFAULT == workloadPriority) {
         replSelectors
       } else {
         checkSelectors
@@ -419,7 +419,7 @@ class PayloadKubeInputMapperTest {
     assertEquals(
       if (customConnector) {
         checkCustomSelectors
-      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+      } else if (WorkloadPriority.DEFAULT == workloadPriority) {
         replSelectors
       } else {
         checkSelectors
@@ -558,18 +558,17 @@ class PayloadKubeInputMapperTest {
 
   companion object {
     @JvmStatic
-    private fun replicationFlagsInputMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun replicationFlagsInputMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(true, true),
         Arguments.of(false, false),
         Arguments.of(true, false),
         Arguments.of(false, true),
       )
-    }
 
     @JvmStatic
-    private fun connectorInputMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun connectorInputMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(true, WorkloadPriority.HIGH, true),
         Arguments.of(false, WorkloadPriority.HIGH, true),
         Arguments.of(true, WorkloadPriority.HIGH, true),
@@ -578,7 +577,6 @@ class PayloadKubeInputMapperTest {
         Arguments.of(false, WorkloadPriority.DEFAULT, false),
         Arguments.of(false, WorkloadPriority.DEFAULT, true),
       )
-    }
   }
 
   object Fixtures {

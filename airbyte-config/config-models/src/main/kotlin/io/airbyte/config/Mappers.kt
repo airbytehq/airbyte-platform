@@ -73,10 +73,10 @@ class MapperSpecificationFieldDeserializer : JsonDeserializer<MapperSpecificatio
     if (root.has("type")) {
       when (root.get("type").asText()) {
         "string" -> {
-          if (root.has("enum")) {
-            return Jsons.deserialize(root.toString(), MapperSpecificationFieldEnum::class.java)
+          return if (root.has("enum")) {
+            Jsons.deserialize(root.toString(), MapperSpecificationFieldEnum::class.java)
           } else {
-            return Jsons.deserialize(root.toString(), MapperSpecificationFieldString::class.java)
+            Jsons.deserialize(root.toString(), MapperSpecificationFieldString::class.java)
           }
         }
         "integer" -> {

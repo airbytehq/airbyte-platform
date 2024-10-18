@@ -57,10 +57,10 @@ internal class ConnectorRolloutHandlerTest {
     )
 
   companion object {
-    val DOCKER_REPOSITORY = "airbyte/source-faker"
-    val DOCKER_IMAGE_TAG = "0.1"
-    val ACTOR_DEFINITION_ID = UUID.randomUUID()
-    val RELEASE_CANDIDATE_VERSION_ID = UUID.randomUUID()
+    const val DOCKER_REPOSITORY = "airbyte/source-faker"
+    const val DOCKER_IMAGE_TAG = "0.1"
+    val ACTOR_DEFINITION_ID: UUID = UUID.randomUUID()
+    val RELEASE_CANDIDATE_VERSION_ID: UUID = UUID.randomUUID()
     val UPDATED_BY = UUID.randomUUID()
 
     @JvmStatic
@@ -169,7 +169,8 @@ internal class ConnectorRolloutHandlerTest {
     // Ensure other fields are not modified
     val excludedFields = listOf("rolloutPct", "rolloutStrategy", "updatedAt")
 
-    ConnectorRollout::class.memberProperties
+    ConnectorRollout::class
+      .memberProperties
       .filter { it.name !in excludedFields }
       .forEach { property ->
         property.isAccessible = true
@@ -775,8 +776,8 @@ internal class ConnectorRolloutHandlerTest {
     id: UUID,
     actorDefinitionId: UUID = ACTOR_DEFINITION_ID,
     releaseCandidateVersionId: UUID = RELEASE_CANDIDATE_VERSION_ID,
-  ): ConnectorRollout {
-    return ConnectorRollout().apply {
+  ): ConnectorRollout =
+    ConnectorRollout().apply {
       this.id = id
       this.actorDefinitionId = actorDefinitionId
       this.releaseCandidateVersionId = releaseCandidateVersionId
@@ -791,24 +792,21 @@ internal class ConnectorRolloutHandlerTest {
       this.updatedAt = OffsetDateTime.now().toEpochSecond()
       this.expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond()
     }
-  }
 
-  private fun createMockConnectorRolloutStartRequestBody(): ConnectorRolloutStartRequestBody {
-    return ConnectorRolloutStartRequestBody()
+  private fun createMockConnectorRolloutStartRequestBody(): ConnectorRolloutStartRequestBody =
+    ConnectorRolloutStartRequestBody()
       .id(UUID.randomUUID())
       .workflowRunId(UUID.randomUUID().toString())
       .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
-  }
 
   private fun createMockConnectorRolloutRequestBody(
     rolloutId: UUID,
     rolloutStrategy: ConnectorRolloutStrategy,
-  ): ConnectorRolloutRequestBody {
-    return ConnectorRolloutRequestBody()
+  ): ConnectorRolloutRequestBody =
+    ConnectorRolloutRequestBody()
       .id(rolloutId)
       .rolloutStrategy(rolloutStrategy)
       .actorIds(listOf(UUID.randomUUID()))
-  }
 
   private fun createMockConnectorRolloutFinalizeRequestBody(
     rolloutId: UUID,
@@ -816,20 +814,18 @@ internal class ConnectorRolloutHandlerTest {
     rolloutStrategy: ConnectorRolloutStrategy,
     errorMsg: String,
     failedReason: String,
-  ): ConnectorRolloutFinalizeRequestBody {
-    return ConnectorRolloutFinalizeRequestBody()
+  ): ConnectorRolloutFinalizeRequestBody =
+    ConnectorRolloutFinalizeRequestBody()
       .id(rolloutId)
       .state(state)
       .rolloutStrategy(rolloutStrategy)
       .errorMsg(errorMsg)
       .failedReason(failedReason)
-  }
 
-  private fun createMockActorDefinitionVersion(): ActorDefinitionVersion {
-    return ActorDefinitionVersion()
+  private fun createMockActorDefinitionVersion(): ActorDefinitionVersion =
+    ActorDefinitionVersion()
       .withVersionId(RELEASE_CANDIDATE_VERSION_ID)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
-  }
 }

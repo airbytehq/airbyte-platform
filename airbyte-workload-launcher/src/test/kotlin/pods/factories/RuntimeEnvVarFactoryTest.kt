@@ -335,36 +335,33 @@ class RuntimeEnvVarFactoryTest {
 
   companion object {
     @JvmStatic
-    private fun concurrentStreamReadEnabledMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun concurrentStreamReadEnabledMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(true, MYSQL_SOURCE_NAME),
         Arguments.of(true, MYSQL_SOURCE_NAME + "asdf"),
       )
-    }
 
     @JvmStatic
-    private fun concurrentStreamReadDisabledMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun concurrentStreamReadDisabledMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(true, "anything else"),
-        Arguments.of(true, "asdf" + MYSQL_SOURCE_NAME),
+        Arguments.of(true, "asdf$MYSQL_SOURCE_NAME"),
         Arguments.of(false, MYSQL_SOURCE_NAME),
-        Arguments.of(false, MYSQL_SOURCE_NAME + "asdf"),
+        Arguments.of(false, "${MYSQL_SOURCE_NAME}asdf"),
         Arguments.of(false, "anything else"),
       )
-    }
 
     @JvmStatic
-    private fun additionalEnvironmentVariablesMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun additionalEnvironmentVariablesMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null),
         Arguments.of(mapOf("key-1" to "value-1")),
         Arguments.of(mapOf("key-1" to "value-1", "key-2" to "value-2")),
       )
-    }
 
     @JvmStatic
-    private fun orchestratorEnvVarMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun orchestratorEnvVarMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true),
         Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false),
         Arguments.of("opts 1", "opts 1", true),
@@ -372,6 +369,5 @@ class RuntimeEnvVarFactoryTest {
         Arguments.of("opts 3 ", "opts 3", true),
         Arguments.of("  opts 4  ", "opts 4", true),
       )
-    }
   }
 }

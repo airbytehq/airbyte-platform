@@ -28,12 +28,9 @@ private val logger = KotlinLogging.logger {}
 @Requires(property = "airbyte.connector_rollouts.github_workflow.github_token")
 class PromoteOrRollbackActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
-  @Value("\${airbyte.connector_rollouts.github_workflow.dispatch_url}") url: String,
-  @Value("\${airbyte.connector_rollouts.github_workflow.github_token}") token: String,
+  @Value("\${airbyte.connector_rollouts.github_workflow.dispatch_url}") private val url: String,
+  @Value("\${airbyte.connector_rollouts.github_workflow.github_token}") private val token: String,
 ) : PromoteOrRollbackActivity {
-  private val url = url
-  private val token = token
-
   init {
     logger.info { "Initialized PromotePromoteOrRollbackActivityImpl" }
   }
@@ -68,7 +65,8 @@ class PromoteOrRollbackActivityImpl(
     val body = jsonBodyString.toRequestBody("application/json; charset=utf-8".toMediaType())
 
     val request =
-      Request.Builder()
+      Request
+        .Builder()
         .url(url)
         .post(body)
         .addHeader("Authorization", "Bearer $token")

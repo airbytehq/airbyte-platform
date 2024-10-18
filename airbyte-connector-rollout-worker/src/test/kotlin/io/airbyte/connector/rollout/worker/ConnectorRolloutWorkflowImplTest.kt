@@ -45,42 +45,42 @@ class ConnectorRolloutWorkflowImplTest {
   private lateinit var workflowClient: WorkflowClient
   private lateinit var workflowStub: ConnectorRolloutWorkflow
   val doRolloutActivity: DoRolloutActivity =
-    Mockito.mock<DoRolloutActivity>(
+    Mockito.mock(
       DoRolloutActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val finalizeRolloutActivity: FinalizeRolloutActivity =
-    Mockito.mock<FinalizeRolloutActivity>(
+    Mockito.mock(
       FinalizeRolloutActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val findRolloutActivity: FindRolloutActivity =
-    Mockito.mock<FindRolloutActivity>(
+    Mockito.mock(
       FindRolloutActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val getRolloutActivity: GetRolloutActivity =
-    Mockito.mock<GetRolloutActivity>(
+    Mockito.mock(
       GetRolloutActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val promoteOrRollbackActivity: PromoteOrRollbackActivity =
-    Mockito.mock<PromoteOrRollbackActivity>(
+    Mockito.mock(
       PromoteOrRollbackActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val startRolloutActivity: StartRolloutActivity =
-    Mockito.mock<StartRolloutActivity>(
+    Mockito.mock(
       StartRolloutActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val verifyDefaultVersionActivity: VerifyDefaultVersionActivity =
-    Mockito.mock<VerifyDefaultVersionActivity>(
+    Mockito.mock(
       VerifyDefaultVersionActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
   val cleanupActivity: CleanupActivity =
-    Mockito.mock<CleanupActivity>(
+    Mockito.mock(
       CleanupActivity::class.java,
       Mockito.withSettings().withoutAnnotations(),
     )
@@ -99,11 +99,15 @@ class ConnectorRolloutWorkflowImplTest {
   fun setUp() {
     testEnv =
       TestWorkflowEnvironment.newInstance(
-        TestEnvironmentOptions.newBuilder().setWorkflowClientOptions(
-          WorkflowClientOptions.newBuilder().setDataConverter(
-            AirbyteTemporalDataConverter(),
+        TestEnvironmentOptions
+          .newBuilder()
+          .setWorkflowClientOptions(
+            WorkflowClientOptions
+              .newBuilder()
+              .setDataConverter(
+                AirbyteTemporalDataConverter(),
+              ).build(),
           ).build(),
-        ).build(),
       )
     worker = testEnv.newWorker(TEST_TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
@@ -127,7 +131,8 @@ class ConnectorRolloutWorkflowImplTest {
     testEnv.start()
     // Get a workflow stub using the same task queue the worker uses.
     val workflowOptions =
-      WorkflowOptions.newBuilder()
+      WorkflowOptions
+        .newBuilder()
         .setTaskQueue(TEST_TASK_QUEUE)
         .setWorkflowId(WORKFLOW_ID)
         .build()
@@ -200,17 +205,21 @@ class ConnectorRolloutWorkflowImplTest {
   fun `test startRollout fails causes workflow failure and calls cleanup activity`() {
     testEnv =
       TestWorkflowEnvironment.newInstance(
-        TestEnvironmentOptions.newBuilder().setWorkflowClientOptions(
-          WorkflowClientOptions.newBuilder().setDataConverter(
-            AirbyteTemporalDataConverter(),
+        TestEnvironmentOptions
+          .newBuilder()
+          .setWorkflowClientOptions(
+            WorkflowClientOptions
+              .newBuilder()
+              .setDataConverter(
+                AirbyteTemporalDataConverter(),
+              ).build(),
           ).build(),
-        ).build(),
       )
     worker = testEnv.newWorker(TEST_TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
 
     val startRolloutActivity: StartRolloutActivity =
-      Mockito.mock<StartRolloutActivity>(
+      Mockito.mock(
         StartRolloutActivity::class.java,
         Mockito.withSettings().withoutAnnotations(),
       )
@@ -243,7 +252,8 @@ class ConnectorRolloutWorkflowImplTest {
 
     // Get a workflow stub using the same task queue the worker uses.
     val workflowOptions =
-      WorkflowOptions.newBuilder()
+      WorkflowOptions
+        .newBuilder()
         .setTaskQueue(TEST_TASK_QUEUE)
         .setWorkflowId(WORKFLOW_ID)
         .build()
@@ -399,7 +409,5 @@ class ConnectorRolloutWorkflowImplTest {
     fun <T> uninitialized(): T = null as T
   }
 
-  fun getMockOutput(state: ConnectorEnumRolloutState): ConnectorRolloutOutput {
-    return ConnectorRolloutOutput(state = state)
-  }
+  fun getMockOutput(state: ConnectorEnumRolloutState): ConnectorRolloutOutput = ConnectorRolloutOutput(state = state)
 }

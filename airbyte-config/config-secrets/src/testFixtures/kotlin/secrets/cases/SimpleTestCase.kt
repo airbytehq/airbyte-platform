@@ -9,7 +9,7 @@ import io.airbyte.config.secrets.SecretsTestCase
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.function.Consumer
 
-class SimpleTestCase() : SecretsTestCase {
+class SimpleTestCase : SecretsTestCase {
   override val name: String
     get() = "simple"
 

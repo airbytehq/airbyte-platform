@@ -2,7 +2,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-
 import java.util.zip.ZipFile
 
 buildscript {
@@ -11,7 +10,9 @@ buildscript {
   }
   dependencies {
     // necessary to convert the well_know_types from yaml to json
-    val jacksonVersion = libs.versions.fasterxml.version.get()
+    val jacksonVersion =
+      libs.versions.fasterxml.version
+        .get()
     classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
   }
@@ -23,11 +24,11 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-val airbyteProtocol by configurations.creating
+val airbyteProtocol: Configuration by configurations.creating
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -91,24 +92,25 @@ airbyte {
 }
 
 // Duplicated from :oss:airbyte-worker, eventually, this should be handled in :oss:airbyte-protocol
-val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
-  inputs.files(airbyteProtocol) // declaring inputs)
-  val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
-  outputs.file(targetFile) // declaring outputs)
+val generateWellKnownTypes =
+  tasks.register("generateWellKnownTypes") {
+    inputs.files(airbyteProtocol) // declaring inputs)
+    val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
+    outputs.file(targetFile) // declaring outputs)
 
-  doLast {
-    val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
-    airbyteProtocol.files.forEach {
-      val zip = ZipFile(it)
-      val entry = zip.getEntry(wellKnownTypesYamlPath)
+    doLast {
+      val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
+      airbyteProtocol.files.forEach {
+        val zip = ZipFile(it)
+        val entry = zip.getEntry(wellKnownTypesYamlPath)
 
-      val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
-      val rawJson = yamlToJson(wellKnownTypesYaml)
-      targetFile.getParentFile().mkdirs()
-      targetFile.writeText(rawJson)
+        val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
+        val rawJson = yamlToJson(wellKnownTypesYaml)
+        targetFile.getParentFile().mkdirs()
+        targetFile.writeText(rawJson)
+      }
     }
   }
-}
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)

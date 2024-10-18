@@ -62,13 +62,12 @@ object ResourceConversionUtils {
    * Kube has a specific string DSL for specifying 'quantities' of bytes (e.g. 5G vs 5Gi vs 10m, vs 10K, etc.)
    * This converts those strings into the raw number of bytes for easier handling.
    */
-  fun kubeQuantityStringToBytes(quantityStr: String?): Long? {
-    return try {
+  fun kubeQuantityStringToBytes(quantityStr: String?): Long? =
+    try {
       Quantity.getAmountInBytes(Quantity(quantityStr)).toLong()
     } catch (e: Exception) {
       null
     }
-  }
 
   private fun min(
     request: Quantity?,
@@ -80,7 +79,7 @@ object ResourceConversionUtils {
     if (request == null) {
       return limit
     }
-    return if (request.numericalAmount.compareTo(limit.numericalAmount) <= 0) {
+    return if (request.numericalAmount <= limit.numericalAmount) {
       request
     } else {
       logger.info { "Invalid resource requirements detected, requested $request while limit is $limit, falling back to requesting $limit." }
