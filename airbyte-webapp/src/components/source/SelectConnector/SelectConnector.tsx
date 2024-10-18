@@ -84,17 +84,48 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     navigate(createLink(`/${RoutePaths.Source}/${SourcePaths.EnterpriseSource.replace(":id", definition.id)}`));
   };
 
-  const [{ search: searchTerm, tab: selectedTab, col: sortColumn, asc }, setFilterValue] = useFilters<{
+  interface BaseFilters {
     search: string;
     tab: ConnectorTab;
     col: ConnectorSortColumn;
     asc: "true" | "false";
-  }>({
-    search: "",
-    tab: "certified",
-    col: "name",
-    asc: "true",
-  });
+  }
+
+  /*
+  by splitting these into source_* and destination_* , we avoid a fun race condition:
+    * the views in this flow are based on a mix of component states and URL params
+    * filters are stored in and read from URL params
+  
+  If the filter names are kept the same between source and destination selection,
+  when in an empty workspace (no sources or destinations), and selecting a source connector after applying filters, the following happens:
+    * any filters are stored in the URL
+    * user selects a connector, sourceDefinitionId is added to the URL triggering the source configuration view
+    * onSubmit of source configuration, CreateNewSource::onCreateSource fires, adding sourceId to the URL
+    * CreateConnectionPage sees `sourceId` and renders DefineDestination
+      * empty workspaces default to create a destination, and we're back here in SelectConnector
+      * SelectConnector defines its filters, grabbing the existing filters from the URL
+    * CreateConnectionPage's useEffect watching URL's `sourceId` that deletes all URL params except `sourceId` (removing any set filters)
+    * Another render pass is triggered, and the filter logic sees the filter values in memory don't match the URL, insertting the filters back into the URL
+  */
+  type DynamicFilters = {
+    [Key in keyof BaseFilters as `${typeof connectorType}_${Key}`]: BaseFilters[Key];
+  };
+
+  const searchFilterName = `${connectorType}_search` as const;
+  const tabFilterName = `${connectorType}_tab` as const;
+  const colFilterName = `${connectorType}_col` as const;
+  const ascFilterName = `${connectorType}_asc` as const;
+
+  const [
+    { [searchFilterName]: searchTerm, [tabFilterName]: selectedTab, [colFilterName]: sortColumn, [ascFilterName]: asc },
+    setFilterValue,
+  ] = useFilters<DynamicFilters>({
+    [searchFilterName]: "",
+    [tabFilterName]: "certified",
+    [colFilterName]: "name",
+    [ascFilterName]: "true",
+  } as DynamicFilters);
+
   const isSortAscending = asc === "true";
   const navigate = useNavigate();
 
@@ -130,25 +161,25 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const handleSortClick = useCallback(
     (clickedColumn: ConnectorSortColumn) => {
       if (clickedColumn === sortColumn) {
-        setFilterValue("asc", !isSortAscending ? "true" : "false");
+        setFilterValue(ascFilterName, !isSortAscending ? "true" : "false");
       } else {
-        setFilterValue("col", clickedColumn);
-        setFilterValue("asc", clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
+        setFilterValue(colFilterName, clickedColumn);
+        setFilterValue(ascFilterName, clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
       }
     },
-    [isSortAscending, setFilterValue, sortColumn]
+    [isSortAscending, setFilterValue, sortColumn, ascFilterName, colFilterName]
   );
 
   const setSelectedTab = useCallback(
     (tab: ConnectorTab) => {
-      setFilterValue("tab", tab);
-      setFilterValue("col", "name");
-      setFilterValue("asc", "true");
+      setFilterValue(tabFilterName, tab);
+      setFilterValue(colFilterName, "name");
+      setFilterValue(ascFilterName, "true");
       // Reset filter checkboxes when switching tabs
       setShowAirbyteConnectors(true);
       setShowEnterpriseConnectors(true);
     },
-    [setFilterValue]
+    [setFilterValue, tabFilterName, colFilterName, ascFilterName]
   );
 
   const hasCustomConnectors = useMemo(
@@ -315,7 +346,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       >
         <SearchInput
           value={searchTerm}
-          onChange={(e) => setFilterValue("search", e.target.value)}
+          onChange={(e) => setFilterValue(searchFilterName, e.target.value)}
           placeholder={formatMessage(
             { id: "connector.searchPlaceholder" },
             { tabName: getTabDisplayName(selectedTab) }

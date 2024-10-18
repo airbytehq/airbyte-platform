@@ -142,7 +142,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
             const createdDestinationId = interception.response?.body.destinationId;
             cy.location("search").should(
               "eq",
-              `?sourceId=${source.sourceId}&tab=marketplace&destinationId=${createdDestinationId}`
+              `?sourceId=${source.sourceId}&destination_tab=marketplace&destinationId=${createdDestinationId}`
             );
 
             requestDeleteDestination({ destinationId: createdDestinationId });
