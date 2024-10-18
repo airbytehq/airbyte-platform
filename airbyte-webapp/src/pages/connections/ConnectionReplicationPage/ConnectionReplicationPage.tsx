@@ -263,7 +263,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           <SchemaChangeBackdrop>
             <SchemaRefreshing>
               <Card noPadding title={formatMessage({ id: "connection.schema" })}>
-                <Box mb="xl" data-testid="catalog-tree-table-body">
+                <Box mb="xl">
                   <SyncCatalogTable />
                 </Box>
               </Card>

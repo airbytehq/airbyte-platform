@@ -410,7 +410,7 @@ export const SyncCatalogTable: FC = () => {
   }, [stickyRowIndex, rows]);
 
   const Table: TableComponents["Table"] = ({ style, ...props }) => (
-    <table className={classnames(styles.table)} {...props} style={style} />
+    <table className={classnames(styles.table)} {...props} style={style} data-testid="sync-catalog-table" />
   );
 
   const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (

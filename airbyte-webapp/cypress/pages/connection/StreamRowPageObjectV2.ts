@@ -9,6 +9,8 @@ const getFieldRowTestId = (fieldName: string) => getTestId(`row-depth-2-field-${
 const streamSyncCheckbox = getTestId("sync-stream-checkbox", "input");
 const streamExpandCollapseButton = getTestId("expand-collapse-stream-btn", "button");
 const streamSyncModeSelectButton = getTestId("sync-mode-select-listbox-button", "button");
+const streamPKCell = getTestId("primary-key-cell", "div");
+const streamCursorCell = getTestId("cursor-field-cell", "div");
 
 const fieldSyncCheckbox = getTestId("sync-field-checkbox", "input");
 const fieldPKCell = getTestId("field-pk-cell", "div");
@@ -38,6 +40,14 @@ export class StreamRowPageObjectV2 {
       .within(callback);
   }
 
+  isStreamExistInTable(expectedResult: boolean) {
+    cy.get(this.namespace)
+      .nextAll('[data-testid^="row-depth-1-stream"]')
+      .filter(this.stream)
+      .first()
+      .should(expectedResult ? "exist" : "not.exist");
+  }
+
   // Stream sync
   toggleStreamSync(enabled: boolean) {
     this.withinStream(() => {
@@ -55,6 +65,12 @@ export class StreamRowPageObjectV2 {
     });
   }
 
+  isStreamSyncCheckboxDisabled(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamSyncCheckbox).should(expectedResult ? "be.disabled" : "not.be.disabled");
+    });
+  }
+
   // Expand/collapse stream
   toggleExpandCollapseStream() {
     this.withinStream(() => {
@@ -65,6 +81,12 @@ export class StreamRowPageObjectV2 {
   isStreamExpanded(expectedValue: boolean) {
     this.withinStream(() => {
       cy.get(streamExpandCollapseButton).should("have.attr", "aria-expanded", expectedValue.toString());
+    });
+  }
+
+  isStreamExpandBtnEnabled(expectedValue: boolean) {
+    this.withinStream(() => {
+      cy.get(streamExpandCollapseButton).should(expectedValue ? "be.enabled" : "be.disabled ");
     });
   }
 
@@ -83,6 +105,12 @@ export class StreamRowPageObjectV2 {
     });
   }
 
+  isSyncModeDropdownDisabled(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamSyncModeSelectButton).should(expectedResult ? "be.disabled" : "not.be.disabled");
+    });
+  }
+
   // PK
   isMissedPKErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
@@ -90,10 +118,26 @@ export class StreamRowPageObjectV2 {
     });
   }
 
+  isPKComboboxBtnDisabled(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamPKCell)
+        .find("button")
+        .should(expectedResult ? "be.disabled" : "not.be.disabled");
+    });
+  }
+
   // Cursor
   isMissedCursorErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
       cy.contains("Cursor missing").should(expectedResult ? "be.visible" : "not.be.visible");
+    });
+  }
+
+  isCursorComboboxBtnDisabled(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamCursorCell)
+        .find("button")
+        .should(expectedResult ? "be.disabled" : "not.be.disabled");
     });
   }
 
