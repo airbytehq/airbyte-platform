@@ -4,13 +4,13 @@
 #
 #    pip-compile
 #
-airbyte-cdk==5.12.0
+airbyte-cdk==5.14.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyio==4.6.0
+anyio==4.6.2.post1
     # via httpx
 attributes-doc==0.4.0
     # via serpyco-rs
@@ -77,7 +77,7 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.132
+langsmith==0.1.136
     # via langchain-core
 markupsafe==3.0.1
     # via jinja2
