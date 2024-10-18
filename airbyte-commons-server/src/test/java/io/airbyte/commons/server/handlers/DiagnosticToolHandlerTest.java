@@ -8,21 +8,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
-import io.airbyte.api.model.generated.ActorStatus;
-import io.airbyte.api.model.generated.ConnectionRead;
-import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.ConnectionStatus;
-import io.airbyte.api.model.generated.DestinationRead;
-import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.LicenseInfoResponse;
 import io.airbyte.api.model.generated.LicenseStatus;
-import io.airbyte.api.model.generated.SourceRead;
-import io.airbyte.api.model.generated.SourceReadList;
-import io.airbyte.api.model.generated.SupportState;
-import io.airbyte.api.model.generated.WorkspaceRead;
-import io.airbyte.api.model.generated.WorkspaceReadList;
+import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.SourceConnection;
+import io.airbyte.config.StandardSync;
+import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Node;
@@ -51,11 +49,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
@@ -66,61 +64,42 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class DiagnosticToolHandlerTest {
 
   private DiagnosticToolHandler diagnosticToolHandler;
-  private WorkspacesHandler workspacesHandler;
-  private ConnectionsHandler connectionsHandler;
-  private SourceHandler sourceHandler;
-  private DestinationHandler destinationHandler;
+  private WorkspaceService workspaceService;
+  private ConnectionService connectionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
   private InstanceConfigurationHandler instanceConfigurationHandler;
-  private ActorDefinitionVersionHandler actorDefinitionVersionHandler;
-
-  @Mock
-  private KubernetesClient mKubernetesClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private KubernetesClient kubernetesClient;
 
   @BeforeEach
   void beforeEach() throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    workspacesHandler = mock(WorkspacesHandler.class);
-    connectionsHandler = mock(ConnectionsHandler.class);
-    sourceHandler = mock(SourceHandler.class);
-    destinationHandler = mock(DestinationHandler.class);
-    actorDefinitionVersionHandler = mock(ActorDefinitionVersionHandler.class);
+    workspaceService = mock(WorkspaceService.class);
+    connectionService = mock(ConnectionService.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     instanceConfigurationHandler = mock(InstanceConfigurationHandler.class);
-    diagnosticToolHandler =
-        new DiagnosticToolHandler(workspacesHandler, connectionsHandler, sourceHandler, destinationHandler, actorDefinitionVersionHandler,
-            instanceConfigurationHandler,
-            Optional.of(mKubernetesClient));
+    kubernetesClient = mock(KubernetesClient.class);
+    diagnosticToolHandler = new DiagnosticToolHandler(
+        workspaceService,
+        connectionService,
+        sourceService,
+        destinationService,
+        actorDefinitionVersionHelper,
+        instanceConfigurationHandler,
+        Optional.of(kubernetesClient));
 
     // Mock workspace API responses
-    when(workspacesHandler.listWorkspaces()).thenReturn(new WorkspaceReadList().addWorkspacesItem(
-        new WorkspaceRead()
-            .name("workspace1")
-            .workspaceId(UUID.randomUUID())));
-    when(connectionsHandler.listConnectionsForWorkspace(any())).thenReturn(new ConnectionReadList().addConnectionsItem(
-        new ConnectionRead()
-            .connectionId(UUID.randomUUID())
-            .name("connection1")
-            .status(ConnectionStatus.ACTIVE)
-            .sourceId(UUID.randomUUID())
-            .destinationId(UUID.randomUUID())));
-    when(sourceHandler.listSourcesForWorkspace(any())).thenReturn(new SourceReadList().addSourcesItem(
-        new SourceRead()
-            .sourceId(UUID.randomUUID())
-            .name("source1")
-            .sourceDefinitionId(UUID.randomUUID())
-            .status(ActorStatus.ACTIVE)));
-    when(destinationHandler.listDestinationsForWorkspace(any())).thenReturn(new DestinationReadList().addDestinationsItem(
-        new DestinationRead()
-            .destinationId(UUID.randomUUID())
-            .name("destination1")
-            .destinationDefinitionId(UUID.randomUUID())
-            .status(ActorStatus.ACTIVE)));
-
-    final ActorDefinitionVersionRead actorDefinitionVersion = new ActorDefinitionVersionRead()
-        .dockerImageTag("tag")
-        .isVersionOverrideApplied(true)
-        .supportState(SupportState.SUPPORTED);
-
-    when(actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(any())).thenReturn(actorDefinitionVersion);
-    when(actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any())).thenReturn(actorDefinitionVersion);
+    final var workspace = getStandardWorkspace();
+    when(workspaceService.listStandardWorkspaces(false)).thenReturn(List.of(workspace));
+    when(connectionService.listWorkspaceStandardSyncs(workspace.getWorkspaceId(), false)).thenReturn(List.of(getStandardSync()));
+    when(sourceService.listWorkspaceSourceConnection(any())).thenReturn(List.of(getSource()));
+    when(sourceService.isSourceActive(any())).thenReturn(true);
+    when(destinationService.listWorkspaceDestinationConnection(any())).thenReturn(List.of(getDestination()));
+    when(destinationService.isDestinationActive(any())).thenReturn(true);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(any(), any(), any())).thenReturn(getActorDefinitionVersion());
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any())).thenReturn(getActorDefinitionVersion());
 
     // Mock license API responses
     when(instanceConfigurationHandler.licenseInfo()).thenReturn(new LicenseInfoResponse()
@@ -146,7 +125,7 @@ class DiagnosticToolHandlerTest {
     final NodeList nodeList = new NodeList();
     nodeList.setItems(List.of(node1));
     final NonNamespaceOperation op = mock(NonNamespaceOperation.class);
-    when(mKubernetesClient.nodes()).thenReturn(op);
+    when(kubernetesClient.nodes()).thenReturn(op);
     when(op.list()).thenReturn(nodeList);
 
     final Pod pod1 = new Pod();
@@ -175,7 +154,7 @@ class DiagnosticToolHandlerTest {
 
     final MixedOperation<Pod, PodList, PodResource> mop = mock(MixedOperation.class);
     final NonNamespaceOperation<Pod, PodList, PodResource> podNamespaceOperation = mock(NonNamespaceOperation.class);
-    when(mKubernetesClient.pods()).thenReturn(mop);
+    when(kubernetesClient.pods()).thenReturn(mop);
     when(mop.inNamespace("ab")).thenReturn(podNamespaceOperation);
     when(podNamespaceOperation.list()).thenReturn(podList);
 
@@ -234,6 +213,37 @@ class DiagnosticToolHandlerTest {
       Assertions.assertTrue(foundInstanceYaml);
       Assertions.assertTrue(foundDeploymentYaml);
     }
+  }
+
+  private static @NotNull StandardWorkspace getStandardWorkspace() {
+    return new StandardWorkspace()
+        .withName("workspace1")
+        .withWorkspaceId(UUID.randomUUID());
+  }
+
+  private static StandardSync getStandardSync() {
+    return new StandardSync()
+        .withName("connection1")
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withConnectionId(UUID.randomUUID())
+        .withSourceId(UUID.randomUUID())
+        .withDestinationId(UUID.randomUUID());
+  }
+
+  private static SourceConnection getSource() {
+    return new SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withName("source")
+        .withSourceDefinitionId(UUID.randomUUID());
+  }
+
+  private static ActorDefinitionVersionHelper.@NotNull ActorDefinitionVersionWithOverrideStatus getActorDefinitionVersion() {
+    return new ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus(
+        new ActorDefinitionVersion().withDockerImageTag("tag").withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED), true);
+  }
+
+  private static DestinationConnection getDestination() {
+    return new DestinationConnection().withDestinationId(UUID.randomUUID()).withName("destination1").withDestinationDefinitionId(UUID.randomUUID());
   }
 
 }
