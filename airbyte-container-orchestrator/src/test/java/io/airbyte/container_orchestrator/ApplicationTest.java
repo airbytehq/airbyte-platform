@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 class ApplicationTest {
 
-  private String application;
   private ReplicationJobOrchestrator jobOrchestrator;
 
   @BeforeEach
@@ -25,7 +24,7 @@ class ApplicationTest {
 
   @Test
   void testHappyPath() throws Exception {
-    final var app = new Application(application, jobOrchestrator);
+    final var app = new Application(jobOrchestrator);
     final var code = app.run();
 
     assertEquals(0, code);
@@ -35,7 +34,7 @@ class ApplicationTest {
   @Test
   void testJobFailedWritesFailedStatus() throws Exception {
     when(jobOrchestrator.runJob()).thenThrow(new Exception());
-    final var app = new Application(application, jobOrchestrator);
+    final var app = new Application(jobOrchestrator);
     final var code = app.run();
 
     assertEquals(1, code);

@@ -18,7 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -156,8 +156,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
 
     try (final var mdcScope = new MdcScope.Builder()
-        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+        .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
         .build()) {
       logClientManager.setJobMdc(jobRoot);
       metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
@@ -190,10 +189,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
 
-    try (final var ignored = new MdcScope.Builder()
-        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-        .build()) {
+    try (final var ignored = new MdcScope.Builder().setExtraMdcEntries(LogSource.PLATFORM.toMdc()).build()) {
       logClientManager.setJobMdc(jobRoot);
 
       LOGGER.info("Canceling workload {}", workloadId);
@@ -215,10 +211,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, tracingContext.jobId, tracingContext.attemptNumber);
 
-    try (final var mdcScope = new MdcScope.Builder()
-        .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-        .build()) {
+    try (final var mdcScope = new MdcScope.Builder().setExtraMdcEntries(LogSource.PLATFORM.toMdc()).build()) {
       logClientManager.setJobMdc(jobRoot);
 
       final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);

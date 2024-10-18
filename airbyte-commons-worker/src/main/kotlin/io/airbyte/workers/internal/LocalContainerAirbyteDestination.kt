@@ -9,8 +9,7 @@ import dev.failsafe.Failsafe
 import dev.failsafe.function.CheckedRunnable
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
-import io.airbyte.commons.logging.LoggingHelper
-import io.airbyte.commons.logging.LoggingHelper.Color
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.AirbyteMessage
@@ -43,10 +42,8 @@ class LocalContainerAirbyteDestination(
     const val CALLER = "airbyte-destination"
 
     val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope
-        .Builder()
-        .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
-        .setPrefixColor(Color.YELLOW_BACKGROUND)
+      MdcScope.Builder()
+        .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
   }
 
   override fun close() {

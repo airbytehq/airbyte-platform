@@ -7,8 +7,7 @@ package io.airbyte.commons.logging.logback
 import ch.qos.logback.classic.spi.ILoggingEvent
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.logging.LoggingHelper
-import io.airbyte.commons.logging.LoggingHelper.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogSource
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -123,7 +122,7 @@ private class MaskedDataConverterTest {
     val loggingEvent =
       mockk<ILoggingEvent> {
         every { formattedMessage } returns TEST_LOGGED_SQL_VALUES
-        every { mdcPropertyMap } returns mapOf(LOG_SOURCE_MDC_KEY to LoggingHelper.destinationSource())
+        every { mdcPropertyMap } returns LogSource.DESTINATION.toMdc()
       }
 
     val result = converter.convert(event = loggingEvent)
@@ -136,7 +135,7 @@ private class MaskedDataConverterTest {
     val loggingEvent =
       mockk<ILoggingEvent> {
         every { formattedMessage } returns TEST_LOGGED_RECORD_CONTENTS
-        every { mdcPropertyMap } returns mapOf(LOG_SOURCE_MDC_KEY to LoggingHelper.destinationSource())
+        every { mdcPropertyMap } returns LogSource.DESTINATION.toMdc()
       }
 
     val result = converter.convert(event = loggingEvent)

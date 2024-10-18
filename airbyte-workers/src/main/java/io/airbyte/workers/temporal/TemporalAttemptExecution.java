@@ -6,7 +6,7 @@ package io.airbyte.workers.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ReplicationOutput;
@@ -74,10 +74,7 @@ public class TemporalAttemptExecution implements Supplier<ReplicationOutput> {
   @Override
   public ReplicationOutput get() {
     try {
-      try (final var mdcScope = new MdcScope.Builder()
-          .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-          .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-          .build()) {
+      try (final var mdcScope = new MdcScope.Builder().setExtraMdcEntries(LogSource.PLATFORM.toMdc()).build()) {
 
         mdcSetter.accept(jobRoot);
 

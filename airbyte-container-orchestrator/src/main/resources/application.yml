@@ -34,7 +34,6 @@ micronaut:
     enabled: false
 
 airbyte:
-  application: ${WORKER_APPLICATION:replication-orchestrator}
   workload-id: ${WORKLOAD_ID:}
   connection-id: ${CONNECTION_ID:}
   job-id: ${JOB_ID:}

@@ -10,8 +10,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import com.fasterxml.jackson.core.type.TypeReference
 import io.airbyte.commons.constants.AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH
 import io.airbyte.commons.constants.AirbyteSecretConstants
-import io.airbyte.commons.logging.LoggingHelper
-import io.airbyte.commons.logging.LoggingHelper.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.yaml.Yamls
 import java.nio.charset.Charset
 import java.util.regex.Pattern
@@ -190,7 +190,7 @@ private fun removeKnownPii(event: ILoggingEvent): String {
    * Only apply the PII replacement to messages from the destination to avoid performance
    * hit in other scenarios.
    */
-  return if (event.mdcPropertyMap.getOrDefault(LOG_SOURCE_MDC_KEY, LoggingHelper.platformLogSource()) == LoggingHelper.destinationSource()) {
+  return if (event.mdcPropertyMap.getOrDefault(LOG_SOURCE_MDC_KEY, LogSource.PLATFORM.displayName) == LogSource.DESTINATION.displayName) {
     DESTINATION_KNOWN_PII_PATTERN.matcher(event.formattedMessage).replaceAll(KNOWN_PII_LOG_MESSAGE_REPLACEMENT_PATTERN)
   } else {
     event.formattedMessage

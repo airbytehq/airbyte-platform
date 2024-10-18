@@ -11,8 +11,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.logging.LoggingHelper;
-import io.airbyte.commons.logging.LoggingHelper.Color;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -105,12 +104,10 @@ public class ReplicationWorkerFactory {
   private final DestinationCatalogGenerator destinationCatalogGenerator;
 
   public static final MdcScope.Builder DESTINATION_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
-      .setPrefixColor(Color.YELLOW_BACKGROUND);
+      .setExtraMdcEntries(LogSource.DESTINATION.toMdc());
 
   public static final MdcScope.Builder SOURCE_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix(LoggingHelper.SOURCE_LOGGER_PREFIX)
-      .setPrefixColor(Color.BLUE_BACKGROUND);
+      .setExtraMdcEntries(LogSource.SOURCE.toMdc());
 
   public ReplicationWorkerFactory(
                                   final AirbyteMessageSerDeProvider serDeProvider,

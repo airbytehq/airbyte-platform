@@ -10,9 +10,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
 import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
-import io.airbyte.commons.logging.LoggingHelper
-import io.airbyte.commons.logging.LoggingHelper.LOG_SOURCE_MDC_KEY
-import io.airbyte.commons.logging.LoggingHelper.SOURCE_LOGGER_PREFIX
+import io.airbyte.commons.logging.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogSource
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,8 +21,7 @@ import java.util.UUID
 private class AirbyteOperationsJobLogbackMessageLayoutTest {
   @Test
   fun testLogMessage() {
-    val logSource = LoggingHelper.applyColor(LoggingHelper.Color.BLUE_BACKGROUND, SOURCE_LOGGER_PREFIX)
-    val context = mapOf(LOG_SOURCE_MDC_KEY to logSource)
+    val context = LogSource.SOURCE.toMdc()
     val className = "io.airbyte.TestClass"
     val methodName = "testMethod"
     val fileName = "TestClass.kt"
@@ -50,7 +48,7 @@ private class AirbyteOperationsJobLogbackMessageLayoutTest {
     val expected =
       buildString {
         append("1970-01-01 00:00:00 ")
-        append(logSource)
+        append(layout.formatLogSource(context.getOrDefault(LOG_SOURCE_MDC_KEY, "")))
         append(" > $logMessage$LINE_SEPARATOR")
       }
     assertEquals(expected, message)
@@ -58,8 +56,7 @@ private class AirbyteOperationsJobLogbackMessageLayoutTest {
 
   @Test
   fun testLogMessageWithMaskedData() {
-    val logSource = LoggingHelper.applyColor(LoggingHelper.Color.BLUE_BACKGROUND, SOURCE_LOGGER_PREFIX)
-    val context = mapOf(LOG_SOURCE_MDC_KEY to logSource)
+    val context = LogSource.SOURCE.toMdc()
     val className = "io.airbyte.TestClass"
     val methodName = "testMethod"
     val fileName = "TestClass.kt"
@@ -87,7 +84,7 @@ private class AirbyteOperationsJobLogbackMessageLayoutTest {
     val expected =
       buildString {
         append("1970-01-01 00:00:00 ")
-        append(logSource)
+        append(layout.formatLogSource(context.getOrDefault(LOG_SOURCE_MDC_KEY, "")))
         append(" > ${logMessage.replace(apiKey, SECRETS_MASK)}$LINE_SEPARATOR")
       }
     assertEquals(expected, message)
@@ -98,8 +95,7 @@ private class AirbyteOperationsJobLogbackMessageLayoutTest {
     val throwableConverter = ThrowableProxyConverter()
     throwableConverter.start()
 
-    val logSource = LoggingHelper.applyColor(LoggingHelper.Color.BLUE_BACKGROUND, SOURCE_LOGGER_PREFIX)
-    val context = mapOf(LOG_SOURCE_MDC_KEY to logSource)
+    val context = LogSource.SOURCE.toMdc()
     val className = "io.airbyte.TestClass"
     val methodName = "testMethod"
     val fileName = "TestClass.kt"
@@ -127,7 +123,7 @@ private class AirbyteOperationsJobLogbackMessageLayoutTest {
     val expected =
       buildString {
         append("1970-01-01 00:00:00 ")
-        append(logSource)
+        append(layout.formatLogSource(context.getOrDefault(LOG_SOURCE_MDC_KEY, "")))
         append(" > $logMessage")
         append("$LINE_SEPARATOR${throwableConverter.convert(event)}")
         append(LINE_SEPARATOR)

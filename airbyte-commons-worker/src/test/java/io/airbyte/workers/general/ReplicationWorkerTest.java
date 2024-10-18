@@ -41,7 +41,7 @@ import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.FailureReason;
@@ -308,7 +308,7 @@ abstract class ReplicationWorkerTest {
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
 
     MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, jobRoot.toString());
-    MDC.put(LoggingHelper.LOG_SOURCE_MDC_KEY, LoggingHelper.platformLogSource());
+    LogSource.PLATFORM.toMdc().forEach(MDC::put);
   }
 
   @AfterEach
