@@ -137,6 +137,7 @@ export const StreamsList: React.FC = () => {
           <StreamActionsMenu
             streamName={props.row.original.streamName}
             streamNamespace={props.row.original.streamNamespace}
+            catalogStream={props.row.original.catalogStream}
           />
         ),
         meta: {

@@ -87,7 +87,7 @@ describe("useUiStreamStates", () => {
       expectedIsLoadingHistoricalData,
       expectedDataFreshAsOf,
     }) => {
-      (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
+      (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "", syncCatalog: { streams: [] } });
       (useConnectionStatus as jest.Mock).mockReturnValue(connectionStatus);
       (useGetConnectionSyncProgress as jest.Mock).mockReturnValue(syncProgress);
       (useStreamsSyncProgress as jest.Mock).mockReturnValue(streamSyncProgress);
@@ -112,7 +112,7 @@ describe("useUiStreamStates", () => {
 });
 
 it("should handle RateLimited status", () => {
-  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
+  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "", syncCatalog: { streams: [] } });
   (useStreamsStatuses as jest.Mock).mockReturnValue({
     streamStatuses: new Map([
       [
@@ -147,7 +147,7 @@ it("should handle post-job fetching correctly", async () => {
   const mockQueryClient = {
     invalidateQueries: mockInvalidateQueries,
   };
-  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "" });
+  (useCurrentConnection as jest.Mock).mockReturnValue({ prefix: "", syncCatalog: { streams: [] } });
   (useConnectionStatus as jest.Mock).mockReturnValueOnce({
     status: ConnectionSyncStatus.running,
     isRunning: true,

@@ -13,6 +13,7 @@ import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { connectionsKeys, useCurrentConnection, useGetConnectionSyncProgress } from "core/api";
 import {
+  AirbyteStreamAndConfiguration,
   ConnectionSyncStatus,
   JobConfigType,
   StreamStatusJobType,
@@ -28,6 +29,7 @@ import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 interface BaseUIStreamState {
   streamName: string;
   streamNamespace?: string;
+  catalogStream?: AirbyteStreamAndConfiguration;
   activeJobConfigType?: JobConfigType;
   activeJobStartedAt?: number;
   dataFreshAsOf?: number;
@@ -47,7 +49,7 @@ export interface RateLimitedUIStreamState extends Omit<BaseUIStreamState, "statu
 export type UIStreamState = BaseUIStreamState | RateLimitedUIStreamState;
 
 export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
-  const { prefix } = useCurrentConnection();
+  const { prefix, syncCatalog } = useCurrentConnection();
   const connectionStatus = useConnectionStatus(connectionId);
   const { enabledStreamsByName } = useStreamsListContext();
   const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.status === ConnectionSyncStatus.running);
@@ -91,6 +93,11 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     const uiState: UIStreamState = {
       streamName: `${prefix ? prefix : ""}${streamItem.streamName}`,
       streamNamespace: streamItem.streamNamespace,
+      catalogStream: syncCatalog.streams.find(
+        (catalogStream) =>
+          catalogStream.stream?.name === streamItem.streamName &&
+          catalogStream.stream?.namespace === streamItem.streamNamespace
+      ),
       activeJobConfigType: undefined,
       activeJobStartedAt: undefined,
       dataFreshAsOf: undefined,

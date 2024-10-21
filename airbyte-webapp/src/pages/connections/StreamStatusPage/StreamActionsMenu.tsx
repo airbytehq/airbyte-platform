@@ -10,7 +10,12 @@ import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu
 import { Text } from "components/ui/Text";
 
 import { useCurrentConnection, useDestinationDefinitionVersion } from "core/api";
-import { ConnectionStatus, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import {
+  AirbyteStreamAndConfiguration,
+  ConnectionStatus,
+  DestinationSyncMode,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -24,9 +29,10 @@ import { ConnectionRefreshModal } from "../ConnectionSettingsPage/ConnectionRefr
 interface StreamActionsMenuProps {
   streamName: string;
   streamNamespace?: string;
+  catalogStream?: AirbyteStreamAndConfiguration;
 }
 
-export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
+export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace, catalogStream }) => {
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
   const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
   const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
@@ -41,10 +47,6 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   );
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { openModal } = useModalService();
-
-  const catalogStream = connection.syncCatalog.streams.find(
-    (catalogStream) => catalogStream.stream?.name === streamName && catalogStream.stream?.namespace === streamNamespace
-  );
 
   const disableSyncActions =
     !isSyncConnectionAvailable || connection.status !== ConnectionStatus.active || !canSyncConnection;
@@ -105,7 +107,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
     if (value === "showInReplicationTable" || value === "openDetails" || value === "editStream") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: streamNamespace, streamName, action: value },
+        state: { namespace: catalogStream.stream?.namespace, streamName: catalogStream.stream?.name, action: value },
       });
     }
 
