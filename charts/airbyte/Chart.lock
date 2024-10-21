@@ -40,12 +40,12 @@ dependencies:
   version: 0.620.2
 - name: connector-rollout-worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 1.1.0
 - name: keycloak
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.620.2
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.620.2
-digest: sha256:124eaec7bfdd585f6e848a7b5efb880e33b67769bbe46cf73063c1d7fb074468
-generated: "2024-10-03T14:41:50.578734-04:00"
+digest: sha256:f5c86f83bd128f2dd725e0a92fdc204ab7782169babf846c065e79f91cd3e63a
+generated: "2024-10-21T16:18:16.757779937+05:30"
