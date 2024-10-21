@@ -91,6 +91,7 @@ dependencies {
   testImplementation(libs.micronaut.http)
   testImplementation(libs.mockk)
   testImplementation(libs.reactor.test)
+  testImplementation(libs.bundles.kotest)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

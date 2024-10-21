@@ -89,6 +89,8 @@ object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", 
 
 object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
 
+object BillingInArrearsForNewSignups : Temporary<Boolean>(key = "billing.inArrearsForNewSignups", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
