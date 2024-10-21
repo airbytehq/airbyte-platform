@@ -38,8 +38,7 @@ export const ConnectionActionsBlock: React.FC = () => {
   const onDelete = () => deleteConnection(connection);
 
   const onReset = useCallback(async () => {
-    // empty streams array will clear _all_ streams
-    await clearStreams([]);
+    await clearStreams();
     registerNotification({
       id: "clearData.successfulStart",
       text: formatMessage({

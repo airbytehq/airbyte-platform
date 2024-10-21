@@ -12,7 +12,6 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
-import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
@@ -42,6 +41,8 @@ import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobReadResponse;
 import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogRequestBody;
@@ -121,7 +122,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/backfill_events")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void backfillConnectionEvents(ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
+  public void backfillConnectionEvents(final ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
     ApiHelper.execute(() -> {
       connectionsHandler.backfillConnectionEvents(connectionEventsBackfillRequestBody);
       return null;
@@ -175,11 +176,12 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @Override
-  public BooleanRead refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
-    return ApiHelper.execute(() -> new BooleanRead().value(streamRefreshesHandler.createRefreshesForConnection(
+  public JobReadResponse refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
+    final JobRead job = ApiHelper.execute(() -> streamRefreshesHandler.createRefreshesForConnection(
         connectionStreamRefreshRequestBody.getConnectionId(),
         connectionStreamRefreshRequestBody.getRefreshMode(),
-        connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>())));
+        connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>()));
+    return new JobReadResponse().job(job);
   }
 
   @Override

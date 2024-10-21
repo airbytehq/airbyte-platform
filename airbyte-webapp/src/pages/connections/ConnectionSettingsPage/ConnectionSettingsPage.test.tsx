@@ -8,7 +8,6 @@ import {
   mockDestinationDefinitionSpecification,
   mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockJobList } from "test-utils/mock-data/mockJobsList";
 import {
   mockSourceDefinition,
   mockSourceDefinitionSpecification,
@@ -48,7 +47,6 @@ jest.mock("core/api", () => ({
   useClearConnection: () => ({
     mutateAsync: jest.fn(),
   }),
-  useListJobsForConnectionStatus: () => mockJobList,
   useSyncConnection: () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
@@ -66,6 +64,7 @@ jest.mock("core/api", () => ({
     isLoading: false,
   }),
   useListStreamsStatuses: () => [],
+  useListConnectionsStatuses: () => [{}],
 }));
 
 jest.mock("core/utils/rbac", () => ({

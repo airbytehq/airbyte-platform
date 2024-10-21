@@ -7,14 +7,18 @@ import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
+import io.airbyte.config.RefreshConfig
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
+import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
+import io.airbyte.data.services.shared.ConnectionEvent
 import io.airbyte.persistence.job.JobPersistence
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -22,10 +26,11 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 
 internal class StreamRefreshesHandlerTest {
@@ -72,7 +77,7 @@ internal class StreamRefreshesHandlerTest {
 
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
-    assertFalse(result)
+    assertNull(result)
 
     verify(exactly = 0) { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) }
     verify(exactly = 0) { eventRunner.startNewManualSync(connectionId) }
@@ -83,15 +88,23 @@ internal class StreamRefreshesHandlerTest {
     mockSupportRefresh(true)
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
-    every { eventRunner.startNewManualSync(connectionId) } returns null
+    every { eventRunner.startNewManualSync(connectionId) } returns
+      ManualOperationResult.builder().jobId(Optional.of(0L)).build()
+    every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
+    every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
+      ConnectionTimelineEvent(
+        connectionId = UUID.randomUUID(),
+        eventType = ConnectionEvent.Type.REFRESH_STARTED.toString(),
+      )
     every { jobPersistence.getJob(any()) } returns
       Job(
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
-        null, listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        JobConfig().withRefresh(RefreshConfig()),
+        listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
-    assertTrue(result)
+    assertNotNull(result)
 
     verifyOrder {
       streamRefreshesRepository.saveAll(any<List<StreamRefresh>>())
@@ -104,16 +117,24 @@ internal class StreamRefreshesHandlerTest {
     mockSupportRefresh(true)
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
-    every { eventRunner.startNewManualSync(connectionId) } returns null
+    every { eventRunner.startNewManualSync(connectionId) } returns
+      ManualOperationResult.builder().jobId(Optional.of(0L)).build()
+    every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
+    every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
+      ConnectionTimelineEvent(
+        connectionId = UUID.randomUUID(),
+        eventType = ConnectionEvent.Type.REFRESH_STARTED.toString(),
+      )
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
     every { jobPersistence.getJob(any()) } returns
       Job(
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
-        null, listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        JobConfig().withRefresh(RefreshConfig()),
+        listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
-    assertTrue(result)
+    assertNotNull(result)
 
     verifyOrder {
       streamRefreshesRepository.saveAll(any<List<StreamRefresh>>())

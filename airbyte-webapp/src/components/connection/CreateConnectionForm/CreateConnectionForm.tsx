@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import React, { Suspense, useCallback, useEffect } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +7,7 @@ import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
-import { useCreateConnection, useDiscoverSchema } from "core/api";
+import { connectionsKeys, useCreateConnection, useDiscoverSchema } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import {
   ConnectionFormServiceProvider,
@@ -38,6 +39,7 @@ const CreateConnectionFormInner: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  const queryClient = useQueryClient();
 
   const validationSchema = useConnectionValidationSchema();
 
@@ -69,6 +71,12 @@ const CreateConnectionFormInner: React.FC = () => {
             text: formatMessage({ id: "onboarding.firstSyncStarted" }),
             type: "success",
           });
+
+          // 2s is above the 90th percentile of the time it takes for a sync job to be created after connection is created
+          // on 2024-10-16 the 90th percentile is 1,842ms for connections created last 30 days
+          setTimeout(() => {
+            queryClient.invalidateQueries(connectionsKeys.statuses([createdConnection.connectionId]));
+          }, 2000);
         }
       } catch (e) {
         setSubmitError(e);
@@ -84,6 +92,7 @@ const CreateConnectionFormInner: React.FC = () => {
       setSubmitError,
       registerNotification,
       formatMessage,
+      queryClient,
     ]
   );
 

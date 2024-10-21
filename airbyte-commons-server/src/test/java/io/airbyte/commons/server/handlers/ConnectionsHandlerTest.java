@@ -2769,6 +2769,7 @@ class ConnectionsHandlerTest {
       final ConnectionStatusRead connectionStatus = status.get(0);
       assertEquals(connectionId, connectionStatus.getConnectionId());
       assertEquals(802L, connectionStatus.getLastSuccessfulSync());
+      assertEquals(0L, connectionStatus.getActiveJob().getId());
     }
 
     @Test

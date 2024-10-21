@@ -1,14 +1,11 @@
 import { UseQueryOptions, useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 
-import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
-
 import {
   cancelJob,
   getAttemptCombinedStats,
   getAttemptForJob,
   getJobDebugInfo,
   getJobInfoWithoutLogs,
-  listJobsFor,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import { AttemptStats } from "../types/AirbyteClient";
@@ -17,36 +14,6 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
-  useListJobsForConnectionStatus: (connectionId: string) =>
-    [...jobsKeys.all(connectionId), "connectionStatus"] as const,
-};
-
-export const useListJobsForConnectionStatus = (connectionId: string) => {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(
-    jobsKeys.useListJobsForConnectionStatus(connectionId),
-    () =>
-      listJobsFor(
-        {
-          configId: connectionId,
-          configTypes: ["sync", "reset_connection", "clear", "refresh"],
-          pagination: {
-            // This is an arbitrary number. We have to look back at several jobs to determine the current status of the connection. Just knowing whether it's running or not is not sufficient, we want to know the status of the last completed job as well.
-            pageSize: 3,
-          },
-        },
-        requestOptions
-      ),
-    {
-      refetchInterval: (data) => {
-        return data?.jobs?.[0]?.job?.status &&
-          jobStatusesIndicatingFinishedExecution.includes(data?.jobs?.[0]?.job?.status)
-          ? 10000
-          : 2500;
-      },
-    }
-  );
 };
 
 // A disabled useQuery that can be called manually to download job logs

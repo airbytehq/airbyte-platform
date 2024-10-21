@@ -2808,7 +2808,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BooleanRead"
+                $ref: "#/components/schemas/JobReadResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -10172,6 +10172,8 @@ components:
         lastSuccessfulSync:
           type: integer
           format: int64
+        activeJob:
+          $ref: "#/components/schemas/JobRead"
         lastSyncJobId:
           $ref: "#/components/schemas/JobId"
         lastSyncAttemptNumber:
@@ -11850,6 +11852,11 @@ components:
           $ref: "#/components/schemas/JobAggregatedStats"
         streamAggregatedStats:
           $ref: "#/components/schemas/StreamAggregatedStats"
+    JobReadResponse:
+      type: object
+      properties:
+        job:
+          $ref: "#/components/schemas/JobRead"
     JobAggregatedStats:
       type: object
       required:

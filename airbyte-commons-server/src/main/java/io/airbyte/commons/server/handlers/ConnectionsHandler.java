@@ -1108,7 +1108,8 @@ public class ConnectionsHandler {
       final List<Job> jobs = jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(),
           maxJobLookback);
-      final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
+      final Optional<Job> activeJob = jobs.stream().findFirst().filter(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
+      final boolean isRunning = activeJob.isPresent();
 
       final Optional<Job> lastSucceededOrFailedJob =
           jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus()) && job.getStatus() != JobStatus.CANCELLED).findFirst();
@@ -1127,6 +1128,7 @@ public class ConnectionsHandler {
 
       final ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
           .connectionId(connectionId)
+          .activeJob(activeJob.map(JobConverter::getJobRead).orElse(null))
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .scheduleData(connectionRead.getScheduleData());
       if (lastSucceededOrFailedJob.isPresent()) {
