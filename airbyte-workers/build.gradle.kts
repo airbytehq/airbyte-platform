@@ -138,7 +138,7 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.workers.Application"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0", "-XX:MaxJavaStackTraceDepth=10000")
+    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_ROLE" to "undefined",
