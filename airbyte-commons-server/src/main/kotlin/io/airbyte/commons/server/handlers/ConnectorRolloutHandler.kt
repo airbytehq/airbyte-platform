@@ -437,23 +437,39 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id))
     }
 
-    open fun manualFinalizeConnectorRolloutWorkflowUpdate(
-      connectorRolloutFinalizeWorkflowUpdate: ConnectorRolloutManualFinalizeRequestBody,
+    open fun manualFinalizeConnectorRollout(
+      connectorRolloutFinalize: ConnectorRolloutManualFinalizeRequestBody,
     ): ConnectorRolloutManualFinalizeResponse {
+      // Start a workflow if one doesn't exist
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutFinalize.id)
+      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
+        try {
+          connectorRolloutClient.startRollout(
+            ConnectorRolloutActivityInputStart(
+              connectorRolloutFinalize.dockerRepository,
+              connectorRolloutFinalize.dockerImageTag,
+              connectorRolloutFinalize.actorDefinitionId,
+              connectorRolloutFinalize.id,
+            ),
+          )
+        } catch (e: WorkflowUpdateException) {
+          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
+        }
+      }
       logger.info {
-        "Finalizing rollout for ${connectorRolloutFinalizeWorkflowUpdate.id}; " +
-          "dockerRepository=${connectorRolloutFinalizeWorkflowUpdate.dockerRepository}" +
-          "dockerImageTag=${connectorRolloutFinalizeWorkflowUpdate.dockerImageTag}" +
-          "actorDefinitionId=${connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId}"
+        "Finalizing rollout for ${connectorRolloutFinalize.id}; " +
+          "dockerRepository=${connectorRolloutFinalize.dockerRepository}" +
+          "dockerImageTag=${connectorRolloutFinalize.dockerImageTag}" +
+          "actorDefinitionId=${connectorRolloutFinalize.actorDefinitionId}"
       }
       try {
         connectorRolloutClient.finalizeRollout(
           ConnectorRolloutActivityInputFinalize(
-            connectorRolloutFinalizeWorkflowUpdate.dockerRepository,
-            connectorRolloutFinalizeWorkflowUpdate.dockerImageTag,
-            connectorRolloutFinalizeWorkflowUpdate.actorDefinitionId,
-            connectorRolloutFinalizeWorkflowUpdate.id,
-            ConnectorRolloutFinalState.fromValue(connectorRolloutFinalizeWorkflowUpdate.state.toString()),
+            connectorRolloutFinalize.dockerRepository,
+            connectorRolloutFinalize.dockerImageTag,
+            connectorRolloutFinalize.actorDefinitionId,
+            connectorRolloutFinalize.id,
+            ConnectorRolloutFinalState.fromValue(connectorRolloutFinalize.state.toString()),
           ),
         )
       } catch (e: WorkflowUpdateException) {

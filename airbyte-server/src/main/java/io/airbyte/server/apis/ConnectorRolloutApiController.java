@@ -196,7 +196,7 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectorRolloutManualFinalizeResponse manualFinalizeConnectorRollout(@Body final ConnectorRolloutManualFinalizeRequestBody connectorRolloutFinalizeRequestBody) {
-    return ApiHelper.execute(() -> connectorRolloutHandler.manualFinalizeConnectorRolloutWorkflowUpdate(connectorRolloutFinalizeRequestBody));
+    return ApiHelper.execute(() -> connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeRequestBody));
   }
 
 }

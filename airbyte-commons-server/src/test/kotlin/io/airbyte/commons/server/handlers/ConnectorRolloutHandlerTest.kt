@@ -642,9 +642,12 @@ internal class ConnectorRolloutHandlerTest {
     }
   }
 
-  @Test
-  fun `test manualFinalizeConnectorRolloutWorkflowUpdate`() {
+  @ParameterizedTest
+  @MethodSource("validFinalizeStates")
+  fun `test manualFinalizeConnectorRollout`(initialState: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
+    val rollout = createMockConnectorRollout(rolloutId)
+    rollout.apply { state = initialState }
     val state = ConnectorRolloutStateTerminal.SUCCEEDED
     val connectorRolloutFinalizeWorkflowUpdate =
       ConnectorRolloutManualFinalizeRequestBody().apply {
@@ -655,11 +658,19 @@ internal class ConnectorRolloutHandlerTest {
         this.state = state
       }
 
+    every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
+    if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
+      every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    }
     every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
 
-    connectorRolloutHandler.manualFinalizeConnectorRolloutWorkflowUpdate(connectorRolloutFinalizeWorkflowUpdate)
+    connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
 
     verifyAll {
+      connectorRolloutService.getConnectorRollout(any())
+      if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
+        connectorRolloutClient.startRollout(any())
+      }
       connectorRolloutClient.finalizeRollout(any())
     }
   }
