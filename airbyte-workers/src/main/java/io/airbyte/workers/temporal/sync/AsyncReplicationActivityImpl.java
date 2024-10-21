@@ -172,7 +172,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
       final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
       final WorkloadApiWorker worker = workerAndReplicationInput.worker;
 
-      LOGGER.info("connection {}, input: {}", tracingContext.connectionId, workerAndReplicationInput.replicationInput);
+      LOGGER.debug("connection {}, input: {}", tracingContext.connectionId, workerAndReplicationInput.replicationInput);
 
       return worker.createWorkload(workerAndReplicationInput.replicationInput, jobRoot);
     } catch (final Exception e) {
