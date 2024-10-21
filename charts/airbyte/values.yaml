@@ -2375,3 +2375,30 @@ testWebapp:
   image:
     repository: busybox
     tag: latest
+
+postgres:
+  enabled: true  
+  
+  fullnameOverride: "postgres"
+  postgresqlUsername: airbyte_user
+  postgresqlPassword: test@123B
+  postgresqlDatabase: csmsTestInternal
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce
+
+  service:
+    type: LoadBalancer  
+    port: 5432
+    loadBalancerIP: ""  
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
