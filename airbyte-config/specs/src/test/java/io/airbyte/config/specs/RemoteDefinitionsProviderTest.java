@@ -5,6 +5,7 @@
 package io.airbyte.config.specs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -143,6 +144,27 @@ class RemoteDefinitionsProviderTest {
     final int expectedNumberOfDestinations = MoreIterators.toList(jsonCatalog.get("destinations").elements()).size();
     assertEquals(expectedNumberOfDestinations, destinationDefinitions.size());
     assertTrue(destinationDefinitions.stream().allMatch(destDef -> destDef.getProtocolVersion().length() > 0));
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("0eeee7fb-518f-4045-bacc-9619e31c43ea"));
+    assertTrue(destinationDefinitionWithFileTransfer.getSupportsFileTransfer());
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithNoFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("b4c5d105-31fd-4817-96b6-cb923bfc04cb"));
+    assertFalse(destinationDefinitionWithNoFileTransfer.getSupportsFileTransfer());
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithoutFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("22f6c74f-5699-40ff-833c-4a879ea40133"));
+    assertFalse(destinationDefinitionWithoutFileTransfer.getSupportsFileTransfer());
+  }
+
+  private ConnectorRegistryDestinationDefinition getDestinationDefinitionById(
+                                                                              final List<ConnectorRegistryDestinationDefinition> destDefs,
+                                                                              final UUID destDefId) {
+    return destDefs.stream()
+        .filter(destDef -> destDef.getDestinationDefinitionId().equals(destDefId))
+        .findFirst()
+        .orElseThrow();
   }
 
   @Test
