@@ -3,34 +3,17 @@
  */
 package io.airbyte.connectorSidecar
 
-import io.airbyte.commons.timer.Stopwatch
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.ApplicationContext
+import io.micronaut.runtime.Micronaut
 
 private val logger = KotlinLogging.logger {}
 
 fun main() {
-  val stopwatch = Stopwatch()
+  logger.info { "Sidecar start" }
 
-  var applicationContext: ApplicationContext?
-  stopwatch.start().use {
-    applicationContext = ApplicationContext.run()
-  }
+  Micronaut.build()
+    .deduceEnvironment(false)
+    .start()
 
-  logger.info { "Context started" }
-  logger.info { stopwatch }
-
-  var connectorWatcher: ConnectorWatcher?
-  stopwatch.start().use {
-    connectorWatcher = applicationContext?.getBean(ConnectorWatcher::class.java)
-  }
-
-  logger.info { "Sidecar created" }
-  logger.info { stopwatch }
-
-  stopwatch.start().use {
-    connectorWatcher?.run()
-  }
-  logger.info { "Sidecar done" }
-  logger.info { stopwatch }
+  logger.info { "Sidecar end" }
 }

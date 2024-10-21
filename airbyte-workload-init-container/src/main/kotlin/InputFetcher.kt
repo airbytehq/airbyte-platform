@@ -6,34 +6,39 @@ import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Singleton
-import org.apache.commons.lang3.time.StopWatch
+import io.micronaut.context.annotation.Context
+import io.micronaut.context.annotation.Value
+import javax.annotation.PostConstruct
 
 private val logger = KotlinLogging.logger {}
 
-@Singleton
+@Context
 class InputFetcher(
   private val workloadApiClient: WorkloadApiClient,
   private val hydrationProcessor: InputHydrationProcessor,
   private val systemClient: SystemClient,
+  @Value("\${airbyte.workload-id}") private val workloadId: String,
 ) {
-  fun fetch(
-    workloadId: String,
-    stopWatch: StopWatch,
-  ) {
+  @PostConstruct
+  fun fetch() {
+    logger.info { "Fetching workload..." }
+
     val workload =
       try {
         workloadApiClient.workloadApi.workloadGet(workloadId)
       } catch (e: Exception) {
         return failWorkloadAndExit(workloadId, "fetching workload", e)
       }
-    logger.info { "Workload fetched from the DB at: ${stopWatch.time}" }
+
+    logger.info { "Workload ${workload.id} fetched." }
+
+    logger.info { "Processing workload..." }
     try {
       hydrationProcessor.process(workload)
     } catch (e: Exception) {
       return failWorkloadAndExit(workloadId, "processing workload", e)
     }
-    logger.info { "Workload hydrated at: ${stopWatch.time}" }
+    logger.info { "Workload processed." }
   }
 
   private fun failWorkloadAndExit(

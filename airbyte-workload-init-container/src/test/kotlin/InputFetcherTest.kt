@@ -39,6 +39,7 @@ class InputFetcherTest {
         workloadApiClient,
         inputProcessor,
         systemClient,
+        WORKLOAD_ID,
       )
   }
 
@@ -47,7 +48,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID, stopWatch)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) }
     verify { inputProcessor.process(workload) }
@@ -59,7 +60,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID, stopWatch)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -72,7 +73,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID, stopWatch)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -84,7 +85,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } throws Exception("bang 1")
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID, stopWatch)
+    fetcher.fetch()
 
     verify { systemClient.exitProcess(1) }
   }

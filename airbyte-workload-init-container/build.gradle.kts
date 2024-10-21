@@ -8,6 +8,21 @@ configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
+  exclude(group = "io.micronaut.http")
+  exclude(group = "io.micronaut.jaxrs")
+  exclude(group = "io.micronaut.email")
+  exclude(group = "io.micronaut.validation")
+  exclude(group = "io.micronaut.cache")
+  exclude(group = "io.micronaut.security")
+  exclude(group = "io.micronaut.reactor")
+  exclude(group = "io.micronaut.kotlin")
+  exclude(group = "io.micronaut.acme")
+  exclude(group = "io.micronaut.aws")
+  exclude(group = "io.micronaut.azure")
+  exclude(group = "io.micronaut.cassandra")
+  exclude(group = "io.micronaut.chatbots")
+  exclude(group = "io.micronaut.coherence")
+  exclude(group = "io.micronaut.controlpanel")
 }
 
 dependencies {
@@ -16,7 +31,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.apache)
-  implementation(libs.bundles.micronaut.light)
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
