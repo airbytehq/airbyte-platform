@@ -79,12 +79,13 @@ class InitContainerFactory(
     workspaceId: UUID,
   ): Container {
     val initContainerImageOverride = featureFlagClient.stringVariation(PlatformInitContainerImage, Workspace(workspaceId))
+    val resolvedImage = initContainerImageOverride.ifEmpty { initContainerInfo.image }
 
-    logger.info { "[initContainer] image: ${initContainerImageOverride.ifEmpty { initContainerInfo.image }}" }
+    logger.info { "[initContainer] image: $resolvedImage resources: $resourceReqs" }
 
     return ContainerBuilder()
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
-      .withImage(initContainerImageOverride.ifEmpty { initContainerInfo.image })
+      .withImage(resolvedImage)
       .withImagePullPolicy(initContainerInfo.pullPolicy)
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withResources(resourceReqs)
