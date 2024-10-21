@@ -264,7 +264,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
       }
     });
 
-    log.info("Replication output for workload {} : {}", workloadId, output.orElse(null));
+    log.debug("Replication output for workload {} : {}", workloadId, output.orElse(null));
     return output.orElse(null);
   }
 

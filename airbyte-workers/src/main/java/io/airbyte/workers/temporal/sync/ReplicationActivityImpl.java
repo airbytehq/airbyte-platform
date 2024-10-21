@@ -213,12 +213,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
 
     final String standardSyncOutputString = standardSyncOutput.toString();
-    LOGGER.info("sync summary: {}", standardSyncOutputString);
+    LOGGER.debug("sync summary: {}", standardSyncOutputString);
     if (standardSyncOutputString.length() > MAX_TEMPORAL_MESSAGE_SIZE) {
       LOGGER.error("Sync output exceeds the max temporal message size of {}, actual is {}.", MAX_TEMPORAL_MESSAGE_SIZE,
           standardSyncOutputString.length());
     } else {
-      LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
+      LOGGER.debug("Sync summary length: {}", standardSyncOutputString.length());
     }
 
     if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(tracingContext.connectionId))) {
