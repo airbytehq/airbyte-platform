@@ -60,8 +60,16 @@ $card-header-fixed-height: 77px;
     width: 50px;
   }
 
+  .nameContent {
+    word-break: break-all;
+  }
+
   .latestSyncHeader {
-    width: 400px;
+    width: 25%;
+  }
+
+  .dataFreshAsOfHeader {
+    width: 20%;
   }
 
   .row:hover {

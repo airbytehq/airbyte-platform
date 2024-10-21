@@ -50,7 +50,11 @@ export const StreamsList: React.FC = () => {
       }),
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
-        cell: (props) => <span data-testid="streams-list-name-cell-content">{props.cell.getValue()}</span>,
+        cell: (props) => (
+          <div data-testid="streams-list-name-cell-content" className={styles.nameContent}>
+            {props.cell.getValue()}
+          </div>
+        ),
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
@@ -103,7 +107,6 @@ export const StreamsList: React.FC = () => {
         },
         meta: {
           thClassName: styles.latestSyncHeader,
-          responsive: true,
         },
       }),
       columnHelper.accessor("dataFreshAsOf", {
@@ -129,6 +132,9 @@ export const StreamsList: React.FC = () => {
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
         ),
+        meta: {
+          thClassName: styles.dataFreshAsOfHeader,
+        },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => null,
