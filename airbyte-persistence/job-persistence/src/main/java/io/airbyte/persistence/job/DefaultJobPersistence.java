@@ -749,20 +749,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public Optional<String> getAttemptTemporalWorkflowId(final long jobId, final int attemptNumber) throws IOException {
-    final var result = jobDatabase.query(ctx -> ctx.fetch(
-        " SELECT temporal_workflow_id from attempts WHERE job_id = ? AND attempt_number = ?",
-        jobId,
-        attemptNumber)).stream().findFirst();
-
-    if (result.isEmpty() || result.get().get("temporal_workflow_id") == null) {
-      return Optional.empty();
-    }
-
-    return Optional.of(result.get().get("temporal_workflow_id", String.class));
-  }
-
-  @Override
   public Optional<Attempt> getAttemptForJob(final long jobId, final int attemptNumber) throws IOException {
     final var result = jobDatabase.query(ctx -> ctx.fetch(
         ATTEMPT_SELECT,
@@ -1118,6 +1104,30 @@ public class DefaultJobPersistence implements JobPersistence {
             + "CAST(config_type AS VARCHAR) =  ? AND "
             + " attempts.ended_at > ? ORDER BY jobs.created_at ASC, attempts.created_at ASC", toSqlName(configType),
             timeConvertedIntoLocalDateTime)));
+  }
+
+  @Override
+  public List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
+                                                 Set<JobStatus> jobStatuses,
+                                                 OffsetDateTime createdAtStart,
+                                                 OffsetDateTime createdAtEnd)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(jobStatuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(jobStatuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return getJobsFromResult(ctx.fetch(fullQuery));
+    });
+
   }
 
   @Override

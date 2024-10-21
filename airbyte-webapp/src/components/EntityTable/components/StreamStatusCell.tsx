@@ -103,10 +103,10 @@ const StreamStatusPopover: React.FC<{ connectionId: string }> = ({ connectionId 
 
 export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, unknown>> = ({ row }) => {
   const connectionId = row.original.connectionId;
-  const { status, isRunning } = useConnectionStatus(connectionId);
+  const { status } = useConnectionStatus(connectionId);
 
   return (
-    <Tooltip theme="light" control={<ConnectionStatusIndicator status={status} loading={isRunning} />}>
+    <Tooltip theme="light" control={<ConnectionStatusIndicator status={status} />}>
       <Suspense fallback={null}>
         <StreamStatusPopover connectionId={connectionId} />
       </Suspense>

@@ -8,19 +8,9 @@ import static io.airbyte.data.services.shared.DataSourceUnwrapper.unwrapContext;
 import static io.airbyte.data.services.shared.DataSourceUnwrapper.unwrapDataSource;
 
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.data.services.CatalogService;
-import io.airbyte.data.services.ConnectionService;
-import io.airbyte.data.services.ConnectorBuilderService;
-import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.OAuthService;
-import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
@@ -34,7 +24,6 @@ import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
@@ -119,29 +108,6 @@ public class DatabaseBeanFactory {
         .setTransactionalLock(false);
 
     return flywayConfiguration.load();
-  }
-
-  @Singleton
-  @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final ActorDefinitionService actorDefinitionService,
-                                           final CatalogService catalogService,
-                                           final ConnectionService connectionService,
-                                           final ConnectorBuilderService connectorBuilderService,
-                                           final DestinationService destinationService,
-                                           final OAuthService oauthService,
-                                           final OperationService operationService,
-                                           final SourceService sourceService,
-                                           final WorkspaceService workspaceService) {
-    return new ConfigRepository(
-        actorDefinitionService,
-        catalogService,
-        connectionService,
-        connectorBuilderService,
-        destinationService,
-        oauthService,
-        operationService,
-        sourceService,
-        workspaceService);
   }
 
   @Singleton

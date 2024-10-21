@@ -1,8 +1,9 @@
 import { CellContext, ColumnDefTemplate, createColumnHelper } from "@tanstack/react-table";
-import React, { useMemo } from "react";
+import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Link } from "components/ui/Link";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
@@ -133,6 +134,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
     [columnHelper, entity, EntityNameCell]
   );
 
+  const customScrollParent = useContext(ScrollParentContext);
   return (
     <Table
       rowId="connectionId"
@@ -143,6 +145,10 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnVisibility={{ "stream-status": streamCentricUIEnabled }}
       className={styles.connectionsTable}
       initialSortBy={[{ id: "entityName", desc: false }]}
+      virtualized={!!customScrollParent}
+      virtualizedProps={{
+        customScrollParent: customScrollParent ?? undefined,
+      }}
     />
   );
 };

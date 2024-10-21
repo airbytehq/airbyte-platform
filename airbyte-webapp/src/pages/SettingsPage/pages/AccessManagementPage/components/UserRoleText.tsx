@@ -14,6 +14,8 @@ export const UserRoleText: React.FC<{ highestPermissionType?: RbacRole }> = ({ h
       ? "role.admin"
       : highestPermissionType === "EDITOR"
       ? "role.editor"
+      : highestPermissionType === "RUNNER"
+      ? "role.runner"
       : highestPermissionType === "READER"
       ? "role.reader"
       : "role.member";

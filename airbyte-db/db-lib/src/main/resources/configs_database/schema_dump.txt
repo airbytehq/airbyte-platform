@@ -101,6 +101,7 @@ create table "public"."actor_definition_version" (
   "last_published" timestamp(6) with time zone,
   "internal_support_level" bigint not null,
   "language" varchar(256),
+  "supports_file_transfer" boolean not null default false,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
@@ -215,19 +216,20 @@ create table "public"."connector_rollout" (
   "release_candidate_version_id" uuid not null,
   "initial_version_id" uuid,
   "state" varchar(32) not null,
-  "initial_rollout_pct" int not null,
+  "initial_rollout_pct" int,
   "current_target_rollout_pct" int,
-  "final_target_rollout_pct" int not null,
+  "final_target_rollout_pct" int,
   "has_breaking_changes" boolean not null,
-  "max_step_wait_time_mins" int not null,
+  "max_step_wait_time_mins" int,
   "updated_by" uuid,
   "created_at" timestamp(6) not null default current_timestamp,
   "updated_at" timestamp(6) not null default current_timestamp,
   "completed_at" timestamp(6),
-  "expires_at" timestamp(6) not null,
+  "expires_at" timestamp(6),
   "error_msg" varchar(1024),
   "failed_reason" varchar(1024),
-  "rollout_strategy" varchar(256) not null,
+  "rollout_strategy" varchar(256),
+  "workflow_run_id" varchar(64),
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."declarative_manifest" (
@@ -452,6 +454,7 @@ create table "public"."workload" (
   "termination_reason" text,
   "auto_id" uuid,
   "deadline" timestamp(6) with time zone,
+  "signal_input" text,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (
@@ -509,7 +512,7 @@ create index "connection_operation_connection_id_idx" on "public"."connection_op
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc)
-where (((state)::text = ANY ((ARRAY['errored'::character varying, 'finalizing'::character varying, 'in_progress'::character varying, 'initialized'::character varying, 'paused'::character varying])::text[])));
+where (((state)::text = ANY ((ARRAY['errored'::character varying, 'finalizing'::character varying, 'in_progress'::character varying, 'initialized'::character varying, 'paused'::character varying, 'workflow_started'::character varying])::text[])));
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);

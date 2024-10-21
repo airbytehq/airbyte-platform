@@ -12,12 +12,14 @@ import static org.mockito.Mock.Strictness.LENIENT;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldRunOnExpandedGkeDataplane;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseRouteToTaskRouting;
 import io.airbyte.featureflag.Workspace;
 import java.io.IOException;
 import java.util.UUID;
@@ -47,22 +49,28 @@ class RouterServiceTest {
   private static final String EU_EXPANDED_TASK_QUEUE = "EU_EXPANDED_TASK_QUEUE";
 
   @Mock(strictness = LENIENT)
-  private ConfigRepository mConfigRepository;
-
-  @Mock(strictness = LENIENT)
   private TaskQueueMapper mTaskQueueMapper;
 
   private FeatureFlagClient mockFeatureFlagClient;
+
+  @Mock(strictness = LENIENT)
+  private ConnectionService mConnectionService;
+
+  @Mock(strictness = LENIENT)
+  private WorkspaceService mWorkspaceService;
 
   private RouterService routerService;
 
   @BeforeEach
   void init() throws ConfigNotFoundException {
     mockFeatureFlagClient = Mockito.mock(TestClient.class);
-    routerService = new RouterService(mConfigRepository, mTaskQueueMapper,
-        mockFeatureFlagClient);
+    routerService = new RouterService(
+        mTaskQueueMapper,
+        mockFeatureFlagClient,
+        mConnectionService,
+        mWorkspaceService);
 
-    Mockito.when(mConfigRepository.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
+    Mockito.when(mWorkspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
 
     Mockito.when(mTaskQueueMapper.getTaskQueue(eq(Geography.AUTO), any(TemporalJobType.class))).thenReturn(US_TASK_QUEUE);
@@ -80,43 +88,46 @@ class RouterServiceTest {
 
   @Test
   void testGetTaskQueue() throws IOException, ConfigNotFoundException {
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
     assertEquals(EU_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
   }
 
   @Test
   void testGetTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
     assertEquals(EU_FLAGGED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
   }
 
   @Test
-  void testGetTaskQueueBehindExpandedFlag() throws IOException, ConfigNotFoundException {
+  void testGetTaskQueueBehindExpandedFlag() throws IOException, ConfigNotFoundException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_EXPANDED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
     assertEquals(US_EXPANDED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
-    Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
+    Mockito.when(mConnectionService.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.EU);
     assertEquals(EU_EXPANDED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
   }
 
@@ -124,13 +135,13 @@ class RouterServiceTest {
   void testGetWorkspaceTaskQueue() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
     assertEquals(EU_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
   }
 
@@ -138,13 +149,13 @@ class RouterServiceTest {
   void testGetWorkspaceTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
     assertEquals(EU_FLAGGED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
   }
 
@@ -153,13 +164,13 @@ class RouterServiceTest {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_EXPANDED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
     assertEquals(US_EXPANDED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
+    Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
     assertEquals(EU_EXPANDED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
   }
 

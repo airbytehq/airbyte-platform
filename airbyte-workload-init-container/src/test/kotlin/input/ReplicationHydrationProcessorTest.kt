@@ -7,7 +7,10 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
@@ -47,6 +50,15 @@ class ReplicationHydrationProcessorTest {
   @MockK(relaxed = true)
   lateinit var fileClient: FileClient
 
+  @MockK
+  lateinit var featureFlagClient: FeatureFlagClient
+
+  @MockK
+  lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
+
+  @MockK
+  lateinit var metricClient: MetricClient
+
   private lateinit var processor: ReplicationHydrationProcessor
 
   @BeforeEach
@@ -58,6 +70,9 @@ class ReplicationHydrationProcessorTest {
         serializer,
         protocolSerializer,
         fileClient,
+        featureFlagClient,
+        destinationCatalogGenerator,
+        metricClient,
       )
   }
 
@@ -77,6 +92,7 @@ class ReplicationHydrationProcessorTest {
         ),
       )
     val activityInput = ReplicationActivityInput()
+    activityInput.connectionId = UUID.randomUUID()
     val hydrated =
       ReplicationInput()
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
@@ -87,6 +103,7 @@ class ReplicationHydrationProcessorTest {
         .withCatalog(catalog)
         .withPrefix("dest_test") // for validating the mapper ran
         .withState(state)
+        .withConnectionId(activityInput.connectionId)
     val mapper =
       NamespacingMapper(
         null,
@@ -109,6 +126,10 @@ class ReplicationHydrationProcessorTest {
     every { serializer.serialize(hydrated.state?.state) } returns serializedState
     every { protocolSerializer.serialize(hydrated.catalog, false) } returns serializedSrcCatalog
     every { protocolSerializer.serialize(mapper.mapCatalog(hydrated.catalog), hydrated.destinationSupportsRefreshes) } returns serializedDestCatalog
+    every {
+      destinationCatalogGenerator.generateDestinationCatalog(any())
+    } returns DestinationCatalogGenerator.CatalogGenerationResult(hydrated.catalog, mapOf())
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     processor.process(input)
 

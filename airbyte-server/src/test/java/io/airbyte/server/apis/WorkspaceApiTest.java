@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.config.AuthenticatedUser;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -92,7 +92,8 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(workspacesHandler).deleteWorkspace(Mockito.any());
@@ -172,7 +173,7 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateWorkspaceFeedback() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateWorkspaceFeedback() throws IOException, ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(workspacesHandler).setFeedbackDone(Mockito.any());

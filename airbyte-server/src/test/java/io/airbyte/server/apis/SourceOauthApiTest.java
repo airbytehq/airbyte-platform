@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -25,7 +25,8 @@ import org.mockito.Mockito;
 class SourceOauthApiTest extends BaseControllerTest {
 
   @Test
-  void testCompleteSourceOAuth() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCompleteSourceOAuth()
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     Mockito.when(oAuthHandler.completeSourceOAuthHandleReturnSecret(Mockito.any()))
         .thenReturn(new CompleteOAuthResponse())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -39,7 +40,8 @@ class SourceOauthApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetSourceOAuthConsent() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testGetSourceOAuthConsent()
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     Mockito.when(oAuthHandler.getSourceOAuthConsent(Mockito.any()))
         .thenReturn(new OAuthConsentRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -53,7 +55,7 @@ class SourceOauthApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testSetInstancewideSourceOauthParams() throws IOException, JsonValidationException {
+  void testSetInstancewideSourceOauthParams() throws IOException {
     Mockito.doNothing()
         .when(oAuthHandler).setSourceInstancewideOauthParams(Mockito.any());
 

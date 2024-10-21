@@ -47,9 +47,10 @@ export const links = {
   connectorBuilderParameterizedRequests: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning#parameterized-requests`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
+  connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
-  creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,
   pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
@@ -58,6 +59,11 @@ export const links = {
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
+  ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
+  enterpriseTalkToSales:
+    "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=enterprise-connector",
+  billingNotificationsForm:
+    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}",
 } as const;
 
 export type OutboundLinks = typeof links;

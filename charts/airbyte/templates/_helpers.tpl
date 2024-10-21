@@ -128,63 +128,6 @@ Returns the GCP credentials path
 {{- end -}}
 {{- end -}}
 
-
-{{/*
-Returns the Airbyte Scheduler Image
-*/}}
-{{- define "airbyte.schedulerImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.scheduler.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Server Image
-*/}}
-{{- define "airbyte.serverImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.server.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Webapp Image
-*/}}
-{{- define "airbyte.webappImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.webapp.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte PodSweeper Image
-*/}}
-{{- define "airbyte.podSweeperImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.podSweeper.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Worker Image
-*/}}
-{{- define "airbyte.workerImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Workload Launcher Image
-*/}}
-{{- define "airbyte.workloadLauncherImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Bootloader Image
-*/}}
-{{- define "airbyte.bootloaderImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.bootloader.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Temporal Image. TODO: This will probably be replaced if we move to using temporal as a dependency, like minio and postgres.
-*/}}
-{{- define "airbyte.temporalImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.temporal.image "global" .Values.global) -}}
-{{- end -}}
-
 {{/*
 Construct comma separated list of key/value pairs from object (useful for ENV var values)
 */}}

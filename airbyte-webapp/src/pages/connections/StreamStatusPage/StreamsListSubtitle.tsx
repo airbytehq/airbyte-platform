@@ -1,11 +1,12 @@
 import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { Text } from "components/ui/Text";
 
+import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+
 interface StreamsListSubtitleProps {
-  connectionStatus: ConnectionStatusType;
+  connectionStatus: ConnectionSyncStatus;
   nextSync?: number;
   recordsExtracted?: number;
 
@@ -19,10 +20,10 @@ export const StreamsListSubtitle: React.FC<StreamsListSubtitleProps> = ({
 }) => {
   return (
     <Text color="grey" bold size="sm" as="span" data-testid="streams-list-subtitle">
-      {connectionStatus === ConnectionStatusType.Synced && nextSync && (
+      {connectionStatus === ConnectionSyncStatus.synced && nextSync && (
         <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
       )}
-      {connectionStatus === ConnectionStatusType.Syncing &&
+      {connectionStatus === ConnectionSyncStatus.running &&
         (recordsLoaded ? (
           <FormattedMessage id="sources.countRecordsLoaded" values={{ count: recordsLoaded }} />
         ) : recordsExtracted ? (

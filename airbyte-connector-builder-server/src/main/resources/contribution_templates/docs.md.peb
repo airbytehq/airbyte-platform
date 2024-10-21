@@ -23,8 +23,8 @@
 <details>
   <summary>Expand to review</summary>
 
-| Version          | Date       | Subject        |
-|------------------|------------|----------------|
-| {{ versionTag }} | {{ releaseDate }} | {{ changelogMessage }}|
+| Version          | Date              | Pull Request | Subject        |
+|------------------|-------------------|--------------|----------------|
+| {{ versionTag }} | {{ releaseDate }} | | {{ changelogMessage }} |
 
 </details>

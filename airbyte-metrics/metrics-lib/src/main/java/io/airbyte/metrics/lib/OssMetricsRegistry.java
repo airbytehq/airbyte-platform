@@ -376,6 +376,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOADS_CANCEL(MetricEmittingApps.CRON,
       "workload_cancel",
       "number of workloads canceled"),
+  WORKLOADS_SIGNAL(MetricEmittingApps.WORKLOAD_API,
+      "workloads_signal",
+      "When emitting signal from the workload-api"),
   NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
       "notifications_sent",
       "number of notifications sent"),
@@ -403,12 +406,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
       "job_output_read",
       "Read a job output from the output folder"),
-  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
-      "sync_record_checksum",
-      "Report the status of a record checksum"),
-  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
-      "sync_state_record_count",
-      "The record count emitted between state messages."),
 
   DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "destination_deserialization_error",
@@ -476,6 +473,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "excessive_catalog_size",
       "Distribution of input catalog field counts that exceed the configured limit."),
 
+  NOTIFICATION_SUCCESS(MetricEmittingApps.SERVER,
+      "notification_success",
+      "A notification was successfully sent"),
+
+  NOTIFICATION_FAILED(MetricEmittingApps.SERVER,
+      "notification_failure",
+      "A notification failed to send"),
+
   REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "replication_context_not_initialized_error",
       "The replication context was not initialized when it was expected to be."),
@@ -498,7 +503,15 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   CONNECTOR_FAILURE_EXIT_VALUE(MetricEmittingApps.ORCHESTRATOR,
       "connector_failure_exit_value",
-      "Count of failure exit codes produced by a connector.");
+      "Count of failure exit codes produced by a connector."),
+
+  CONNECTOR_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connector_storage_usage_mb",
+      "Storage in mb used by a connector."),
+
+  CONNECTION_STAGING_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connection_staging_storage_usage_mb",
+      "Staging storage in mb used by a connection.");
 
   private final MetricEmittingApp application;
   private final String metricName;

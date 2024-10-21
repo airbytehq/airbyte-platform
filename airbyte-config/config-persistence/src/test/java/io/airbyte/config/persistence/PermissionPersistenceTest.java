@@ -15,18 +15,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
-import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
@@ -51,48 +42,17 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   private void setupTestData() throws Exception {
     final UserPersistence userPersistence = new UserPersistence(database);
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
-    final ConnectionService connectionService = mock(ConnectionService.class);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
-    final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
 
     organizationPersistence.createOrganization(MockData.defaultOrganization());
-
+    final WorkspaceService workspaceService = new WorkspaceServiceJooqImpl(
+        database,
+        mock(TestClient.class),
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
-      configRepository.writeStandardWorkspaceNoSecrets(workspace);
+      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     }
     // write user table
     for (final AuthenticatedUser user : MockData.users()) {

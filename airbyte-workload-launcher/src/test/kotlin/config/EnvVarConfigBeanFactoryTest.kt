@@ -4,22 +4,15 @@
 
 package config
 
-import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
-import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
+import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
+import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
-import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
 import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
 import io.airbyte.workload.launcher.constants.EnvVarConstants.KEYCLOAK_CLIENT_SECRET_ENV_VAR
 import io.airbyte.workload.launcher.constants.EnvVarConstants.WORKLOAD_API_BEARER_TOKEN_ENV_VAR
-import io.fabric8.kubernetes.api.model.EnvVarSource
-import io.fabric8.kubernetes.api.model.SecretKeySelector
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 class EnvVarConfigBeanFactoryTest {
   companion object {
@@ -126,34 +119,5 @@ class EnvVarConfigBeanFactoryTest {
     val awsSecretKeyRef = awsSecretKey!!.valueFrom.secretKeyRef
     assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsSecretKeyRef.name)
     assertEquals(AWS_ASSUMED_ROLE_SECRET_KEY, awsSecretKeyRef.key)
-  }
-
-  @Test
-  fun `test final env vars contain secret env vars an non-secret env vars`() {
-    val factory: OrchestratorEnvSingleton = mockk()
-    every { factory.orchestratorEnvMap(any()) } returns (mapOf(Pair(ENV_VAR_NAME1, ENV_VAR_VALUE1), Pair(ENV_VAR_NAME2, ENV_VAR_VALUE2)))
-    every {
-      factory.secretEnvMap()
-    } returns (
-      mapOf(
-        Pair(ENV_VAR_NAME3, EnvVarSource(null, null, null, SecretKeySelector(BEARER_TOKEN_SECRET_KEY, BEARER_TOKEN_SECRET_NAME, false))),
-      )
-    )
-    every { factory.orchestratorEnvVars(any()) } answers { callOriginal() }
-    val orchestratorEnvVars =
-      factory.orchestratorEnvVars(
-        UUID.randomUUID(),
-      ).sortedBy { it.name }
-
-    assertEquals(ENV_VAR_NAME1, orchestratorEnvVars[0].name)
-    assertEquals(ENV_VAR_VALUE1, orchestratorEnvVars[0].value)
-
-    assertEquals(ENV_VAR_NAME2, orchestratorEnvVars[1].name)
-    assertEquals(ENV_VAR_VALUE2, orchestratorEnvVars[1].value)
-
-    assertEquals(ENV_VAR_NAME3, orchestratorEnvVars[2].name)
-    assertNull(orchestratorEnvVars[2].value)
-    assertEquals(BEARER_TOKEN_SECRET_NAME, orchestratorEnvVars[2].valueFrom.secretKeyRef.name)
-    assertEquals(BEARER_TOKEN_SECRET_KEY, orchestratorEnvVars[2].valueFrom.secretKeyRef.key)
   }
 }

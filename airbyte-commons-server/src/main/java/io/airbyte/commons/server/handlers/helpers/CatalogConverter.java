@@ -11,9 +11,11 @@ import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamMapperType;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
@@ -61,6 +63,13 @@ public class CatalogConverter {
         .isResumable(stream.getIsResumable());
   }
 
+  public static ConfiguredStreamMapper toApi(final ConfiguredMapper mapper) {
+    return new ConfiguredStreamMapper()
+        .type(Enums.toEnum(mapper.getName(), StreamMapperType.class)
+            .orElseThrow(() -> new IllegalArgumentException("Unexpected mapper name: " + mapper.getName())))
+        .mapperConfiguration(Jsons.jsonNode(mapper.getConfig()));
+  }
+
   /**
    * Convert an internal catalog and field selection mask to an api catalog model.
    *
@@ -88,9 +97,11 @@ public class CatalogConverter {
                   .suggested(false)
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
                   .selectedFields(List.of())
+                  // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.
                   .hashedFields(configuredStream.getMappers().stream().filter(mapper -> MapperOperationName.HASHING.equals(mapper.getName()))
                       .map(CatalogConverter::toApiFieldInfo)
                       .collect(Collectors.toList()))
+                  .mappers(configuredStream.getMappers().stream().map(CatalogConverter::toApi).collect(Collectors.toList()))
                   .generationId(configuredStream.getGenerationId())
                   .minimumGenerationId(configuredStream.getMinimumGenerationId())
                   .syncId(configuredStream.getSyncId());
@@ -212,6 +223,15 @@ public class CatalogConverter {
     ).toList();
   }
 
+  private static List<ConfiguredMapper> toConfiguredMappers(final @Nullable List<io.airbyte.api.model.generated.ConfiguredStreamMapper> mappers) {
+    if (mappers == null) {
+      return Collections.emptyList();
+    }
+    return mappers.stream()
+        .map(mapper -> new ConfiguredMapper(mapper.getType().toString(), Jsons.deserializeToStringMap(mapper.getMapperConfiguration())))
+        .collect(Collectors.toList());
+  }
+
   private static SelectedFieldInfo toApiFieldInfo(final ConfiguredMapper configuredHashingMapper) {
     Preconditions.checkArgument(MapperOperationName.HASHING.equals(configuredHashingMapper.getName()), "Expected hashing mapper");
     return new SelectedFieldInfo()
@@ -228,8 +248,7 @@ public class CatalogConverter {
    * @param catalog api catalog
    * @return protocol catalog
    */
-  public static ConfiguredAirbyteCatalog toConfiguredInternal(final io.airbyte.api.model.generated.AirbyteCatalog catalog,
-                                                              final boolean enableMappers)
+  public static ConfiguredAirbyteCatalog toConfiguredInternal(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final List<JsonValidationException> errors = new ArrayList<>();
     final List<ConfiguredAirbyteStream> streams = catalog.getStreams()
@@ -243,11 +262,15 @@ public class CatalogConverter {
                 .syncMode(Enums.convertTo(s.getConfig().getSyncMode(), io.airbyte.config.SyncMode.class))
                 .destinationSyncMode(Enums.convertTo(s.getConfig().getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
                 .cursorField(s.getConfig().getCursorField())
-                .primaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
+                .primaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()))
+                .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()));
 
-            if (enableMappers) {
+            if (s.getConfig().getMappers() != null && !s.getConfig().getMappers().isEmpty()) {
               builder
-                  .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
+                  .mappers(toConfiguredMappers(s.getConfig().getMappers()));
+            } else {
+              // TODO(pedro): `hashedFields` support should be removed once the UI is updated to use `mappers`.
+              builder
                   .mappers(toConfiguredHashingMappers(s.getConfig().getHashedFields()));
             }
 
@@ -347,12 +370,11 @@ public class CatalogConverter {
    * @return protocol catalog
    */
   @SuppressWarnings("LineLength")
-  public static ConfiguredAirbyteCatalog toProtocolKeepAllStreams(final io.airbyte.api.model.generated.AirbyteCatalog catalog,
-                                                                  final boolean enableMappers)
+  public static ConfiguredAirbyteCatalog toProtocolKeepAllStreams(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final AirbyteCatalog clone = Jsons.clone(catalog);
     clone.getStreams().forEach(stream -> stream.getConfig().setSelected(true));
-    return toConfiguredInternal(clone, enableMappers);
+    return toConfiguredInternal(clone);
   }
 
   /**

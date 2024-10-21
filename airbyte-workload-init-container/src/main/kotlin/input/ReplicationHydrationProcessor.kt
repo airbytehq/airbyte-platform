@@ -1,7 +1,13 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
@@ -15,6 +21,7 @@ import io.airbyte.workload.api.client.model.generated.Workload
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
+import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
@@ -22,7 +29,6 @@ private val logger = KotlinLogging.logger {}
  * Parses, hydrates and writes input files for the replication pod.
  */
 @Requires(property = "airbyte.init.operation", pattern = "sync")
-@Requires(property = "airbyte.init.monopod", pattern = "true")
 @Singleton
 class ReplicationHydrationProcessor(
   private val replicationInputHydrator: ReplicationInputHydrator,
@@ -30,6 +36,9 @@ class ReplicationHydrationProcessor(
   private val serializer: ObjectSerializer,
   private val protocolSerializer: ProtocolSerializer,
   private val fileClient: FileClient,
+  private val featureFlagClient: FeatureFlagClient,
+  private val destinationCatalogGenerator: DestinationCatalogGenerator,
+  private val metricClient: MetricClient,
 ) : InputHydrationProcessor {
   override fun process(workload: Workload) {
     logger.info { "Deserializing replication input..." }
@@ -78,7 +87,11 @@ class ReplicationHydrationProcessor(
         hydrated.prefix,
       )
 
-    val destinationCatalog = mapper.mapCatalog(hydrated.catalog)
+    val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
+
+    sendMapperErrorMetrics(transformedCatalog, parsed.connectionId)
+
+    val destinationCatalog = mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
 
     fileClient.writeInputFile(
       FileConstants.CATALOG_FILE,
@@ -95,5 +108,36 @@ class ReplicationHydrationProcessor(
     // pipes for passing messages between all three
     logger.info { "Making named pipes..." }
     fileClient.makeNamedPipes()
+  }
+
+  private fun sendMapperErrorMetrics(
+    transformedCatalog: DestinationCatalogGenerator.CatalogGenerationResult,
+    connectionId: UUID,
+  ) {
+    transformedCatalog.errors.entries.forEach { streamErrors ->
+      streamErrors.value.values.forEach { streamError ->
+        when (streamError) {
+          DestinationCatalogGenerator.MapperError.MISSING_MAPPER ->
+            metricClient.count(
+              OssMetricsRegistry.MISSING_MAPPER,
+              1,
+              MetricAttribute(
+                MetricTags.CONNECTION_ID,
+                connectionId.toString(),
+              ),
+            )
+
+          DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG ->
+            metricClient.count(
+              OssMetricsRegistry.INVALID_MAPPER_CONFIG,
+              1,
+              MetricAttribute(
+                MetricTags.CONNECTION_ID,
+                connectionId.toString(),
+              ),
+            )
+        }
+      }
+    }
   }
 }

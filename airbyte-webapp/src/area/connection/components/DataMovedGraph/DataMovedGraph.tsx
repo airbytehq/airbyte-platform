@@ -1,13 +1,16 @@
 import { useMemo, ComponentPropsWithoutRef } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-import { useGetConnectionDataHistory } from "core/api";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { ConnectionUptimeHistoryRead } from "core/api/types/AirbyteClient";
 
-import { CHART_BASE_HEIGHT, CHART_MAX_HEIGHT, CHART_MIN_HEIGHT, CHART_STREAM_ROW_HEIGHT } from "./constants";
 import styles from "./DataMovedGraph.module.scss";
-import { BAR_WIDTH, ClickToJob, adjustPositions, tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
-import { NoDataMessage } from "../HistoricalOverview/NoDataMessage";
+import {
+  MAX_BAR_WIDTH,
+  ClickToJob,
+  adjustPositions,
+  tooltipConfig,
+  xAxisConfig,
+} from "../HistoricalOverview/ChartConfig";
 import { UpdateTooltipTickPositions } from "../UptimeStatusGraph/UpdateTooltipTickPositions";
 import { UptimeStatusGraphTooltip } from "../UptimeStatusGraph/UptimeStatusGraphTooltip";
 import { UptimeDayEntry } from "../UptimeStatusGraph/WaffleChart";
@@ -24,11 +27,7 @@ class PositionedBar extends Bar {
   }
 }
 
-export const DataMovedGraph: React.FC = () => {
-  const { connection } = useConnectionEditService();
-  const data = useGetConnectionDataHistory(connection.connectionId);
-  const hasData = data.some(({ recordsCommitted }) => recordsCommitted > 0);
-
+export const DataMovedGraph: React.FC<{ data: ConnectionUptimeHistoryRead; height: number }> = ({ data, height }) => {
   const formattedData = useMemo<UptimeDayEntry[]>(
     () =>
       data.map(({ jobCreatedAt, jobId, jobUpdatedAt, recordsCommitted, recordsEmitted }) => ({
@@ -42,17 +41,8 @@ export const DataMovedGraph: React.FC = () => {
     [data]
   );
 
-  const chartHeight = Math.max(
-    CHART_MIN_HEIGHT,
-    Math.min(CHART_MAX_HEIGHT, connection.syncCatalog.streams.length * CHART_STREAM_ROW_HEIGHT + CHART_BASE_HEIGHT)
-  );
-
-  if (!hasData) {
-    return <NoDataMessage />;
-  }
-
   return (
-    <ResponsiveContainer width="100%" height={chartHeight}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={formattedData}>
         <UpdateTooltipTickPositions />
 
@@ -60,7 +50,7 @@ export const DataMovedGraph: React.FC = () => {
 
         <PositionedBar
           minPointSize={3} // ensure that the bar is always visible even when the value is 0
-          barSize={BAR_WIDTH}
+          barSize={MAX_BAR_WIDTH}
           dataKey="recordsCommitted"
           fill={styles.recordsColor}
           isAnimationActive={false}

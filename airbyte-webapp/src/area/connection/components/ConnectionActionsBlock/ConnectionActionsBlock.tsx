@@ -12,7 +12,8 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useDeleteConnection, useDestinationDefinitionVersion } from "core/api";
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -24,6 +25,7 @@ import { ConnectionRefreshModal } from "pages/connections/ConnectionSettingsPage
 export const ConnectionActionsBlock: React.FC = () => {
   const { mode } = useConnectionFormService();
   const { connection, streamsByRefreshType } = useConnectionEditService();
+  const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
   const { refreshStreams } = useConnectionSyncContext();
   const { openModal } = useModalService();
   const { registerNotification } = useNotificationService();
@@ -117,9 +119,9 @@ export const ConnectionActionsBlock: React.FC = () => {
     const tooltipContent =
       mode === "readonly"
         ? undefined
-        : connection.status !== ConnectionStatus.active
+        : connection.status === ConnectionStatus.inactive
         ? "connection.actions.clearYourData.disabledConnectionTooltip"
-        : connectionStatus.isRunning
+        : connectionStatus.status === ConnectionSyncStatus.running
         ? "connection.actions.clearYourData.runningJobTooltip"
         : undefined;
 
@@ -147,7 +149,7 @@ export const ConnectionActionsBlock: React.FC = () => {
 
   const RefreshConnectionDataButton = () => {
     const tooltipContent =
-      mode === "readonly"
+      connection.status === ConnectionStatus.deprecated
         ? undefined
         : destinationSupportsRefreshes === false
         ? "connection.actions.refreshData.notAvailable.destination"
@@ -156,7 +158,7 @@ export const ConnectionActionsBlock: React.FC = () => {
         ? "connection.actions.refreshData.notAvailable.streams"
         : connection.status !== ConnectionStatus.active
         ? "connection.actions.refreshData.disabledConnectionTooltip"
-        : connectionStatus.isRunning
+        : connectionStatus.status === ConnectionSyncStatus.running
         ? "connection.actions.refreshData.runningJobTooltip"
         : undefined;
 
@@ -166,7 +168,7 @@ export const ConnectionActionsBlock: React.FC = () => {
           variant="secondary"
           onClick={onRefreshModalClick}
           data-id="open-refresh-modal"
-          disabled={!!tooltipContent || mode === "readonly"}
+          disabled={!!tooltipContent || connection.status === ConnectionStatus.deprecated || !canSyncConnection}
         >
           <FormattedMessage id="connection.actions.refreshData" />
         </Button>

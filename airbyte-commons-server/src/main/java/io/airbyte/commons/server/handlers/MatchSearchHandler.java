@@ -21,8 +21,10 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -35,18 +37,23 @@ import java.util.List;
 @Singleton
 public class MatchSearchHandler {
 
-  private final ConfigRepository configRepository;
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+  private final ConnectionService connectionService;
 
   @Inject
-  public MatchSearchHandler(
-                            final ConfigRepository configRepository,
-                            final DestinationHandler destinationHandler,
-                            final SourceHandler sourceHandler) {
-    this.configRepository = configRepository;
+  public MatchSearchHandler(final DestinationHandler destinationHandler,
+                            final SourceHandler sourceHandler,
+                            final SourceService sourceService,
+                            final DestinationService destinationService,
+                            final ConnectionService connectionService) {
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
+    this.connectionService = connectionService;
   }
 
   public static boolean matchSearch(final SourceSearch sourceSearch, final SourceRead sourceRead) {
@@ -66,14 +73,14 @@ public class MatchSearchHandler {
   public boolean matchSearch(final ConnectionSearch connectionSearch, final ConnectionRead connectionRead)
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionRead.getSourceId());
+    final SourceConnection sourceConnection = sourceService.getSourceConnection(connectionRead.getSourceId());
     final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
+        sourceService.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
     final SourceRead sourceRead = sourceHandler.toSourceRead(sourceConnection, sourceDefinition);
 
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(connectionRead.getDestinationId());
+    final DestinationConnection destinationConnection = destinationService.getDestinationConnection(connectionRead.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
     final DestinationRead destinationRead = destinationHandler.toDestinationRead(destinationConnection, destinationDefinition);
 
     final ConnectionMatcher connectionMatcher = new ConnectionMatcher(connectionSearch);
@@ -87,7 +94,7 @@ public class MatchSearchHandler {
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> reads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listStandardSyncs()) {
+    for (final StandardSync standardSync : connectionService.listStandardSyncs()) {
       if (standardSync.getStatus() != StandardSync.Status.DEPRECATED) {
         final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
         if (matchSearch(connectionSearch, connectionRead)) {

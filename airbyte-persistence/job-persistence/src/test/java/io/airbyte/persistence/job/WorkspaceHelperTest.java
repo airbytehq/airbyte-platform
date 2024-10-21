@@ -23,8 +23,12 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -68,25 +72,33 @@ class WorkspaceHelperTest {
       .withName("the new normal")
       .withTombstone(false);
 
-  ConfigRepository configRepository;
   JobPersistence jobPersistence;
   WorkspaceHelper workspaceHelper;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private ConnectionService connectionService;
+  private OperationService operationService;
+  private WorkspaceService workspaceService;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
     jobPersistence = mock(JobPersistence.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+    connectionService = mock(ConnectionService.class);
+    workspaceService = mock(WorkspaceService.class);
+    operationService = mock(OperationService.class);
 
-    configRepository = mock(ConfigRepository.class);
-    when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(SOURCE);
-    when(configRepository.getSourceConnection(not(eq(SOURCE_ID)))).thenThrow(ConfigNotFoundException.class);
-    when(configRepository.getDestinationConnection(DEST_ID)).thenReturn(DEST);
-    when(configRepository.getDestinationConnection(not(eq(DEST_ID)))).thenThrow(ConfigNotFoundException.class);
-    when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(CONNECTION);
-    when(configRepository.getStandardSync(not(eq(CONNECTION_ID)))).thenThrow(ConfigNotFoundException.class);
-    when(configRepository.getStandardSyncOperation(OPERATION_ID)).thenReturn(OPERATION);
-    when(configRepository.getStandardSyncOperation(not(eq(OPERATION_ID)))).thenThrow(ConfigNotFoundException.class);
+    when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(SOURCE);
+    when(sourceService.getSourceConnection(not(eq(SOURCE_ID)))).thenThrow(ConfigNotFoundException.class);
+    when(destinationService.getDestinationConnection(DEST_ID)).thenReturn(DEST);
+    when(destinationService.getDestinationConnection(not(eq(DEST_ID)))).thenThrow(ConfigNotFoundException.class);
+    when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(CONNECTION);
+    when(connectionService.getStandardSync(not(eq(CONNECTION_ID)))).thenThrow(ConfigNotFoundException.class);
+    when(operationService.getStandardSyncOperation(OPERATION_ID)).thenReturn(OPERATION);
+    when(operationService.getStandardSyncOperation(not(eq(OPERATION_ID)))).thenThrow(ConfigNotFoundException.class);
 
-    workspaceHelper = new WorkspaceHelper(configRepository, jobPersistence);
+    workspaceHelper = new WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService);
   }
 
   @Test
@@ -114,11 +126,11 @@ class WorkspaceHelperTest {
   void testSource() throws IOException, JsonValidationException, ConfigNotFoundException {
     final UUID retrievedWorkspace = workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID);
     assertEquals(WORKSPACE_ID, retrievedWorkspace);
-    verify(configRepository, times(1)).getSourceConnection(SOURCE_ID);
+    verify(sourceService, times(1)).getSourceConnection(SOURCE_ID);
 
     workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID);
     // There should have been no other call to configRepository
-    verify(configRepository, times(1)).getSourceConnection(SOURCE_ID);
+    verify(sourceService, times(1)).getSourceConnection(SOURCE_ID);
   }
 
   @Test
@@ -126,11 +138,11 @@ class WorkspaceHelperTest {
   void testDestination() throws IOException, JsonValidationException, ConfigNotFoundException {
     final UUID retrievedWorkspace = workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID);
     assertEquals(WORKSPACE_ID, retrievedWorkspace);
-    verify(configRepository, times(1)).getDestinationConnection(DEST_ID);
+    verify(destinationService, times(1)).getDestinationConnection(DEST_ID);
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID);
     // There should have been no other call to configRepository
-    verify(configRepository, times(1)).getDestinationConnection(DEST_ID);
+    verify(destinationService, times(1)).getDestinationConnection(DEST_ID);
   }
 
   @Test
@@ -142,11 +154,11 @@ class WorkspaceHelperTest {
     // test retrieving by source and destination ids
     final UUID retrievedWorkspaceBySourceAndDestination = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(CONNECTION_ID);
     assertEquals(WORKSPACE_ID, retrievedWorkspaceBySourceAndDestination);
-    verify(configRepository, times(1)).getStandardSync(CONNECTION_ID);
+    verify(connectionService, times(1)).getStandardSync(CONNECTION_ID);
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID);
     // There should have been no other call to configRepository
-    verify(configRepository, times(1)).getStandardSync(CONNECTION_ID);
+    verify(connectionService, times(1)).getStandardSync(CONNECTION_ID);
   }
 
   @Test
@@ -154,10 +166,10 @@ class WorkspaceHelperTest {
     // test retrieving by connection id
     final UUID retrievedWorkspace = workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID);
     assertEquals(WORKSPACE_ID, retrievedWorkspace);
-    verify(configRepository, times(1)).getStandardSyncOperation(OPERATION_ID);
+    verify(operationService, times(1)).getStandardSyncOperation(OPERATION_ID);
 
     workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID);
-    verify(configRepository, times(1)).getStandardSyncOperation(OPERATION_ID);
+    verify(operationService, times(1)).getStandardSyncOperation(OPERATION_ID);
   }
 
   @Test

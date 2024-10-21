@@ -9,10 +9,11 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
-import { useDestinationDefinitionVersion } from "core/api";
-import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { useCurrentConnection, useDestinationDefinitionVersion } from "core/api";
+import { ConnectionStatus, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
@@ -26,20 +27,14 @@ interface StreamActionsMenuProps {
 }
 
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
+  const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
-  const { mode, connection } = useConnectionFormService();
-  const {
-    syncStarting,
-    jobSyncRunning,
-    clearStarting: resetStarting,
-    jobClearRunning: jobResetRunning,
-    refreshStarting,
-    jobRefreshRunning,
-    clearStreams: resetStreams,
-    refreshStreams,
-  } = useConnectionSyncContext();
+  const connection = useCurrentConnection();
+  const { isSyncConnectionAvailable, clearStreams: resetStreams, refreshStreams } = useConnectionSyncContext();
 
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
@@ -52,13 +47,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   );
 
   const disableSyncActions =
-    syncStarting ||
-    jobSyncRunning ||
-    resetStarting ||
-    jobResetRunning ||
-    refreshStarting ||
-    jobRefreshRunning ||
-    mode === "readonly";
+    !isSyncConnectionAvailable || connection.status !== ConnectionStatus.active || !canSyncConnection;
 
   const { canMerge, canTruncate } = useMemo(() => {
     const hasIncremental = catalogStream?.config?.syncMode === SyncMode.incremental;
@@ -77,7 +66,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   }
 
   const options: DropdownMenuOptionType[] = [
-    ...(isSyncCatalogV2Enabled
+    ...(useSyncCatalogV2
       ? [
           {
             displayName: formatMessage({ id: "connection.stream.actions.edit" }),
@@ -108,7 +97,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
         id: "connection.stream.actions.clearData",
       }),
       value: "clearStreamData",
-      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
+      disabled: disableSyncActions,
       className: classNames(styles.streamActionsMenu__clearDataLabel),
     },
   ];

@@ -50,10 +50,14 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.UseAsyncReplicate;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
@@ -81,7 +85,6 @@ import org.slf4j.LoggerFactory;
 public class JobInputHandler {
 
   private final JobPersistence jobPersistence;
-  private final ConfigRepository configRepository;
   private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ConfigInjector configInjector;
@@ -89,21 +92,25 @@ public class JobInputHandler {
   private final StateHandler stateHandler;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ContextBuilder contextBuilder;
+  private final ConnectionService connectionService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobInputHandler.class);
 
   @SuppressWarnings("ParameterName")
   public JobInputHandler(final JobPersistence jobPersistence,
-                         final ConfigRepository configRepository,
                          final FeatureFlagClient featureFlagClient,
                          final OAuthConfigSupplier oAuthConfigSupplier,
                          final ConfigInjector configInjector,
                          final AttemptHandler attemptHandler,
                          final StateHandler stateHandler,
                          final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                         final ContextBuilder contextBuilder) {
+                         final ContextBuilder contextBuilder,
+                         final ConnectionService connectionService,
+                         final SourceService sourceService,
+                         final DestinationService destinationService) {
     this.jobPersistence = jobPersistence;
-    this.configRepository = configRepository;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.configInjector = configInjector;
@@ -111,6 +118,9 @@ public class JobInputHandler {
     this.stateHandler = stateHandler;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.contextBuilder = contextBuilder;
+    this.connectionService = connectionService;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   /**
@@ -128,7 +138,7 @@ public class JobInputHandler {
       ActorDefinitionVersion sourceVersion = null;
 
       final UUID connectionId = UUID.fromString(job.getScope());
-      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+      final StandardSync standardSync = connectionService.getStandardSync(connectionId);
 
       final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig();
       getCurrentConnectionState(connectionId).ifPresent(attemptSyncConfig::setState);
@@ -136,9 +146,9 @@ public class JobInputHandler {
       final JobConfig.ConfigType jobConfigType = job.getConfig().getConfigType();
 
       if (SYNC_REPLICATION_TYPES.contains(jobConfigType)) {
-        final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
+        final SourceConnection source = sourceService.getSourceConnection(standardSync.getSourceId());
         sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
-            configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()),
+            sourceService.getStandardSourceDefinition(source.getSourceDefinitionId()),
             source.getWorkspaceId(),
             source.getSourceId());
         final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
@@ -156,10 +166,10 @@ public class JobInputHandler {
 
       final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
-      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+      final DestinationConnection destination = destinationService.getDestinationConnection(standardSync.getDestinationId());
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(
-              configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()),
+              destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId()),
               destination.getWorkspaceId(),
               destination.getDestinationId());
       final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
@@ -192,6 +202,8 @@ public class JobInputHandler {
         featureFlagContext.add(new Connection(standardSync.getConnectionId()));
       }
 
+      final boolean useAsyncReplicate = featureFlagClient.boolVariation(UseAsyncReplicate.INSTANCE, new Multi(featureFlagContext));
+
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
       final StandardSyncInput syncInput = new StandardSyncInput()
@@ -208,7 +220,8 @@ public class JobInputHandler {
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
           .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType))
-          .withConnectionContext(connectionContext);
+          .withConnectionContext(connectionContext)
+          .withUseAsyncReplicate(useAsyncReplicate);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -230,17 +243,17 @@ public class JobInputHandler {
       final JobSyncConfig jobSyncConfig = getJobSyncConfig(jobId, jobConfig);
 
       final UUID connectionId = UUID.fromString(job.getScope());
-      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+      final StandardSync standardSync = connectionService.getStandardSync(connectionId);
 
-      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+      final DestinationConnection destination = destinationService.getDestinationConnection(standardSync.getDestinationId());
       final StandardDestinationDefinition destinationDefinition =
-          configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+          destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(), destination.getDestinationId());
 
-      final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
+      final SourceConnection source = sourceService.getSourceConnection(standardSync.getSourceId());
       final StandardSourceDefinition sourceDefinition =
-          configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+          sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
       final ActorDefinitionVersion sourceVersion =
           actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
 

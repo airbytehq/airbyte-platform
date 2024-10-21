@@ -7,7 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { PermissionType } from "core/api/types/AirbyteClient";
 
-import { permissionDescriptionDictionary, permissionStringDictionary } from "./useGetAccessManagementData";
+import { permissionDescriptionDictionary, permissionStringDictionary } from "./util";
 
 interface ChangeRoleMenuItemContentProps {
   roleIsInvalid: boolean;

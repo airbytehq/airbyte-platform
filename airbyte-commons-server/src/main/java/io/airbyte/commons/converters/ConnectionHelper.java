@@ -16,8 +16,8 @@ import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
@@ -37,16 +37,16 @@ import java.util.UUID;
 @Singleton
 public class ConnectionHelper {
 
-  private final ConfigRepository configRepository;
+  private final ConnectionService connectionService;
   private final WorkspaceHelper workspaceHelper;
 
-  public ConnectionHelper(final ConfigRepository configRepository, final WorkspaceHelper workspaceHelper) {
-    this.configRepository = configRepository;
+  public ConnectionHelper(final ConnectionService connectionService, final WorkspaceHelper workspaceHelper) {
+    this.connectionService = connectionService;
     this.workspaceHelper = workspaceHelper;
   }
 
-  public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync update = Jsons.clone(configRepository.getStandardSync(connectionId).withStatus(StandardSync.Status.DEPRECATED));
+  public void deleteConnection(final UUID connectionId) throws JsonValidationException, IOException, ConfigNotFoundException {
+    final StandardSync update = Jsons.clone(connectionService.getStandardSync(connectionId).withStatus(StandardSync.Status.DEPRECATED));
     updateConnection(update);
   }
 
@@ -62,9 +62,9 @@ public class ConnectionHelper {
    */
   public StandardSync updateConnection(final StandardSync update)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync original = configRepository.getStandardSync(update.getConnectionId());
+    final StandardSync original = connectionService.getStandardSync(update.getConnectionId());
     final StandardSync newConnection = updateConnectionObject(workspaceHelper, original, update);
-    configRepository.writeStandardSync(newConnection);
+    connectionService.writeStandardSync(newConnection);
     return newConnection;
   }
 

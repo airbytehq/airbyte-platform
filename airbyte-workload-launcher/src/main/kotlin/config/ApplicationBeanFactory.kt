@@ -29,6 +29,8 @@ import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 /**
  * Micronaut bean factory for general application beans.
@@ -156,4 +158,12 @@ class ApplicationBeanFactory {
   fun connectorApmSupportHelper(): ConnectorApmSupportHelper {
     return ConnectorApmSupportHelper()
   }
+
+  @Singleton
+  @Named("claimedProcessorBackoffDuration")
+  fun claimedProcessorBackoffDuration() = 5.seconds.toJavaDuration()
+
+  @Singleton
+  @Named("claimedProcessorBackoffMaxDelay")
+  fun claimedProcessorBackoffMaxDelay() = 60.seconds.toJavaDuration()
 }

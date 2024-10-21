@@ -14,9 +14,9 @@ import {
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
-import { useIntent } from "core/utils/rbac";
-import { useGeneratedIntent } from "core/utils/rbac/useGeneratedIntent";
+import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
+import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
@@ -26,9 +26,10 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
-  const canManageOrganizationBilling = useGeneratedIntent("ManageOrganizationBilling");
+  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
+  const showBillingPageV2 = useShowBillingPageV2();
+  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
 
   return (
     <SettingsLayout>
@@ -95,7 +96,7 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
 
-          {isBillingInArrearsActive && (
+          {showBillingPageV2 && (
             <SettingsLink
               iconType="chart"
               name={formatMessage({ id: "settings.usage" })}
@@ -115,11 +116,18 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.members" })}
               to={CloudSettingsRoutePaths.OrganizationMembers}
             />
-            {isBillingInArrearsActive && canManageOrganizationBilling && (
+            {showBillingPageV2 && canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}
                 to={CloudSettingsRoutePaths.Billing}
+              />
+            )}
+            {showBillingPageV2 && canViewOrganizationUsage && (
+              <SettingsLink
+                iconType="chart"
+                name={formatMessage({ id: "settings.usage" })}
+                to={CloudSettingsRoutePaths.OrganizationUsage}
               />
             )}
           </SettingsNavigationBlock>

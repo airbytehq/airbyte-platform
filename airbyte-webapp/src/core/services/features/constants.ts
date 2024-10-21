@@ -11,12 +11,15 @@ export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
   FeatureItem.ConnectionHistoryGraphs,
+  FeatureItem.DiagnosticsExport,
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,
+  FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
+  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultCloudFeatures = [
@@ -33,4 +36,6 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
+  FeatureItem.SyncCatalogV2,
+  FeatureItem.FieldHashing, // also goverened by connection.hashingUI experiment
 ];

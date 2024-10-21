@@ -1,4 +1,4 @@
-import { Row } from "@tanstack/react-table";
+import { ColumnFilter, Row } from "@tanstack/react-table";
 import isEqual from "lodash/isEqual";
 
 import {
@@ -83,9 +83,40 @@ export const getSyncCatalogRows = (
     }),
   }));
 };
-
+/**
+ * Check if row is namespace
+ * @param row
+ */
 export const isNamespaceRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0 && row.original.rowType === "namespace";
+
+/**
+ * Check if row is stream
+ * @param row
+ */
 export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 1 && row.original.rowType === "stream";
+
+/**
+ * Get the root parent id, which is the namespace id
+ * @param row
+ */
+export const getNamespaceRowId = (row: Row<SyncCatalogUIModel>) => row.id.split(".")[0];
+
+/**
+ * Find row by id
+ * note: don't use getRow() method from react-table instance, when column filters are applied, it will return row by index not by id
+ * @param rows
+ * @param id
+ */
+export const findRow = (rows: Array<Row<SyncCatalogUIModel>>, id: string) => rows.find((row) => row.id === id);
+
+/**
+ * Is filter by stream enabled
+ * @param columnFilters - column filters array, for "stream.selected" column the format is: { id: "stream.selected", value: boolean }
+ * @param id - column id
+ * @returns boolean - true or false if filter by stream is enabled, undefined if filter is not set
+ */
+export const getColumnFilterValue = (columnFilters: ColumnFilter[], id: string) =>
+  columnFilters.find((filter) => filter.id === id)?.value;
 
 // Stream  Fields
 /*
@@ -228,4 +259,30 @@ export const getRowChangeStatus = (row: Row<SyncCatalogUIModel>) => {
   return {
     rowChangeStatus,
   };
+};
+
+/**
+ * Generate test id for row
+ * @param row
+ * @example row-depth-0-namespace-public
+ * @example row-depth-0-namespace-no-name
+ * @example row-depth-1-stream-activities
+ * @example row-depth-2-field-id
+ */
+export const generateTestId = (row: Row<SyncCatalogUIModel>): string => {
+  const {
+    original: { rowType, name },
+    depth,
+  } = row;
+
+  switch (rowType) {
+    case "namespace":
+      return `row-depth-${depth}-namespace-${name || "no-name"}`;
+    case "stream":
+      return `row-depth-${depth}-stream-${name}`;
+    case "field":
+      return `row-depth-${depth}-field-${name}`;
+    default:
+      return `row-unknown-type`;
+  }
 };

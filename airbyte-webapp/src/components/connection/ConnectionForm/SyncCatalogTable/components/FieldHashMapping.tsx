@@ -1,10 +1,12 @@
 import { Row } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
+import { isCursor, isPrimaryKey } from "components/connection/syncCatalog/StreamFieldsTable/StreamFieldsTable";
 import { updateFieldHashing } from "components/connection/syncCatalog/SyncCatalog/streamConfigHelpers";
 import { Option } from "components/ui/ListBox";
 import { InlineListBox } from "components/ui/ListBox/InlineListBox";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -44,6 +46,9 @@ export const FieldHashMapping: React.FC<FieldHashMappingProps> = ({ row, updateS
   }
 
   const isFieldHashed = checkIsFieldHashed(field, streamNode?.config);
+  const isSelectedPrimaryKey = isPrimaryKey(streamNode.config, field.path);
+  const isSelectedCursor = isCursor(streamNode.config, field.path);
+  const isFieldHashingAllowed = !isSelectedPrimaryKey && !isSelectedCursor;
 
   const onChangeFieldHashing = (fieldPath: string[], isNowHashed: boolean) => {
     if (!row.original.streamNode) {
@@ -59,17 +64,26 @@ export const FieldHashMapping: React.FC<FieldHashMappingProps> = ({ row, updateS
     updateStreamField(row.original.streamNode, updatedConfig);
   };
 
+  const listbox = (
+    <InlineListBox<HashModeValue>
+      isDisabled={isDisabled || !isFieldHashingAllowed}
+      options={options}
+      selectedValue={isFieldHashed ? "hashed" : "unhashed"}
+      onSelect={(value) => {
+        onChangeFieldHashing(field.path, value === "hashed");
+      }}
+      placement="bottom-start"
+      data-testid="field-hashing-listbox"
+    />
+  );
+
   return (
     <div data-showonhover={!isFieldHashed}>
-      <InlineListBox<HashModeValue>
-        isDisabled={isDisabled}
-        options={options}
-        selectedValue={isFieldHashed ? "hashed" : "unhashed"}
-        onSelect={(value) => {
-          onChangeFieldHashing(field.path, value === "hashed");
-        }}
-        placement="bottom-start"
-      />
+      <Tooltip placement="top" disabled={isFieldHashingAllowed} control={listbox}>
+        <FormattedMessage
+          id={isSelectedPrimaryKey ? "connectionForm.hashing.pk.tip" : "connectionForm.hashing.cursor.tip"}
+        />
+      </Tooltip>
     </div>
   );
 };

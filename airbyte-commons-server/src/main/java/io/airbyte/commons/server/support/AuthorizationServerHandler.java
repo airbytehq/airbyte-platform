@@ -63,14 +63,14 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
     final String contentAsString = StandardCharsets.UTF_8.decode(httpRequest.content().nioBuffer()).toString();
     final JsonNode contentAsJson = airbyteHttpRequestFieldExtractor.contentToJson(contentAsString).orElse(null);
     for (final AuthenticationId authenticationId : AuthenticationId.values()) {
-      log.debug("Checking HTTP request '{}' for field '{}'...", contentAsString, authenticationId.getFieldName());
+      log.trace("Checking HTTP request '{}' for field '{}'...", contentAsString, authenticationId.getFieldName());
       final Optional<String> id =
           airbyteHttpRequestFieldExtractor.extractId(contentAsJson, authenticationId.getFieldName());
       if (id.isPresent()) {
-        log.debug("Found field '{}' with value '{}' in HTTP request body.", authenticationId.getFieldName(), id.get());
+        log.trace("Found field '{}' with value '{}' in HTTP request body.", authenticationId.getFieldName(), id.get());
         addHeaderToRequest(authenticationId.getHttpHeader(), id.get(), httpRequest);
       } else {
-        log.debug("Field '{}' not found in content.", authenticationId.getFieldName());
+        log.trace("Field '{}' not found in content.", authenticationId.getFieldName());
       }
     }
 
@@ -88,7 +88,7 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
   protected void addHeaderToRequest(final String headerName, final Object headerValue, final FullHttpRequest httpRequest) {
     final HttpHeaders httpHeaders = httpRequest.headers();
     if (!httpHeaders.contains(headerName)) {
-      log.debug("Adding HTTP header '{}' with value '{}' to request...", headerName, headerValue);
+      log.trace("Adding HTTP header '{}' with value '{}' to request...", headerName, headerValue);
       httpHeaders.add(headerName, headerValue.toString());
     }
   }

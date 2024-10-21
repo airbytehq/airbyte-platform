@@ -92,7 +92,7 @@ class ParallelStreamStatsTrackerTest {
       StateCheckSumCountEventHandler(
         pubSubWriter = Optional.empty(),
         featureFlagClient = featureFlagClient,
-        deploymentFetcher = DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
+        deploymentFetcher = DeploymentFetcher { DeploymentMetadataRead(UUID.randomUUID(), "test", "test") },
         trackingIdentityFetcher = trackingIdentityFetcher,
         stateCheckSumReporter = stateCheckSumErrorReporter,
         connectionId = CONNECTION_ID,
@@ -100,7 +100,7 @@ class ParallelStreamStatsTrackerTest {
         jobId = JOB_ID,
         attemptNumber = ATTEMPT_NUMBER,
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, false)
   }
 
   @Test

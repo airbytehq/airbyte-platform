@@ -10,6 +10,11 @@
   height: 30px;
   border-radius: 50%;
   background-color: colors.$grey-100;
+
+  &--lg {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .connectionTimelineEventIcon__icon {

@@ -17,6 +17,7 @@ import { openCreateConnection } from "pages/destinationPage";
 
 import {
   getConnectionCreateRequest,
+  getFakerCreateSourceBody,
   getLocalJSONCreateDestinationBody,
   getPokeApiCreateSourceBody,
   getPostgresCreateDestinationBody,
@@ -88,6 +89,17 @@ export const startManualReset = () => {
   cy.get(statusPage.jobHistoryDropdownMenu).click();
   cy.get(statusPage.resetDataDropdownOption).click();
   cy.get("[data-id='clear-data']").click();
+};
+
+export const createFakerSourceViaApi = () => {
+  let source: SourceRead;
+  return requestWorkspaceId().then(() => {
+    const sourceRequestBody = getFakerCreateSourceBody(appendRandomString("Faker Source"));
+    requestCreateSource(sourceRequestBody).then((sourceResponse) => {
+      source = sourceResponse;
+    });
+    return source;
+  });
 };
 
 export const createPokeApiSourceViaApi = () => {

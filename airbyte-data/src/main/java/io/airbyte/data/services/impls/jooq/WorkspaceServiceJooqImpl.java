@@ -66,6 +66,7 @@ import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
+import org.jooq.exception.DataAccessException;
 
 @Slf4j
 @Singleton
@@ -316,8 +317,13 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void setFeedback(final UUID workspaceId) throws IOException {
-    database.query(ctx -> ctx.update(WORKSPACE).set(WORKSPACE.FEEDBACK_COMPLETE, true).where(WORKSPACE.ID.eq(workspaceId)).execute());
+  @SuppressWarnings({"PMD.PreserveStackTrace"})
+  public void setFeedback(final UUID workspaceId) throws IOException, ConfigNotFoundException {
+    try {
+      database.query(ctx -> ctx.update(WORKSPACE).set(WORKSPACE.FEEDBACK_COMPLETE, true).where(WORKSPACE.ID.eq(workspaceId)).execute());
+    } catch (DataAccessException e) {
+      throw new ConfigNotFoundException("workspace", "Workspace not found");
+    }
   }
 
   /**

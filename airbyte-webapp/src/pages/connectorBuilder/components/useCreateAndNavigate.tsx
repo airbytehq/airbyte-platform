@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { CreateProjectContext, useCreateBuilderProject } from "core/api";
+import { CreateProjectContext, useCreateBuilderProject, useCreateSourceDefForkedBuilderProject } from "core/api";
+import { SourceDefinitionId } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 import { useConnectorBuilderLocalStorage } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
@@ -11,9 +12,11 @@ import { getEditPath } from "../ConnectorBuilderRoutes";
 const CREATE_PROJECT_ERROR_ID = "connectorBuilder.createProject.error";
 
 export const useCreateAndNavigate = () => {
-  const { mutateAsync: createProject, isLoading } = useCreateBuilderProject();
+  const { mutateAsync: createProject, isLoading: isCreateLoading } = useCreateBuilderProject();
+  const { mutateAsync: createForkedProject, isLoading: isCreateForkedLoading } =
+    useCreateSourceDefForkedBuilderProject();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { setAssistEnabledById } = useConnectorBuilderLocalStorage();
+  const { setAssistProjectEnabled } = useConnectorBuilderLocalStorage();
 
   useEffect(
     () => () => {
@@ -21,31 +24,61 @@ export const useCreateAndNavigate = () => {
     },
     [unregisterNotificationById]
   );
+
+  const isLoading = useMemo(() => isCreateLoading || isCreateForkedLoading, [isCreateForkedLoading, isCreateLoading]);
+
+  const showErrorToast = useCallback(
+    (error: Error) => {
+      registerNotification({
+        id: CREATE_PROJECT_ERROR_ID,
+        text: (
+          <FormattedMessage
+            id={CREATE_PROJECT_ERROR_ID}
+            values={{
+              reason: error.message,
+            }}
+          />
+        ),
+        type: "error",
+      });
+    },
+    [registerNotification]
+  );
+
   const navigate = useNavigate();
+  const navigateToProject = useCallback(
+    (projectId: string) => {
+      navigate(`../${getEditPath(projectId)}`);
+    },
+    [navigate]
+  );
+
   const createAndNavigate = useCallback(
     async (context: CreateProjectContext) => {
       try {
         const result = await createProject(context);
-        if (context.assistEnabled) {
-          setAssistEnabledById(result.builderProjectId)(true);
+        if (context.assistSessionId) {
+          setAssistProjectEnabled(result.builderProjectId, true, context.assistSessionId);
         }
-        navigate(`../${getEditPath(result.builderProjectId)}`);
+        navigateToProject(result.builderProjectId);
       } catch (e) {
-        registerNotification({
-          id: CREATE_PROJECT_ERROR_ID,
-          text: (
-            <FormattedMessage
-              id={CREATE_PROJECT_ERROR_ID}
-              values={{
-                reason: e.message,
-              }}
-            />
-          ),
-          type: "error",
-        });
+        showErrorToast(e);
       }
     },
-    [createProject, navigate, registerNotification, setAssistEnabledById]
+    [createProject, navigateToProject, showErrorToast, setAssistProjectEnabled]
   );
-  return { createAndNavigate, isLoading };
+
+  const forkAndNavigate = useCallback(
+    async (baseSourceDefinitionId: SourceDefinitionId) => {
+      try {
+        const result = await createForkedProject(baseSourceDefinitionId);
+        navigateToProject(result.builderProjectId);
+      } catch (e) {
+        showErrorToast(e);
+      }
+    },
+    [createForkedProject, navigateToProject, showErrorToast]
+  );
+
+  return { createAndNavigate, forkAndNavigate, isLoading };
 };

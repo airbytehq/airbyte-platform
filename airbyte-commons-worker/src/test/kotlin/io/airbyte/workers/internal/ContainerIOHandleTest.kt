@@ -4,7 +4,8 @@
 
 package io.airbyte.workers.internal
 
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_FAILURE
+import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
+import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_NOT_EMPTY_FAILURE
 import io.airbyte.workers.internal.ContainerIOHandle.Companion.TERMINATION_FILE_BODY
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
@@ -70,7 +71,7 @@ internal class ContainerIOHandleTest {
   internal fun testGetErrorCode() {
     // File exists but is empty
     val emptyFileError = assertThrows(IllegalStateException::class.java, containerIOHandle::getExitCode)
-    assertEquals(EXIT_CODE_CHECK_FAILURE, emptyFileError.message)
+    assertEquals(EXIT_CODE_CHECK_NOT_EMPTY_FAILURE, emptyFileError.message)
 
     // File exists and contains an exit value
     val exitCode = -122
@@ -80,7 +81,7 @@ internal class ContainerIOHandleTest {
     // File does not exist
     exitValueFile.delete()
     val notExistError = assertThrows(IllegalStateException::class.java, containerIOHandle::getExitCode)
-    assertEquals(EXIT_CODE_CHECK_FAILURE, notExistError.message)
+    assertEquals(EXIT_CODE_CHECK_EXISTS_FAILURE, notExistError.message)
   }
 
   @Test

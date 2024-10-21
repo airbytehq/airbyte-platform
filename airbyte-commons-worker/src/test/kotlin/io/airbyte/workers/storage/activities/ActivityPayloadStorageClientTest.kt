@@ -1,11 +1,11 @@
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
-import io.airbyte.workers.storage.StorageClient
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension

@@ -10,7 +10,7 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.micronaut.context.annotation.Requires;
+import io.airbyte.data.services.ActorDefinitionService;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
@@ -23,17 +23,16 @@ import org.slf4j.LoggerFactory;
  * database or remotely in the DefinitionsProvider.
  */
 @Singleton
-@Requires(bean = ConfigRepository.class)
 public class ActorDefinitionVersionResolver {
 
-  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
-  private final ConfigRepository configRepository;
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionResolver.class);
+  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private final ActorDefinitionService actorDefinitionService;
 
   public ActorDefinitionVersionResolver(final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                        final ConfigRepository configRepository) {
+                                        final ActorDefinitionService actorDefinitionService) {
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
-    this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
   }
 
   /**
@@ -50,7 +49,7 @@ public class ActorDefinitionVersionResolver {
       throws IOException {
 
     final Optional<ActorDefinitionVersion> existingVersion =
-        configRepository.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
+        actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
     if (existingVersion.isPresent()) {
       return existingVersion;
     }
@@ -62,7 +61,7 @@ public class ActorDefinitionVersionResolver {
     }
 
     final ActorDefinitionVersion newVersion = registryDefinitionVersion.get().withActorDefinitionId(actorDefinitionId);
-    final ActorDefinitionVersion persistedADV = configRepository.writeActorDefinitionVersion(newVersion);
+    final ActorDefinitionVersion persistedADV = actorDefinitionService.writeActorDefinitionVersion(newVersion);
     LOGGER.info("Persisted new version {} for definition {} with tag {}", persistedADV.getVersionId(), actorDefinitionId, dockerImageTag);
 
     return Optional.of(persistedADV);

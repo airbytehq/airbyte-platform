@@ -30,6 +30,10 @@ export const ConnectionSettingsUpdateEventItem: React.FC<ConnectionSettingsUpdat
   const { formatMessage } = useIntl();
   const titleId = titleIdMap[event.eventType];
   const patchedFields = patchFields.filter((field) => event.summary.patches.hasOwnProperty(field));
+  if (patchedFields.length === 0) {
+    return null;
+  }
+
   const firstPatchedField = patchedFields.at(0);
 
   const triggerModal = () => {

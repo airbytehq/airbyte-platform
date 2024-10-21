@@ -63,6 +63,27 @@ export function updateFieldSelected({
   };
 }
 
+/**
+ * If one of the fields in the disabled stream is selected,
+ * we need to ensure that mandatory fields are also selected(PK, cursor)
+ * @param config
+ */
+export const getSelectedMandatoryFields = (config: AirbyteStreamConfiguration): SelectedFieldInfo[] => {
+  const mandatoryFields: string[][] = [];
+
+  if (!config?.selected) {
+    if (config?.primaryKey?.length && ["append_dedup", "overwrite_dedup"].includes(config.destinationSyncMode)) {
+      mandatoryFields.push(...config.primaryKey);
+    }
+
+    if (config?.cursorField?.length && config.syncMode === "incremental") {
+      mandatoryFields.push(config.cursorField);
+    }
+  }
+
+  return mandatoryFields.map((fieldPath) => ({ fieldPath }));
+};
+
 interface updateFieldHashingArguments {
   config: AirbyteStreamConfiguration;
   fieldPath: string[];

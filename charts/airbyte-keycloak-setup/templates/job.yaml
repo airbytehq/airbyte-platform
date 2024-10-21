@@ -39,11 +39,7 @@ spec:
       {{- end }}
       initContainers:
         - name: keycloak-readiness-check
-          {{- if .Values.initContainers.keycloakReadinessCheck.image }}
-          image: {{ .Values.initContainers.keycloakReadinessCheck.image }}
-          {{- else }}
-          image: curlimages/curl:8.1.1
-          {{- end }}
+          image: {{ include "imageUrl" (list .Values.initContainers.keycloakReadinessCheck.image $) }}
           command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
           env:
             - name: KEYCLOAK_INTERNAL_HOST
@@ -58,7 +54,7 @@ spec:
         {{- end }}
       containers:
         - name: airbyte-keycloak-setup-container
-          image: {{ printf "%s:%s" .Values.image.repository (include "keycloak-setup.imageTag" .) }}
+          image: {{ include "imageUrl" (list .Values.image $) }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
             - name: AIRBYTE_URL 
@@ -85,6 +81,7 @@ spec:
             {{- include "airbyte.database.envs" . | nindent 12 }}
             {{- include "airbyte.enterprise.instanceAdmin" . | nindent 12 }} 
             {{- include "airbyte.enterprise.identityProvider" . | nindent 12 }} 
+            {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
 
             # Values from secret
             {{- if .Values.secrets }}

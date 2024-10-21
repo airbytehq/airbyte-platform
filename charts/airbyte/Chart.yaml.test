@@ -81,6 +81,10 @@ dependencies:
     name: connector-builder-server
     repository: "file://../airbyte-connector-builder-server"
     version: "*"
+  - condition: connector-rollout-worker.enabled
+    name: connector-rollout-worker
+    repository: "file://../airbyte-connector-rollout-worker"
+    version: "*"
   - condition: keycloak.enabled
     name: keycloak
     repository: "file://../airbyte-keycloak"

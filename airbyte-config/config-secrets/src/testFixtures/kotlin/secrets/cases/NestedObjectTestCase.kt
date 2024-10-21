@@ -12,7 +12,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.concurrent.Callable
 import java.util.function.Consumer
 
-class NestedObjectTestCase() : SecretsTestCase {
+class NestedObjectTestCase : SecretsTestCase {
   override val name: String
     get() = "nested_object"
 

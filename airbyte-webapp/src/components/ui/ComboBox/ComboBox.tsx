@@ -22,7 +22,7 @@ export interface Option {
   description?: string;
 }
 
-interface OptionSection {
+export interface OptionSection {
   sectionTitle?: string;
   innerOptions: Option[];
 }
@@ -53,6 +53,7 @@ export interface ComboBoxProps extends BaseProps {
   disabled?: boolean;
   allowCustomValue?: boolean;
   optionsConfig?: OptionsConfig;
+  "data-testid"?: string;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -85,23 +86,6 @@ const ComboBoxOption = ({ option }: { option: Option }) => (
   </ComboboxOption>
 );
 
-const getOptionsList = ({ optionSections }: { optionSections: OptionSection[] }) => {
-  return optionSections.map(({ sectionTitle, innerOptions }, index) => (
-    <FlexContainer direction="column" key={`${sectionTitle}_${index}`} gap="none">
-      {sectionTitle && (
-        <Box p="md">
-          <Text size="sm" color="grey">
-            {sectionTitle}
-          </Text>
-        </Box>
-      )}
-      {innerOptions.map((option) => (
-        <ComboBoxOption key={getLabel(option)} option={option} />
-      ))}
-    </FlexContainer>
-  ));
-};
-
 const OptionsLoading = ({ message }: { message: ReactNode }) => {
   return (
     <FlexContainer
@@ -123,31 +107,38 @@ const OptionsInstruction = ({ message }: { message: ReactNode }) => {
   );
 };
 
-const Options = React.forwardRef<HTMLDivElement, OptionsProps>(
-  ({ optionSections, loadingMessage, instructionMessage, loading = false }, ref) => {
-    const { formatMessage } = useIntl();
-    const defaultLoadingMessage = formatMessage({ id: "ui.loading" });
-    const optionsList = getOptionsList({ optionSections });
-    if (optionSections.length === 0 && !loading) {
-      return null;
-    }
+const Options: React.FC<OptionsProps> = ({ optionSections, loadingMessage, instructionMessage, loading = false }) => {
+  const { formatMessage } = useIntl();
+  const defaultLoadingMessage = formatMessage({ id: "ui.loading" });
+  const optionsList = optionSections.map(({ sectionTitle, innerOptions }, index) => (
+    <FlexContainer direction="column" key={`${sectionTitle}_${index}`} gap="none">
+      {sectionTitle && (
+        <Box p="md">
+          <Text size="sm" color="grey">
+            {sectionTitle}
+          </Text>
+        </Box>
+      )}
+      {innerOptions.map((option) => (
+        <ComboBoxOption key={option.value} option={option} />
+      ))}
+    </FlexContainer>
+  ));
 
-    if (loading) {
-      optionsList.unshift(<OptionsLoading message={loadingMessage || defaultLoadingMessage} />);
-    }
-
-    if (instructionMessage) {
-      optionsList.unshift(<OptionsInstruction message={instructionMessage} />);
-    }
-
-    return (
-      <ComboboxOptions ref={ref} as="ul" className={styles.optionsMenu} modal={false}>
-        {optionsList}
-      </ComboboxOptions>
-    );
+  if (optionSections.length === 0 && !loading) {
+    return null;
   }
-);
-Options.displayName = "Options";
+
+  if (loading) {
+    optionsList.unshift(<OptionsLoading message={loadingMessage || defaultLoadingMessage} />);
+  }
+
+  if (instructionMessage) {
+    optionsList.unshift(<OptionsInstruction message={instructionMessage} />);
+  }
+
+  return <>{optionsList}</>;
+};
 
 const normalizeOptionsAsSections = (options: Option[] | OptionSection[]): OptionSection[] => {
   if (options.length === 0) {
@@ -210,6 +201,7 @@ export const ComboBox = ({
   optionsConfig,
   filterOptions = true,
   allowCustomValue,
+  "data-testid": testId,
 }: ComboBoxProps) => {
   // Stores the value that the user types in to filter the options
   const [query, setQuery] = useState("");
@@ -230,12 +222,14 @@ export const ComboBox = ({
       return value;
     }
 
-    return undefined;
+    return "";
   }, [allowCustomValue, inputOptionSections, query, value]);
 
   const displayOptionSections = useMemo(() => {
+    const nonEmptyOptionSections = inputOptionSections.filter((section) => section.innerOptions.length > 0);
+
     const filteredOptionSections =
-      filterOptions && query ? filterOptionSectionsByQuery(inputOptionSections, query) : inputOptionSections;
+      filterOptions && query ? filterOptionSectionsByQuery(nonEmptyOptionSections, query) : nonEmptyOptionSections;
 
     const shouldAddCustomValue =
       allowCustomValue && currentInputValue && isCustomValue(currentInputValue, filteredOptionSections);
@@ -246,23 +240,25 @@ export const ComboBox = ({
 
   return (
     <Combobox
-      value={value}
+      value={value ?? ""}
       onChange={(newValue) => onChange(newValue ?? "")}
       onClose={() => {
         setQuery("");
       }}
       immediate
       as="div"
+      data-testid={testId}
     >
-      <Float adaptiveWidth placement="bottom-start">
+      <Float adaptiveWidth placement="bottom-start" as={React.Fragment}>
         <ComboboxInput as={React.Fragment}>
           <Input
             {...fieldInputProps}
+            spellCheck={false}
             value={currentInputValue}
             error={error}
             adornment={
               adornment ?? (
-                <ComboboxButton className={styles.caretButton}>
+                <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
                   <Icon type="caretDown" />
                 </ComboboxButton>
               )
@@ -277,13 +273,18 @@ export const ComboBox = ({
                 onChange(selectedOption?.value ?? newQuery);
               } else if (selectedOption) {
                 onChange(selectedOption.value);
+              } else {
+                onChange("");
               }
             }}
             onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
             disabled={disabled}
+            data-testid={testId ? `${testId}--input` : undefined}
           />
         </ComboboxInput>
-        <Options optionSections={displayOptionSections} {...optionsConfig} />
+        <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
+          <Options optionSections={displayOptionSections} {...optionsConfig} />
+        </ComboboxOptions>
       </Float>
     </Combobox>
   );
@@ -309,6 +310,8 @@ export const MultiComboBox = ({
         disabled={disabled}
       />
     </ComboboxInput>
-    <Options optionSections={normalizeOptionsAsSections(options)} />
+    <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
+      <Options optionSections={normalizeOptionsAsSections(options)} />
+    </ComboboxOptions>
   </Combobox>
 );

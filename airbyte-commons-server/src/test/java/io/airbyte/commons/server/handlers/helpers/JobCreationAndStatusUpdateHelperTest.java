@@ -26,7 +26,8 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -44,7 +45,8 @@ import org.junit.jupiter.api.Test;
  */
 class JobCreationAndStatusUpdateHelperTest {
 
-  ConfigRepository mConfigRepository;
+  ActorDefinitionService mActorDefinitionService;
+  ConnectionService mConnectionService;
   JobNotifier mJobNotifier;
 
   JobPersistence mJobPersistence;
@@ -56,7 +58,8 @@ class JobCreationAndStatusUpdateHelperTest {
 
   @BeforeEach
   void setup() {
-    mConfigRepository = mock(ConfigRepository.class);
+    mActorDefinitionService = mock(ActorDefinitionService.class);
+    mConnectionService = mock(ConnectionService.class);
     mJobNotifier = mock(JobNotifier.class);
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
@@ -64,9 +67,11 @@ class JobCreationAndStatusUpdateHelperTest {
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
-        mConfigRepository,
+        mActorDefinitionService,
+        mConnectionService,
         mJobNotifier,
-        mJobTracker, connectionTimelineEventHelper);
+        mJobTracker,
+        connectionTimelineEventHelper);
   }
 
   @Test
@@ -188,7 +193,7 @@ class JobCreationAndStatusUpdateHelperTest {
     final Job job = new Job(Fixtures.JOB_ID, ConfigType.SYNC, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
         0L, 0L, 0L);
 
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+    when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
@@ -208,7 +213,7 @@ class JobCreationAndStatusUpdateHelperTest {
     final Job job = new Job(Fixtures.JOB_ID, RESET_CONNECTION, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
         0L, 0L, 0L);
 
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+    when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
     final List<ReleaseStage> releaseStages = helper.getJobToReleaseStages(job);

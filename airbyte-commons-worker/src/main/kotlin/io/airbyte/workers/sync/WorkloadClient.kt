@@ -1,17 +1,22 @@
 package io.airbyte.workers.sync
 
+import io.airbyte.commons.temporal.HeartbeatUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workers.workload.WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
+import io.temporal.activity.ActivityExecutionContext
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
 
 private val logger = KotlinLogging.logger { }
@@ -23,6 +28,7 @@ private val logger = KotlinLogging.logger { }
 @Singleton
 class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private val jobOutputDocStore: JobOutputDocStore) {
   companion object {
+    const val CANCELLATION_SOURCE_STR = "Cancellation callback."
     val TERMINAL_STATUSES = setOf(WorkloadStatus.SUCCESS, WorkloadStatus.FAILURE, WorkloadStatus.CANCELLED)
   }
 
@@ -46,22 +52,15 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     }
   }
 
-  fun waitForWorkload(
-    workloadId: String,
-    pollingFrequencyInSeconds: Int,
-  ) {
-    waitForWorkload(workloadId, pollingFrequencyInSeconds) {}
-  }
+  fun isTerminal(workloadId: String) = isWorkloadTerminal(workloadApiClient.workloadApi.workloadGet(workloadId))
 
   fun waitForWorkload(
     workloadId: String,
     pollingFrequencyInSeconds: Int,
-    loopingAction: () -> Unit,
   ) {
     try {
       var workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       while (!isWorkloadTerminal(workload)) {
-        loopingAction()
         Thread.sleep(pollingFrequencyInSeconds.seconds.inWholeMilliseconds)
         workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       }
@@ -81,6 +80,46 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     }.fold(
       onFailure = { t -> onFailure(handleMissingConnectorJobOutput(workloadId, t)) },
       onSuccess = { x -> x },
+    )
+  }
+
+  /**
+   * Attempts to cancel the workload and swallows errors if it fails.
+   */
+  fun cancelWorkloadBestEffort(req: WorkloadCancelRequest) {
+    try {
+      workloadApiClient.workloadApi.workloadCancel(req)
+    } catch (e: ClientException) {
+      when (e.statusCode) {
+        HttpStatus.GONE.code -> logger.warn { "Workload: ${req.workloadId} already terminal. Cancellation is a no-op." }
+        HttpStatus.NOT_FOUND.code -> logger.warn { "Workload: ${req.workloadId} not yet created. Cancellation is a no-op." }
+        else -> logger.error(e) { "Workload: ${req.workloadId} failed to be cancelled due to API error. Status code: ${e.statusCode}" }
+      }
+    } catch (e: Exception) {
+      logger.error(e) { "Workload: ${req.workloadId} failed to be cancelled." }
+    }
+  }
+
+  /**
+   * Creates and waits for workload propagating any Temporal level cancellations (detected by the heartbeats) to the workload.
+   */
+  fun runWorkloadWithCancellationHeartbeat(
+    createReq: WorkloadCreateRequest,
+    checkFrequencyInSeconds: Int,
+    context: ActivityExecutionContext,
+  ) {
+    val cancellationCallback =
+      Runnable {
+        val failReq = WorkloadCancelRequest(createReq.workloadId, WORKLOAD_CANCELLED_BY_USER_REASON, CANCELLATION_SOURCE_STR)
+        cancelWorkloadBestEffort(failReq)
+      }
+    HeartbeatUtils.withBackgroundHeartbeat(
+      AtomicReference(cancellationCallback),
+      {
+        createWorkload(createReq)
+        waitForWorkload(createReq.workloadId, checkFrequencyInSeconds)
+      },
+      context,
     )
   }
 

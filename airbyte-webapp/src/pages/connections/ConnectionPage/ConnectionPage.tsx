@@ -1,22 +1,21 @@
 import React, { Suspense } from "react";
-import { Outlet, useParams } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { HeadTitle } from "components/HeadTitle";
 
+import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
+import { useCurrentConnection } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import {
-  ConnectionEditServiceProvider,
-  useConnectionEditService,
-} from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperimentContext } from "hooks/services/Experiment";
 
 import styles from "./ConnectionPage.module.scss";
 import { ConnectionPageHeader } from "./ConnectionPageHeader";
 
 const ConnectionHeadTitle: React.FC = () => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
   useExperimentContext("connection", connection.connectionId);
 
@@ -37,9 +36,7 @@ const ConnectionHeadTitle: React.FC = () => {
 };
 
 export const ConnectionPage: React.FC = () => {
-  const { connectionId = "" } = useParams<{
-    connectionId: string;
-  }>();
+  const connectionId = useCurrentConnectionId();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 

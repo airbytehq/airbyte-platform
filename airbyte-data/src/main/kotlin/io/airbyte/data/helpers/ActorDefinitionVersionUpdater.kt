@@ -16,6 +16,7 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.helpers.BreakingChangeScopeFactory
 import io.airbyte.config.helpers.StreamBreakingChangeScope
+import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ScopedConfigurationService
@@ -142,7 +143,8 @@ class ActorDefinitionVersionUpdater(
     processBreakingChangePinRollbacks(actorDefinitionId, newDefaultVersion, breakingChangesForDefinition)
   }
 
-  private fun getConfigScopeMaps(actorDefinitionId: UUID): Collection<ConfigScopeMapWithId> {
+  @VisibleForTesting
+  fun getConfigScopeMaps(actorDefinitionId: UUID): Collection<ConfigScopeMapWithId> {
     val actorScopes = actorDefinitionService.getActorIdsForDefinition(actorDefinitionId)
     return actorScopes.map {
       ConfigScopeMapWithId(
@@ -260,6 +262,61 @@ class ActorDefinitionVersionUpdater(
           .withOrigin(breakingChange.version.serialize())
       }.toList()
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
+  }
+
+  @VisibleForTesting
+  fun createReleaseCandidatePinsForActors(
+    actorIds: Set<UUID>,
+    actorDefinitionId: UUID,
+    currentVersionId: UUID,
+    releaseCandidateVersionId: UUID,
+  ) {
+    val configScopeMaps = getConfigScopeMaps(actorDefinitionId)
+    val allEligibleActorIds =
+      getUpgradeCandidates(
+        actorDefinitionId,
+        configScopeMaps,
+      )
+
+    val ineligibleActorIds = actorIds.toSet() - allEligibleActorIds
+    if (ineligibleActorIds.isNotEmpty()) {
+      throw InvalidRequestException("Rollout update failed; the following actors do not exist or are already pinned: $ineligibleActorIds")
+    }
+
+    val scopedConfigurationsToCreate =
+      actorIds.map { actorId ->
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withKey(ConnectorVersionKey.key)
+          .withValue(releaseCandidateVersionId.toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefinitionId)
+          .withScopeType(ConfigScopeType.ACTOR)
+          .withScopeId(actorId)
+          .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
+          .withOrigin(currentVersionId.toString())
+      }.toList()
+    scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
+  }
+
+  @VisibleForTesting
+  fun removeReleaseCandidatePinsForVersion(
+    actorDefinitionId: UUID,
+    releaseCandidateVersionId: UUID,
+  ) {
+    val scopedConfigsToRemove =
+      scopedConfigurationService.listScopedConfigurationsWithValues(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        ConfigOriginType.RELEASE_CANDIDATE,
+        listOf(releaseCandidateVersionId.toString()),
+      )
+
+    if (scopedConfigsToRemove.isNotEmpty()) {
+      scopedConfigurationService.deleteScopedConfigurations(scopedConfigsToRemove.map { it.id })
+    }
   }
 
   @VisibleForTesting

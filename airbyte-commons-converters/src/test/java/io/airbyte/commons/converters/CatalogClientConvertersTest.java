@@ -7,13 +7,15 @@ package io.airbyte.commons.converters;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.SelectedFieldInfo;
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper;
+import io.airbyte.api.client.model.generated.StreamMapperType;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -26,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class CatalogClientConvertersTest {
 
@@ -68,6 +68,7 @@ class CatalogClientConvertersTest {
           null,
           null,
           null,
+          null,
           null);
 
   private static final AirbyteCatalog BASIC_MODEL_CATALOG = new AirbyteCatalog().withStreams(
@@ -92,10 +93,12 @@ class CatalogClientConvertersTest {
         CatalogClientConverters.toAirbyteProtocol(EXPECTED_CLIENT_CATALOG));
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testConvertInternalWithMapping(final boolean enableMappers) {
+  @Test
+  void testConvertInternalWithMapping() {
     reset(fieldGenerator);
+
+    final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
+
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
         io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
@@ -106,7 +109,8 @@ class CatalogClientConvertersTest {
         null,
         null,
         null,
-        List.of(new SelectedFieldInfo(List.of(ID_FIELD_NAME))),
+        null,
+        List.of(new ConfiguredStreamMapper(StreamMapperType.HASHING, Jsons.jsonNode(hashingMapper.getConfig()))),
         null,
         null,
         null);
@@ -117,19 +121,13 @@ class CatalogClientConvertersTest {
                     CLIENT_STREAM,
                     streamConfig)));
 
-    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog, enableMappers);
+    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog);
     final var stream = configuredCatalog.getStreams().getFirst();
     assertEquals(STREAM_NAME, stream.getStream().getName());
-    if (enableMappers) {
-      assertEquals(1, stream.getFields().size());
-      assertEquals(1, stream.getMappers().size());
-      assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
-      assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
-    } else {
-      assertEquals(null, stream.getFields());
-      assertEquals(0, stream.getMappers().size());
-      verifyNoInteractions(fieldGenerator);
-    }
+    assertEquals(1, stream.getFields().size());
+    assertEquals(1, stream.getMappers().size());
+    assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
+    assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
   }
 
   @Test
@@ -166,6 +164,7 @@ class CatalogClientConvertersTest {
           List.of(),
           Names.toAlphanumericAndUnderscore(STREAM_NAME),
           true,
+          null,
           null,
           null,
           null,

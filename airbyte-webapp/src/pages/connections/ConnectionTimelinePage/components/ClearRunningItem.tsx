@@ -21,7 +21,7 @@ export const ClearRunningItem: React.FC<ClearRunningItemProps> = ({ jobId, strea
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   return (
-    <ConnectionTimelineEventItem centered>
+    <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="cross" running />
       <ConnectionTimelineEventSummary>
         <Text bold>

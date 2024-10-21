@@ -2,6 +2,8 @@ import React, { useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
+import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
+
 import {
   useGetInstanceConfiguration,
   useInvalidateAllWorkspaceScopeOnChange,
@@ -12,6 +14,7 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
+import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -25,6 +28,7 @@ import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from ".
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
+import { LicenseSettingsPage } from "./SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
@@ -70,7 +74,8 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const { applicationSupport } = useAuthService();
+  const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
@@ -93,6 +98,7 @@ const MainViewRoutes: React.FC = () => {
             <Route index element={<AllSourcesPage />} />
             <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
             <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
+            <Route path={SourcePaths.EnterpriseSource} element={<EnterpriseSourcePage />} />
             <Route path={SourcePaths.Root} element={<SourceItemPage />}>
               <Route index element={<SourceSettingsPage />} />
               <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />
@@ -101,7 +107,7 @@ const MainViewRoutes: React.FC = () => {
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
           <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
             <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
-            {isTokenManagementEnabled && (
+            {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
             {canViewWorkspaceSettings && multiWorkspaceUI && (
@@ -123,6 +129,7 @@ const MainViewRoutes: React.FC = () => {
                 )}
               </>
             )}
+            {licenseSettings && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
             <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>
@@ -220,6 +227,7 @@ const AuthenticatedRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { initialSetupComplete } = useGetInstanceConfiguration();
+  useEnterpriseLicenseCheck();
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;

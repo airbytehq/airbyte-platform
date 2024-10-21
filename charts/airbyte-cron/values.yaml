@@ -13,6 +13,14 @@ global:
     secretValue: ""
   secrets: {}
 
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    tag: ""
+
 enabled: true
 ##  cron.replicaCount Number of cron replicas
 replicaCount: 1

@@ -5,15 +5,12 @@
 package io.airbyte.container_orchestrator;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
-import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
-import io.airbyte.workers.process.AsyncKubePodStatus;
-import io.micronaut.context.annotation.Value;
+import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,16 +45,10 @@ public class Application {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  private final String application;
-  private final JobOrchestrator<?> jobOrchestrator;
-  private final Optional<AsyncStateManager> asyncStateManager;
+  private final ReplicationJobOrchestrator jobOrchestrator;
 
-  public Application(@Value("${airbyte.application}") final String application,
-                     final JobOrchestrator<?> jobOrchestrator,
-                     final Optional<AsyncStateManager> asyncStateManager) {
-    this.application = application;
+  public Application(final ReplicationJobOrchestrator jobOrchestrator) {
     this.jobOrchestrator = jobOrchestrator;
-    this.asyncStateManager = asyncStateManager;
   }
 
   /**
@@ -71,16 +62,11 @@ public class Application {
   int run() {
     // set mdc scope for the remaining execution
     try (final var mdcScope = new MdcScope.Builder()
-        .setLogPrefix(application)
-        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-        .build()) {
+        .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc()).build()) {
 
-      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.INITIALIZING));
       final String result = jobOrchestrator.runJob().orElse("");
-      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.SUCCEEDED, result));
     } catch (final Throwable t) {
       log.error("Killing orchestrator because of an Exception", t);
-      asyncStateManager.ifPresent(manager -> manager.write((AsyncKubePodStatus.FAILED)));
       return 1;
     }
 

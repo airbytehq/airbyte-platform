@@ -13,9 +13,24 @@ interface ConnectorRolloutService {
   fun getConnectorRollout(id: UUID): ConnectorRollout
 
   /**
-   * Write a connector rollout.
+   * Insert a connector rollout.
+   */
+  fun insertConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout
+
+  /**
+   * Write (create or update) a connector rollout.
    */
   fun writeConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout
+
+  /**
+   * List all connector rollouts
+   */
+  fun listConnectorRollouts(): List<ConnectorRollout>
+
+  /**
+   * List all connector rollouts matching the provided actor definition ID
+   */
+  fun listConnectorRollouts(actorDefinitionId: UUID): List<ConnectorRollout>
 
   /**
    * List all connector rollouts matching the provided actor definition ID & release candidate versions

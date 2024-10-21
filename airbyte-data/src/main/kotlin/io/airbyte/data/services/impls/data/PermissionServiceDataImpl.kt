@@ -32,14 +32,34 @@ open class PermissionServiceDataImpl(
 
   @Transactional("config")
   override fun deletePermission(permissionId: UUID) {
-    throwIfDeletingLastOrgAdmin(listOf(permissionId))
-    permissionRepository.deleteById(permissionId)
+    val permissionsToDelete = permissionRepository.findByIdIn(listOf(permissionId))
+    throwIfDeletingLastOrgAdmin(permissionsToDelete)
+
+    if (permissionsToDelete.isEmpty()) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId")
+    }
+
+    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+    val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
+    permissionRepository.deleteByIdIn(listOf(permissionId) + workspacePermissionsToDelete)
   }
 
   @Transactional("config")
   override fun deletePermissions(permissionIds: List<UUID>) {
-    throwIfDeletingLastOrgAdmin(permissionIds)
-    permissionRepository.deleteByIdIn(permissionIds)
+    val permissionsToDelete = permissionRepository.findByIdIn(permissionIds)
+    throwIfDeletingLastOrgAdmin(permissionsToDelete)
+
+    if (permissionsToDelete.isEmpty()) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permissions not found: $permissionIds")
+    }
+
+    if (permissionsToDelete.map { it.userId }.toSet().size > 1) {
+      // Guard against the state where we're deleting multiple permissions for different users
+      throw IllegalStateException("Permissions to delete must all belong to the same user.")
+    }
+    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+    val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
+    permissionRepository.deleteByIdIn(permissionIds + workspacePermissionsToDelete)
   }
 
   @Transactional("config")
@@ -88,12 +108,8 @@ open class PermissionServiceDataImpl(
       ?.let { permissionRepository.deleteByIdIn(it) }
   }
 
-  private fun throwIfDeletingLastOrgAdmin(permissionIdsToDelete: List<UUID>) {
-    // get all org admin permissions being deleted, if any
-    val deletedOrgAdminPermissions =
-      permissionRepository.findByIdIn(permissionIdsToDelete).filter {
-        it.permissionType == PermissionType.organization_admin
-      }
+  private fun throwIfDeletingLastOrgAdmin(deletedPermissions: List<io.airbyte.data.repositories.entities.Permission>) {
+    val deletedOrgAdminPermissions = deletedPermissions.filter { it.permissionType == PermissionType.organization_admin }
 
     // group deleted org admin permission IDs by organization ID
     val orgIdToDeletedOrgAdminPermissionIds = deletedOrgAdminPermissions.groupBy({ it.organizationId!! }, { it.id!! })
@@ -103,6 +119,34 @@ open class PermissionServiceDataImpl(
         (orgId, deletedOrgAdminIds) ->
       throwIfDeletingLastOrgAdminForOrg(orgId, deletedOrgAdminIds.toSet())
     }
+  }
+
+  /**
+   * If organization permission(s) are being deleted, get the user's permissions, gather the workspace permissions
+   * for organizations where permissions are being deleted and return the workspace permission IDs to delete.
+   *
+   * It's assumed by this method that we've already verified that permissionsToDelete only contains permissions for a single user.
+   */
+  private fun cascadeOrganizationPermissionDeletes(
+    permissionsToDelete: List<io.airbyte.data.repositories.entities.Permission>,
+    userPermissions: List<Permission>,
+  ): List<UUID> {
+    val orgIds = permissionsToDelete.filter { it.organizationId != null }.map { it.organizationId }.toSet()
+
+    // Group user permission Ids by workspaceId
+    val workspaceIdToUserPermissionIds = userPermissions.filter { it.workspaceId != null }.groupBy({ it.workspaceId }, { it.permissionId })
+
+    if (workspaceIdToUserPermissionIds.isEmpty()) {
+      return emptyList()
+    }
+
+    // Get workspaceIds by their organizationId for the user's permissions
+    val workspaceList = workspaceService.listStandardWorkspacesWithIds(workspaceIdToUserPermissionIds.keys.toList(), true)
+    val workspaceIdsByOrgId = workspaceList.groupBy({ it.organizationId }, { it.workspaceId })
+
+    // For workspaces in the organizations where permissions are being deleted, add that workspace permission ID to the list of permission Ids to delete.
+    val workspaceIdsToDeletePermissionsFor = workspaceIdsByOrgId.filterKeys { orgIds.contains(it) }.values.flatten()
+    return workspaceIdsToDeletePermissionsFor.flatMap { workspaceIdToUserPermissionIds[it] ?: emptyList() }
   }
 
   private fun throwIfDeletingLastOrgAdminForOrg(
@@ -163,11 +207,13 @@ open class PermissionServiceDataImpl(
       Permission.PermissionType.INSTANCE_ADMIN -> throw IllegalArgumentException("INSTANCE_ADMIN permissions are not supported")
       Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.authority
       Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.authority
+      Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.authority
       Permission.PermissionType.ORGANIZATION_READER -> OrganizationAuthRole.ORGANIZATION_READER.authority
       Permission.PermissionType.ORGANIZATION_MEMBER -> OrganizationAuthRole.ORGANIZATION_MEMBER.authority
       Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
       Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
       Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.authority
+      Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.authority
       Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.authority
     }
   }

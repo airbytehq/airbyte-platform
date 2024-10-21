@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.SlackNotificationConfiguration;
@@ -21,6 +22,7 @@ import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.slack.Field;
 import io.airbyte.notification.slack.Notification;
 import io.airbyte.notification.slack.Section;
+import io.micronaut.core.util.StringUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,7 +31,6 @@ import java.net.http.HttpResponse;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,36 +60,52 @@ public class SlackNotificationClient extends NotificationClient {
 
   @Override
   public boolean notifyJobFailure(final SyncSummary summary,
-                                  final String receiverEmail)
-      throws IOException, InterruptedException {
-    final String legacyMessage = renderTemplate(
-        "slack/failure_slack_notification_template.txt",
-        summary.getConnection().getName(),
-        summary.getSource().getName(),
-        summary.getDestination().getName(),
-        summary.getErrorMessage(),
-        summary.getConnection().getUrl(),
-        String.valueOf(summary.getJobId()));
+                                  final String receiverEmail) {
+    final String legacyMessage;
+    try {
+      legacyMessage = renderTemplate(
+          "slack/failure_slack_notification_template.txt",
+          summary.getConnection().getName(),
+          summary.getSource().getName(),
+          summary.getDestination().getName(),
+          summary.getErrorMessage(),
+          summary.getConnection().getUrl(),
+          String.valueOf(summary.getJobId()));
+    } catch (IOException e) {
+      return false;
+    }
     Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
     notification.setData(summary);
-    return notifyJson(notification.toJsonNode());
+    try {
+      return notifyJson(notification.toJsonNode());
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyJobSuccess(final SyncSummary summary,
-                                  final String receiverEmail)
-      throws IOException, InterruptedException {
-    final String legacyMessage = renderTemplate(
-        "slack/success_slack_notification_template.txt",
-        summary.getConnection().getName(),
-        summary.getSource().getName(),
-        summary.getDestination().getName(),
-        summary.getErrorMessage(),
-        summary.getConnection().getUrl(),
-        String.valueOf(summary.getJobId()));
+                                  final String receiverEmail) {
+    final String legacyMessage;
+    try {
+      legacyMessage = renderTemplate(
+          "slack/success_slack_notification_template.txt",
+          summary.getConnection().getName(),
+          summary.getSource().getName(),
+          summary.getDestination().getName(),
+          summary.getErrorMessage(),
+          summary.getConnection().getUrl(),
+          String.valueOf(summary.getJobId()));
+    } catch (IOException e) {
+      return false;
+    }
     Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
     notification.setData(summary);
-    return notifyJson(notification.toJsonNode());
+    try {
+      return notifyJson(notification.toJsonNode());
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @NotNull
@@ -156,45 +173,60 @@ public class SlackNotificationClient extends NotificationClient {
 
   @Override
   public boolean notifyConnectionDisabled(final SyncSummary summary,
-                                          final String receiverEmail)
-      throws IOException, InterruptedException {
-    final String legacyMessage = renderTemplate(
-        "slack/auto_disable_slack_notification_template.txt",
-        summary.getSource().getName(),
-        summary.getDestination().getName(),
-        summary.getErrorMessage(),
-        summary.getWorkspace().getId().toString(),
-        summary.getConnection().getId().toString());
+                                          final String receiverEmail) {
+    final String legacyMessage;
+    try {
+      legacyMessage = renderTemplate(
+          "slack/auto_disable_slack_notification_template.txt",
+          summary.getSource().getName(),
+          summary.getDestination().getName(),
+          summary.getErrorMessage(),
+          summary.getWorkspace().getId().toString(),
+          summary.getConnection().getId().toString());
+    } catch (IOException e) {
+      return false;
+    }
     final String message = """
                            Your connection has been repeatedly failing and has been automatically disabled.
                            """;
-    return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
+    try {
+      return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
-                                                final String receiverEmail)
-      throws IOException, InterruptedException {
-    final String legacyMessage = renderTemplate(
-        "slack/auto_disable_warning_slack_notification_template.txt",
-        summary.getSource().getName(),
-        summary.getDestination().getName(),
-        summary.getErrorMessage(),
-        summary.getWorkspace().getId().toString(),
-        summary.getConnection().getId().toString());
+                                                final String receiverEmail) {
+    final String legacyMessage;
+    try {
+      legacyMessage = renderTemplate(
+          "slack/auto_disable_warning_slack_notification_template.txt",
+          summary.getSource().getName(),
+          summary.getDestination().getName(),
+          summary.getErrorMessage(),
+          summary.getWorkspace().getId().toString(),
+          summary.getConnection().getId().toString());
+    } catch (IOException e) {
+      return false;
+    }
     final String message = """
                            Your connection has been repeatedly failing. Please address any issues to ensure your syncs continue to run.
                            """;
-    return notifyJson(
-        buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
+    try {
+      return notifyJson(
+          buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override
   public boolean notifyBreakingChangeWarning(final List<String> receiverEmails,
                                              final String connectorName,
                                              final ActorType actorType,
-                                             final ActorDefinitionBreakingChange breakingChange)
-      throws IOException, InterruptedException {
+                                             final ActorDefinitionBreakingChange breakingChange) {
     // Unsupported for now since we can't reliably send bulk Slack notifications
     throw new UnsupportedOperationException("Slack notification is not supported for breaking change warning");
   }
@@ -203,16 +235,14 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyBreakingChangeSyncsDisabled(final List<String> receiverEmails,
                                                    final String connectorName,
                                                    final ActorType actorType,
-                                                   final ActorDefinitionBreakingChange breakingChange)
-      throws IOException, InterruptedException {
+                                                   final ActorDefinitionBreakingChange breakingChange) {
     // Unsupported for now since we can't reliably send bulk Slack notifications
     throw new UnsupportedOperationException("Slack notification is not supported for breaking change syncs disabled notification");
   }
 
   @Override
   public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
-                                        final String recipient)
-      throws IOException, InterruptedException {
+                                        final String recipient) {
     final String summary = buildSummary(notification.getCatalogDiff());
 
     final String header = String.format("The schema of '%s' has changed.",
@@ -222,8 +252,12 @@ public class SlackNotificationClient extends NotificationClient {
             notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
 
     final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notifyJson(slackNotification.toJsonNode());
+    if (!StringUtils.isEmpty(webhookUrl)) {
+      try {
+        return notifyJson(slackNotification.toJsonNode());
+      } catch (IOException e) {
+        return false;
+      }
     }
     return false;
   }
@@ -333,8 +367,8 @@ public class SlackNotificationClient extends NotificationClient {
     return notifyJson(node);
   }
 
-  private boolean notifyJson(final JsonNode node) throws IOException, InterruptedException {
-    if (Strings.isEmpty(config.getWebhook())) {
+  private boolean notifyJson(final JsonNode node) throws IOException {
+    if (StringUtils.isEmpty(config.getWebhook())) {
       return false;
     }
     final ObjectMapper mapper = new ObjectMapper();
@@ -346,7 +380,12 @@ public class SlackNotificationClient extends NotificationClient {
         .uri(URI.create(config.getWebhook()))
         .header("Content-Type", "application/json")
         .build();
-    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    final HttpResponse<String> response;
+    try {
+      response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    } catch (InterruptedException e) {
+      return false;
+    }
     if (isSuccessfulHttpResponse(response.statusCode())) {
       LOGGER.info("Successful notification ({}): {}", response.statusCode(), response.body());
       return true;
@@ -367,7 +406,7 @@ public class SlackNotificationClient extends NotificationClient {
    */
   public boolean notifyTest(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
+    if (!StringUtils.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;
@@ -379,6 +418,11 @@ public class SlackNotificationClient extends NotificationClient {
    */
   private static boolean isSuccessfulHttpResponse(final int httpStatusCode) {
     return httpStatusCode / 100 == 2;
+  }
+
+  String renderTemplate(final String templateFile, final String... data) throws IOException {
+    final String template = MoreResources.readResource(templateFile);
+    return String.format(template, data);
   }
 
 }

@@ -3,7 +3,6 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
@@ -25,11 +24,11 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workers.pod.KubeContainerInfo
+import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -41,7 +40,6 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
-import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
@@ -58,51 +56,12 @@ class PayloadKubeInputMapper(
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
+  @Named("fileTransferReqs") private val fileTransferReqs: AirbyteResourceRequirements,
   private val runTimeEnvVarFactory: RuntimeEnvVarFactory,
   private val featureFlagClient: FeatureFlagClient,
   @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun toKubeInput(
-    workloadId: String,
-    input: ReplicationInput,
-    sharedLabels: Map<String, String>,
-  ): OrchestratorKubeInput {
-    val jobId = input.getJobId()
-    val attemptId = input.getAttemptId()
-
-    val orchestratorPodName = podNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
-    val orchestratorImage: String = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorPodInfo =
-      KubePodInfo(
-        namespace,
-        orchestratorPodName,
-        KubeContainerInfo(orchestratorImage, orchestratorKubeContainerInfo.pullPolicy),
-      )
-
-    val orchestratorReqs = input.getOrchestratorResourceReqs()
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
-
-    val runtimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      )
-
-    return OrchestratorKubeInput(
-      labeler.getReplicationOrchestratorLabels(orchestratorKubeContainerInfo.image) + sharedLabels,
-      labeler.getSourceLabels() + sharedLabels,
-      labeler.getDestinationLabels() + sharedLabels,
-      nodeSelectors,
-      orchestratorPodInfo,
-      orchestratorReqs,
-      replicationWorkerConfigs.workerKubeAnnotations,
-      runtimeEnvVars,
-    )
-  }
-
-  fun toReplicationKubeInput(
     workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
@@ -114,23 +73,26 @@ class PayloadKubeInputMapper(
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = KubePodProcess.buildResourceRequirements(input.getOrchestratorResourceReqs())
-    val orchRuntimeEnvVars =
-      listOf(
-        EnvVar(AirbyteEnvVar.MONO_POD.toString(), true.toString(), null),
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      )
+    val orchestratorReqs = ResourceConversionUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
-    val sourceReqs = KubePodProcess.buildResourceRequirements(input.getSourceResourceReqs())
-    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig)
+    val sourceBaseReqs =
+      if (input.useFileTransfer) {
+        addEphemeralStorageReqLimits(input.getSourceResourceReqs())
+      } else {
+        input.getSourceResourceReqs()
+      }
+    val sourceReqs = ResourceConversionUtils.buildResourceRequirements(sourceBaseReqs)
+    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceBaseReqs)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
-    val destinationReqs = KubePodProcess.buildResourceRequirements(input.getDestinationResourceReqs())
-    val destinationRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig)
+    val destinationReqs = ResourceConversionUtils.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationRuntimeEnvVars =
+      runTimeEnvVarFactory.replicationConnectorEnvVars(
+        input.destinationLauncherConfig,
+        input.getDestinationResourceReqs(),
+      )
 
     val labels =
       labeler.getReplicationLabels(
@@ -398,18 +360,14 @@ class PayloadKubeInputMapper(
       },
     )
   }
-}
 
-data class OrchestratorKubeInput(
-  val orchestratorLabels: Map<String, String>,
-  val sourceLabels: Map<String, String>,
-  val destinationLabels: Map<String, String>,
-  val nodeSelectors: Map<String, String>,
-  val kubePodInfo: KubePodInfo,
-  val resourceReqs: AirbyteResourceRequirements?,
-  val annotations: Map<String, String>,
-  val extraEnv: List<EnvVar>,
-)
+  private fun addEphemeralStorageReqLimits(airbyteSourceReqs: AirbyteResourceRequirements?): AirbyteResourceRequirements {
+    return airbyteSourceReqs
+      ?.withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
+      ?.withEphemeralStorageRequest(fileTransferReqs.ephemeralStorageRequest)
+      ?: fileTransferReqs
+  }
+}
 
 data class ReplicationKubeInput(
   val podName: String,

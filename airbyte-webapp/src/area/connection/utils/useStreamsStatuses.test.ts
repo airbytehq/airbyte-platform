@@ -1,11 +1,11 @@
 import { renderHook } from "@testing-library/react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import {
+  ConnectionSyncStatus,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRunState,
@@ -67,7 +67,7 @@ describe("useStreamsStatuses", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValue({ streamStatuses: mockStreamStatuses });
     (useSchemaChanges as jest.Mock).mockReturnValue({ hasBreakingSchemaChange: false });
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusType.Pending,
+      status: ConnectionSyncStatus.pending,
       isRunning: true,
       lastSuccessfulSync: 1609459200,
     });
@@ -104,7 +104,7 @@ describe("useStreamsStatuses", () => {
 
   it("no per-stream statuses, stream should return connection status", () => {
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusType.Failed,
+      status: ConnectionSyncStatus.failed,
       isRunning: true,
       lastSuccessfulSync: 1609459200,
     });
@@ -125,7 +125,7 @@ describe("useStreamsStatuses", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValueOnce({ streamStatuses: mockIncompleteStreamStatuses });
 
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusType.Failed,
+      status: ConnectionSyncStatus.failed,
       isRunning: false,
       lastSuccessfulSync: 1609459200,
     });
@@ -142,7 +142,7 @@ describe("useStreamsStatuses", () => {
     (useListStreamsStatuses as jest.Mock).mockReturnValueOnce({ streamStatuses: mockIncompleteStreamStatuses });
 
     (useConnectionStatus as jest.Mock).mockReturnValue({
-      status: ConnectionStatusType.Incomplete,
+      status: ConnectionSyncStatus.incomplete,
       isRunning: false,
       lastSuccessfulSync: 1609459200,
     });

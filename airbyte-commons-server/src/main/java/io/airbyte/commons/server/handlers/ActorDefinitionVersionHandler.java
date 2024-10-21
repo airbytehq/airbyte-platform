@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -87,6 +88,14 @@ public class ActorDefinitionVersionHandler {
     };
   }
 
+  @SuppressWarnings("LineLength")
+  public ActorDefinitionVersionRead getDefaultVersion(GetActorDefinitionVersionDefaultRequestBody actorDefinitionVersionDefaultRequestBody)
+      throws IOException {
+    final Optional<ActorDefinitionVersion> version =
+        actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersionDefaultRequestBody.getActorDefinitionId());
+    return createActorDefinitionVersionRead(new ActorDefinitionVersionWithOverrideStatus(version.get(), false));
+  }
+
   public ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionByTag(final ResolveActorDefinitionVersionRequestBody resolveVersionReq)
       throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
     final UUID actorDefinitionId = resolveVersionReq.getActorDefinitionId();
@@ -133,7 +142,8 @@ public class ActorDefinitionVersionHandler {
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
         .cdkVersion(actorDefinitionVersion.getCdkVersion())
         .lastPublished(ApiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
-        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
+        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied())
+        .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);

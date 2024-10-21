@@ -113,6 +113,12 @@ public class ResourceRequirementsUtils {
       if (resourceReq.getMemoryLimit() != null) {
         outputReqs.setMemoryLimit(resourceReq.getMemoryLimit());
       }
+      if (resourceReq.getEphemeralStorageRequest() != null) {
+        outputReqs.setEphemeralStorageRequest(resourceReq.getEphemeralStorageRequest());
+      }
+      if (resourceReq.getEphemeralStorageLimit() != null) {
+        outputReqs.setEphemeralStorageLimit(resourceReq.getEphemeralStorageLimit());
+      }
     }
     return outputReqs;
   }

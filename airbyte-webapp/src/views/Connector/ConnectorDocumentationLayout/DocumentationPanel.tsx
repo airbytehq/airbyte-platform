@@ -37,7 +37,7 @@ import styles from "./DocumentationPanel.module.scss";
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
 
-const removeFirstHeading: Pluggable = () => {
+export const removeFirstHeading: Pluggable = () => {
   // Remove the first heading from the markdown content, as it is already displayed in the header
   return (tree: MdastRoot) => {
     let headingRemoved = false;
@@ -114,7 +114,7 @@ const LinkRelativePathReplacer: React.FC<
   );
 };
 
-const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field, children }) => {
+const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field = "", children }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { focusedField } = useDocumentationPanelContext();
   const isFieldFocused = field

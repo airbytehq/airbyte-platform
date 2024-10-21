@@ -18,7 +18,6 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.kotlin)
-  implementation(libs.log4j.impl)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
@@ -26,8 +25,13 @@ dependencies {
   implementation(libs.jackson.databind)
   implementation(libs.jackson.dataformat)
   implementation(libs.jackson.kotlin)
+  implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-storage"))
+
+  runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)

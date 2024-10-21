@@ -50,7 +50,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-temporal-ui
-        image: {{ printf "%s:%s" .Values.image.repository (include "temporal-ui.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         # Values from env

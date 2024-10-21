@@ -15,3 +15,7 @@ properties:
     type: string
   memory_limit:
     type: string
+  ephemeral_storage_request:
+    type: string
+  ephemeral_storage_limit:
+    type: string

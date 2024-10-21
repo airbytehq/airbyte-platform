@@ -13,33 +13,32 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import {
-  BuilderAssistCreateStreamParams,
-  BuilderAssistFindStreamsResponse,
-  BuilderAssistGlobalParams,
-  BuilderAssistManifestResponse,
-  useBuilderAssistCreateStream,
-  useBuilderAssistFindStreams,
-} from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
-import { convertToAssistFormValuesSync } from "./Assist/assist";
+import {
+  convertToAssistFormValuesSync,
+  BuilderAssistFindStreamsResponse,
+  BuilderAssistInputStreamParams,
+  BuilderAssistManifestResponse,
+  useBuilderAssistCreateStream,
+  useBuilderAssistFindStreams,
+} from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { AssistData, BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamResponse {
   streamName: string;
-  newStreamValues?: BuilderStream;
+  newStreamValues: BuilderStream;
 }
 
 interface AddStreamButtonProps {
   onAddStream: (addedStreamNum: number) => void;
   button?: React.ReactElement;
-  initialValues?: Partial<BuilderStream>;
+  streamToDuplicate?: Partial<BuilderStream>;
   "data-testid"?: string;
   modalTitle?: string;
   disabled?: boolean;
@@ -48,7 +47,7 @@ interface AddStreamButtonProps {
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   onAddStream,
   button,
-  initialValues,
+  streamToDuplicate,
   "data-testid": testId,
   modalTitle,
   disabled,
@@ -62,7 +61,6 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
 
   const { setValue } = useFormContext();
   const numStreams = streams.length;
-  const isDuplicate = !!initialValues;
 
   const buttonClickHandler = () => {
     setIsOpen(true);
@@ -74,8 +72,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     const id = uuid();
     setValue("formValues.streams", [
       ...streams,
-      merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
-        ...initialValues,
+      {
         ...values.newStreamValues,
         name: values.streamName,
         schema: DEFAULT_SCHEMA,
@@ -84,15 +81,15 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           // indicates that this stream was added by the Builder and needs to be tested
           streamHash: null,
         },
-      }),
+      },
     ]);
     setIsOpen(false);
     onAddStream(numStreams);
-    if (isDuplicate) {
+    if (streamToDuplicate) {
       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_COPY, {
         actionDescription: "Existing stream copied into a new stream",
-        existing_stream_id: initialValues.id,
-        existing_stream_name: initialValues.name,
+        existing_stream_id: streamToDuplicate.id,
+        existing_stream_name: streamToDuplicate.name,
         new_stream_id: id,
         new_stream_name: values.streamName,
         new_stream_url_path: values.newStreamValues?.urlPath,
@@ -133,9 +130,8 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           modalTitle={modalTitle}
           onSubmit={handleSubmit}
           onCancel={() => setIsOpen(false)}
-          isDuplicate={isDuplicate}
+          streamToDuplicate={streamToDuplicate}
           streams={streams}
-          initialUrlPath={initialValues?.urlPath}
         />
       )}
     </>
@@ -161,36 +157,20 @@ const AddStreamModal = ({
   modalTitle,
   onSubmit,
   onCancel,
-  isDuplicate,
+  streamToDuplicate,
   streams,
-  initialUrlPath,
 }: {
   modalTitle?: string;
   onSubmit: (values: AddStreamResponse) => void;
   onCancel: () => void;
-  isDuplicate: boolean;
+  streamToDuplicate?: Partial<BuilderStream>;
   streams: BuilderStream[];
-  initialUrlPath?: string;
 }) => {
-  const baseUrl = useBuilderWatch("formValues.global.urlBase");
-  const appName = useBuilderWatch("name") || "Connector";
-  const assistData: AssistData = useBuilderWatch("formValues.assist");
   const { assistEnabled } = useConnectorBuilderFormState();
-
-  const shouldAssist = assistEnabled && !isDuplicate;
+  const shouldAssist = assistEnabled && !streamToDuplicate;
 
   // TODO refactor to useMutation, as this is a bit of a hack
   const [assistFormValues, setAssistFormValues] = useState<AddStreamFormValues | null>(null);
-
-  const assistParams = useMemo(
-    () => ({
-      docs_url: assistData?.docsUrl,
-      openapi_spec_url: assistData?.openApiSpecUrl,
-      app_name: appName,
-      url_base: baseUrl,
-    }),
-    [assistData?.docsUrl, assistData?.openApiSpecUrl, appName, baseUrl]
-  );
 
   const submitResponse = useCallback(
     (values: AddStreamFormValues) => {
@@ -200,12 +180,12 @@ const AddStreamModal = ({
 
       onSubmit({
         streamName: values.streamName,
-        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, otherStreamValues, {
+        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, streamToDuplicate, otherStreamValues, {
           urlPath: values.urlPath,
         }),
       });
     },
-    [streams, onSubmit]
+    [streams, onSubmit, streamToDuplicate]
   );
 
   const submitAction = useCallback(
@@ -235,10 +215,9 @@ const AddStreamModal = ({
       return null;
     }
     return {
-      ...assistParams,
       stream_name: assistFormValues.streamName,
     };
-  }, [assistParams, assistFormValues]);
+  }, [assistFormValues]);
 
   return (
     <Modal
@@ -252,10 +231,9 @@ const AddStreamModal = ({
         <AddStreamForm
           onSubmit={submitAction}
           onCancel={cancelAction}
-          isDuplicate={isDuplicate}
+          isDuplicate={!!streamToDuplicate}
           streams={streams}
-          initialUrlPath={initialUrlPath}
-          assistParams={assistParams}
+          initialUrlPath={streamToDuplicate?.urlPath}
           shouldAssist={shouldAssist}
         />
       )}
@@ -276,7 +254,6 @@ const AddStreamForm = ({
   isDuplicate,
   streams,
   initialUrlPath,
-  assistParams,
   shouldAssist,
 }: {
   onSubmit: (values: AddStreamFormValues) => void;
@@ -284,10 +261,13 @@ const AddStreamForm = ({
   isDuplicate: boolean;
   streams: BuilderStream[];
   initialUrlPath?: string;
-  assistParams: BuilderAssistGlobalParams;
   shouldAssist: boolean;
 }) => {
   const { formatMessage } = useIntl();
+
+  const { data, isFetching } = useBuilderAssistFindStreams({
+    enabled: shouldAssist,
+  });
 
   const showCopyFromStream = !isDuplicate && streams.length > 0;
   const showUrlPath = !shouldAssist;
@@ -306,6 +286,7 @@ const AddStreamForm = ({
     validator.urlPath = yup.string().required("form.empty.error");
   }
 
+  // put the main form default values here so the API can use the context in the new form
   const methods = useForm({
     defaultValues: {
       streamName: "",
@@ -324,7 +305,7 @@ const AddStreamForm = ({
       <form onSubmit={methods.handleSubmit(onSubmit)}>
         <ModalBody className={styles.body}>
           {shouldAssist ? (
-            <AssistedStreamNameField path="streamName" streams={streams} assistParams={assistParams} />
+            <AssistedStreamNameField path="streamName" streams={streams} data={data} isFetching={isFetching} />
           ) : (
             <BuilderField
               path="streamName"
@@ -393,18 +374,15 @@ const AssistLoadingMessage = () => {
 const AssistedStreamNameField = ({
   path,
   streams,
-  assistParams,
+  data,
+  isFetching,
 }: {
   path: string;
   streams: BuilderStream[];
-  assistParams: BuilderAssistGlobalParams;
+  data: BuilderAssistFindStreamsResponse | undefined;
+  isFetching: boolean;
 }) => {
   const { formatMessage } = useIntl();
-
-  const { data, isFetching } = useBuilderAssistFindStreams({
-    ...assistParams,
-    enabled: true,
-  });
 
   const streamOptions = useMemo(() => {
     if (data) {
@@ -443,7 +421,7 @@ const AssistProcessing = ({
   onComplete,
   onSkip,
 }: {
-  input: BuilderAssistCreateStreamParams;
+  input: BuilderAssistInputStreamParams;
   onComplete: (values: AddStreamResponse) => void;
   onSkip: () => void;
 }) => {

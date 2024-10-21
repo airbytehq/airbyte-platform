@@ -12,7 +12,7 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
+import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
@@ -33,12 +33,27 @@ const HIDDEN_SIDEBAR_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
 ];
 
+const BillingPageLink: React.FC = () => {
+  const showBillingPageV2 = useShowBillingPageV2();
+  if (showBillingPageV2) {
+    return null;
+  }
+
+  return (
+    <NavItem
+      icon="credits"
+      label={<FormattedMessage id="sidebar.billing" />}
+      to={CloudRoutes.Billing}
+      testId="creditsButton"
+    />
+  );
+};
+
 export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   workspaceFetcher,
   bottomSlot,
   settingHighlight,
 }) => {
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
   const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
@@ -87,16 +102,9 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
           />
-          {!isBillingInArrearsActive && (
-            <IfFeatureEnabled feature={FeatureItem.Billing}>
-              <NavItem
-                icon="credits"
-                label={<FormattedMessage id="sidebar.billing" />}
-                to={CloudRoutes.Billing}
-                testId="creditsButton"
-              />
-            </IfFeatureEnabled>
-          )}
+          <IfFeatureEnabled feature={FeatureItem.Billing}>
+            <BillingPageLink />
+          </IfFeatureEnabled>
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon="gear"

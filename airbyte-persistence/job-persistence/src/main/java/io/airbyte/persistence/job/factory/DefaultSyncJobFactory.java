@@ -18,8 +18,12 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.helper.model.JobCreatorInput;
@@ -35,26 +39,39 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
 
   private final boolean connectorSpecificResourceDefaultsEnabled;
   private final DefaultJobCreator jobCreator;
-  private final ConfigRepository configRepository;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ConfigInjector configInjector;
   private final WorkspaceHelper workspaceHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+  private final ConnectionService connectionService;
+  private final OperationService operationService;
+  private final WorkspaceService workspaceService;
+
   public DefaultSyncJobFactory(final boolean connectorSpecificResourceDefaultsEnabled,
                                final DefaultJobCreator jobCreator,
-                               final ConfigRepository configRepository,
                                final OAuthConfigSupplier oauthConfigSupplier,
                                final ConfigInjector configInjector,
                                final WorkspaceHelper workspaceHelper,
-                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                               final SourceService sourceService,
+                               final DestinationService destinationService,
+                               final ConnectionService connectionService,
+                               final OperationService operationService,
+                               final WorkspaceService workspaceService) {
     this.connectorSpecificResourceDefaultsEnabled = connectorSpecificResourceDefaultsEnabled;
     this.jobCreator = jobCreator;
-    this.configRepository = configRepository;
     this.oAuthConfigSupplier = oauthConfigSupplier;
     this.configInjector = configInjector;
     this.workspaceHelper = workspaceHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
+    this.connectionService = connectionService;
+    this.operationService = operationService;
+    this.workspaceService = workspaceService;
   }
 
   @Override
@@ -81,7 +98,7 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           jobCreatorInput.getWorkspaceId())
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
-    } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
+    } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new RuntimeException(e);
     }
   }
@@ -107,17 +124,18 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           streamsToRefresh)
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
-    } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
+    } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private JobCreatorInput getJobCreatorInput(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+  private JobCreatorInput getJobCreatorInput(UUID connectionId)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(standardSync.getSourceId());
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(standardSync.getDestinationId());
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
+    final SourceConnection sourceConnection = sourceService.getSourceConnection(standardSync.getSourceId());
+    final DestinationConnection destinationConnection = destinationService.getDestinationConnection(standardSync.getDestinationId());
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
         sourceConnection.getSourceDefinitionId(),
         sourceConnection.getSourceId(),
@@ -131,9 +149,9 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
         destinationConnection.getConfiguration());
     destinationConnection
         .withConfiguration(configInjector.injectConfig(destinationConfiguration, destinationConnection.getDestinationDefinitionId()));
-    final StandardSourceDefinition sourceDefinition = configRepository
+    final StandardSourceDefinition sourceDefinition = sourceService
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final StandardDestinationDefinition destinationDefinition = configRepository
+    final StandardDestinationDefinition destinationDefinition = destinationService
         .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
 
     final ActorDefinitionVersion sourceVersion =
@@ -151,7 +169,7 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
 
     final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
     for (final var operationId : standardSync.getOperationIds()) {
-      final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+      final StandardSyncOperation standardSyncOperation = operationService.getStandardSyncOperation(operationId);
       standardSyncOperations.add(standardSyncOperation);
     }
 

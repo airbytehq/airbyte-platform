@@ -55,7 +55,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-workload-launcher-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "workload-launcher.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -190,27 +190,31 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
+        - name: CONNECTOR_SIDECAR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_SIDECAR_IMAGE
+        - name: WORKLOAD_INIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_INIT_IMAGE
+        - name: CONTAINER_ORCHESTRATOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTAINER_ORCHESTRATOR_IMAGE
         - name: JOB_KUBE_BUSYBOX_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.socat }}
-        - name: JOB_KUBE_SOCAT_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_SOCAT_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
         - name: JOB_KUBE_CURL_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_CURL_IMAGE
-        {{- end }}
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:
@@ -312,6 +316,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -365,6 +379,43 @@ spec:
         {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
         - name: AWS_KMS_KEY_ARN
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
         {{- end }}
 
         # Values for googleSecretManager secrets

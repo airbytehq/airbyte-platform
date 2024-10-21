@@ -34,7 +34,7 @@
   padding: variables.$spacing-md;
   font-size: 1rem;
   border: none;
-  background-color: colors.$transparentColor;
+  background-color: transparent;
 
   &:hover {
     text-decoration-line: underline;

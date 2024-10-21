@@ -9,7 +9,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.ClosableLinkedBlockingQueue;
 import io.airbyte.commons.concurrency.ClosableQueue;
-import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
@@ -58,7 +57,7 @@ import org.slf4j.MDC;
  * backpressure.
  */
 @SuppressWarnings({"PMD.UnusedLocalVariable", "PMD.ExceptionAsFlowControl"})
-public class BufferedReplicationWorker implements ReplicationWorker {
+public class BufferedReplicationWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BufferedReplicationWorker.class);
 
@@ -135,7 +134,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
-  @Override
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
@@ -156,11 +154,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
         replicationWorkerHelper.markReplicationRunning();
 
-        if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
-          CompletableFuture.runAsync(
-              replicationWorkerHelper.getWorkloadStatusHeartbeat(mdc),
-              executors);
-        }
+        CompletableFuture.runAsync(
+            replicationWorkerHelper.getWorkloadStatusHeartbeat(mdc),
+            executors);
 
         CompletableFuture.allOf(
             runAsyncWithHeartbeatCheck(this::readFromSource, mdc),
@@ -279,7 +275,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         replicationInput.getDestinationLauncherConfig().getDockerImage(), sourceDefinitionId, destinationDefinitionId);
   }
 
-  @Override
+  // TODO cancel should be irrelevant on the BufferedReplicationWorker
   public void cancel() {
     boolean wasInterrupted = false;
 
@@ -352,7 +348,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
 
-      if (replicationWorkerHelper.isWorkerV2TestEnabled() && replicationWorkerHelper.getShouldAbort()) {
+      if (replicationWorkerHelper.getShouldAbort()) {
         source.cancel();
       }
 
@@ -466,7 +462,21 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!replicationWorkerHelper.getShouldAbort() && !writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
+      while (true) {
+        if (replicationWorkerHelper.getShouldAbort()) {
+          LOGGER.info("Abort signaled — exiting read dest...");
+          break;
+        }
+        if (writeToDestFailed) {
+          LOGGER.info("Write to destination failed — exiting read dest...");
+          break;
+        }
+        destinationIsFinished = destinationIsFinished();
+        if (destinationIsFinished) {
+          LOGGER.info("Destination finished successfully — exiting read dest...");
+          break;
+        }
+
         final Optional<AirbyteMessage> messageOptional;
         try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
@@ -547,8 +557,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         new MetricAttribute("connection_id", connectionId),
         new MetricAttribute("connector", connectorType),
         new MetricAttribute("image", connectorImage),
-        new MetricAttribute("exit_value", exitValue),
-        new MetricAttribute("execution_mode", Boolean.parseBoolean(EnvVar.MONO_POD.fetch(Boolean.FALSE.toString())) ? "mono-pod" : "triplet"));
+        new MetricAttribute("exit_value", exitValue));
   }
 
 }

@@ -97,8 +97,7 @@ class SlackNotificationClientTest {
         .startedAt(Instant.MIN)
         .finishedAt(Instant.MAX)
         .build();
-    assertThrows(IOException.class,
-        () -> client.notifyJobFailure(summary, null));
+    assertFalse(client.notifyJobFailure(summary, null));
   }
 
   @Test

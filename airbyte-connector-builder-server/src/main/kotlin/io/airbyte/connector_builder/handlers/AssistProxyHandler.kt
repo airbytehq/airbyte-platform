@@ -27,7 +27,9 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class AssistProxyHandler
   @Inject
-  constructor(private val proxyConfig: AssistConfiguration) {
+  constructor(
+    private val proxyConfig: AssistConfiguration,
+  ) {
     /**
      * Call the Assistant to get connector data
      */
@@ -38,7 +40,7 @@ class AssistProxyHandler
 
       val jsonBody = Jsons.jsonNode(requestBody)
       val result = proxy.post(path, jsonBody)
-      var response = Jsons.`object`(result, ProxyResponse::class.java) as ProxyResponse
+      val response = Jsons.`object`(result, ProxyResponse::class.java) as ProxyResponse
       response.tree = result
       return response
     }

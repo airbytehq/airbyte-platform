@@ -440,6 +440,27 @@ components:
               default: The specified cron timezone is invalid
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
+    MapperValidationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation
+            title:
+              type: string
+              default: Mapper validation failed
+            detail:
+              type: string
+              default: The mapper configuration is invalid
+            data:
+              $ref: "#/components/schemas/ProblemMapperErrorsData"
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -468,7 +489,7 @@ components:
           properties:
             status:
               type: integer
-              default: 400
+              default: 404
             type:
               type: string
               default: https://reference.airbyte.com/reference/errors#resource-not-found
@@ -549,6 +570,95 @@ components:
               default: An unexpected error occurred when creating your GitHub contribution.
             data:
               $ref: "#/components/schemas/GithubContributionProblemData"
+    BillingSubscriptionRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:billing/subscription/subscription-required
+            title:
+              type: string
+              default: A subscription is required for this operation to succeed.
+    BillingTooManyNonPrepaidSubscriptionsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:billing/subscription/too-many-incompatible-subscriptions
+            title:
+              type: string
+              default: Found more than one subscription with some not being prepaid.
+    BillingInsufficientPaymentStatusProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: error:billing/insufficient-payment-status
+            title:
+              type: string
+              default: The payment status of the associated Organization is insufficient.
+            data:
+              $ref: "#/components/schemas/BillingInsufficientPaymentStatusProblemData"
+    BillingInsufficientCreditBalanceProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: error:billing/insufficient-credit-balance
+            title:
+              type: string
+              default: The credit balance of the associated Workspace or Organization is insufficient.
+            data:
+              $ref: "#/components/schemas/BillingInsufficientCreditBalanceProblemData"
+    ConnectorRolloutInvalidRequestProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/invalid-request
+            title:
+              type: string
+              default: Invalid Connector Rollout request
+            detail:
+              type: string
+              default: Invalid connector rollout request.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     ProblemCronData:
       type: object
       properties:
@@ -578,6 +688,36 @@ components:
           type: string
         cronTimezone:
           type: string
+    ProblemMapperErrorsData:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemMapperErrorData"
+    ProblemMapperErrorData:
+      type: object
+      required:
+        - stream
+        - error
+        - mapper
+      properties:
+        stream:
+          type: string
+        error:
+          type: string
+        mapper:
+          type: object
+          required:
+            - type
+            - mapperConfiguration
+          properties:
+            type:
+              type: string
+            mapperConfiguration:
+              type: object
     ProblemEmailData:
       type: object
       required:
@@ -637,4 +777,32 @@ components:
         status:
           type: integer
         message:
+          type: string
+    BillingInsufficientPaymentStatusProblemData:
+      type: object
+      required:
+        - requiredStatuses
+        - currentStatus
+      properties:
+        validPaymentStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentStatusEnum"
+        currentPaymentStatus:
+          $ref: "#/components/schemas/PaymentStatusEnum"
+    PaymentStatusEnum:
+      type: string
+      enum:
+        - uninitialized
+        - okay
+        - grace_period
+        - disabled
+        - locked
+        - manual
+    BillingInsufficientCreditBalanceProblemData:
+      type: object
+      required:
+        - currentBalance
+      properties:
+        currentBalance:
           type: string

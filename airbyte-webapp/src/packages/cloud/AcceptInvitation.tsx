@@ -10,6 +10,7 @@ export const AcceptInvitation: React.FC = () => {
 
   const acceptedInvitation = useAcceptUserInvitation(inviteCode);
 
+  // if accepted invitation was to a workspace, navigate there
   return (
     <Navigate
       to={`/${RoutePaths.Workspaces}/${

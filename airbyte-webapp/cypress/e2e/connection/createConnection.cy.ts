@@ -5,8 +5,11 @@ import {
   createPostgresSourceViaApi,
 } from "@cy/commands/connection";
 import { fillLocalJsonForm, fillPokeAPIForm } from "@cy/commands/connector";
+import { StreamRowPageObjectV2 } from "@cy/pages/connection/StreamRowPageObjectV2";
+import { streamsTableV2 } from "@cy/pages/connection/StreamsTablePageObjectV2";
 import { goToDestinationPage, openDestinationConnectionsPage } from "@cy/pages/destinationPage";
 import { openSourceConnectionsPage, goToSourcePage } from "@cy/pages/sourcePage";
+import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
@@ -139,7 +142,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
             const createdDestinationId = interception.response?.body.destinationId;
             cy.location("search").should(
               "eq",
-              `?sourceId=${source.sourceId}&tab=marketplace&destinationId=${createdDestinationId}`
+              `?sourceId=${source.sourceId}&destination_tab=marketplace&destinationId=${createdDestinationId}`
             );
 
             requestDeleteDestination({ destinationId: createdDestinationId });
@@ -232,6 +235,74 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
+  describe("Streams table V2", () => {
+    before(() => {
+      setFeatureFlags({ "connection.syncCatalogV2": true });
+      setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
+
+      interceptDiscoverSchemaRequest();
+
+      cy.visit(
+        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+      );
+      waitForDiscoverSchemaRequest();
+    });
+
+    after(() => {
+      setFeatureFlags({ "connection.syncCatalogV2": false });
+      setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+    });
+
+    it("should have no streams checked by default", () => {
+      streamsTableV2.isNamespaceCheckboxChecked(false);
+      streamsTableV2.areAllStreamsInNamespaceEnabled("public", false);
+    });
+
+    it("should verify namespace row", () => {
+      streamsTableV2.isNamespaceCheckboxEnabled(true);
+      streamsTableV2.isNamespaceCheckboxChecked(false);
+      streamsTableV2.isNamespaceNameDisplayed("public", true);
+      streamsTableV2.isTotalAmountOfStreamsDisplayed(21, true);
+      streamsTableV2.isOpenNamespaceModalGearButtonDisplayed(true);
+      streamsTableV2.isSyncModeColumnNameDisplayed();
+      streamsTableV2.isFieldsColumnNameDisplayed();
+    });
+
+    it("should show 'no selected streams' error ", () => {
+      streamsTableV2.isNoStreamsSelectedErrorDisplayed(true);
+      streamsTableV2.areAllStreamsInNamespaceEnabled("public", false);
+      newConnectionPage.isNextPageButtonEnabled(false);
+    });
+
+    it("should NOT show 'no selected streams' error", () => {
+      streamsTableV2.toggleNamespaceCheckbox("public", true);
+      streamsTableV2.areAllStreamsInNamespaceEnabled("public", true);
+
+      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
+      newConnectionPage.isNextPageButtonEnabled(false);
+
+      streamsTableV2.toggleNamespaceCheckbox("public", false);
+    });
+
+    it("should not replace refresh schema button with form controls", () => {
+      streamsTableV2.isRefreshSourceSchemaBtnExist(true);
+      streamsTableV2.isToggleExpandCollapseAllStreamsBtnExist(true);
+
+      streamsTableV2.toggleNamespaceCheckbox("public", true);
+      streamsTableV2.isRefreshSourceSchemaBtnExist(true);
+      streamsTableV2.isToggleExpandCollapseAllStreamsBtnExist(true);
+
+      streamsTableV2.toggleNamespaceCheckbox("public", false);
+    });
+
+    it("should enable all streams in namespace", () => {
+      streamsTableV2.toggleNamespaceCheckbox("public", true);
+      streamsTableV2.areAllStreamsInNamespaceEnabled("public", true);
+      streamsTableV2.toggleNamespaceCheckbox("public", false);
+      streamsTableV2.areAllStreamsInNamespaceEnabled("public", false);
+    });
+  });
+
   describe("Stream", () => {
     before(() => {
       interceptDiscoverSchemaRequest();
@@ -288,6 +359,71 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     it("should close stream details panel by clicking on close button", () => {
       streamDetails.close();
       streamDetails.isClosed();
+    });
+  });
+
+  describe("Stream V2", () => {
+    before(() => {
+      setFeatureFlags({ "connection.syncCatalogV2": true });
+      setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
+
+      interceptDiscoverSchemaRequest();
+
+      cy.visit(
+        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+      );
+      waitForDiscoverSchemaRequest();
+    });
+
+    after(() => {
+      setFeatureFlags({ "connection.syncCatalogV2": false });
+      setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+    });
+
+    const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+
+    it("should enable and disable stream", () => {
+      streamsTableV2.filterByStreamOrFieldName("users");
+      streamsTableV2.isNamespaceCheckboxEnabled(false);
+      usersStreamRow.streamHasDisabledStyle(true);
+      usersStreamRow.toggleStreamSync(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.streamHasDisabledStyle(false);
+      usersStreamRow.streamHasAddedStyle(false);
+      usersStreamRow.isMissedCursorErrorDisplayed(true);
+
+      usersStreamRow.toggleStreamSync(false);
+      usersStreamRow.isStreamSyncEnabled(false);
+    });
+
+    it("should expand and collapse stream", () => {
+      usersStreamRow.toggleExpandCollapseStream();
+      usersStreamRow.isStreamExpanded(true);
+      usersStreamRow.toggleExpandCollapseStream();
+      usersStreamRow.isStreamExpanded(false);
+    });
+
+    it("should enable field", () => {
+      usersStreamRow.isStreamSyncEnabled(false);
+      usersStreamRow.toggleExpandCollapseStream();
+      usersStreamRow.fieldHasDisabledStyle("email", true);
+
+      usersStreamRow.toggleFieldSync("email", true);
+      usersStreamRow.fieldHasDisabledStyle("email", false);
+      usersStreamRow.fieldHasAddedStyle("email", false);
+      usersStreamRow.isFieldSyncCheckboxDisabled("id", true);
+      usersStreamRow.isPKField("id", true);
+
+      usersStreamRow.isFieldSyncEnabled("email", true);
+      usersStreamRow.isMissedCursorErrorDisplayed(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      streamsTableV2.isNamespaceCheckboxMixed(true);
+    });
+
+    it("should enable form submit after a stream is selected and configured", () => {
+      usersStreamRow.selectSyncMode("full_refresh", "overwrite");
+      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
+      newConnectionPage.isNextPageButtonEnabled(true);
     });
   });
 

@@ -157,7 +157,7 @@
   }
 
   &.typeSecondary {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-400;
     border: 1px solid colors.$grey-300;
     box-shadow: none;
@@ -174,7 +174,7 @@
   }
 
   &.typeClear {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-300;
     box-shadow: none;
 
@@ -231,7 +231,7 @@
   }
 
   &.typeSecondaryDark {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$dark-blue-900;
     border: 1px solid colors.$dark-blue-900;
     box-shadow: none;
@@ -253,7 +253,7 @@
     justify-content: center;
 
     .childrenContainer {
-      color: colors.$transparentColor;
+      color: transparent;
     }
 
     .buttonIcon {
@@ -285,7 +285,7 @@
   }
 
   &.typeClearDark {
-    background-color: colors.$transparentColor;
+    background-color: transparent;
     color: colors.$grey-500;
     box-shadow: none;
     padding: 0;

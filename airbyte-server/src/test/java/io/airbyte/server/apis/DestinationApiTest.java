@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -32,7 +32,8 @@ import org.mockito.Mockito;
 class DestinationApiTest extends BaseControllerTest {
 
   @Test
-  void testCheckConnectionToDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(schedulerHandler.checkDestinationConnectionFromDestinationId(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -46,7 +47,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCheckConnectionToDestinationForUpdate() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToDestinationForUpdate()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -60,7 +62,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCloneDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCloneDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(destinationHandler.cloneDestination(Mockito.any()))
         .thenReturn(new DestinationRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -74,7 +77,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCreateDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(destinationHandler.createDestination(Mockito.any()))
         .thenReturn(new DestinationRead())
         .thenThrow(new ConstraintViolationException(new HashSet<>()));
@@ -88,7 +92,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(destinationHandler).deleteDestination(Mockito.any(DestinationIdRequestBody.class));
@@ -117,7 +122,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(destinationHandler.listDestinationsForWorkspace(Mockito.any()))
         .thenReturn(new DestinationReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -131,7 +137,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testSearchDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(destinationHandler.searchDestinations(Mockito.any()))
         .thenReturn(new DestinationReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -145,7 +152,8 @@ class DestinationApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(destinationHandler.updateDestination(Mockito.any()))
         .thenReturn(new DestinationRead())
         .thenThrow(new ConfigNotFoundException("", ""));

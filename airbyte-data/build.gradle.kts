@@ -25,6 +25,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-db:db-lib"))
@@ -46,6 +47,7 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.bundles.kotest)
 
   // TODO: flip this import - MockData should live in airbyte-data's testFixtures
   // and be imported in this manner by config-persistence

@@ -14,6 +14,7 @@ import {
   NonBreakingChangesPreference,
   SyncMode,
   SchemaChangeBackfillPreference,
+  StreamMapperType,
 } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog";
 
@@ -103,6 +104,15 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .array()
     .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
     .optional(),
+  mappers: yup
+    .array()
+    .of(
+      yup.object({
+        type: yup.mixed<StreamMapperType>().oneOf(Object.values(StreamMapperType)),
+        mapperConfiguration: yup.object(),
+      })
+    )
+    .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   minimumGenerationId: yup.number().optional(),
@@ -171,6 +181,14 @@ const syncCatalogSchema = yup.object({
       "syncCatalog.streams.required",
       "connectionForm.streams.required",
       (streams) => streams?.some(({ config }) => !!config?.selected) ?? false
+    )
+    .test(
+      "syncCatalog.streams.mappers",
+      "connectionForm.streams.existingMappers",
+      (streams) =>
+        !streams?.some(
+          (stream) => stream.config?.mappers?.some((mapper) => mapper.type !== StreamMapperType.hashing)
+        ) ?? true
     )
     .test("syncCatalog.streams.hash", "connectionForm.streams.hashFieldCollision", (streams) => {
       // group all top-level included fields by stream name & namespace

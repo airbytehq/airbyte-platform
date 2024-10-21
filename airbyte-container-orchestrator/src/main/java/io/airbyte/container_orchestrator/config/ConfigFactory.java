@@ -5,10 +5,10 @@
 package io.airbyte.container_orchestrator.config;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.EnvConfigs;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.pod.FileConstants;
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
-import io.airbyte.workers.process.KubePodInfo;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.annotation.Nullable;
@@ -51,21 +51,28 @@ public class ConfigFactory {
     return new JobRunConfig().withJobId(jobId).withAttemptId(attemptId);
   }
 
-  /**
-   * Returns the contents of the OrchestratorConstants.KUBE_POD_INFO file.
-   *
-   * @param configDir Which directory contains the OrchestratorConstants.KUBE_POD_INFO file.
-   * @return Contents of OrchestratorConstants.KUBE_POD_INFO
-   */
-  @Singleton
-  KubePodInfo kubePodInfo(@Named("configDir") final String configDir) {
-    return Jsons.deserialize(Path.of(configDir, AsyncOrchestratorPodProcess.KUBE_POD_INFO).toFile(), KubePodInfo.class);
-  }
-
   @Singleton
   @Named("workspaceRoot")
   public Path workspaceRoot(@Value("${airbyte.workspace-root}") final String workspaceRoot) {
     return Path.of(workspaceRoot);
+  }
+
+  @Singleton
+  @Named("workloadId")
+  public String workloadId(@Value("${airbyte.workload-id}") final String workloadId) {
+    return workloadId;
+  }
+
+  @Singleton
+  public ReplicationInput replicationInput(@Named("configDir") final String configDir) {
+    return Jsons.deserialize(
+        Path.of(configDir).resolve(FileConstants.INIT_INPUT_FILE).toFile(),
+        ReplicationInput.class);
+  }
+
+  @Singleton
+  EnvConfigs envConfigs() {
+    return new EnvConfigs();
   }
 
 }

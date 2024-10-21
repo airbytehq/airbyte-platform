@@ -427,7 +427,9 @@ public class DbConverter {
         .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
         .withTestingValues(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES) == null ? null
             : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()))
-        .withBaseActorDefinitionVersionId(record.get(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID));
+        .withBaseActorDefinitionVersionId(record.get(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID))
+        .withContributionPullRequestUrl(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL))
+        .withContributionActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID));
   }
 
   /**
@@ -522,7 +524,8 @@ public class DbConverter {
         .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
-        .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE));
+        .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
+        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

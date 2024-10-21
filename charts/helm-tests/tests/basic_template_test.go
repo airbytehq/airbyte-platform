@@ -1,19 +1,102 @@
-//go:build template
-
-package test
+package tests
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
-	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// TODO: move this to a common package or file
-// These are all of the common keys that we expect to see populated in the config map, regardless of the value of
-// `global.edition`.
-var commonConfigMapKeys = toStringSet(
+func TestHelmTemplateWithDefaultValues(t *testing.T) {
+
+	chartYaml := renderChart(t, BaseHelmOptions())
+	envMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+
+	t.Run("storage configs", func(t *testing.T) {
+		assert.Equal(t, envMap.Data["STORAGE_TYPE"], "minio")
+		assert.Equal(t, envMap.Data["STORAGE_BUCKET_LOG"], "airbyte-storage")
+		assert.Equal(t, envMap.Data["STORAGE_BUCKET_STATE"], "airbyte-storage")
+		assert.Equal(t, envMap.Data["MINIO_ENDPOINT"], "http://airbyte-minio-svc:9000")
+		assert.Equal(t, envMap.Data["S3_PATH_STYLE_ACCESS"], "true")
+	})
+
+	t.Run("metrics client", func(t *testing.T) {
+		assert.Empty(t, envMap.Data["METRIC_CLIENT"])
+		assert.Empty(t, envMap.Data["OTEL_COLLECTOR_ENDPOINT"])
+	})
+
+	t.Run("airbyte-env configmap", func(t *testing.T) {
+		// Make sure the env config map has all (and only) the expected keys.
+		configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+		keys := slices.Collect(maps.Keys(configMap.Data))
+		assert.ElementsMatch(t, keys, commonConfigMapKeys)
+	})
+
+	t.Run("airbyte-secrets secret", func(t *testing.T) {
+		// Make sure the secret has all (and only) the expected keys.
+		secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+		keys := slices.Collect(maps.Keys(secret.StringData))
+		assert.ElementsMatch(t, keys, commonSecretkeys)
+	})
+
+	t.Run("the airbyte-airbyte-yml secret is not created by default", func(t *testing.T) {
+		// The airbyte-airbyte-yml secret is not created by default.
+		// The global.airbyteYml value must be set in order to render this resource.
+		assertNoResource(t, chartYaml, "Secret", "airbyte-airbyte-yml")
+	})
+
+	t.Run("service account is created by default", func(t *testing.T) {
+		assert.NotNil(t, getServiceAccount(chartYaml, "airbyte-admin"))
+		assert.NotNil(t, getRole(chartYaml, "airbyte-admin-role"))
+		getRoleBinding(chartYaml, "airbyte-admin-binding")
+	})
+}
+
+func TestAirbyteYmlSecret(t *testing.T) {
+	// The airbyte-airbyte-yml secret is created when the global.airbyteYml value is set.
+	opts := BaseHelmOptions()
+	opts.SetFiles = map[string]string{
+		"global.airbyteYml": "fixtures/airbyte.yaml",
+	}
+	chartYml := renderChart(t, opts)
+	secret := getSecret(chartYml, "airbyte-airbyte-yml")
+	assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
+	assert.NotEmpty(t, secret.Data["fileContents"])
+}
+
+func TestEnterpriseConfigKeys(t *testing.T) {
+	opts := BaseHelmOptionsForEnterpriseWithValues()
+	chartYaml := renderChart(t, opts)
+
+	configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+	keys := slices.Collect(maps.Keys(configMap.Data))
+	assert.ElementsMatch(t, keys, enterpriseEditionConfigMapKeys)
+
+	secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+	keys = slices.Collect(maps.Keys(secret.StringData))
+	assert.ElementsMatch(t, keys, enterpriseEditionSecretKeys)
+}
+
+func TestProConfigKeys(t *testing.T) {
+	opts := BaseHelmOptions()
+	opts.SetValues["global.edition"] = "pro"
+	opts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+	opts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+	chartYaml := renderChart(t, opts)
+
+	configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+	keys := slices.Collect(maps.Keys(configMap.Data))
+	assert.ElementsMatch(t, keys, enterpriseEditionConfigMapKeys)
+
+	secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+	keys = slices.Collect(maps.Keys(secret.StringData))
+	assert.ElementsMatch(t, keys, enterpriseEditionSecretKeys)
+}
+
+// These are all of the common keys that we expect to see populated in the config map,
+// regardless of the value of `global.edition`.
+var commonConfigMapKeys = []string{
 	"ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS",
 	"ACTIVITY_MAX_ATTEMPT",
 	"ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS",
@@ -38,9 +121,13 @@ var commonConfigMapKeys = toStringSet(
 	"DATABASE_URL",
 	"DATA_DOCKER_MOUNT",
 	"DB_DOCKER_MOUNT",
+  	"FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT",
+  	"FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST",
 	"GOOGLE_APPLICATION_CREDENTIALS",
 	"INTERNAL_API_HOST",
 	"JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION",
+	"JOB_KUBE_BUSYBOX_IMAGE",
+	"JOB_KUBE_CURL_IMAGE",
 	"JOB_MAIN_CONTAINER_CPU_LIMIT",
 	"JOB_MAIN_CONTAINER_CPU_REQUEST",
 	"JOB_MAIN_CONTAINER_MEMORY_LIMIT",
@@ -51,7 +138,6 @@ var commonConfigMapKeys = toStringSet(
 	"LAUNCHER_MICRONAUT_ENVIRONMENTS",
 	"LOCAL_ROOT",
 	"LOG_LEVEL",
-	"LOG4J_CONFIGURATION_FILE",
 	"MAX_NOTIFY_WORKERS",
 	"METRIC_CLIENT",
 	"MICROMETER_METRICS_ENABLED",
@@ -78,241 +164,38 @@ var commonConfigMapKeys = toStringSet(
 	"WORKER_ENVIRONMENT",
 	"WORKFLOW_FAILURE_RESTART_DELAY_SECONDS",
 	"WORKLOAD_API_HOST",
-	"WORKLOAD_API_SERVER_ENABLED",
 	"WORKLOAD_INIT_IMAGE",
-	"WORKLOAD_LAUNCHER_ENABLED",
 	"WORKLOAD_LAUNCHER_PARALLELISM",
 	"WORKSPACE_DOCKER_MOUNT",
 	"WORKSPACE_ROOT",
 	"PUB_SUB_ENABLED",
 	"PUB_SUB_TOPIC_NAME",
-)
+	"ENTERPRISE_SOURCE_STUBS_URL",
+}
 
-var proEditionConfigMapKeys = toStringSet(
+var proEditionConfigMapKeys = append([]string{
 	"INITIAL_USER_FIRST_NAME",
 	"INITIAL_USER_LAST_NAME",
-	"KEYCLOAK_INTERNAL_HOST",
 	"KEYCLOAK_PORT",
 	"KEYCLOAK_HOSTNAME_URL",
 	"KEYCLOAK_JAVA_OPTS_APPEND",
-)
+}, commonConfigMapKeys...)
 
 // update these if they ever diverge from "pro"
 var enterpriseEditionConfigMapKeys = proEditionConfigMapKeys
 
-var commonSecretkeys = toStringSet(
+var commonSecretkeys = []string{
 	"DATABASE_USER",
+	"DATABASE_PASSWORD",
 	"MINIO_ACCESS_KEY_ID",
 	"MINIO_SECRET_ACCESS_KEY",
 	"WORKLOAD_API_BEARER_TOKEN",
-)
+}
 
-var proEditionSecretKeys = toStringSet(
+var proEditionSecretKeys = append([]string{
 	"KEYCLOAK_ADMIN_USER",
 	"KEYCLOAK_ADMIN_PASSWORD",
-)
+}, commonSecretkeys...)
 
 // update these if they ever diverge from "pro"
 var enterpriseEditionSecretKeys = proEditionSecretKeys
-
-func TestHelmTemplateWithDefaultValues(t *testing.T) {
-
-	t.Run("basic template render", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
-		_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
-		require.NoError(t, err, "failure rendering template")
-	})
-
-	t.Run("verify airbyte-env configmap for edition", func(t *testing.T) {
-		cases := []struct {
-			edition      string
-			expectedKeys set[string]
-		}{
-			{
-				edition:      "community",
-				expectedKeys: commonConfigMapKeys,
-			},
-			{
-				edition:      "enterprise",
-				expectedKeys: enterpriseEditionConfigMapKeys.union(commonConfigMapKeys),
-			},
-			{
-				edition:      "pro",
-				expectedKeys: proEditionConfigMapKeys.union(commonConfigMapKeys),
-			},
-		}
-
-		for _, c := range cases {
-			t.Run("edition="+c.edition, func(t *testing.T) {
-				var helmOpts *helm.Options
-				switch c.edition {
-				case "community":
-					helmOpts = baseHelmOptions()
-				case "pro", "enterprise":
-					helmOpts = baseHelmOptionsForEnterpriseWithAirbyteYml()
-				}
-
-				configMapYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/env-configmap.yaml"})
-				require.NoError(t, err, "failure rendering template")
-
-				configMap, err := getConfigMap(configMapYaml, "airbyte-airbyte-env")
-				assert.NotNil(t, configMap)
-				require.NoError(t, err)
-
-				// verify keys that we find the expected keys
-				for _, key := range c.expectedKeys.keys() {
-					_, ok := configMap.Data[key]
-					assert.True(t, ok, "expected key %s in ConfigMap for edition %s", key, c.edition)
-				}
-
-				// verify that we don't find any unexpected keys
-				for key := range configMap.Data {
-					assert.True(t, c.expectedKeys.contains(key), "%s is not an expected ConfigMap key for edition %s", key, c.edition)
-				}
-			})
-		}
-	})
-
-	t.Run("verify airbyte-secrets secret for edition", func(t *testing.T) {
-		cases := []struct {
-			edition      string
-			expectedKeys set[string]
-		}{
-			{
-				edition:      "community",
-				expectedKeys: commonSecretkeys,
-			},
-			{
-				edition:      "enterprise",
-				expectedKeys: commonSecretkeys.union(enterpriseEditionSecretKeys),
-			},
-			{
-				edition:      "pro",
-				expectedKeys: commonSecretkeys.union(proEditionSecretKeys),
-			},
-		}
-
-		for _, c := range cases {
-			t.Run("edition="+c.edition, func(t *testing.T) {
-				var helmOpts *helm.Options
-				switch c.edition {
-				case "community":
-					helmOpts = baseHelmOptions()
-				case "pro", "enterprise":
-					helmOpts = baseHelmOptionsForEnterpriseWithAirbyteYml()
-				}
-
-				secretYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/secret.yaml"})
-				require.NoError(t, err, "failure rendering template")
-
-				secret, err := getSecret(secretYaml, "airbyte-airbyte-secrets")
-				assert.NotNil(t, secret)
-				require.NoError(t, err)
-
-				for _, key := range c.expectedKeys.keys() {
-					_, ok := secret.StringData[key]
-					assert.True(t, ok, "expected key %s not found in secret", key)
-				}
-			})
-		}
-	})
-
-	t.Run("verify airbyte-yml secret", func(t *testing.T) {
-		cases := []struct {
-			airbyteYamlFile string
-			shouldRender    bool
-		}{
-			{
-				airbyteYamlFile: "",
-				shouldRender:    false,
-			},
-			{
-				airbyteYamlFile: "fixtures/airbyte.yaml",
-				shouldRender:    true,
-			},
-		}
-
-		for _, c := range cases {
-			t.Run("airbyteYaml="+c.airbyteYamlFile, func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-
-				if c.airbyteYamlFile == "" {
-					_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
-					require.Error(t, err, "template should not render if empty")
-					return
-				}
-
-				if c.airbyteYamlFile != "" {
-					helmOpts.SetFiles = map[string]string{
-						"global.airbyteYml": c.airbyteYamlFile,
-					}
-				}
-
-				secretYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
-				require.NoError(t, err, "failure rendering template")
-
-				secret, err := getSecret(secretYaml, "airbyte-airbyte-yml")
-				assert.NotNil(t, secret)
-				require.NoError(t, err)
-
-				if c.shouldRender {
-					assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
-					assert.NotEmpty(t, secret.Data["fileContents"])
-				} else {
-					assert.Empty(t, secret.Name)
-				}
-			})
-		}
-	})
-
-	t.Run("default storage configs", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
-
-		configMapYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/env-configmap.yaml"})
-		require.NoError(t, err, "failure rendering template")
-
-		configMap, err := getConfigMap(configMapYaml, "airbyte-airbyte-env")
-		assert.NotNil(t, configMap)
-		require.NoError(t, err)
-
-		// default should be in-cluster minio
-		assert.Equal(t, configMap.Data["STORAGE_TYPE"], "minio")
-		assert.Equal(t, configMap.Data["STORAGE_BUCKET_LOG"], "airbyte-storage")
-		assert.Equal(t, configMap.Data["STORAGE_BUCKET_STATE"], "airbyte-storage")
-		assert.Equal(t, configMap.Data["MINIO_ENDPOINT"], "http://airbyte-minio-svc:9000")
-		assert.Equal(t, configMap.Data["S3_PATH_STYLE_ACCESS"], "true")
-	})
-
-	t.Run("default metrics client", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
-
-		configMapYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/env-configmap.yaml"})
-		require.NoError(t, err, "failure rendering template")
-
-		configMap, err := getConfigMap(configMapYaml, "airbyte-airbyte-env")
-		assert.NotNil(t, configMap)
-		require.NoError(t, err)
-
-		assert.Empty(t, configMap.Data["METRIC_CLIENT"])
-		assert.Empty(t, configMap.Data["OTEL_COLLECTOR_ENDPOINT"])
-	})
-
-	t.Run("service account is created by default", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
-
-		tmplYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/serviceaccount.yaml"})
-		require.NoError(t, err, "failure rendering template")
-
-		serviceAccount, err := getServiceAccount(tmplYaml, "airbyte-admin")
-		assert.NotNil(t, serviceAccount)
-		require.NoError(t, err)
-
-		role, err := getRole(tmplYaml, "airbyte-admin-role")
-		assert.NotNil(t, role)
-		require.NoError(t, err)
-
-		roleBinding, err := getRoleBinding(tmplYaml, "airbyte-admin-binding")
-		assert.NotNil(t, roleBinding)
-		require.NoError(t, err)
-	})
-}

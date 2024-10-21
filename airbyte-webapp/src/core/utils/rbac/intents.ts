@@ -7,17 +7,19 @@ export const intentToRbacQuery = {
   UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
   UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
+  ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
 
   // workspace
-  UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
+  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
   DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
+  DownloadDiagnostics: { resourceType: "WORKSPACE", role: "READER" },
   UpdateWorkspace: [
     { resourceType: "WORKSPACE", role: "ADMIN" },
     { resourceType: "ORGANIZATION", role: "EDITOR" },
   ],
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
+  UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
-  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
 
   // builder
   CreateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
@@ -33,6 +35,6 @@ export const intentToRbacQuery = {
 
   // connection
   CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
+  ClearData: { resourceType: "WORKSPACE", role: "EDITOR" },
 } as const;

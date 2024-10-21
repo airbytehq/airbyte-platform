@@ -17,6 +17,10 @@
   border-left: 1px solid colors.$grey-100;
 }
 
+.contained {
+  max-width: 100%;
+}
+
 .connectorName {
   word-wrap: break-word;
   flex: 0 0 auto;

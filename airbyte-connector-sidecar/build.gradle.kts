@@ -16,13 +16,15 @@ buildscript {
   }
   dependencies {
     // necessary to convert the well_know_types from yaml to json
-    val jacksonVersion = libs.versions.fasterxml.version.get()
+    val jacksonVersion =
+      libs.versions.fasterxml.version
+        .get()
     classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
   }
 }
 
-val airbyteProtocol by configurations.creating
+val airbyteProtocol: Configuration by configurations.creating
 
 configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
@@ -36,7 +38,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
-  implementation(libs.bundles.log4j)
   implementation(libs.bundles.micronaut.light)
   implementation(libs.google.cloud.storage)
   implementation(libs.java.jwt)
@@ -48,8 +49,8 @@ dependencies {
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
-  implementation(project(":oss:airbyte-commons-logging"))
   implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -59,7 +60,7 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
-  runtimeOnly(libs.appender.log4j2)
+  runtimeOnly(libs.bundles.logback)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
   kspTest(platform(libs.micronaut.platform))
@@ -87,8 +88,8 @@ airbyte {
       mapOf(
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test"
-      )
+        "MICRONAUT_ENVIRONMENTS" to "test",
+      ),
     )
   }
   docker {
@@ -97,24 +98,25 @@ airbyte {
 }
 
 // Duplicated from :oss:airbyte-worker, eventually, this should be handled in :oss:airbyte-protocol
-val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
-  inputs.files(airbyteProtocol) // declaring inputs)
-  val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
-  outputs.file(targetFile) // declaring outputs)
+val generateWellKnownTypes =
+  tasks.register("generateWellKnownTypes") {
+    inputs.files(airbyteProtocol) // declaring inputs)
+    val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
+    outputs.file(targetFile) // declaring outputs)
 
-  doLast {
-    val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
-    airbyteProtocol.files.forEach {
-      val zip = ZipFile(it)
-      val entry = zip.getEntry(wellKnownTypesYamlPath)
+    doLast {
+      val wellKnownTypesYamlPath = "airbyte_protocol/well_known_types.yaml"
+      airbyteProtocol.files.forEach {
+        val zip = ZipFile(it)
+        val entry = zip.getEntry(wellKnownTypesYamlPath)
 
-      val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
-      val rawJson = yamlToJson(wellKnownTypesYaml)
-      targetFile.getParentFile().mkdirs()
-      targetFile.writeText(rawJson)
+        val wellKnownTypesYaml = zip.getInputStream(entry).bufferedReader().use { reader -> reader.readText() }
+        val rawJson = yamlToJson(wellKnownTypesYaml)
+        targetFile.getParentFile().mkdirs()
+        targetFile.writeText(rawJson)
+      }
     }
   }
-}
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)

@@ -7,6 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { TextHighlighter } from "./TextHighlighter";
 import { SyncStreamFieldWithId } from "../../formConfig";
@@ -25,6 +26,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
+  const { mode } = useConnectionFormService();
+
   if (!row.original.streamNode) {
     return null;
   }
@@ -50,7 +53,16 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
       <CheckBox
         checkboxSize="sm"
         checked={config?.selected}
-        onChange={({ target: { checked } }) => updateStreamField(row.original.streamNode!, { selected: checked })}
+        onChange={({ target: { checked } }) =>
+          updateStreamField(row.original.streamNode!, {
+            selected: checked,
+            // enable/disable stream will enable/disable all fields
+            fieldSelectionEnabled: false,
+            selectedFields: [],
+          })
+        }
+        data-testid="sync-stream-checkbox"
+        disabled={mode === "readonly"}
       />
       <Button
         type="button"
@@ -58,6 +70,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         variant="clear"
         onClick={onToggleExpand}
         disabled={!row.getCanExpand()}
+        data-testid="expand-collapse-stream-btn"
+        aria-expanded={row.getIsExpanded()}
       />
       <TextWithOverflowTooltip>
         <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />

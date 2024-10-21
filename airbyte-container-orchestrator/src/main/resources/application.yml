@@ -34,13 +34,15 @@ micronaut:
     enabled: false
 
 airbyte:
-  application: ${WORKER_APPLICATION:replication-orchestrator}
+  workload-id: ${WORKLOAD_ID:}
+  connection-id: ${CONNECTION_ID:}
   job-id: ${JOB_ID:}
   attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+  staging-dir: ${AIRBYTE_STAGING_DIRECTORY}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -62,6 +64,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -102,41 +106,8 @@ airbyte:
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
+  use-file-transfer: ${USE_FILE_TRANSFER:false}
   worker:
-    isolated:
-      kube:
-        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
-        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
-    job:
-      kube:
-        images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
-          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
-        main:
-          container:
-            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
-        sidecar:
-          container:
-            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-        tolerations: ${JOB_KUBE_TOLERATIONS:}
-        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
-    kube-job-configs:
-      default:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      replication:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
-        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
-        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
-        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
   workload-api:
@@ -147,8 +118,6 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workload:
-    enabled: false
   workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
@@ -179,3 +148,14 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+
+logger:
+  levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

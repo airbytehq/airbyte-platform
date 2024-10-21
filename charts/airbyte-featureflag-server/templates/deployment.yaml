@@ -56,7 +56,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-featureflag-server-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "featureflag-server.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}

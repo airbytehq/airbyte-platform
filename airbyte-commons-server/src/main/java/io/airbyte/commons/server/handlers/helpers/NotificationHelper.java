@@ -11,6 +11,10 @@ import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
 import io.airbyte.notification.messages.ConnectionInfo;
@@ -26,6 +30,7 @@ import org.slf4j.LoggerFactory;
 public class NotificationHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHelper.class);
+  public static final String NOTIFICATION_TRIGGER_SCHEMA = "schema_propagated";
 
   private final WebUrlHelper webUrlHelper;
 
@@ -40,6 +45,10 @@ public class NotificationHelper {
                                      final SourceConnection source,
                                      final String email) {
     try {
+      if (notificationSettings.getSendOnConnectionUpdate() == null) {
+        LOGGER.warn("Connection update notification settings are not configured for workspaceId: '{}'", workspace.getWorkspaceId());
+        return;
+      }
       if (diff.getTransforms().isEmpty()) {
         LOGGER.info("No diff to report for connection: '{}'; skipping notification.", connection.getConnectionId());
         return;
@@ -68,26 +77,38 @@ public class NotificationHelper {
         item = notificationSettings.getSendOnConnectionUpdate();
       }
       for (final Notification.NotificationType type : item.getNotificationType()) {
-        try {
-          switch (type) {
-            case SLACK -> {
-              final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-              slackNotificationClient.notifySchemaPropagated(notification, email);
-            }
-            case CUSTOMERIO -> {
-              final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-              emailNotificationClient.notifySchemaPropagated(notification, email);
-            }
-            default -> {
-              LOGGER.warn("Notification type {} not supported", type);
+        switch (type) {
+          case SLACK -> {
+            final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
+            if (slackNotificationClient.notifySchemaPropagated(notification, email)) {
+              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
+                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
+                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
+            } else {
+              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
+                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
+                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
             }
           }
-        } catch (final InterruptedException e) {
-          LOGGER.error("Failed to send notification for connectionId: '{}'", connection.getConnectionId(), e);
+          case CUSTOMERIO -> {
+            final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
+            if (emailNotificationClient.notifySchemaPropagated(notification, email)) {
+              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
+                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
+                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
+            } else {
+              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
+                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
+                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
+            }
+          }
+          default -> {
+            LOGGER.warn("Notification type {} not supported", type);
+          }
         }
       }
     } catch (final Exception e) {
-      LOGGER.error("Failed to send notification {}", workspace, e);
+      LOGGER.error("Failed to send notification {}: {}", workspace, e);
     }
   }
 

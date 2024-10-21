@@ -49,13 +49,13 @@ class ManifestParser(rawManifestYaml: String) {
 
   /**
    * Removes escape quote characters from the serialized string
-   * e.g. \\" -> "
+   * e.g. \\" -> '
    *
    * Note: This is due to the way the yaml in the FE library serializes escaped strings
    */
   private fun unEscapeQuotes(serializedString: String): String {
     // Handle escaped quotes in the string
-    // \\" -> "
+    // \\" -> '
     return serializedString.replace("\\\\\"", "\"")
   }
 

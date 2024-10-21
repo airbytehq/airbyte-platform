@@ -38,7 +38,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
   @Test
   fun `test update active version`() {
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
-    var initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
+    val initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
     val newActiveVersion =
       DeclarativeManifestImageVersion(

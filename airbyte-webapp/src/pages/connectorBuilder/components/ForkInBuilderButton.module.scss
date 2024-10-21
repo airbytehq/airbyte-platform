@@ -1,0 +1,8 @@
+@use "scss/colors";
+
+.button {
+  // !important because Button's current background-color has stubbornly high specificity
+  // and this is just to mimic Link's button variant with a $foreground background color
+  // so that styles are consistent even when not using Link
+  background-color: colors.$foreground !important;
+}

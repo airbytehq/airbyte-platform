@@ -5,7 +5,10 @@
 package io.airbyte.server.config;
 
 import io.airbyte.config.Configs.DeploymentMode;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient;
@@ -46,12 +49,18 @@ public class JobErrorReportingBeanFactory {
   @Singleton
   public JobErrorReporter jobErrorReporter(
                                            @Value("${airbyte.version}") final String airbyteVersion,
-                                           final ConfigRepository configRepository,
+                                           final ActorDefinitionService actorDefinitionService,
+                                           final SourceService sourceService,
+                                           final DestinationService destinationService,
+                                           final WorkspaceService workspaceService,
                                            final DeploymentMode deploymentMode,
                                            @Named("jobErrorReportingClient") final Optional<JobErrorReportingClient> jobErrorReportingClient,
                                            final WebUrlHelper webUrlHelper) {
     return new JobErrorReporter(
-        configRepository,
+        actorDefinitionService,
+        sourceService,
+        destinationService,
+        workspaceService,
         deploymentMode,
         airbyteVersion,
         webUrlHelper,

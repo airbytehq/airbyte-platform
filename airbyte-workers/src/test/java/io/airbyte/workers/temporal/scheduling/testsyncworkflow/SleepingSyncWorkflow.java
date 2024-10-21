@@ -29,4 +29,7 @@ public class SleepingSyncWorkflow implements SyncWorkflow {
     return new StandardSyncOutput();
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

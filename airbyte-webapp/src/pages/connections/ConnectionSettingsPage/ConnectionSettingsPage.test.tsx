@@ -28,6 +28,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnectionQuery: jest.fn(() => async () => mockConnection),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
   useUpdateConnection: () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,
@@ -69,6 +70,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    RunAndCancelConnectionSyncAndRefresh: "RunAndCancelConnectionSyncAndRefresh",
+  },
 }));
 
 jest.mock("components/connection/ConnectionStatus/useConnectionStatus", () => ({

@@ -48,7 +48,8 @@ const PermissionBuilder: React.FC<{
             options={[
               { label: "Admin", value: RbacRoleHierarchy[0] },
               { label: "Editor", value: RbacRoleHierarchy[1] },
-              { label: "Reader", value: RbacRoleHierarchy[2] },
+              { label: "Runner", value: RbacRoleHierarchy[2] },
+              { label: "Reader", value: RbacRoleHierarchy[3] },
             ]}
             onSelect={setRole}
           />

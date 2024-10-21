@@ -6,6 +6,10 @@
     padding-top: 0;
     padding-bottom: 0;
   }
+
+  tr {
+    vertical-align: top;
+  }
 }
 
 .draft {
@@ -66,4 +70,39 @@
       flex-shrink: 0;
     }
   }
+}
+
+.actions {
+  width: 100%;
+}
+
+.cell {
+  // hardcode height to keep cells aligned with first line of 'name' column
+  height: 38px;
+}
+
+.baseConnectorInfo {
+  white-space: nowrap;
+}
+
+.contributionInfo {
+  padding: 0 0 variables.$spacing-lg variables.$spacing-2xl;
+}
+
+.contributionIcon {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+$iconWidth: 16px;
+
+.contributionText {
+  align-self: flex-end;
+  padding-top: variables.$spacing-sm;
+  white-space: nowrap;
+}
+
+.connectorIcon {
+  width: $iconWidth;
+  height: $iconWidth;
 }

@@ -11,6 +11,8 @@ import { useGetSourceFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList, useDestinationList } from "core/api";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
+import styles from "./SourceConnectionsPage.module.scss";
+
 const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable"));
 
 export const SourceConnectionsPage = () => {
@@ -52,7 +54,7 @@ export const SourceConnectionsPage = () => {
   return (
     <>
       {connections.length ? (
-        <FlexContainer direction="column" gap="xl">
+        <FlexContainer direction="column" gap="xl" className={styles.fullHeight}>
           <TableItemTitle
             type="destination"
             dropdownOptions={destinationDropdownOptions}

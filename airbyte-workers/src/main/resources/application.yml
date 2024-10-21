@@ -42,6 +42,7 @@ airbyte:
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
     check-timeout: ${ACTIVITY_CHECK_TIMEOUT:10}
     discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
+    async-timeout: ${ACTIVITY_ASYNC_TIMEOUT_SECONDS:120}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -53,6 +54,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -136,39 +139,6 @@ airbyte:
       max-successive: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_SUCCESSIVE:1000}
       max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:20}
   worker:
-    kube-job-configs:
-      default:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        labels: ${JOB_KUBE_LABELS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      check:
-        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
-        labels: ${CHECK_JOB_KUBE_LABELS:}
-        node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      discover:
-        annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
-        labels: ${DISCOVER_JOB_KUBE_LABELS:}
-        node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
-      replication:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
-        labels: ${REPLICATION_JOB_KUBE_LABELS:}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
-        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
-        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
-        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
-      spec:
-        annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
-        labels: ${SPEC_JOB_KUBE_LABELS:}
-        node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
     check:
       enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}
       max-workers: ${MAX_CHECK_WORKERS:5}
@@ -199,23 +169,6 @@ airbyte:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
-      kube:
-        images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
-          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
-        main:
-          container:
-            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
-        namespace: ${JOB_KUBE_NAMESPACE:default}
-        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
-        sidecar:
-          container:
-            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
-        tolerations: ${JOB_KUBE_TOLERATIONS:}
-    replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
     spec:
       enabled: ${SHOULD_RUN_GET_SPEC_WORKFLOWS:true}
       max-workers: ${MAX_CHECK_WORKERS:5}
@@ -228,8 +181,6 @@ airbyte:
     notify:
       enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
-  workload:
-    enabled: false
   role: ${AIRBYTE_ROLE:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
@@ -247,6 +198,12 @@ airbyte:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   temporal:
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
@@ -338,6 +295,11 @@ temporal:
 
 logger:
   levels:
-    io.airbyte.bootloader: DEBUG
-# Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

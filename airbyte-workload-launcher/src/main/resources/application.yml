@@ -75,7 +75,7 @@ airbyte:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
   secret:
-    persistence: ${SECRET_PERSISTENCE}
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
         region: ${AWS_SECRET_MANAGER_REGION:}
@@ -104,14 +104,21 @@ airbyte:
         # injects the name/key for secret reference
         token-ref-name: ${VAULT_AUTH_TOKEN_REF_NAME:}
         token-ref-key: ${VAULT_AUTH_TOKEN_REF_KEY:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+        # injects actual secret values
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        # injects the name/key for secret reference
+        client-id-ref-name: ${AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME:}
+        client-id-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY:}
+        client-secret-ref-name: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME:}
+        client-secret-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
-    data-plane-creds:
-      secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
-      secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
-    secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
-    secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
   role: ${AIRBYTE_ROLE:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:
@@ -124,7 +131,6 @@ airbyte:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
-          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -141,6 +147,15 @@ airbyte:
           container:
             image: ${CONNECTOR_SIDECAR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        volumes:
+          data-plane-creds:
+            mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
+            secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
+          secret:
+            mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
+            secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
+          staging:
+            mount-path: ${AIRBYTE_STAGING_PATH:/staging/files}
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
@@ -180,6 +195,10 @@ airbyte:
         cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
+    file-transfer:
+      resources:
+        ephemeral-storage-limit: ${FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT:5G}
+        ephemeral-storage-request: ${FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST:5G}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
@@ -214,6 +233,8 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -285,6 +306,12 @@ temporal:
 
 logger:
   levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
 

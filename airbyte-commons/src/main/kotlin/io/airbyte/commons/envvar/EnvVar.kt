@@ -20,7 +20,9 @@ enum class EnvVar {
 
   CDK_ENTRYPOINT,
   CDK_PYTHON,
+  CLOUD_STORAGE_APPENDER_THREADS,
   CONFIG_ROOT,
+  CONNECTION_ID,
   CUSTOMERIO_API_KEY,
 
   DATABASE_PASSWORD,
@@ -50,16 +52,12 @@ enum class EnvVar {
   JOB_ID,
   JOB_ISOLATED_KUBE_NODE_SELECTORS,
   JOB_KUBE_ANNOTATIONS,
-  JOB_KUBE_BUSYBOX_IMAGE,
-  JOB_KUBE_CURL_IMAGE,
   JOB_KUBE_LABELS,
   JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY,
   JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET,
   JOB_KUBE_NAMESPACE,
   JOB_KUBE_NODE_SELECTORS,
   JOB_KUBE_SERVICEACCOUNT,
-  JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY,
-  JOB_KUBE_SOCAT_IMAGE,
   JOB_KUBE_TOLERATIONS,
   JOB_MAIN_CONTAINER_CPU_LIMIT,
   JOB_MAIN_CONTAINER_CPU_REQUEST,
@@ -71,12 +69,11 @@ enum class EnvVar {
   LOCAL_CONNECTOR_CATALOG_PATH,
   LOCAL_DOCKER_MOUNT,
   LOCAL_ROOT,
-  LOG4J_CONFIGURATION_FILE,
+  LOG_IDLE_ROUTE_TTL,
   LOG_LEVEL,
 
   METRIC_CLIENT,
   MINIO_ENDPOINT,
-  MONO_POD,
 
   OPERATION_TYPE,
   OTEL_COLLECTOR_ENDPOINT,
@@ -93,11 +90,7 @@ enum class EnvVar {
   S3_PATH_STYLE_ACCESS,
   SERVICE_NAME,
   SIDECAR_KUBE_CPU_LIMIT,
-  SIDECAR_KUBE_CPU_REQUEST,
-  SIDECAR_KUBE_MEMORY_LIMIT,
   SIDECAR_MEMORY_REQUEST,
-  SOCAT_KUBE_CPU_LIMIT,
-  SOCAT_KUBE_CPU_REQUEST,
   STORAGE_BUCKET_ACTIVITY_PAYLOAD,
   STORAGE_BUCKET_LOG,
   STORAGE_BUCKET_STATE,
@@ -121,10 +114,19 @@ enum class EnvVar {
   ;
 
   /**
-   * Fetch the value of this [EnvVar], returning [default] if the value is null or an empty string
+   * Fetch the value of this [EnvVar], returning [default] if the value is null or an empty string.
    *
    * @param default value to return if this environment variable is null or empty
    */
   @JvmOverloads
   fun fetch(default: String? = null): String? = System.getenv(this.name).takeUnless { it.isNullOrBlank() } ?: default
+
+  /**
+   * Fetch the value of this [EnvVar], returning a non-null [default] if the value is null or an empty string.
+   *
+   * @param default value to return if this environment variable is null or empty
+   *
+   * If kotlin contracts ever become stable, this method could be replaced with a contract on the [fetch] method.
+   */
+  fun fetchNotNull(default: String = ""): String = System.getenv(this.name).takeUnless { it.isNullOrBlank() } ?: default
 }

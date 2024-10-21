@@ -4,6 +4,8 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.api.model.generated.CatalogDiff
+import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobConfig
@@ -11,6 +13,7 @@ import io.airbyte.data.repositories.ConnectionTimelineEventRepository
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.shared.FailedEvent
+import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -53,6 +56,22 @@ internal class ConnectionTimelineEventServiceDataImplTest {
         failureReason = Optional.of(FailureReason()),
       )
     val writtenEvent = service.writeEvent(connectionId = connectionId, event = syncFailedEvent, userId = null)
+    verify {
+      repository.save(any())
+    }
+  }
+
+  @Test
+  internal fun `Write schema change event`() {
+    val connectionId = UUID.randomUUID()
+    every {
+      repository.save(any())
+    } returns ConnectionTimelineEvent(connectionId = connectionId, eventType = "")
+    val schemaChangeEvent =
+      SchemaChangeAutoPropagationEvent(
+        catalogDiff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)),
+      )
+    val writtenEvent = service.writeEvent(connectionId = connectionId, event = schemaChangeEvent, userId = null)
     verify {
       repository.save(any())
     }

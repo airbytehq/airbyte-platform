@@ -14,25 +14,32 @@ import java.util.UUID
 data class ConnectorRollout(
   @field:Id
   var id: UUID,
+  var workflowRunId: String? = null,
   var actorDefinitionId: UUID,
   var releaseCandidateVersionId: UUID,
   var initialVersionId: UUID? = null,
   var state: ConnectorRolloutStateType,
-  var initialRolloutPct: Int,
   @Nullable
-  var currentTargetRolloutPct: Int? = null,
-  var finalTargetRolloutPct: Int,
+  var initialRolloutPct: Int? = 0,
+  @Nullable
+  var currentTargetRolloutPct: Int? = 0,
+  @Nullable
+  var finalTargetRolloutPct: Int? = 0,
   var hasBreakingChanges: Boolean,
-  var rolloutStrategy: ConnectorRolloutStrategyType,
-  var maxStepWaitTimeMins: Int,
+  @Nullable
+  var rolloutStrategy: ConnectorRolloutStrategyType? = null,
+  @Nullable
+  var maxStepWaitTimeMins: Int? = null,
   @Nullable
   var updatedBy: UUID? = null,
   @DateCreated
   var createdAt: OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: OffsetDateTime? = null,
+  @Nullable
   var completedAt: OffsetDateTime? = null,
-  var expiresAt: OffsetDateTime,
+  @Nullable
+  var expiresAt: OffsetDateTime? = null,
   @Nullable
   var errorMsg: String? = null,
   @Nullable

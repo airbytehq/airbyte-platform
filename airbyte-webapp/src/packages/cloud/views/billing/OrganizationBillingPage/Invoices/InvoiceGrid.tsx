@@ -82,13 +82,15 @@ export const InvoiceGrid: React.FC<InvoiceGridProps> = ({ invoices, hasMore }) =
               />
             </Text>
 
-            <Badge variant={invoiceStatusToBadgeVariant(invoice.status)}>{invoice.status}</Badge>
+            <div>
+              <Badge variant={invoiceStatusToBadgeVariant(invoice.status)}>{invoice.status}</Badge>
+            </div>
 
             <div className={styles.invoiceGrid__open}>
               <Text>
                 <ExternalLink href={invoice.invoiceUrl} opensInNewTab className={styles.invoiceGrid__openLink}>
                   <FlexContainer alignItems="center" gap="sm">
-                    <FormattedMessage id="settings.organization.billing.invoices.openInvoice" />
+                    <FormattedMessage id="settings.organization.billing.invoices.viewInvoice" />
                   </FlexContainer>
                 </ExternalLink>
               </Text>

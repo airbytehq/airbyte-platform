@@ -1,7 +1,6 @@
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.ConfiguredMapper
-import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName
 import io.airbyte.config.MapperSpecification
@@ -11,7 +10,7 @@ import io.airbyte.config.adapters.AirbyteRecord
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.security.MessageDigest
-import java.util.Base64
+import java.util.HexFormat
 
 @Singleton
 @Named("HashingMapper")
@@ -68,33 +67,14 @@ class HashingMapper : Mapper {
 
   override fun schema(
     config: ConfiguredMapper,
-    streamFields: List<Field>,
-  ): List<Field> {
+    slimStream: SlimStream,
+  ): SlimStream {
     val (targetField, _, fieldNameSuffix) = getConfigValues(config.config)
     val resultField = "$targetField$fieldNameSuffix"
-    var fieldFound = false
 
-    val result: List<Field> =
-      streamFields.map {
-        if (it.name == resultField) {
-          throw IllegalStateException("Field $resultField already exists in stream fields")
-        }
-        if (it.name == targetField) {
-          fieldFound = true
-          it.copy(
-            name = "${it.name}$fieldNameSuffix",
-            type = FieldType.STRING,
-          )
-        } else {
-          it
-        }
-      }
-
-    if (fieldFound.not()) {
-      throw IllegalStateException("Field $targetField not found in stream fields")
-    }
-
-    return result
+    return slimStream
+      .deepCopy()
+      .apply { redefineField(targetField, resultField, FieldType.STRING) }
   }
 
   override fun map(
@@ -102,13 +82,20 @@ class HashingMapper : Mapper {
     record: AirbyteRecord,
   ) {
     val (targetField, method, fieldNameSuffix) = getConfigValues(config.config)
+    val outputFieldName = "$targetField$fieldNameSuffix"
 
     if (record.has(targetField)) {
-      val data = record.get(targetField).asString().toByteArray()
+      try {
+        val data = record.get(targetField).asString().toByteArray()
 
-      val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
-      record.set(targetField + fieldNameSuffix, hashedAndEncodeValue)
-      record.remove(targetField)
+        val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
+        record.set(outputFieldName, hashedAndEncodeValue)
+      } catch (e: Exception) {
+        // TODO We should use a more precise Reason once available in the protocol
+        record.trackFieldError(outputFieldName, AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
+      } finally {
+        record.remove(targetField)
+      }
     }
   }
 
@@ -122,7 +109,7 @@ class HashingMapper : Mapper {
 
     val hashedValue = MessageDigest.getInstance(method).digest(data)
 
-    return Base64.getEncoder().encodeToString(hashedValue)
+    return HexFormat.of().formatHex(hashedValue)
   }
 
   data class HashingConfig(

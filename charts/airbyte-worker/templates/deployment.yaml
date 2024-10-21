@@ -53,7 +53,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-worker-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "worker.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -169,27 +169,16 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
         - name: JOB_KUBE_BUSYBOX_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.socat }}
-        - name: JOB_KUBE_SOCAT_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_SOCAT_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
         - name: JOB_KUBE_CURL_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_CURL_IMAGE
-        {{- end }}
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:
@@ -282,16 +271,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKERS_MICRONAUT_ENVIRONMENTS
-        - name: WORKLOAD_LAUNCHER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_LAUNCHER_ENABLED
-        - name: WORKLOAD_API_SERVER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_API_SERVER_ENABLED
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -333,6 +312,33 @@ spec:
         {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
         - name: AWS_KMS_KEY_ARN
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
         {{- end }}
 
         # Values for googleSecretManager secrets

@@ -17,7 +17,9 @@ public record AirbyteLicense(LicenseType type, Optional<Date> expirationDate, Op
   public enum LicenseType {
 
     PRO("pro"),
-    INVALID("invalid");
+    INVALID("invalid"),
+    TRIAL("trial"),
+    ENTERPRISE("enterprise");
 
     private final String value;
 

@@ -20,6 +20,7 @@ export enum DestinationPaths {
 export enum SourcePaths {
   Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Connections = "connections",
+  EnterpriseSource = "enterprise/:id",
   SelectSourceNew = "new-source",
   SourceNew = "new-source/:sourceDefinitionId",
 }
@@ -29,7 +30,7 @@ export const enum ConnectionRoutePaths {
   Transformation = "transformation",
   Replication = "replication",
   Settings = "settings",
-  JobHistory = "job-history",
+  JobHistory = "job-history", // deprecated, used to support legacy logs links
   ConnectionNew = "new-connection",
   Configure = "configure",
   ConfigureContinued = "continued",
@@ -50,4 +51,5 @@ export enum SettingsRoutePaths {
   OrganizationMembers = "organizationMembers",
   AccessManagement = "access-management",
   Applications = "applications",
+  License = "license",
 }

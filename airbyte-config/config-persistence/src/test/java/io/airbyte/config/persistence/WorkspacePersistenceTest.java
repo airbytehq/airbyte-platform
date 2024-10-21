@@ -29,28 +29,30 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -72,13 +74,16 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final JsonNode CONFIG = Jsons.jsonNode(ImmutableMap.of("key-a", "value-a"));
 
-  private ConfigRepository configRepository;
   private WorkspacePersistence workspacePersistence;
   private UserPersistence userPersistence;
   private FeatureFlagClient featureFlagClient;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private ConnectionService connectionService;
+  private WorkspaceService workspaceService;
 
   @BeforeEach
   void setup() throws Exception {
@@ -86,42 +91,19 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    connectionService = spy(new ConnectionServiceJooqImpl(database));
 
-    final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = spy(
-        new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
-            new CatalogServiceJooqImpl(database),
-            connectionService,
-            new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
-            new OperationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+
+    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater));
+    destinationService = spy(new DestinationServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater));
+    workspaceService = spy(
+        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService));
     workspacePersistence = new WorkspacePersistence(database);
     userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
@@ -135,7 +117,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testGetWorkspace() throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardWorkspaceNoSecrets(
+    workspaceService.writeStandardWorkspaceNoSecrets(
         createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID()).withOrganizationId(DEFAULT_ORGANIZATION_ID));
     assertReturnsWorkspace(createBaseStandardWorkspace());
   }
@@ -212,7 +194,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   void assertReturnsWorkspace(final StandardWorkspace workspace) throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
     final StandardWorkspace expectedWorkspace = Jsons.clone(workspace);
     /*
@@ -223,7 +205,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
       expectedWorkspace.withTombstone(false);
     }
 
-    assertWorkspaceEquals(expectedWorkspace, configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true));
+    assertWorkspaceEquals(expectedWorkspace, workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true));
   }
 
   private void assertWorkspaceEquals(final StandardWorkspace expectedWorkspace, final StandardWorkspace actualWorkspace) {
@@ -277,11 +259,11 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   void testUpdateFeedback() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
-    assertFalse(MoreBooleans.isTruthy(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone()));
-    configRepository.setFeedback(workspace.getWorkspaceId());
-    assertTrue(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone());
+    assertFalse(MoreBooleans.isTruthy(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone()));
+    workspaceService.setFeedback(workspace.getWorkspaceId());
+    assertTrue(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone());
   }
 
   @ParameterizedTest
@@ -296,19 +278,21 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
                                             final boolean expectation)
       throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
-    configRepository.writeConnectorMetadata(
+    sourceService.writeConnectorMetadata(
         createSourceDefinition(),
-        createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
-    configRepository.writeConnectorMetadata(
+        createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage),
+        Collections.emptyList());
+    destinationService.writeConnectorMetadata(
         createDestinationDefinition(),
-        createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
+        createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage),
+        Collections.emptyList());
 
-    configRepository.writeSourceConnectionNoSecrets(createBaseSource());
-    configRepository.writeDestinationConnectionNoSecrets(createBaseDestination());
+    sourceService.writeSourceConnectionNoSecrets(createBaseSource());
+    destinationService.writeDestinationConnectionNoSecrets(createBaseDestination());
 
-    assertEquals(expectation, configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
+    assertEquals(expectation, workspaceService.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
   }
 
   @Test
@@ -319,8 +303,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_2);
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.empty());
@@ -339,8 +323,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("B workspace");
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
@@ -358,8 +342,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("workspace");
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
@@ -375,7 +359,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("workspaceInOrganization1");
 
-    configRepository.writeStandardWorkspaceNoSecrets(expectedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace);
 
     final StandardWorkspace tombstonedWorkspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
@@ -383,14 +367,14 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withName("tombstonedWorkspace")
         .withTombstone(true);
 
-    configRepository.writeStandardWorkspaceNoSecrets(tombstonedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(tombstonedWorkspace);
 
     final StandardWorkspace laterWorkspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("laterWorkspace");
 
-    configRepository.writeStandardWorkspaceNoSecrets(laterWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(laterWorkspace);
 
     final StandardWorkspace actualWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(MockData.ORGANIZATION_ID_1);
 
@@ -409,7 +393,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withName("workspaceInOrganization1")
         .withInitialSetupComplete(initialSetupComplete);
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
     final boolean actualInitialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
@@ -437,28 +421,28 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withWorkspaceId(workspaceId1)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("workspace_with_keyword_1");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace1);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1);
 
     // create a workspace in org_2, name contains search "Keyword"
     final StandardWorkspace workspace2 = createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId2)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName("workspace_with_Keyword_2");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create another workspace in org_2, name does NOT contain search "keyword"
     createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId3)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName("workspace_3");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace in org_3, name contains search "keyword"
     createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId4)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
         .withName("workspace_4_with_keyword");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace permission for workspace 1
     BaseConfigDatabaseTest.writePermission(new Permission()
@@ -507,21 +491,21 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withWorkspaceId(workspace1Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("workspace1");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace1);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1);
 
     // create a workspace in org_2
     final StandardWorkspace workspace2 = createBaseStandardWorkspace()
         .withWorkspaceId(workspace2Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName("workspace2");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace in org_3
     final StandardWorkspace workspace3 = createBaseStandardWorkspace()
         .withWorkspaceId(workspace3Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
         .withName("workspace3");
-    configRepository.writeStandardWorkspaceNoSecrets(workspace3);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3);
 
     // create a workspace-level permission for workspace 1
     BaseConfigDatabaseTest.writePermission(new Permission()

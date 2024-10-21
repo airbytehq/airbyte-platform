@@ -33,7 +33,7 @@ fun registerTestSuite(name: String, includeTags: Array<String> = emptyArray()) {
 
           systemProperties = mapOf(
             "junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled,
-            // we use this property for our log4j2 configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
+            // we use this property for our logging configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
             "ciMode" to ciMode)
 
           useJUnitPlatform {

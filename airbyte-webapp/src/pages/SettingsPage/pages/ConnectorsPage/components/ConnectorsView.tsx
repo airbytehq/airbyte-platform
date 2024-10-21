@@ -2,6 +2,10 @@ import { createColumnHelper } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { DeleteDestinationDefinitionButton } from "components/connector/DeleteDestinationDefinitionButton";
+import { DeleteSourceDefinitionButton } from "components/connector/DeleteSourceDefinitionButton";
+import { EditDestinationDefinitionButton } from "components/connector/EditDestinationDefinitionButton";
+import { EditSourceDefinitionButton } from "components/connector/EditSourceDefinitionButton";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -11,9 +15,9 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { BuilderProject, useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
+import { isSourceDefinition } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useIntent } from "core/utils/rbac";
-import { useGeneratedIntent } from "core/utils/rbac/useGeneratedIntent";
+import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import { AddNewConnectorButton } from "./AddNewConnectorButton";
@@ -21,17 +25,12 @@ import { ConnectorCell } from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
 import ImageCell from "./ImageCell";
-import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
-import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
 import UpgradeAllButton from "./UpgradeAllButton";
-import { ConnectorVersionFormValues } from "./VersionCell";
 
 export interface ConnectorsViewProps {
   type: "sources" | "destinations";
   usedConnectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
   connectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
-  updatingDefinitionId?: string;
-  onUpdateVersion: (values: ConnectorVersionFormValues) => Promise<void>;
   connectorBuilderProjects?: BuilderProject[];
 }
 
@@ -59,32 +58,31 @@ const MemoizedTable = React.memo(Table) as typeof Table;
 
 const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   type,
-  onUpdateVersion,
   usedConnectorsDefinitions,
-  updatingDefinitionId,
   connectorsDefinitions,
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
   const workspace = useCurrentWorkspace();
-  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions", {
+  const canUpdateConnectors = useIntent("UpdateConnectorVersions", {
     organizationId: workspace.organizationId,
   });
-  const hasUploadCustomConnectorPermissions = useGeneratedIntent("UploadCustomConnector");
-  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
-  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
+  const canUpdateOrDeleteCustomConnectors = useGeneratedIntent(Intent.UpdateOrDeleteCustomConnector);
+  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && canUpdateConnectors;
+  const allowUpdateDeleteCustomConnectors =
+    useFeature(FeatureItem.AllowUploadCustomImage) && canUpdateOrDeleteCustomConnectors;
 
   const showVersionUpdateColumn = useCallback(
     (definitions: ConnectorDefinition[]) => {
       if (allowUpdateConnectors) {
         return true;
       }
-      if (allowUploadCustomImage && definitions.some((definition) => definition.custom)) {
+      if (allowUpdateDeleteCustomConnectors && definitions.some((definition) => definition.custom)) {
         return true;
       }
       return false;
     },
-    [allowUpdateConnectors, allowUploadCustomImage]
+    [allowUpdateConnectors, allowUpdateDeleteCustomConnectors]
   );
 
   const renderColumns = useCallback(
@@ -134,33 +132,36 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         ? [
             columnHelper.display({
               id: "versionUpdate",
-              header: () => (
-                <div className={styles.changeToHeader}>
-                  <FormattedMessage id="admin.changeTo" />
-                </div>
-              ),
-              cell: (props) =>
-                allowUpdateConnectors || (allowUploadCustomImage && props.row.original.custom) ? (
-                  type === "sources" ? (
-                    <UpdateSourceConnectorVersionCell
-                      connectorDefinitionId={Connector.id(props.row.original)}
-                      onChange={onUpdateVersion}
-                      currentVersion={props.row.original.dockerImageTag}
-                      custom={props.row.original.custom}
-                    />
-                  ) : (
-                    <UpdateDestinationConnectorVersionCell
-                      connectorDefinitionId={Connector.id(props.row.original)}
-                      onChange={onUpdateVersion}
-                      currentVersion={props.row.original.dockerImageTag}
-                    />
-                  )
-                ) : null,
+              header: () => null,
+              cell: (props) => {
+                return allowUpdateConnectors || (canUpdateOrDeleteCustomConnectors && props.row.original.custom) ? (
+                  <FlexContainer justifyContent="flex-end" gap="xs">
+                    {isSourceDefinition(props.row.original) ? (
+                      <EditSourceDefinitionButton
+                        definitionId={Connector.id(props.row.original)}
+                        isConnectorNameEditable={!!props.row.original.custom}
+                      />
+                    ) : (
+                      <EditDestinationDefinitionButton
+                        definitionId={Connector.id(props.row.original)}
+                        isConnectorNameEditable={!!props.row.original.custom}
+                      />
+                    )}
+                    {props.row.original.custom ? (
+                      isSourceDefinition(props.row.original) ? (
+                        <DeleteSourceDefinitionButton sourceDefinitionId={Connector.id(props.row.original)} />
+                      ) : (
+                        <DeleteDestinationDefinitionButton destinationDefinitionId={Connector.id(props.row.original)} />
+                      )
+                    ) : null}
+                  </FlexContainer>
+                ) : null;
+              },
             }),
           ]
         : []),
     ],
-    [allowUpdateConnectors, allowUploadCustomImage, onUpdateVersion, type]
+    [allowUpdateConnectors, canUpdateOrDeleteCustomConnectors, type]
   );
 
   const filteredUsedConnectorsDefinitions = useMemo(
@@ -177,9 +178,8 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     () => ({
       setUpdatingAll: setUpdatingAllConnectors,
       updatingAll: updatingAllConnectors,
-      updatingDefinitionId,
     }),
-    [updatingDefinitionId, updatingAllConnectors]
+    [updatingAllConnectors]
   );
 
   const showUpdateColumnForUsedDefinitions = showVersionUpdateColumn(usedConnectorsDefinitions);
@@ -216,6 +216,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           columns={usedDefinitionColumns}
           data={filteredUsedConnectorsDefinitions}
           sorting={false}
+          className={styles.connectorsTable}
         />
       ),
     });
@@ -229,34 +230,33 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         columns={definitionColumns}
         data={filteredConnectorsDefinitions}
         sorting={false}
+        className={styles.connectorsTable}
       />
     ),
   });
 
   return (
     <ConnectorsViewContext.Provider value={ctx}>
-      <div className={styles.connectorsTable}>
-        <FlexContainer direction="column" gap="2xl">
-          {sections.map((section, index) => (
-            <FlexContainer key={index} direction="column">
-              <FlexContainer alignItems="center">
-                <FlexItem grow>
-                  <Heading as="h2">
-                    <FormattedMessage id={section.title} />
-                  </Heading>
-                </FlexItem>
-                {index === 0 && (
-                  <FlexContainer>
-                    <AddNewConnectorButton type={type} />
-                    {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
-                  </FlexContainer>
-                )}
-              </FlexContainer>
-              {section.content}
+      <FlexContainer direction="column" gap="2xl">
+        {sections.map((section, index) => (
+          <FlexContainer key={index} direction="column">
+            <FlexContainer alignItems="center">
+              <FlexItem grow>
+                <Heading as="h2">
+                  <FormattedMessage id={section.title} />
+                </Heading>
+              </FlexItem>
+              {index === 0 && (
+                <FlexContainer>
+                  <AddNewConnectorButton type={type} />
+                  {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
+                </FlexContainer>
+              )}
             </FlexContainer>
-          ))}
-        </FlexContainer>
-      </div>
+            {section.content}
+          </FlexContainer>
+        ))}
+      </FlexContainer>
     </ConnectorsViewContext.Provider>
   );
 };

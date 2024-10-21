@@ -26,8 +26,9 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -46,7 +47,6 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class ConnectorDefinitionSpecificationHandlerTest {
 
-  private ConfigRepository configRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private JobConverter jobConverter;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
@@ -66,18 +66,23 @@ class ConnectorDefinitionSpecificationHandlerTest {
       .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
       .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()));
 
+  private SourceService sourceService;
+  private DestinationService destinationService;
+
   @BeforeEach
   void setup() {
-    configRepository = mock(ConfigRepository.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     jobConverter = mock(JobConverter.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
 
     connectorDefinitionSpecificationHandler =
-        new ConnectorDefinitionSpecificationHandler(configRepository, actorDefinitionVersionHelper, jobConverter);
+        new ConnectorDefinitionSpecificationHandler(actorDefinitionVersionHelper, jobConverter, sourceService, destinationService);
   }
 
   @Test
-  void testGetDestinationSpecForDestinationId() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetDestinationSpecForDestinationId()
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
@@ -88,12 +93,12 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionId);
-    when(configRepository.getDestinationConnection(destinationId)).thenReturn(
+    when(destinationService.getDestinationConnection(destinationId)).thenReturn(
         new DestinationConnection()
             .withDestinationId(destinationId)
             .withWorkspaceId(workspaceId)
             .withDestinationDefinitionId(destinationDefinitionId));
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId))
         .thenReturn(new ActorDefinitionVersion()
@@ -108,14 +113,15 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetSourceSpecWithoutDocs() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpecWithoutDocs()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
         new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
         .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId()))
         .thenReturn(new ActorDefinitionVersion()
@@ -126,13 +132,14 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final SourceDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
 
-    verify(configRepository).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
+    verify(sourceService).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     assertEquals(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
   @Test
-  void testGetSourceSpecForSourceId() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpecForSourceId()
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -144,12 +151,12 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
         .withSourceDefinitionId(sourceDefinitionId);
-    when(configRepository.getSourceConnection(sourceId)).thenReturn(
+    when(sourceService.getSourceConnection(sourceId)).thenReturn(
         new SourceConnection()
             .withSourceId(sourceId)
             .withWorkspaceId(workspaceId)
             .withSourceDefinitionId(sourceDefinitionId));
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId))
         .thenReturn(new ActorDefinitionVersion()
@@ -164,14 +171,15 @@ class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  void testGetDestinationSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetDestinationSpec()
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
@@ -182,21 +190,22 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
 
-    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    verify(destinationService).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
     verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
   @Test
-  void testGetSourceSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testGetSourceSpec()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
         new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
         .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId()))
         .thenReturn(new ActorDefinitionVersion()
@@ -206,21 +215,22 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final SourceDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
 
-    verify(configRepository).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
+    verify(sourceService).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void testDestinationSyncModeEnrichment(boolean supportsRefreshes) throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testDestinationSyncModeEnrichment(boolean supportsRefreshes)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
@@ -237,7 +247,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
 
-    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    verify(destinationService).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
     verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     if (supportsRefreshes) {
@@ -259,7 +269,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
@@ -276,7 +286,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
 
-    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    verify(destinationService).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
     verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(

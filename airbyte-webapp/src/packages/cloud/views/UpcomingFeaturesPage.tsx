@@ -10,7 +10,7 @@ import styles from "./UpcomingFeaturesPage.module.scss";
 const UpcomingFeaturesPage = () => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
-  const url = useExperiment("upcomingFeaturesPage.url", "");
+  const url = useExperiment("upcomingFeaturesPage.url");
   return (
     <>
       <HeadTitle titles={[{ id: "upcomingFeatures.title" }]} />

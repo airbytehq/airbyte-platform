@@ -56,7 +56,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-server-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "server.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -211,16 +211,11 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
-        - name: WORKLOAD_LAUNCHER_ENABLED
+        - name: ENTERPRISE_SOURCE_STUBS_URL
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_LAUNCHER_ENABLED
-        - name: WORKLOAD_API_SERVER_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WORKLOAD_API_SERVER_ENABLED
+              key: ENTERPRISE_SOURCE_STUBS_URL
 
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
         # Values for Airbyte auth configurations, secrets, and credentials in Community edition
@@ -277,6 +272,33 @@ spec:
         {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
         - name: AWS_KMS_KEY_ARN
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
         {{- end }}
 
         # Values for googleSecretManager secrets

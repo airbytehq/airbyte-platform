@@ -13,9 +13,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -33,29 +31,21 @@ import java.util.UUID;
 @Singleton
 public class ConfigurationUpdate {
 
-  private final ConfigRepository configRepository;
-  private final SecretsRepositoryReader secretsRepositoryReader;
   private final JsonSecretsProcessor secretsProcessor;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final SourceService sourceService;
   private final DestinationService destinationService;
 
-  public ConfigurationUpdate(final ConfigRepository configRepository,
-                             final SecretsRepositoryReader secretsRepositoryReader,
-                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+  public ConfigurationUpdate(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final SourceService sourceService,
                              final DestinationService destinationService) {
-    this(configRepository, secretsRepositoryReader, new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService);
+    this(new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService);
   }
 
-  public ConfigurationUpdate(final ConfigRepository configRepository,
-                             final SecretsRepositoryReader secretsRepositoryReader,
-                             final JsonSecretsProcessor secretsProcessor,
+  public ConfigurationUpdate(final JsonSecretsProcessor secretsProcessor,
                              final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final SourceService sourceService,
                              final DestinationService destinationService) {
-    this.configRepository = configRepository;
-    this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsProcessor = secretsProcessor;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.sourceService = sourceService;
@@ -75,7 +65,7 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource;
     try {
@@ -85,7 +75,7 @@ public class ConfigurationUpdate {
     }
     persistedSource.setName(sourceName);
     // get spec
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(persistedSource.getSourceDefinitionId());
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(persistedSource.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, persistedSource.getWorkspaceId(), sourceId);
     final ConnectorSpecification spec = sourceVersion.getSpec();
@@ -111,14 +101,11 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource;
-    try {
-      persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
+
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
@@ -141,7 +128,7 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
@@ -151,7 +138,7 @@ public class ConfigurationUpdate {
     }
     persistedDestination.setName(destName);
     // get spec
-    final StandardDestinationDefinition destinationDefinition = configRepository
+    final StandardDestinationDefinition destinationDefinition = destinationService
         .getStandardDestinationDefinition(persistedDestination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, persistedDestination.getWorkspaceId(), destinationId);

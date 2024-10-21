@@ -5,17 +5,7 @@
 package io.airbyte.cron.config;
 
 import io.airbyte.commons.temporal.config.WorkerMode;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.data.services.CatalogService;
-import io.airbyte.data.services.ConnectionService;
-import io.airbyte.data.services.ConnectorBuilderService;
-import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.OAuthService;
-import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DataSourceUnwrapper;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
@@ -25,7 +15,6 @@ import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
@@ -83,29 +72,6 @@ public class DatabaseBeanFactory {
         .installedBy(INSTALLED_BY)
         .table(String.format("airbyte_%s_migrations", "configs"))
         .load();
-  }
-
-  @Singleton
-  @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(final ActorDefinitionService actorDefinitionService,
-                                           final CatalogService catalogService,
-                                           final ConnectionService connectionService,
-                                           final ConnectorBuilderService connectorBuilderService,
-                                           final DestinationService destinationService,
-                                           final OAuthService oauthService,
-                                           final OperationService operationService,
-                                           final SourceService sourceService,
-                                           final WorkspaceService workspaceService) {
-    return new ConfigRepository(
-        actorDefinitionService,
-        catalogService,
-        connectionService,
-        connectorBuilderService,
-        destinationService,
-        oauthService,
-        operationService,
-        sourceService,
-        workspaceService);
   }
 
   /**

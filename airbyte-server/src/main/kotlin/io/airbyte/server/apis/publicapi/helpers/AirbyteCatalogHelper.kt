@@ -23,11 +23,13 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -48,9 +50,7 @@ object AirbyteCatalogHelper {
    * @param streamConfigurations StreamConfigurations from conneciton create/update request
    * @return true if they exist, false if they don't
    */
-  fun hasStreamConfigurations(streamConfigurations: StreamConfigurations?): Boolean {
-    return !streamConfigurations?.streams.isNullOrEmpty()
-  }
+  fun hasStreamConfigurations(streamConfigurations: StreamConfigurations?): Boolean = !streamConfigurations?.streams.isNullOrEmpty()
 
   /**
    * Just set a config to be full refresh overwrite.
@@ -80,12 +80,14 @@ object AirbyteCatalogHelper {
   fun updateAllStreamsFullRefreshOverwrite(airbyteCatalog: AirbyteCatalog): AirbyteCatalog {
     val updatedAirbyteCatalog = AirbyteCatalog()
     updatedAirbyteCatalog.streams =
-      airbyteCatalog.streams.stream().map { stream: AirbyteStreamAndConfiguration ->
-        val updatedAirbyteStreamAndConfiguration = AirbyteStreamAndConfiguration()
-        updatedAirbyteStreamAndConfiguration.config = updateConfigDefaultFullRefreshOverwrite(stream.config)
-        updatedAirbyteStreamAndConfiguration.stream = stream.stream
-        updatedAirbyteStreamAndConfiguration
-      }.toList()
+      airbyteCatalog.streams
+        .stream()
+        .map { stream: AirbyteStreamAndConfiguration ->
+          val updatedAirbyteStreamAndConfiguration = AirbyteStreamAndConfiguration()
+          updatedAirbyteStreamAndConfiguration.config = updateConfigDefaultFullRefreshOverwrite(stream.config)
+          updatedAirbyteStreamAndConfiguration.stream = stream.stream
+          updatedAirbyteStreamAndConfiguration
+        }.toList()
 
     return updatedAirbyteCatalog
   }
@@ -150,7 +152,7 @@ object AirbyteCatalogHelper {
     }
     // Validate input selected fields.
     val allSelectedFields =
-      streamConfiguration.selectedFields!!.map { it ->
+      streamConfiguration.selectedFields!!.map {
         if (it.fieldPath.isNullOrEmpty()) {
           throw BadRequestProblem(
             ProblemMessageData().message(
@@ -283,8 +285,8 @@ object AirbyteCatalogHelper {
     // check that the first seconds and hour values are not *
   }
 
-  fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? {
-    return connectionSchedule?.let { schedule ->
+  fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? =
+    connectionSchedule?.let { schedule ->
       schedule.cronExpression?.let { cronExpression ->
         if (cronExpression.endsWith("UTC")) {
           AirbyteApiConnectionSchedule(
@@ -296,16 +298,24 @@ object AirbyteCatalogHelper {
         }
       }
     }
-  }
 
   /**
    * Convert proto/object from public_api model to airbyte_api model.
    * */
-  private fun selectedFieldInfoConverter(publicApiSelectedFieldInfo: SelectedFieldInfo): io.airbyte.api.model.generated.SelectedFieldInfo {
-    return io.airbyte.api.model.generated.SelectedFieldInfo().apply {
+  private fun selectedFieldInfoConverter(publicApiSelectedFieldInfo: SelectedFieldInfo): io.airbyte.api.model.generated.SelectedFieldInfo =
+    io.airbyte.api.model.generated.SelectedFieldInfo().apply {
       fieldPath = publicApiSelectedFieldInfo.fieldPath
     }
-  }
+
+  private fun mapperTypeConverter(publicApiMapperType: StreamMapperType): io.airbyte.api.model.generated.StreamMapperType =
+    io.airbyte.api.model.generated.StreamMapperType
+      .fromValue(publicApiMapperType.toString())
+
+  private fun configuredMapperConverter(publicApiMappers: ConfiguredStreamMapper): io.airbyte.api.model.generated.ConfiguredStreamMapper =
+    io.airbyte.api.model.generated.ConfiguredStreamMapper().apply {
+      type = mapperTypeConverter(publicApiMappers.type)
+      mapperConfiguration = publicApiMappers.mapperConfiguration
+    }
 
   fun updateAirbyteStreamConfiguration(
     config: AirbyteStreamConfiguration,
@@ -318,12 +328,18 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
     updatedStreamConfiguration.selectedFields = config.selectedFields
+
     if (streamConfiguration.selectedFields != null) {
       // Override and update
       updatedStreamConfiguration.fieldSelectionEnabled = true
       updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields!!.map { selectedFieldInfoConverter(it) }
     }
     updatedStreamConfiguration.suggested = config.suggested
+
+    updatedStreamConfiguration.mappers = config.mappers
+    if (streamConfiguration.mappers != null) {
+      updatedStreamConfiguration.mappers = streamConfiguration.mappers!!.map { configuredMapperConverter(it) }
+    }
 
     if (streamConfiguration.syncMode == null) {
       updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
@@ -368,24 +384,22 @@ object AirbyteCatalogHelper {
   private fun selectCursorField(
     airbyteStream: AirbyteStream,
     streamConfiguration: StreamConfiguration,
-  ): List<String>? {
-    return if (airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!) {
+  ): List<String>? =
+    if (airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!) {
       airbyteStream.defaultCursorField
     } else if (streamConfiguration.cursorField != null && streamConfiguration.cursorField!!.isNotEmpty()) {
       streamConfiguration.cursorField
     } else {
       airbyteStream.defaultCursorField
     }
-  }
 
   private fun selectPrimaryKey(
     airbyteStream: AirbyteStream,
     streamConfiguration: StreamConfiguration,
-  ): List<List<String>>? {
-    return (airbyteStream.sourceDefinedPrimaryKey ?: emptyList()).ifEmpty {
+  ): List<List<String>>? =
+    (airbyteStream.sourceDefinedPrimaryKey ?: emptyList()).ifEmpty {
       streamConfiguration.primaryKey
     }
-  }
 
   /**
    * Validates a stream's configurations and sets those configurations in the
@@ -539,7 +553,7 @@ object AirbyteCatalogHelper {
     validSourceSyncModes: List<SyncMode?>?,
     validDestinationSyncModes: List<DestinationSyncMode?>,
   ): Set<ConnectionSyncModeEnum> {
-    val validCombinedSyncModes: MutableSet<ConnectionSyncModeEnum> = HashSet<ConnectionSyncModeEnum>()
+    val validCombinedSyncModes: MutableSet<ConnectionSyncModeEnum> = HashSet()
     for (sourceSyncMode in validSourceSyncModes!!) {
       for (destinationSyncMode in validDestinationSyncModes) {
         val combinedSyncMode: ConnectionSyncModeEnum? =
@@ -596,10 +610,9 @@ object AirbyteCatalogHelper {
   fun getStreamFields(connectorSchema: JsonNode): List<List<String>> {
     val yamlMapper = ObjectMapper(YAMLFactory())
     val streamFields: MutableList<List<String>> = ArrayList()
-    val spec: JsonNode
-    spec =
+    val spec: JsonNode =
       try {
-        yamlMapper.readTree<JsonNode>(connectorSchema.traverse())
+        yamlMapper.readTree(connectorSchema.traverse())
       } catch (e: IOException) {
         log.error("Error getting stream fields from schema", e)
         throw UnexpectedProblem()
@@ -611,14 +624,14 @@ object AirbyteCatalogHelper {
         val propertyFields = paths.fields()
         while (propertyFields.hasNext()) {
           val (propertyName, nestedProperties) = propertyFields.next()
-          streamFields.add(java.util.List.of(propertyName))
+          streamFields.add(listOf(propertyName))
 
           // retrieve nested paths
           for (entry in getStreamFields(nestedProperties)) {
             if (entry.isEmpty()) {
               continue
             }
-            val streamFieldPath: MutableList<String> = ArrayList(java.util.List.of(propertyName))
+            val streamFieldPath: MutableList<String> = ArrayList(listOf(propertyName))
             streamFieldPath.addAll(entry)
             streamFields.add(streamFieldPath)
           }

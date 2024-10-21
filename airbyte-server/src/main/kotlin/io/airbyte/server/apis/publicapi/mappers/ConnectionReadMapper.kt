@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
+import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.DestinationSyncMode
@@ -18,8 +19,10 @@ import io.airbyte.publicApi.server.generated.models.GeographyEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
+import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
 import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import java.util.UUID
 
 /**
@@ -47,11 +50,17 @@ object ConnectionReadMapper {
                   streamAndConfiguration.config!!.syncMode,
                   streamAndConfiguration.config!!.destinationSyncMode,
                 )
+              val selectedFields: List<SelectedFieldInfo>? =
+                streamAndConfiguration.config!!.selectedFields?.map {
+                  selectedFieldInfoConverter(it)
+                }
               StreamConfiguration(
                 name = streamAndConfiguration.stream.name,
                 primaryKey = streamAndConfiguration.config.primaryKey,
                 cursorField = streamAndConfiguration.config.cursorField,
+                mappers = convertMappers(streamAndConfiguration.config.mappers),
                 syncMode = connectionSyncMode,
+                selectedFields = selectedFields,
               )
             }.toList(),
         )
@@ -118,6 +127,24 @@ object ConnectionReadMapper {
     } else {
       NonBreakingSchemaUpdatesBehaviorEnum.valueOf(nonBreakingChangesPreference.toString().uppercase())
     }
+  }
+
+  private fun convertMappers(mappers: List<ConfiguredStreamMapper>?): List<io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper>? {
+    return mappers?.map { mapper ->
+      io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper(
+        type = StreamMapperType.decode(mapper.type.toString()) ?: throw IllegalArgumentException("Invalid stream mapper type"),
+        mapperConfiguration = mapper.mapperConfiguration,
+      )
+    }
+  }
+
+  /**
+   * Convert selected fields from airbyte_api model to public_api model
+   * */
+  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.model.generated.SelectedFieldInfo): SelectedFieldInfo {
+    return SelectedFieldInfo(
+      fieldPath = selectedField.fieldPath,
+    )
   }
 
   /**

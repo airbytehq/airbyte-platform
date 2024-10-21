@@ -1,8 +1,8 @@
 import React from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentConnection } from "core/api";
 import { useAvailableDbtJobs, useDbtIntegration } from "core/api/cloud";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { DbtCloudErrorBoundary } from "./DbtCloudErrorBoundary";
 import { DbtCloudTransformationsForm } from "./DbtCloudTransformationsForm";
@@ -36,7 +36,7 @@ export const DbtCloudTransformations: React.FC = () => {
   //   2.4) AND there are available jobs from the dbt cloud API
   //        THEN show empty "+ Add transformation" button
 
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { hasDbtIntegration } = useDbtIntegration(connection);
   /**
    * we can't use hooks inside the class component, so we to pass them as props

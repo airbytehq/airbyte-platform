@@ -2,25 +2,29 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-.container {
+.schemaRefreshing {
   width: 100%;
   height: 100%;
   position: relative;
 
-  .backdrop {
+  &__backdrop {
     display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
     z-index: z-indices.$schemaChangesBackdrop;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
     border-radius: variables.$border-radius-lg;
-    background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, colors.$foreground 92.54%);
+    background: colors.$gradient-light-background;
 
-    &.schemaRefreshing {
-      position: absolute;
-      display: flex;
-      width: 100%;
-      height: 100%;
+    &--visible {
+      display: block;
     }
+  }
+
+  &__message {
+    position: sticky;
+    top: 50%;
+    bottom: 50%;
+    padding-bottom: variables.$spacing-2xl;
   }
 }

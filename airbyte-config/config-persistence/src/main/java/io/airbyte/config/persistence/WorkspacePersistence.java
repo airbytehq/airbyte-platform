@@ -9,9 +9,9 @@ import static org.jooq.impl.DSL.noCondition;
 
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.impls.jooq.DbConverter;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;

@@ -49,17 +49,3 @@ Selector labels
 app.kubernetes.io/name: {{ include "airbyte.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-
-{{/* 
-Define imageTag
-*/}}
-
-{{- define "bootloader.imageTag" -}}
-{{- if .Values.image.tag }}
-    {{- printf "%s" .Values.image.tag }}
-{{- else if ((.Values.global.image).tag) }}
-    {{- printf "%s" .Values.global.image.tag }}
-{{- else }}
-    {{- printf "%s" .Chart.AppVersion }}
-{{- end }}
-{{- end }}

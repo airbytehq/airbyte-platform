@@ -29,7 +29,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.ConnectorReleases;
+import io.airbyte.config.ConnectorReleasesSource;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
@@ -325,11 +325,12 @@ class ActorDefinitionHandlerHelperTest {
 
     @Test
     void testGetBreakingChanges() throws IOException {
-      final BreakingChanges registryBreakingChanges =
+      final BreakingChanges sourceRegistryBreakingChanges =
           new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange().withMessage("A breaking change was made")
               .withUpgradeDeadline("2000-01-01").withMigrationDocumentationUrl("https://docs.airbyte.io/migration"));
       final ConnectorRegistrySourceDefinition sourceDefWithBreakingChanges =
-          Jsons.clone(connectorRegistrySourceDefinition).withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
+          Jsons.clone(connectorRegistrySourceDefinition)
+              .withReleases(new ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges));
 
       when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST))
           .thenReturn(Optional.of(sourceDefWithBreakingChanges));

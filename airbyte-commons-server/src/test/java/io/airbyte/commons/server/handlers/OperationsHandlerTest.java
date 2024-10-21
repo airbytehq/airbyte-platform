@@ -32,8 +32,9 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -56,21 +57,23 @@ class OperationsHandlerTest {
   private static final Long NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 789L;
   public static final String EXECUTION_BODY = "{\"cause\": \"airbyte\"}";
   public static final String EXECUTION_URL_TEMPLATE = "https://cloud.getdbt.com/api/v2/accounts/%d/jobs/%d/run/";
-  private ConfigRepository configRepository;
   private WorkspaceService workspaceService;
   private Supplier<UUID> uuidGenerator;
   private OperationsHandler operationsHandler;
   private StandardSyncOperation standardSyncOperation;
   private io.airbyte.config.OperatorWebhook operatorWebhook;
+  private OperationService operationService;
+  private ConnectionService connectionService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
-    configRepository = mock(ConfigRepository.class);
     workspaceService = mock(WorkspaceService.class);
+    operationService = mock(OperationService.class);
+    connectionService = mock(ConnectionService.class);
     uuidGenerator = mock(Supplier.class);
 
-    operationsHandler = new OperationsHandler(configRepository, workspaceService, uuidGenerator);
+    operationsHandler = new OperationsHandler(workspaceService, uuidGenerator, connectionService, operationService);
     operatorWebhook = new io.airbyte.config.OperatorWebhook()
         .withWebhookConfigId(WEBHOOK_CONFIG_ID)
         .withExecutionBody(Jsons.serialize(new OperatorWebhookDbtCloud().accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID).jobId(DBT_CLOUD_WEBHOOK_JOB_ID)))
@@ -117,7 +120,7 @@ class OperationsHandlerTest {
 
     final StandardWorkspace workspace = new StandardWorkspace().withWebhookOperationConfigs(webhookOperationConfig);
     when(workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false)).thenReturn(workspace);
-    when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(expectedPersistedOperation);
+    when(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(expectedPersistedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.createOperation(operationCreate);
 
@@ -132,7 +135,7 @@ class OperationsHandlerTest {
             DBT_CLOUD_WEBHOOK_JOB_ID)).executionBody(EXECUTION_BODY);
     assertEquals(expectedWebhookConfigRead, actualOperationRead.getOperatorConfiguration().getWebhook());
 
-    verify(configRepository).writeStandardSyncOperation(eq(expectedPersistedOperation));
+    verify(operationService).writeStandardSyncOperation(eq(expectedPersistedOperation));
   }
 
   @Test
@@ -179,7 +182,7 @@ class OperationsHandlerTest {
 
     StandardWorkspace workspace = new StandardWorkspace();
     when(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
-    when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation).thenReturn(updatedOperation);
+    when(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation).thenReturn(updatedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.updateOperation(operationUpdate);
 
@@ -191,7 +194,7 @@ class OperationsHandlerTest {
             DBT_CLOUD_WEBHOOK_JOB_ID)).executionBody(EXECUTION_BODY);
     assertEquals(expectedWebhookConfigRead, actualOperationRead.getOperatorConfiguration().getWebhook());
 
-    verify(configRepository)
+    verify(operationService)
         .writeStandardSyncOperation(persistedOperation.withOperatorWebhook(persistedOperation.getOperatorWebhook().withExecutionUrl(
             String.format(EXECUTION_URL_TEMPLATE, NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
                 DBT_CLOUD_WEBHOOK_JOB_ID))));
@@ -199,7 +202,7 @@ class OperationsHandlerTest {
 
   @Test
   void testGetOperation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    when(configRepository.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation);
+    when(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation);
 
     final OperationIdRequestBody operationIdRequestBody = new OperationIdRequestBody().operationId(standardSyncOperation.getOperationId());
     final OperationRead actualOperationRead = operationsHandler.getOperation(operationIdRequestBody);
@@ -231,14 +234,14 @@ class OperationsHandlerTest {
   void testListOperationsForConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID connectionId = UUID.randomUUID();
 
-    when(configRepository.getStandardSync(connectionId))
+    when(connectionService.getStandardSync(connectionId))
         .thenReturn(new StandardSync()
             .withOperationIds(List.of(standardSyncOperation.getOperationId())));
 
-    when(configRepository.getStandardSyncOperation(standardSyncOperation.getOperationId()))
+    when(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId()))
         .thenReturn(standardSyncOperation);
 
-    when(configRepository.listStandardSyncOperations())
+    when(operationService.listStandardSyncOperations())
         .thenReturn(List.of(standardSyncOperation));
 
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -255,7 +258,7 @@ class OperationsHandlerTest {
 
     spiedOperationsHandler.deleteOperation(operationIdRequestBody);
 
-    verify(configRepository).deleteStandardSyncOperation(standardSyncOperation.getOperationId());
+    verify(operationService).deleteStandardSyncOperation(standardSyncOperation.getOperationId());
   }
 
   @Test
@@ -268,26 +271,26 @@ class OperationsHandlerTest {
     final StandardSync sync = new StandardSync()
         .withConnectionId(syncConnectionId)
         .withOperationIds(List.of(standardSyncOperation.getOperationId(), operationId, remainingOperationId));
-    when(configRepository.listStandardSyncs()).thenReturn(List.of(
+    when(connectionService.listStandardSyncs()).thenReturn(List.of(
         sync,
         new StandardSync()
             .withConnectionId(otherConnectionId)
             .withOperationIds(List.of(standardSyncOperation.getOperationId()))));
     final StandardSyncOperation operation = new StandardSyncOperation().withOperationId(operationId);
     final StandardSyncOperation remainingOperation = new StandardSyncOperation().withOperationId(remainingOperationId);
-    when(configRepository.getStandardSyncOperation(operationId)).thenReturn(operation);
-    when(configRepository.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation);
-    when(configRepository.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation);
+    when(operationService.getStandardSyncOperation(operationId)).thenReturn(operation);
+    when(operationService.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation);
+    when(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId())).thenReturn(standardSyncOperation);
 
     // first, test that a remaining operation results in proper call
     operationsHandler.deleteOperationsForConnection(sync, toDelete);
-    verify(configRepository).writeStandardSyncOperation(operation.withTombstone(true));
-    verify(configRepository).updateConnectionOperationIds(syncConnectionId, Collections.singleton(remainingOperationId));
+    verify(operationService).writeStandardSyncOperation(operation.withTombstone(true));
+    verify(operationService).updateConnectionOperationIds(syncConnectionId, Collections.singleton(remainingOperationId));
 
     // next, test that removing all operations results in proper call
     toDelete.add(remainingOperationId);
     operationsHandler.deleteOperationsForConnection(sync, toDelete);
-    verify(configRepository).updateConnectionOperationIds(syncConnectionId, Collections.emptySet());
+    verify(operationService).updateConnectionOperationIds(syncConnectionId, Collections.emptySet());
   }
 
   @Test
@@ -324,7 +327,7 @@ class OperationsHandlerTest {
             .withExecutionUrl(urlToCheck)
             .withExecutionBody(EXECUTION_BODY))
         .withTombstone(false);
-    when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation);
+    when(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation);
 
     final OperationIdRequestBody operationIdRequestBody = new OperationIdRequestBody().operationId(WEBHOOK_OPERATION_ID);
     operationsHandler.getOperation(operationIdRequestBody);

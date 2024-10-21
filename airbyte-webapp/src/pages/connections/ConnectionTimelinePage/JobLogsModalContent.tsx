@@ -22,12 +22,6 @@ export const JobLogsModalContent: React.FC<{
   }
 
   return (
-    <JobLogsModal
-      jobId={jobIdToUse}
-      initialAttemptId={attemptNumber}
-      eventId={eventId}
-      connectionId={connectionId}
-      connectionTimelineEnabled
-    />
+    <JobLogsModal jobId={jobIdToUse} initialAttemptId={attemptNumber} eventId={eventId} connectionId={connectionId} />
   );
 };

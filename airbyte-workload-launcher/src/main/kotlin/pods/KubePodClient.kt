@@ -3,41 +3,36 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
-import io.airbyte.config.ResourceRequirements
-import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.ReplicationMonoPod
-import io.airbyte.featureflag.ReplicationMonoPodMemoryTolerance
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.input.getDestinationResourceReqs
-import io.airbyte.workers.input.getOrchestratorResourceReqs
-import io.airbyte.workers.input.getSourceResourceReqs
-import io.airbyte.workers.input.setDestinationLabels
-import io.airbyte.workers.input.setSourceLabels
+import io.airbyte.workers.exception.KubeClientException
+import io.airbyte.workers.exception.KubeCommandType
+import io.airbyte.workers.exception.PodType
+import io.airbyte.workers.exception.ResourceConstraintException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.PodLabeler
-import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SOURCE_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_RESET_OPERATION_NAME
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
-import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
+import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeoutException
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Interface layer between domain and Kube layers.
@@ -48,7 +43,6 @@ class KubePodClient(
   private val kubePodLauncher: KubePodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
-  private val orchestratorPodFactory: OrchestratorPodFactory,
   private val replicationPodFactory: ReplicationPodFactory,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
@@ -65,69 +59,9 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    if (useMonoPod(replicationInput = replicationInput)) {
-      launchReplicationMonoPod(replicationInput, launcherInput)
-    } else {
-      launchReplicationPodTriplet(replicationInput, launcherInput)
-    }
-  }
-
-  fun launchReplicationPodTriplet(
-    replicationInput: ReplicationInput,
-    launcherInput: LauncherInput,
-  ) {
     val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
 
-    val inputWithLabels =
-      replicationInput
-        .setSourceLabels(sharedLabels)
-        .setDestinationLabels(sharedLabels)
-
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
-
-    var pod =
-      orchestratorPodFactory.create(
-        replicationInput.connectionId,
-        kubeInput.orchestratorLabels,
-        kubeInput.resourceReqs,
-        kubeInput.nodeSelectors,
-        kubeInput.kubePodInfo,
-        kubeInput.annotations,
-        kubeInput.extraEnv,
-      )
-    try {
-      pod =
-        kubePodLauncher.create(pod)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Failed to create pod ${kubeInput.kubePodInfo.name}.",
-        e,
-        KubeCommandType.CREATE,
-        PodType.ORCHESTRATOR,
-      )
-    }
-
-    waitForPodInitComplete(pod, PodType.ORCHESTRATOR.toString())
-
-    waitForOrchestratorStart(pod)
-
-    // We wait for the destination first because orchestrator starts destinations first.
-    waitDestinationReadyOrTerminalInit(kubeInput)
-
-    if (!replicationInput.isReset) {
-      waitSourceReadyOrTerminalInit(kubeInput)
-    }
-  }
-
-  fun launchReplicationMonoPod(
-    replicationInput: ReplicationInput,
-    launcherInput: LauncherInput,
-  ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
-
-    val kubeInput = mapper.toReplicationKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
-
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
     var pod =
       replicationPodFactory.create(
         kubeInput.podName,
@@ -143,8 +77,14 @@ class KubePodClient(
         kubeInput.orchestratorRuntimeEnvVars,
         kubeInput.sourceRuntimeEnvVars,
         kubeInput.destinationRuntimeEnvVars,
-        replicationInput.connectionId,
+        replicationInput.useFileTransfer,
+        replicationInput.workspaceId,
       )
+
+    logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
+    logger.info { "[source] image: ${kubeInput.sourceImage} resources: ${kubeInput.sourceReqs}" }
+    logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
+    logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
 
     try {
       pod =
@@ -165,50 +105,51 @@ class KubePodClient(
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
   }
 
-  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
-  fun waitForOrchestratorStart(pod: Pod) {
-    try {
-      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Main container of orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. " +
-          "(${e.message})",
-        e,
-        KubeCommandType.WAIT_MAIN,
-        PodType.ORCHESTRATOR,
-      )
-    }
-  }
+  @Trace(operationName = LAUNCH_RESET_OPERATION_NAME)
+  fun launchReset(
+    replicationInput: ReplicationInput,
+    launcherInput: LauncherInput,
+  ) {
+    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
 
-  @Trace(operationName = WAIT_SOURCE_OPERATION_NAME)
-  fun waitSourceReadyOrTerminalInit(kubeInput: OrchestratorKubeInput) {
-    try {
-      kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Source pod failed to start within allotted timeout of ${REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
-        e,
-        KubeCommandType.WAIT_MAIN,
-        PodType.SOURCE,
+    var pod =
+      replicationPodFactory.createReset(
+        kubeInput.podName,
+        kubeInput.labels,
+        kubeInput.annotations,
+        kubeInput.nodeSelectors,
+        kubeInput.orchestratorImage,
+        kubeInput.destinationImage,
+        kubeInput.orchestratorReqs,
+        kubeInput.destinationReqs,
+        kubeInput.orchestratorRuntimeEnvVars,
+        kubeInput.destinationRuntimeEnvVars,
+        replicationInput.useFileTransfer,
+        replicationInput.workspaceId,
       )
-    }
-  }
 
-  @Trace(operationName = WAIT_DESTINATION_OPERATION_NAME)
-  fun waitDestinationReadyOrTerminalInit(kubeInput: OrchestratorKubeInput) {
+    logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }
+    logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
+    logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
+
     try {
-      kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
+      pod =
+        kubePodLauncher.create(pod)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubeClientException(
-        "Destination pod failed to start within allotted timeout of ${REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
+        "Failed to create pod ${kubeInput.podName}.",
         e,
-        KubeCommandType.WAIT_MAIN,
-        PodType.DESTINATION,
+        KubeCommandType.CREATE,
+        PodType.RESET,
       )
     }
+
+    // NOTE: might not be necessary depending on when `serversideApply` returns.
+    // If it blocks until it moves from PENDING, then we are good. Otherwise, we
+    // need this or something similar to wait for the pod to be running on the node.
+    waitForPodInitComplete(pod, PodType.REPLICATION.toString())
   }
 
   fun launchCheck(
@@ -292,6 +233,7 @@ class KubePodClient(
         kubeInput.annotations,
         kubeInput.extraEnv,
         useFetchingInit,
+        kubeInput.workspaceId,
       )
     try {
       pod = kubePodLauncher.create(pod)
@@ -365,49 +307,23 @@ class KubePodClient(
   ) {
     try {
       kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: TimeoutException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "$podLogLabel pod failed to init within allotted timeout.",
-        e,
-        KubeCommandType.WAIT_INIT,
-      )
+    } catch (e: Exception) {
+      when (e) {
+        is TimeoutException, is KubernetesClientTimeoutException -> {
+          ApmTraceUtils.addExceptionToTrace(e)
+          throw ResourceConstraintException(
+            "Unable to start the $podLogLabel pod. This may be due to insufficient system resources. Please check available resources and try again.",
+            e,
+            KubeCommandType.WAIT_INIT,
+          )
+        } else -> throw e
+      }
     }
-  }
-
-  private fun useMonoPod(replicationInput: ReplicationInput): Boolean {
-    val ffContext = Multi(listOf(Workspace(replicationInput.workspaceId), Connection(replicationInput.connectionId)))
-    val memoryFootprint = getMemoryLimitTotal(replicationInput)
-    return featureFlagClient.boolVariation(
-      ReplicationMonoPod,
-      ffContext,
-    ) && featureFlagClient.intVariation(ReplicationMonoPodMemoryTolerance, ffContext) >= toGigabytes(memoryFootprint)
-  }
-
-  private fun getMemoryLimitTotal(replicationInput: ReplicationInput): Long {
-    val sourceMemoryLimit = extractMemoryLimit(replicationInput.getSourceResourceReqs())
-    val destinationMemoryLimit = extractMemoryLimit(replicationInput.getDestinationResourceReqs())
-    val orchestratorMemoryLimit = extractMemoryLimit(replicationInput.getOrchestratorResourceReqs())
-    return sourceMemoryLimit + destinationMemoryLimit + orchestratorMemoryLimit
-  }
-
-  private fun extractMemoryLimit(resourceRequirements: ResourceRequirements?): Long {
-    return KubePodProcess.buildResourceRequirements(resourceRequirements)?.limits?.get("memory")?.numericalAmount?.toLong() ?: 0
   }
 
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
-    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(2)
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
-    private const val BYTES_PER_GB = 1024 * 1024 * 1024
-
-    private fun toGigabytes(bytes: Long): Int {
-      return if (bytes > 0) {
-        (bytes / BYTES_PER_GB).toInt()
-      } else {
-        bytes.toInt()
-      }
-    }
   }
 }

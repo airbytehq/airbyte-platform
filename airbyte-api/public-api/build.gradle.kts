@@ -42,9 +42,10 @@ dependencies {
   testImplementation(libs.kotlin.test.runner.junit5)
 }
 
-val internalApiSpecFile = project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").getPath()
+val internalApiSpecFile = project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").path
 
-val genPublicApiServer = tasks.register<GenerateTask>("generatePublicApiServer") {
+val genPublicApiServer =
+  tasks.register<GenerateTask>("generatePublicApiServer") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/public_api/server"
 
     inputs.file(internalApiSpecFile)
@@ -59,29 +60,32 @@ val genPublicApiServer = tasks.register<GenerateTask>("generatePublicApiServer")
 
     generateApiDocumentation = false
 
-    configOptions = mapOf(
-            "dateLibrary"                   to "java8",
-            "enumPropertyNaming"            to "UPPERCASE",
-            "generatePom"                   to "false",
-            "interfaceOnly"                 to "true",
-            "library"                       to "jaxrs-spec",
-            "returnResponse"                to "true",
-            "useBeanValidation"             to "true",
-            "performBeanValidation"         to "true",
-            "additionalModelTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
-            "additionalEnumTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
-            "useTags"                       to "true",
-            "useJakartaEe"                  to "true",
-    )
+    configOptions =
+      mapOf(
+        "dateLibrary" to "java8",
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "library" to "jaxrs-spec",
+        "returnResponse" to "true",
+        "useBeanValidation" to "true",
+        "performBeanValidation" to "true",
+        "additionalModelTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
+        "additionalEnumTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
+        "useTags" to "true",
+        "useJakartaEe" to "true",
+      )
 
-    schemaMappings = mapOf(
-            "SourceConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "OAuthInputConfiguration"      to "com.fasterxml.jackson.databind.JsonNode",
-            "OAuthCredentialsConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"     to "com.fasterxml.jackson.databind.JsonNode",
-            "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-    )
-}
+    schemaMappings =
+      mapOf(
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "OAuthInputConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "OAuthCredentialsConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+      )
+  }
 
 sourceSets {
   main {
@@ -103,13 +107,12 @@ sourceSets {
   }
 }
 
-
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs = listOf("-parameters")
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(genPublicApiServer)
+  dependsOn(genPublicApiServer)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
@@ -123,5 +126,5 @@ afterEvaluate {
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
-    enabled = false
+  enabled = false
 }

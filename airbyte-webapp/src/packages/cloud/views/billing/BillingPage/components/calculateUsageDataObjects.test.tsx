@@ -3,35 +3,17 @@ import {
   mockConsumptionThirtyDay,
   mockConsumptionYear,
 } from "test-utils/mock-data/mockBillingData";
+import { mockWorkspaceUsage } from "test-utils/mock-data/mockWorkspaceUsage";
 
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 
 import {
   calculateFreeAndPaidUsageByConnection,
   calculateFreeAndPaidUsageByTimeChunk,
-  generateArrayForTimeWindow,
+  getWorkspaceUsageByConnection,
 } from "./calculateUsageDataObjects";
 
 describe("calculateUsageDataObjects", () => {
-  describe(`${generateArrayForTimeWindow.name}`, () => {
-    it("should generate an array of the correct length for past 30 days", () => {
-      const result = generateArrayForTimeWindow(ConsumptionTimeWindow.lastMonth);
-      expect(result).toHaveLength(30);
-    });
-
-    it("should generate an array of the correct length for past 6 months", () => {
-      // because the "buckets" always start on a Sunday, there is some variation between
-      // whether we end up with 26 or 27 buckets
-      const result = generateArrayForTimeWindow(ConsumptionTimeWindow.lastSixMonths);
-      expect(result.length).toEqual(26);
-    });
-    it("should generate an array of the correct length for past year", () => {
-      // because the "buckets" always start on the 1st of the month, there is some variation between
-      // whether we end up with 12 or 13 buckets
-      const result = generateArrayForTimeWindow(ConsumptionTimeWindow.lastYear);
-      expect(result.length).toEqual(12);
-    });
-  });
   describe(`${calculateFreeAndPaidUsageByTimeChunk.name}`, () => {
     describe("thirty day lookback", () => {
       it("should calculate the correct usage with an empty set of filteredConsumptionData", () => {
@@ -110,5 +92,21 @@ describe("calculateUsageDataObjects", () => {
       expect(result[2].usage).toHaveLength(30);
       expect(result[2].totalUsage).toEqual(24);
     });
+  });
+});
+
+describe(`${getWorkspaceUsageByConnection.name}`, () => {
+  it("should calculate the correct usage with an empty set of filteredConsumptionData", () => {
+    const result = getWorkspaceUsageByConnection([], ConsumptionTimeWindow.lastMonth);
+    expect(result).toHaveLength(0);
+  });
+
+  it("should calculate the correct usage with internal, free and regular usage", () => {
+    const result = getWorkspaceUsageByConnection(mockWorkspaceUsage.data, ConsumptionTimeWindow.lastMonth);
+    expect(result).toHaveLength(2);
+    expect(result[0].totalFreeUsage).toEqual(10);
+    expect(result[0].totalInternalUsage).toEqual(10);
+    expect(result[0].totalBilledCost).toEqual(53.5);
+    expect(result[0].totalUsage).toEqual(73.5);
   });
 });

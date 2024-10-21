@@ -3,17 +3,12 @@ package io.airbyte.workers.internal.bookkeeping.streamstatus
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.ProcessRateLimitedMessage
-import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.general.CachingFeatureFlagClient
 import io.airbyte.workers.general.RateLimitedMessageHelper
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
@@ -37,7 +32,6 @@ class StreamStatusTracker(
   private val dataExtractor: AirbyteMessageDataExtractor,
   private val store: StreamStatusStateStore,
   private val eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>,
-  private val ffClient: CachingFeatureFlagClient,
   private val ctx: ReplicationContext,
   // TODO: move cache to client proper when Docker uses Orchestrator
   // Cache for api responses — we put this here so it gets GC'd when the sync
@@ -108,7 +102,7 @@ class StreamStatusTracker(
     return when (msg.streamStatus.status!!) {
       ProtocolEnum.STARTED -> store.setRunState(key, ApiEnum.RUNNING)
       ProtocolEnum.RUNNING -> {
-        if (RateLimitedMessageHelper.isStreamStatusRateLimitedMessage(msg.streamStatus) && shouldProcessRateLimitedMessage()) {
+        if (RateLimitedMessageHelper.isStreamStatusRateLimitedMessage(msg.streamStatus)) {
           logger.info { "Stream status TRACE with status RUNNING received of sub-type: ${ApiEnum.RATE_LIMITED} for stream ${key.toDisplayName()}" }
 
           store.setRunState(key, ApiEnum.RATE_LIMITED)
@@ -180,10 +174,5 @@ class StreamStatusTracker(
     metadata: StreamStatusRateLimitedMetadata?,
   ) {
     eventPublisher.publishEvent(StreamStatusUpdateEvent(apiResponseCache, key, runState, metadata, ctx))
-  }
-
-  private fun shouldProcessRateLimitedMessage(): Boolean {
-    val ffCtx = Multi(listOf(Workspace(ctx.workspaceId), Connection(ctx.connectionId)))
-    return ffClient.boolVariation(ProcessRateLimitedMessage, ffCtx)
   }
 }

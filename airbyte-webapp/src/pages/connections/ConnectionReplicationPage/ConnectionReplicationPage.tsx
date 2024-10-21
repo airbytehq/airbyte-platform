@@ -1,6 +1,6 @@
 import isBoolean from "lodash/isBoolean";
 import pick from "lodash/pick";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -20,14 +20,15 @@ import { UpdateConnectionFormControls } from "components/connection/ConnectionFo
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
-import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -48,7 +49,7 @@ const SchemaChangeMessage: React.FC = () => {
   const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(isDirty);
 
   const { refreshSchema } = useConnectionFormService();
-  const { connection, schemaHasBeenRefreshed, schemaRefreshing } = useConnectionEditService();
+  const { connection, schemaHasBeenRefreshed, schemaRefreshing, connectionUpdating } = useConnectionEditService();
   const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   if (schemaHasBeenRefreshed) {
@@ -61,6 +62,7 @@ const SchemaChangeMessage: React.FC = () => {
         type="info"
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
+        actionBtnProps={{ disabled: connectionUpdating }}
         onAction={refreshSchema}
         data-testid="schemaChangesDetected"
       />
@@ -90,8 +92,9 @@ const relevantConnectionKeys = [
 
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
+  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
+  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
   const getStateType = useGetStateTypeQuery();
@@ -126,6 +129,15 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const onFormSubmit = useCallback(
     async (values: RelevantConnectionValues) => {
+      // ** FOR NOW **
+      // the UI relies on `config.hashedFields` which the API maps to `mappers`
+      // to enable support for `mappers` in the public API, compose BE does some magic to convert between the two
+      // but that can lead to `mappers` here overriding `hashedFields`, so we unset any mappers
+      // `hashedFields` will go away with the mappers UI project
+      values.syncCatalog.streams.forEach((stream) => {
+        delete stream.config?.mappers;
+      });
+
       setSubmitError(null);
 
       /**
@@ -218,13 +230,6 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
-  const setScrollableContainer = (ref: HTMLDivElement | null) => {
-    if (ref === null) {
-      return;
-    }
-    setScrollElement(ref);
-  };
-
   const onSuccess = () => {
     registerNotification({
       id: "connection_settings_change_success",
@@ -243,14 +248,13 @@ export const ConnectionReplicationPage: React.FC = () => {
   };
 
   const newSyncCatalogV2Form = connection && (
-    <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
+    <ScrollParent props={{ className: styles.scrollableContainer }}>
       <Form<RelevantConnectionValues>
         defaultValues={initialValues}
         reinitializeDefaultValues
         schema={validationSchema}
         onSubmit={onFormSubmit}
         trackDirtyChanges
-        disabled={mode === "readonly"}
         onError={onError}
         onSuccess={onSuccess}
       >
@@ -259,22 +263,22 @@ export const ConnectionReplicationPage: React.FC = () => {
           <SchemaChangeBackdrop>
             <SchemaRefreshing>
               <Card noPadding title={formatMessage({ id: "connection.schema" })}>
-                <Box mb="xl" data-testid="catalog-tree-table-body">
-                  <SyncCatalogTable scrollParentContainer={scrollElement} />
+                <Box mb="xl">
+                  <SyncCatalogTable />
                 </Box>
               </Card>
             </SchemaRefreshing>
           </SchemaChangeBackdrop>
         </FlexContainer>
       </Form>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 
   const oldSyncCatalogForm =
     schemaError && !schemaRefreshing ? (
-      <ScrollableContainer>
+      <ScrollParent>
         <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
-      </ScrollableContainer>
+      </ScrollParent>
     ) : !schemaRefreshing && connection ? (
       <Form<RelevantConnectionValues>
         defaultValues={initialValues}
@@ -283,14 +287,14 @@ export const ConnectionReplicationPage: React.FC = () => {
         trackDirtyChanges
       >
         <div className={styles.formContainer}>
-          <ScrollableContainer ref={setScrollableContainer}>
+          <ScrollParent props={{ className: styles.scrollableContainer }}>
             <FlexContainer direction="column">
               <SchemaChangeMessage />
               <SchemaChangeBackdrop>
-                <SyncCatalogCard scrollParentContainer={scrollElement} />
+                <SyncCatalogCard />
               </SchemaChangeBackdrop>
             </FlexContainer>
-          </ScrollableContainer>
+          </ScrollParent>
           <Box pb="xl" px="xl" pt="lg" className={styles.editControlsContainer}>
             <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
           </Box>
@@ -300,5 +304,5 @@ export const ConnectionReplicationPage: React.FC = () => {
       <LoadingSchema />
     );
 
-  return <div className={styles.container}>{isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
+  return <div className={styles.container}>{useSyncCatalogV2 ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
 };

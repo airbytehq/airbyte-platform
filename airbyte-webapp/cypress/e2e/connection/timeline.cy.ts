@@ -6,7 +6,6 @@ import {
   createPokeApiSourceViaApi,
 } from "@cy/commands/connection";
 import { visit } from "@cy/pages/connection/connectionPageObject";
-import { setFeatureFlags } from "@cy/support/e2e";
 import { DestinationRead, SourceRead, WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 
 describe("Connection Timeline", () => {
@@ -15,8 +14,6 @@ describe("Connection Timeline", () => {
   let connection: WebBackendConnectionRead | null = null;
 
   beforeEach(() => {
-    setFeatureFlags({ "connection.timeline": true });
-
     createPokeApiSourceViaApi().then((source) => {
       pokeApiSource = source;
     });
@@ -38,7 +35,6 @@ describe("Connection Timeline", () => {
         destinationId: jsonDestination.destinationId,
       });
     }
-    setFeatureFlags({});
   });
 
   it("Should list events and interact with job logs modal and links", () => {

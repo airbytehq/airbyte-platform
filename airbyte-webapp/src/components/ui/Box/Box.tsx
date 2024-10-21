@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { PropsWithChildren } from "react";
+import React, { forwardRef, PropsWithChildren } from "react";
 
 import styles from "./Box.module.scss";
 
@@ -34,13 +34,11 @@ function toClassName(key: keyof Omit<BoxProps, "className" | "as" | "data-testid
 
 const keys = ["m", "my", "mx", "mt", "mr", "mb", "ml", "p", "py", "px", "pt", "pr", "pb", "pl"] as const;
 
-export const Box: React.FC<PropsWithChildren<BoxProps>> = ({
-  as = "div",
-  children,
-  className: classNameProp,
-  ...props
-}) => {
-  const className = classNames(classNameProp, ...keys.map((key) => toClassName(key, props[key])));
+export const Box = forwardRef<HTMLElement, PropsWithChildren<BoxProps>>(
+  ({ as = "div", children, className: classNameProp, ...props }, ref) => {
+    const className = classNames(classNameProp, ...keys.map((key) => toClassName(key, props[key])));
 
-  return React.createElement(as, { className, children, "data-testid": props["data-testid"] });
-};
+    return React.createElement(as, { className, children, "data-testid": props["data-testid"], ref });
+  }
+);
+Box.displayName = "Box";

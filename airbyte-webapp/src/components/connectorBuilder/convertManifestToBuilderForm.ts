@@ -38,12 +38,18 @@ import {
   PrimaryKey,
   DatetimeBasedCursor,
   DefaultErrorHandler,
+  JsonDecoderType,
+  JsonlDecoderType,
+  XmlDecoderType,
+  IterableDecoderType,
+  SimpleRetrieverDecoder,
 } from "core/api/types/ConnectorManifest";
 
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
   BuilderFormInput,
@@ -92,8 +98,9 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
-  assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
-  builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
+  const firstStreamRetriever: SimpleRetriever = streams[0].retriever;
+  assertType<HttpRequester>(firstStreamRetriever.requester, "HttpRequester", streams[0].name);
+  builderFormValues.global.urlBase = firstStreamRetriever.requester.url_base;
 
   const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
 
@@ -114,8 +121,8 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       index.toString(),
       streamNameToIndex,
       serializedStreamToName,
-      streams[0].retriever.requester.url_base,
-      streams[0].retriever.requester.authenticator,
+      firstStreamRetriever.requester.url_base,
+      firstStreamRetriever.requester.authenticator,
       builderMetadata,
       resolvedManifest.spec
     )
@@ -205,6 +212,7 @@ const manifestStreamToBuilder = (
     partition_router,
     record_selector,
     requester,
+    decoder,
     ...unknownRetrieverFields
   } = retriever;
   assertType<HttpRequester>(requester, "HttpRequester", stream.name);
@@ -253,6 +261,7 @@ const manifestStreamToBuilder = (
     name: streamName,
     urlPath: path,
     httpMethod: http_method === "POST" ? "POST" : "GET",
+    decoder: manifestDecoderToBuilder(decoder, streamName),
     requestOptions: {
       requestParameters: Object.entries(request_parameters ?? {}),
       requestHeaders: Object.entries(request_headers ?? {}),
@@ -373,6 +382,34 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
     value: formatJson(requester.request_body_json),
   };
 }
+
+const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+  const decoderType = decoder?.type;
+  if (
+    ![
+      undefined,
+      JsonDecoderType.JsonDecoder,
+      JsonlDecoderType.JsonlDecoder,
+      XmlDecoderType.XmlDecoder,
+      IterableDecoderType.IterableDecoder,
+    ].includes(decoderType)
+  ) {
+    throw new ManifestCompatibilityError(streamName, "decoder is not supported");
+  }
+
+  switch (decoderType) {
+    case JsonDecoderType.JsonDecoder:
+      return "JSON";
+    case XmlDecoderType.XmlDecoder:
+      return "XML";
+    case JsonlDecoderType.JsonlDecoder:
+      return "JSON Lines";
+    case IterableDecoderType.IterableDecoder:
+      return "Iterable";
+    default:
+      return "JSON";
+  }
+};
 
 export function manifestRecordSelectorToBuilder(
   recordSelector: RecordSelector,
@@ -1192,7 +1229,7 @@ export function manifestAuthenticatorToBuilder(
     case SESSION_TOKEN_AUTHENTICATOR: {
       const sessionTokenAuth = filterKnownFields(
         authenticator,
-        ["type", "expiration_duration", "login_requester", "request_authentication", "session_token_path"],
+        ["type", "expiration_duration", "login_requester", "request_authentication", "session_token_path", "decoder"],
         authenticator.type
       );
       if (sessionTokenAuth.request_authentication.type === SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR) {
@@ -1216,6 +1253,11 @@ export function manifestAuthenticatorToBuilder(
           undefined,
           `SessionTokenAuthenticator request_authentication must have one of the following types: ${SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR}, ${SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR}`
         );
+      }
+
+      const decoderType = sessionTokenAuth.decoder?.type;
+      if (![undefined, JsonDecoderType.JsonDecoder, XmlDecoderType.XmlDecoder].includes(decoderType)) {
+        throw new ManifestCompatibilityError(undefined, "SessionTokenAuthenticator decoder is not supported");
       }
 
       const manifestLoginRequester = filterKnownFields(
@@ -1269,6 +1311,7 @@ export function manifestAuthenticatorToBuilder(
           },
           errorHandler: manifestErrorHandlerToBuilder(manifestLoginRequester.error_handler),
         },
+        decoder: decoderType ? (decoderType === XmlDecoderType.XmlDecoder ? "XML" : "JSON") : "JSON",
       };
     }
   }

@@ -1,6 +1,6 @@
 intents:
   UploadCustomConnector:
-    name: Create Custom Docker Connector
+    name: Create custom docker connector
     description: Upload a custom docker connector to be used in the workspace
     roles:
       - ORGANIZATION_EDITOR
@@ -8,9 +8,49 @@ intents:
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
+  UpdateOrDeleteCustomConnector:
+    name: Update or delete custom docker connector
+    description: Update or delete a custom docker connector in the workspace
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ViewOrganizationTrialStatus:
+    name: View organization trial status
+    description: Ability to see the trial status of an organization
+    roles:
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ViewOrganizationUsage:
+    name: View organization usage
+    description: Ability to view usage across the whole organization
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ManageOrganizationBilling:
-    name: Manage Organization Billing
+    name: Manage organization billing
     description: View and edit billing information for the organization
     roles:
       - ORGANIZATION_ADMIN
+      - ADMIN
+  ManageOrganizationPaymentConfigs:
+    name: Manage organization payment configs
+    description: Ability to directly interact with organization payment configs
+    # This intent can only be used for instance admin at the moment, since the API it's used on are not all using
+    # POST request bodies, thus our authentication logic might not find the organizationId in the request.
+    roles:
+      - ADMIN
+
+  RunAndCancelConnectionSyncAndRefresh:
+    name: Run and cancel connection sync and refresh
+    description: Allow user to run/cancel syncs and refreshes
+    roles:
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_RUNNER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
       - ADMIN

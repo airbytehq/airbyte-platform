@@ -55,7 +55,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-workload-api-server-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "workload-api.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -165,7 +165,7 @@ spec:
           containerPort: 8007
           protocol: TCP
         {{- if .Values.debug.enabled }}
-        - name: debug 
+        - name: debug
           containerPort: {{ .Values.debug.remoteDebugPort }}
           protocol: TCP
         {{- end }}
@@ -198,7 +198,7 @@ spec:
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
       {{- end }}
       {{- if .Values.extraVolumes }}
       {{- toYaml .Values.extraVolumes | nindent 6 }}

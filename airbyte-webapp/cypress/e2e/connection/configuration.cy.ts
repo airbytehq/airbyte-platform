@@ -453,6 +453,8 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
         });
       });
     });
+
+    // TODO: the whole "Replication tab" test suite can be safely removed as it's covered by the connection/syncCatalog.cy.ts
     describe("Replication tab", () => {
       it("Cannot enable/disable streams", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {

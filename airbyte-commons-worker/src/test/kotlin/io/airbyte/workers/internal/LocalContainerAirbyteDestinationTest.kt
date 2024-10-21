@@ -7,7 +7,7 @@ package io.airbyte.workers.internal
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_FAILURE
+import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -250,8 +250,8 @@ internal class LocalContainerAirbyteDestinationTest {
     assertEquals(exitValue, destination.exitValue)
 
     exitValueFile.delete()
-    val error = assertThrows(IllegalStateException::class.java, { destination.exitValue })
-    assertEquals(EXIT_CODE_CHECK_FAILURE, error.message)
+    val error = assertThrows(IllegalStateException::class.java) { destination.exitValue }
+    assertEquals(EXIT_CODE_CHECK_EXISTS_FAILURE, error.message)
   }
 
   @Test

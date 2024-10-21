@@ -16,6 +16,8 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
+import styles from "./DestinationItemPage.module.scss";
+
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);
   const params = useParams<{ workspaceId: string; "*": StepsTypes | "" | undefined }>();
@@ -37,20 +39,28 @@ export const DestinationItemPage: React.FC = () => {
   return (
     <DefaultErrorBoundary>
       <ConnectorDocumentationWrapper>
-        <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
-        <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-          <ConnectorTitleBlock
-            connector={destination}
-            connectorDefinition={destinationDefinition}
-            actorDefinitionVersion={actorDefinitionVersion}
-          />
-          <ConnectorNavigationTabs connectorType="destination" connector={destination} id={destination.destinationId} />
-        </PageHeaderWithNavigation>
-        <Suspense fallback={<LoadingPage />}>
-          <DefaultErrorBoundary>
-            <Outlet />
-          </DefaultErrorBoundary>
-        </Suspense>
+        <div className={styles.container}>
+          <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
+          <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} className={styles.pageHeader}>
+            <ConnectorTitleBlock
+              connector={destination}
+              connectorDefinition={destinationDefinition}
+              actorDefinitionVersion={actorDefinitionVersion}
+            />
+            <ConnectorNavigationTabs
+              connectorType="destination"
+              connector={destination}
+              id={destination.destinationId}
+            />
+          </PageHeaderWithNavigation>
+          <Suspense fallback={<LoadingPage />}>
+            <DefaultErrorBoundary>
+              <div className={styles.pageBody}>
+                <Outlet />
+              </div>
+            </DefaultErrorBoundary>
+          </Suspense>
+        </div>
       </ConnectorDocumentationWrapper>
     </DefaultErrorBoundary>
   );

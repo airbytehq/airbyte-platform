@@ -18,10 +18,14 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -36,9 +40,13 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.validation.json.JsonSchemaValidator;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
@@ -71,24 +79,41 @@ public class ApplicationBeanFactory {
 
   @Singleton
   public JobTracker jobTracker(
-                               final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
                                final TrackingClient trackingClient,
                                final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                               final FeatureFlagClient featureFlagClient) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
+                               final SourceService sourceService,
+                               final DestinationService destinationService,
+                               final ConnectionService connectionService,
+                               final OperationService operationService,
+                               final WorkspaceService workspaceService) {
+    return new JobTracker(
+        jobPersistence,
+        trackingClient,
+        actorDefinitionVersionHelper,
+        sourceService,
+        destinationService,
+        connectionService,
+        operationService,
+        workspaceService);
   }
 
   @Singleton
   public JobNotifier jobNotifier(
-                                 final ConfigRepository configRepository,
                                  final TrackingClient trackingClient,
                                  final WebUrlHelper webUrlHelper,
                                  final WorkspaceHelper workspaceHelper,
-                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                 final SourceService sourceService,
+                                 final DestinationService destinationService,
+                                 final ConnectionService connectionService,
+                                 final WorkspaceService workspaceService) {
     return new JobNotifier(
         webUrlHelper,
-        configRepository,
+        connectionService,
+        sourceService,
+        destinationService,
+        workspaceService,
         workspaceHelper,
         trackingClient,
         actorDefinitionVersionHelper);
@@ -106,22 +131,30 @@ public class ApplicationBeanFactory {
   @SuppressWarnings("ParameterName")
   @Singleton
   public SyncJobFactory jobFactory(
-                                   final ConfigRepository configRepository,
                                    final JobPersistence jobPersistence,
                                    @Property(name = "airbyte.connector.specific-resource-defaults-enabled",
                                              defaultValue = "false") final boolean connectorSpecificResourceDefaultsEnabled,
                                    final DefaultJobCreator jobCreator,
                                    final OAuthConfigSupplier oAuthConfigSupplier,
                                    final ConfigInjector configInjector,
-                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                   final SourceService sourceService,
+                                   final DestinationService destinationService,
+                                   final ConnectionService connectionService,
+                                   final OperationService operationService,
+                                   final WorkspaceService workspaceService) {
     return new DefaultSyncJobFactory(
         connectorSpecificResourceDefaultsEnabled,
         jobCreator,
-        configRepository,
         oAuthConfigSupplier,
         configInjector,
-        new WorkspaceHelper(configRepository, jobPersistence),
-        actorDefinitionVersionHelper);
+        new WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService),
+        actorDefinitionVersionHelper,
+        sourceService,
+        destinationService,
+        connectionService,
+        operationService,
+        workspaceService);
   }
 
   @Singleton
@@ -195,6 +228,12 @@ public class ApplicationBeanFactory {
     } else {
       return new CompositeBuilderProjectUpdater(List.of(configRepositoryProjectUpdater, new LocalFileSystemBuilderProjectUpdater()));
     }
+  }
+
+  @Singleton
+  @Requires(env = Environment.KUBERNETES)
+  public KubernetesClient kubernetesClient() {
+    return new KubernetesClientBuilder().build();
   }
 
 }

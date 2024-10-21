@@ -17,7 +17,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -70,7 +70,8 @@ class ConnectionApiControllerTest {
 
   @ParameterizedTest
   @MethodSource("uuidJobTypesMatrix")
-  void getTaskQueueNameSuccess(final UUID connectionId, final TemporalJobType jobType) throws IOException, ConfigNotFoundException {
+  void getTaskQueueNameSuccess(final UUID connectionId, final TemporalJobType jobType)
+      throws IOException, ConfigNotFoundException {
     final var expected = "queue name";
     when(routerService.getTaskQueue(connectionId, jobType)).thenReturn(expected);
 
@@ -88,7 +89,7 @@ class ConnectionApiControllerTest {
     final TemporalJobType type = TemporalJobType.SYNC;
 
     when(routerService.getTaskQueue(connectionId, type))
-        .thenThrow(new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, "Nope."));
+        .thenThrow(new io.airbyte.data.exceptions.ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, "Nope."));
 
     final var req = new GetTaskQueueNameRequest()
         .connectionId(connectionId)

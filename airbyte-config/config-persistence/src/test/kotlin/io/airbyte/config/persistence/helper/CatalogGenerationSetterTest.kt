@@ -65,7 +65,7 @@ class CatalogGenerationSetterTest {
     )
 
   val jobId = 3L
-  val connectionId = UUID.randomUUID()
+  val connectionId: UUID = UUID.randomUUID()
 
   @BeforeEach
   fun init() {

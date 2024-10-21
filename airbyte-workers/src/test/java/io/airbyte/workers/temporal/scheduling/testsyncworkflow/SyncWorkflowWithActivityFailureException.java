@@ -31,4 +31,7 @@ public class SyncWorkflowWithActivityFailureException implements SyncWorkflow {
         new Exception("Error"));
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

@@ -13,15 +13,16 @@ import jakarta.inject.Singleton
 @Singleton
 class VolumeFactory(
   @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
-  @Value("\${airbyte.container.orchestrator.secret-name}") private val secretName: String?,
-  @Value("\${airbyte.container.orchestrator.secret-mount-path}") private val secretMountPath: String?,
-  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
-  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.secret-name}") private val secretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.mount-path}") private val secretMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.mount-path}") private val dataPlaneCredsMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
 ) {
   fun config(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-config")
+        .withName(CONFIG_VOLUME_NAME)
         .withNewEmptyDir()
         .withMedium("Memory")
         .endEmptyDir()
@@ -29,7 +30,7 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-config")
+        .withName(CONFIG_VOLUME_NAME)
         .withMountPath(FileConstants.CONFIG_DIR)
         .build()
 
@@ -47,7 +48,7 @@ class VolumeFactory(
 
     val volume =
       VolumeBuilder()
-        .withName("airbyte-secret")
+        .withName(SECRET_VOLUME_NAME)
         .withSecret(
           SecretVolumeSourceBuilder()
             .withSecretName(secretName)
@@ -58,7 +59,7 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-secret")
+        .withName(SECRET_VOLUME_NAME)
         .withMountPath(secretMountPath)
         .build()
 
@@ -68,14 +69,14 @@ class VolumeFactory(
   fun dataplaneCreds(): VolumeMountPair? {
     val hasDataplaneCreds =
       StringUtils.isNotEmpty(dataPlaneCredsSecretName) &&
-        StringUtils.isNotEmpty(dataPlaneCredsSecretMountPath)
+        StringUtils.isNotEmpty(dataPlaneCredsMountPath)
     if (!hasDataplaneCreds) {
       return null
     }
 
     val volume =
       VolumeBuilder()
-        .withName("airbyte-dataplane-creds")
+        .withName(DATA_PLANE_CREDS_VOLUME_NAME)
         .withSecret(
           SecretVolumeSourceBuilder()
             .withSecretName(dataPlaneCredsSecretName)
@@ -86,8 +87,8 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-dataplane-creds")
-        .withMountPath(dataPlaneCredsSecretMountPath)
+        .withName(DATA_PLANE_CREDS_VOLUME_NAME)
+        .withMountPath(dataPlaneCredsMountPath)
         .build()
 
     return VolumeMountPair(volume, mount)
@@ -96,14 +97,14 @@ class VolumeFactory(
   fun source(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-source")
+        .withName(SOURCE_VOLUME_NAME)
         .withNewEmptyDir()
         .endEmptyDir()
         .build()
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-source")
+        .withName(SOURCE_VOLUME_NAME)
         .withMountPath(FileConstants.SOURCE_DIR)
         .build()
 
@@ -113,21 +114,38 @@ class VolumeFactory(
   fun destination(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-destination")
+        .withName(DESTINATION_VOLUME_NAME)
         .withNewEmptyDir()
         .endEmptyDir()
         .build()
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-destination")
+        .withName(DESTINATION_VOLUME_NAME)
         .withMountPath(FileConstants.DEST_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun replication(): ReplicationVolumes {
+  fun staging(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withNewEmptyDir()
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withMountPath(stagingMountPath)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  fun replication(useStaging: Boolean): ReplicationVolumes {
     val volumes: MutableList<Volume> = ArrayList()
     val orchVolumeMounts: MutableList<VolumeMount> = ArrayList()
     val sourceVolumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -159,12 +177,29 @@ class VolumeFactory(
       orchVolumeMounts.add(dataPlaneCreds.mount)
     }
 
+    if (useStaging) {
+      val staging = staging()
+      volumes.add(staging.volume)
+      orchVolumeMounts.add(staging.mount)
+      sourceVolumeMounts.add(staging.mount)
+      destVolumeMounts.add(staging.mount)
+    }
+
     return ReplicationVolumes(
       volumes,
       orchVolumeMounts,
       sourceVolumeMounts,
       destVolumeMounts,
     )
+  }
+
+  companion object {
+    const val CONFIG_VOLUME_NAME = "airbyte-config"
+    const val DATA_PLANE_CREDS_VOLUME_NAME = "airbyte-data-plane-creds"
+    const val DESTINATION_VOLUME_NAME = "airbyte-destination"
+    const val SECRET_VOLUME_NAME = "airbyte-secret"
+    const val SOURCE_VOLUME_NAME = "airbyte-source"
+    const val STAGING_VOLUME_NAME = "airbyte-file-staging"
   }
 }
 

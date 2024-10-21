@@ -41,30 +41,30 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.SyncMode;
-import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
-import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
@@ -72,6 +72,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,8 +82,13 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID workspaceId = UUID.randomUUID();
 
-  private ConfigRepository configRepository;
   private StandardSyncPersistence standardSyncPersistence;
+
+  private ConnectionService connectionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
+  private OperationService operationService;
 
   private StandardSourceDefinition sourceDef1;
   private StandardSourceDefinition sourceDefAlpha;
@@ -102,46 +108,40 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     standardSyncPersistence = new StandardSyncPersistence(database);
 
-    // only used for creating records that sync depends on.
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-
-    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
+    final var featureFlagClient = mock(TestClient.class);
+    final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    connectionService = new ConnectionServiceJooqImpl(database);
+    final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
         connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+        new ActorDefinitionServiceJooqImpl(database),
+        mock(ScopedConfigurationService.class));
+    sourceService = new SourceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater);
+    destinationService = new DestinationServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater);
+    workspaceService = new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
+    operationService = new OperationServiceJooqImpl(database);
+
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
   }
@@ -224,15 +224,15 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     final StandardSync syncGa = createStandardSync(source1, destination1);
     standardSyncPersistence.writeStandardSync(syncGa);
-    assertFalse(configRepository.getConnectionHasAlphaOrBetaConnector(syncGa.getConnectionId()));
+    assertFalse(connectionService.getConnectionHasAlphaOrBetaConnector(syncGa.getConnectionId()));
 
     final StandardSync syncAlpha = createStandardSync(sourceAlpha, destination1);
     standardSyncPersistence.writeStandardSync(syncAlpha);
-    assertTrue(configRepository.getConnectionHasAlphaOrBetaConnector(syncAlpha.getConnectionId()));
+    assertTrue(connectionService.getConnectionHasAlphaOrBetaConnector(syncAlpha.getConnectionId()));
 
     final StandardSync syncBeta = createStandardSync(source1, destinationBeta);
     standardSyncPersistence.writeStandardSync(syncBeta);
-    assertTrue(configRepository.getConnectionHasAlphaOrBetaConnector(syncBeta.getConnectionId()));
+    assertTrue(connectionService.getConnectionHasAlphaOrBetaConnector(syncBeta.getConnectionId()));
   }
 
   @Test
@@ -284,11 +284,11 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence.writeStandardSync(sync);
     final UUID operationId = writeOperationForConnection(sync.getConnectionId());
 
-    List<StandardSync> standardSyncs = configRepository.listStandardSyncsUsingOperation(operationId);
+    List<StandardSync> standardSyncs = connectionService.listStandardSyncsUsingOperation(operationId);
     assertEquals(1, standardSyncs.size());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
 
-    standardSyncs = configRepository.listWorkspaceStandardSyncs(new ConfigRepository.StandardSyncQuery(
+    standardSyncs = connectionService.listWorkspaceStandardSyncs(new StandardSyncQuery(
         workspaceId,
         null,
         null,
@@ -296,7 +296,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(1, standardSyncs.size());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
 
-    standardSyncs = configRepository.listWorkspaceStandardSyncsPaginated(new ConfigRepository.StandardSyncsQueryPaginated(
+    standardSyncs = connectionService.listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
         List.of(workspaceId),
         null,
         null,
@@ -308,7 +308,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(1, standardSyncs.size());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
 
-    standardSyncs = configRepository.listConnectionsBySource(sync.getSourceId(), true);
+    standardSyncs = connectionService.listConnectionsBySource(sync.getSourceId(), true);
     assertEquals(1, standardSyncs.size());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
   }
@@ -366,7 +366,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   void testListConnectionsByActorDefinitionIdAndType() throws IOException, JsonValidationException {
     createBaseObjects();
     final var expectedSync = createStandardSync(source1, destination1);
-    final List<StandardSync> actualSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+    final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
         ActorType.DESTINATION.value(), false);
     assertThat(actualSyncs.size()).isEqualTo(1);
@@ -390,12 +390,12 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence.writeStandardSync(sync2);
 
     final StandardSyncQuery syncQueryBySource = new StandardSyncQuery(workspaceId, List.of(source1.getSourceId()), null, false);
-    final List<UUID> activeSyncsForSource1 = configRepository.listWorkspaceActiveSyncIds(syncQueryBySource);
+    final List<UUID> activeSyncsForSource1 = workspaceService.listWorkspaceActiveSyncIds(syncQueryBySource);
     assertEquals(activeSyncsForSource1.size(), 1);
     assertEquals(activeSyncsForSource1.get(0), sync1.getConnectionId());
 
     final StandardSyncQuery syncQueryByDestination = new StandardSyncQuery(workspaceId, null, List.of(destination1.getDestinationId()), false);
-    final List<UUID> activeSyncsForDestination1 = configRepository.listWorkspaceActiveSyncIds(syncQueryByDestination);
+    final List<UUID> activeSyncsForDestination1 = workspaceService.listWorkspaceActiveSyncIds(syncQueryByDestination);
     assertEquals(activeSyncsForDestination1.size(), 1);
     assertEquals(activeSyncsForDestination1.get(0), sync1.getConnectionId());
   }
@@ -421,7 +421,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(Status.INACTIVE, sync3.getStatus());
     assertEquals(Status.DEPRECATED, sync4.getStatus());
 
-    configRepository.disableConnectionsById(List.of(sync1.getConnectionId(), sync2.getConnectionId(), sync3.getConnectionId()));
+    connectionService.disableConnectionsById(List.of(sync1.getConnectionId(), sync2.getConnectionId(), sync3.getConnectionId()));
 
     final StandardSync updatedSync1 = standardSyncPersistence.getStandardSync(sync1.getConnectionId());
     final StandardSync updatedSync2 = standardSyncPersistence.getStandardSync(sync2.getConnectionId());
@@ -442,7 +442,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
     sourceDef1 = createStandardSourceDefinition("0.2.2", ReleaseStage.GENERALLY_AVAILABLE);
     source1 = createSourceConnection(workspaceId, sourceDef1);
@@ -485,7 +485,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withReleaseStage(releaseStage)
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L);
-    configRepository.writeConnectorMetadata(sourceDef, sourceDefVersion);
+    sourceService.writeConnectorMetadata(sourceDef, sourceDefVersion, Collections.emptyList());
     return sourceDef;
   }
 
@@ -511,7 +511,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L);
 
-    configRepository.writeConnectorMetadata(destDef, destDefVersion);
+    destinationService.writeConnectorMetadata(destDef, destDefVersion, Collections.emptyList());
     return destDef;
   }
 
@@ -524,7 +524,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(sourceDef.getSourceDefinitionId())
         .withWorkspaceId(workspaceId)
         .withSourceId(sourceId);
-    configRepository.writeSourceConnectionNoSecrets(source);
+    sourceService.writeSourceConnectionNoSecrets(source);
     return source;
   }
 
@@ -538,7 +538,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(destDef.getDestinationDefinitionId())
         .withWorkspaceId(workspaceId)
         .withDestinationId(destinationId);
-    configRepository.writeDestinationConnectionNoSecrets(dest);
+    destinationService.writeDestinationConnectionNoSecrets(dest);
     return dest;
   }
 
@@ -576,7 +576,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   private UUID writeOperationForConnection(final UUID connectionId) throws SQLException, IOException {
     final UUID operationId = UUID.randomUUID();
     final UUID standardSyncOperationId = UUID.randomUUID();
-    configRepository.writeStandardSyncOperation(new StandardSyncOperation()
+    operationService.writeStandardSyncOperation(new StandardSyncOperation()
         .withOperationId(standardSyncOperationId)
         .withName("name")
         .withWorkspaceId(workspaceId)

@@ -6,7 +6,7 @@ package io.airbyte.server.apis;
 
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -23,7 +23,8 @@ import org.mockito.Mockito;
 class DestinationDefinitionSpecificationApiTest extends BaseControllerTest {
 
   @Test
-  void testCheckConnectionToDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(connectorDefinitionSpecificationHandler.getDestinationSpecification(Mockito.any()))
         .thenReturn(new DestinationDefinitionSpecificationRead())
         .thenThrow(new ConfigNotFoundException("", ""));

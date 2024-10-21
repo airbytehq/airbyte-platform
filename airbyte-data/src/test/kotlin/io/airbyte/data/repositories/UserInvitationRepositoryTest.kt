@@ -146,6 +146,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
       userInvitation.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
+        permissionType = PermissionType.organization_admin,
         scopeId = organizationId,
         scopeType = ScopeType.organization,
         status = matchingStatus,
@@ -180,6 +181,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
       userInvitation.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
+        permissionType = PermissionType.organization_admin,
         scopeId = otherOrganizationId,
         scopeType = ScopeType.organization,
         status = otherStatus,

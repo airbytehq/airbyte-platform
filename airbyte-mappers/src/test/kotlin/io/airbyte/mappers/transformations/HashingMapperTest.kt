@@ -4,9 +4,9 @@ import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.mappers.transformations.HashingMapper.Companion.supportedMethods
-import io.mockk.every
 import io.mockk.spyk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -34,27 +34,27 @@ class HashingMapperTest {
   fun schemaTransformsFieldNamesCorrectly() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE))
-    val result = hashingMapper.schema(config, fields)
-    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result)
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE)))
+    val result = hashingMapper.schema(config, slimStream)
+    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result.fields)
   }
 
   @Test
   fun schemaTransformsFieldNamesCorrectlyIfMissingSuffix() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1"))
-    val fields = listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE))
-    val result = hashingMapper.schema(config, fields)
-    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result)
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.DATE), Field("field2", FieldType.DATE)))
+    val result = hashingMapper.schema(config, slimStream)
+    assertEquals(listOf(Field("field1_hashed", FieldType.STRING), Field("field2", FieldType.DATE)), result.fields)
   }
 
   @Test
   fun schemaTransformsFailsIfFieldIsMissing() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("NotField1", FieldType.STRING))
+    val slimStream = SlimStream(listOf(Field("NotField1", FieldType.STRING)))
     assertThrows(IllegalStateException::class.java) {
-      hashingMapper.schema(config, fields)
+      hashingMapper.schema(config, slimStream)
     }
   }
 
@@ -62,9 +62,9 @@ class HashingMapperTest {
   fun schemaTransformFailsIfFieldCollision() {
     val config =
       ConfiguredMapper("test", mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed"))
-    val fields = listOf(Field("field1", FieldType.STRING), Field("field1_hashed", FieldType.STRING))
+    val slimStream = SlimStream(listOf(Field("field1", FieldType.STRING), Field("field1_hashed", FieldType.STRING)))
     assertThrows(IllegalStateException::class.java) {
-      hashingMapper.schema(config, fields)
+      hashingMapper.schema(config, slimStream)
     }
   }
 
@@ -86,18 +86,17 @@ class HashingMapperTest {
         "test",
         mapOf(
           HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1",
-          HashingMapper.METHOD_CONFIG_KEY to HashingMapper.SHA256,
+          HashingMapper.METHOD_CONFIG_KEY to hashingMethod,
           HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
         ),
       )
-
-    every { hashingMapper.hashAndEncodeData(HashingMapper.SHA256, "value1".toByteArray()) } returns "hashed_value"
 
     val record = TestRecordAdapter(StreamDescriptor().withName("stream"), mapOf("field1" to "value1", "field2" to "value2"))
     hashingMapper.map(config, record)
 
     assertTrue(record.has("field1_hashed"))
-    assertEquals("hashed_value", record.get("field1_hashed").asString())
+    val hashedValue = record.get("field1_hashed").asString()
+    assertTrue("hashed_value" != hashedValue && hashedValue.all { it.isLetterOrDigit() }, "$hashedValue doesn't look like a valid hash")
     assertFalse(record.has("field1"))
     assertTrue(record.has("field2"))
     assertEquals("value2", record.get("field2").asString())
@@ -115,9 +114,15 @@ class HashingMapperTest {
         ),
       )
 
-    assertThrows(IllegalArgumentException::class.java) {
-      hashingMapper.map(config, TestRecordAdapter(StreamDescriptor().withName("any"), mapOf("field1" to "anything")))
-    }
+    val record = TestRecordAdapter(StreamDescriptor().withName("any"), mapOf("field1" to "anything"))
+    hashingMapper.map(config, record)
+
+    assertFalse(record.has("field1"))
+    assertFalse(record.has("field1_hashed"))
+    assertEquals(
+      listOf(TestRecordAdapter.Change("field1_hashed", AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)),
+      record.changes,
+    )
   }
 
   @Test

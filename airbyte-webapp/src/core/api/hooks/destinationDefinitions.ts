@@ -7,6 +7,7 @@ import { trackError } from "core/utils/datadog";
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
   createCustomDestinationDefinition,
+  deleteDestinationDefinition,
   getDestinationDefinitionForWorkspace,
   listDestinationDefinitionsForWorkspace,
   listLatestDestinationDefinitions,
@@ -15,6 +16,7 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   DestinationDefinitionCreate,
+  DestinationDefinitionIdRequestBody,
   DestinationDefinitionRead,
   DestinationDefinitionReadList,
 } from "../types/AirbyteClient";
@@ -148,4 +150,34 @@ export const useUpdateDestinationDefinition = () => {
       trackError(error);
     },
   });
+};
+
+export const useDeleteDestinationDefinition = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  const { mutateAsync } = useMutation(
+    (body: DestinationDefinitionIdRequestBody) => deleteDestinationDefinition(body, requestOptions).then(() => body),
+    {
+      onSuccess: (body) => {
+        queryClient.setQueryData(destinationDefinitionKeys.detail(body.destinationDefinitionId), undefined);
+        queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
+          const newMap = new Map(oldData?.destinationDefinitionMap);
+          newMap.delete(body.destinationDefinitionId);
+          return {
+            destinationDefinitions:
+              oldData?.destinationDefinitions.filter(
+                ({ destinationDefinitionId }) => destinationDefinitionId !== body.destinationDefinitionId
+              ) ?? [],
+            destinationDefinitionMap: newMap,
+          };
+        });
+        queryClient.invalidateQueries(connectorDefinitionKeys.count());
+      },
+    }
+  );
+
+  return {
+    deleteDestinationDefinition: mutateAsync,
+  };
 };

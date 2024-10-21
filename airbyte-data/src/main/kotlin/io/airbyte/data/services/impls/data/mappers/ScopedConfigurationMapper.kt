@@ -44,6 +44,7 @@ fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType {
   return when (this) {
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
     EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
+    EntityConfigOriginType.release_candidate -> ModelConfigOriginType.RELEASE_CANDIDATE
   }
 }
 
@@ -51,6 +52,7 @@ fun ModelConfigOriginType.toEntity(): EntityConfigOriginType {
   return when (this) {
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
     ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
+    ModelConfigOriginType.RELEASE_CANDIDATE -> EntityConfigOriginType.release_candidate
   }
 }
 

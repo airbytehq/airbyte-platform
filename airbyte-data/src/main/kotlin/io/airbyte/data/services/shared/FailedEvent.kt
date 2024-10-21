@@ -7,15 +7,15 @@ import java.util.Optional
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class FailedEvent(
-  private val jobId: Long,
-  private val startTimeEpochSeconds: Long,
-  private val endTimeEpochSeconds: Long,
-  private val bytesLoaded: Long,
-  private val recordsLoaded: Long,
-  private val attemptsCount: Int,
-  private val jobType: String,
-  private val statusType: String,
-  private val streams: List<StreamDescriptor>? = null,
+  jobId: Long,
+  startTimeEpochSeconds: Long,
+  endTimeEpochSeconds: Long,
+  bytesLoaded: Long,
+  recordsLoaded: Long,
+  attemptsCount: Int,
+  jobType: String,
+  statusType: String,
+  streams: List<StreamDescriptor>? = null,
   private val failureReason: Optional<FailureReason>,
 ) : FinalStatusEvent(
     jobId,
@@ -28,7 +28,5 @@ class FailedEvent(
     statusType,
     streams,
   ) {
-  fun getFailureReason(): Optional<FailureReason> {
-    return failureReason
-  }
+  fun getFailureReason(): Optional<FailureReason> = failureReason
 }

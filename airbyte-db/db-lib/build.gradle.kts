@@ -5,7 +5,7 @@ plugins {
 }
 
 // Add a configuration(for our migrations(tasks defined below to encapsulate their dependencies)
-val migrations by configurations.creating {
+val migrations: Configuration by configurations.creating {
   extendsFrom(configurations.getByName("implementation"))
 }
 
@@ -64,7 +64,7 @@ tasks.named<Test>("test") {
       // Required to use junit-pioneer @SetEnvironmentVariable
       "--add-opens=java.base/java.util=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
-    )
+    ),
   )
 }
 
@@ -110,12 +110,14 @@ tasks.register<JavaExec>("dumpJobsSchema") {
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
-val copyInitSql = tasks.register<Copy>("copyInitSql") {
-  from("src/main/resources") {
-    include("init.sql")
+val copyInitSql =
+  tasks.register<Copy>("copyInitSql") {
+    from("src/main/resources") {
+      include("init.sql")
+      include("airbyte-entrypoint.sh")
+    }
+    into("build/airbyte/docker/bin")
   }
-  into("build/airbyte/docker/bin")
-}
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyInitSql)

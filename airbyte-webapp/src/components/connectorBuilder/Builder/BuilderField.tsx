@@ -46,6 +46,7 @@ interface BaseFieldProps {
   path: string;
   label?: string;
   manifestPath?: string;
+  manifestOptionPaths?: string[];
   tooltip?: React.ReactNode;
   readOnly?: boolean;
   optional?: boolean;
@@ -139,6 +140,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   adornment,
   preview,
   manifestPath,
+  manifestOptionPaths,
   omitInterpolationContext,
   labelAction,
   ...props
@@ -156,7 +158,8 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     manifestPath,
     path,
     false,
-    omitInterpolationContext
+    omitInterpolationContext,
+    manifestOptionPaths
   );
 
   const { handleScrollToField } = useConnectorBuilderFormManagementState();

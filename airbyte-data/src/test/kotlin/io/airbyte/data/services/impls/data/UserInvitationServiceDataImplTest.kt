@@ -7,6 +7,7 @@ import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.UserInvitation
 import io.airbyte.data.services.InvitationDuplicateException
+import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityPermissionType
@@ -74,6 +75,7 @@ internal class UserInvitationServiceDataImplTest {
   @Test
   fun `test create user invitation`() {
     every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns emptyList()
+    every { permissionRepository.findByUserEmail(any()) } returns emptyList()
     every { userInvitationRepository.save(invitation) } returns invitation
 
     val result = userInvitationService.createUserInvitation(invitation.toConfigModel())
@@ -86,7 +88,27 @@ internal class UserInvitationServiceDataImplTest {
   fun `test create duplicate user invitation throws`() {
     every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns listOf(invitation)
 
+    every { permissionRepository.findByUserEmail(any()) } returns emptyList()
     assertThrows<InvitationDuplicateException> { userInvitationService.createUserInvitation(invitation.toConfigModel()) }
+
+    verify(exactly = 0) { userInvitationRepository.save(invitation) }
+  }
+
+  @Test
+  fun `test create existing permission user invitation throws`() {
+    every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns emptyList()
+
+    val permission =
+      Permission(
+        id = UUID.randomUUID(),
+        userId = UUID.randomUUID(),
+        workspaceId = invitation.scopeId,
+        organizationId = null,
+        permissionType = invitation.permissionType,
+      )
+
+    every { permissionRepository.findByUserEmail(any()) } returns listOf(permission)
+    assertThrows<InvitationPermissionOverlapException> { userInvitationService.createUserInvitation(invitation.toConfigModel()) }
 
     verify(exactly = 0) { userInvitationRepository.save(invitation) }
   }

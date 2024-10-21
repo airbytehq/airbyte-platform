@@ -25,6 +25,13 @@ $card-header-fixed-height: 77px;
   .icon {
     margin-left: variables.$spacing-sm;
   }
+
+  p {
+    margin-left: variables.$spacing-sm;
+    background-color: colors.$grey-100;
+    padding: variables.$spacing-xs variables.$spacing-sm;
+    border-radius: variables.$border-radius-sm;
+  }
 }
 
 .search {
@@ -38,16 +45,7 @@ $card-header-fixed-height: 77px;
   }
 
   .syncing {
-    background: none;
-    @include mixins.striped-background(colors.$dark-blue-30, 30px);
-  }
-
-  .syncing--next {
     background: colors.$grey-40;
-
-    &.row:hover {
-      background-color: colors.$grey-40;
-    }
   }
 
   .statusHeader {
@@ -60,6 +58,10 @@ $card-header-fixed-height: 77px;
 
   .actionsHeader {
     width: 50px;
+  }
+
+  .latestSyncHeader {
+    width: 400px;
   }
 
   .row:hover {

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -14,7 +18,7 @@ import java.time.Clock
 class StreamStatusCompletionTracker(
   private val clock: Clock,
 ) {
-  private val hasCompletedStatus = mutableMapOf<StreamDescriptor, Boolean>()
+  private val hasCompletedStatus = StreamStatusMap()
   private var shouldEmitStreamStatus = false
 
   fun startTracking(
@@ -32,7 +36,7 @@ class StreamStatusCompletionTracker(
 
   fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
     if (shouldEmitStreamStatus && streamStatus.status == AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE) {
-      if (hasCompletedStatus[streamStatus.streamDescriptor] == null) {
+      if (!hasCompletedStatus.containsStream(streamStatus.streamDescriptor)) {
         throw WorkerException(
           "A stream status (${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}) " +
             "has been detected for a stream not present in the catalog",
@@ -71,6 +75,25 @@ class StreamStatusCompletionTracker(
               ),
           ),
       )
+    }
+  }
+}
+
+/**
+ * Custom map implementation that is used in order to override the `containsKey` functionality
+ * to account for [StreamDescriptor] instances with either `null` or empty string `namespace`
+ * values.
+ */
+class StreamStatusMap : HashMap<StreamDescriptor, Boolean>() {
+  /**
+   * Determines of the map contains an entry for the [StreamDescriptor].  It handles [StreamDescriptor] instances
+   * with either a `null` or empty `namespace` value when checking for the value in the map.
+   */
+  fun containsStream(descriptor: StreamDescriptor): Boolean {
+    return if (descriptor.namespace == null) {
+      containsKey(descriptor) || containsKey(StreamDescriptor().withName(descriptor.name).withNamespace(""))
+    } else {
+      containsKey(descriptor)
     }
   }
 }

@@ -12,7 +12,6 @@ import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.general.CachingFeatureFlagClient
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
 import io.micronaut.context.event.ApplicationEventPublisher
@@ -36,7 +35,6 @@ class StreamStatusTrackerTest {
   private lateinit var dataExtractor: AirbyteMessageDataExtractor
   private lateinit var store: StreamStatusStateStore
   private lateinit var eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>
-  private lateinit var ffClient: CachingFeatureFlagClient
   private lateinit var apiCache: MutableMap<StreamStatusKey, StreamStatusRead>
 
   @BeforeEach
@@ -44,12 +42,10 @@ class StreamStatusTrackerTest {
     dataExtractor = mockk()
     store = mockk()
     eventPublisher = mockk()
-    ffClient = mockk()
     apiCache = HashMap()
 
-    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, ffClient, Fixtures.ctx, apiCache)
+    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, Fixtures.ctx, apiCache)
 
-    every { ffClient.boolVariation(any(), any()) } returns true
     every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor1
     every { store.get(any()) } returns null
     every { store.isGlobalComplete(any()) } returns false

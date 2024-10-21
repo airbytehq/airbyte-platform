@@ -12,6 +12,14 @@ global:
     secretName: ""
     secretValue: ""
 
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    tag: ""
+
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -69,10 +77,6 @@ global:
         ## busybox image used by the job pod
         ##   jobs.kube.images.busybox [string] busybox image used by the job pod
         busybox: ""
-        ## JOB_KUBE_SOCAT_IMAGE
-        ## socat image used by the job pod
-        ##   jobs.kube.images.socat [string] socat image used by the job pod
-        socat: ""
         ## JOB_KUBE_CURL_IMAGE
         ## curl image used by the job pod
         ##   jobs.kube.images.curl [string] curl image used by the job pod

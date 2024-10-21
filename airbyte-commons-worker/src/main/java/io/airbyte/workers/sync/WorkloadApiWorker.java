@@ -25,15 +25,16 @@ import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.exception.WorkloadLauncherException;
 import io.airbyte.workers.exception.WorkloadMonitorException;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.process.Metadata;
+import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.WorkloadConstants;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.WorkloadApiClient;
@@ -61,7 +62,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Worker implementation that uses workload API instead of starting kube pods directly.
  */
-public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
+public class WorkloadApiWorker implements ReplicationWorker {
 
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
@@ -103,6 +104,12 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   @Override
   @SuppressWarnings("PMD.AssignmentInOperand")
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
+    final String workloadId = createWorkload(replicationInput, jobRoot);
+    waitForWorkload(workloadId);
+    return getOutput(workloadId);
+  }
+
+  public String createWorkload(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
     workloadId = workloadIdGenerator.generateSyncWorkloadId(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
@@ -129,7 +136,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         WorkloadType.SYNC,
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
-        null);
+        null,
+        replicationInput.getSignalInput());
 
     // Create the workload
     try {
@@ -141,7 +149,16 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         log.info("Workload {} has already been created, reconnecting...", workloadId);
       }
     }
+    return workloadId;
+  }
 
+  public boolean isWorkloadTerminal(final String workloadId) {
+    // TODO handle error
+    final Workload workload = getWorkload(workloadId);
+    return workload.getStatus() != null && TERMINAL_STATUSES.contains(workload.getStatus());
+  }
+
+  public void waitForWorkload(final String workloadId) {
     // Wait until workload reaches a terminal status
     // TODO merge this with WorkloadApiHelper.waitForWorkload. The only difference currently is the
     // progress log.
@@ -173,7 +190,18 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     if (workload.getStatus() == WorkloadStatus.CANCELLED) {
       throw new CancellationException("Replication cancelled by " + workload.getTerminationSource());
     }
+  }
 
+  public void cancelWorkload(final String workloadId) throws IOException {
+    callWithRetry(() -> {
+      workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(
+          workloadId, WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON, "WorkloadApiWorker"));
+      return true;
+    });
+  }
+
+  public ReplicationOutput getOutput(final String workloadId) throws WorkerException {
+    final Workload workload = getWorkload(workloadId);
     final ReplicationOutput output;
     try {
       output = getReplicationOutput(workloadId);
@@ -210,7 +238,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   public void cancel() {
     try {
       if (workloadId != null) {
-        workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+        cancelWorkload(workloadId);
       }
     } catch (final IOException e) {
       throw new RuntimeException(e);

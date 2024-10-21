@@ -36,9 +36,11 @@ import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -67,7 +69,7 @@ import java.util.stream.Stream;
 @Singleton
 public class DestinationDefinitionsHandler {
 
-  private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final Supplier<UUID> uuidSupplier;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
@@ -77,8 +79,11 @@ public class DestinationDefinitionsHandler {
   private final FeatureFlagClient featureFlagClient;
   private final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
+  private final DestinationService destinationService;
+  private final WorkspaceService workspaceService;
+
   @VisibleForTesting
-  public DestinationDefinitionsHandler(final ConfigRepository configRepository,
+  public DestinationDefinitionsHandler(final ActorDefinitionService actorDefinitionService,
                                        @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
@@ -86,8 +91,10 @@ public class DestinationDefinitionsHandler {
                                        final SupportStateUpdater supportStateUpdater,
                                        final FeatureFlagClient featureFlagClient,
                                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                                       final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
-    this.configRepository = configRepository;
+                                       final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator,
+                                       final DestinationService destinationService,
+                                       final WorkspaceService workspaceService) {
+    this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
@@ -96,13 +103,15 @@ public class DestinationDefinitionsHandler {
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
+    this.destinationService = destinationService;
+    this.workspaceService = workspaceService;
   }
 
   public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+        destinationService.getStandardDestinationDefinition(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion = actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
     return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
   }
 
@@ -133,7 +142,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listDestinationDefinitions() throws IOException {
-    final List<StandardDestinationDefinition> standardDestinationDefinitions = configRepository.listStandardDestinationDefinitions(false);
+    final List<StandardDestinationDefinition> standardDestinationDefinitions = destinationService.listStandardDestinationDefinitions(false);
     final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions);
     return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
   }
@@ -148,7 +157,7 @@ public class DestinationDefinitionsHandler {
 
   private Map<UUID, ActorDefinitionVersion> getVersionsForDestinationDefinitions(final List<StandardDestinationDefinition> destinationDefinitions)
       throws IOException {
-    return configRepository.getActorDefinitionVersions(destinationDefinitions
+    return actorDefinitionService.getActorDefinitionVersions(destinationDefinitions
         .stream()
         .map(StandardDestinationDefinition::getDefaultVersionId)
         .collect(Collectors.toList()))
@@ -177,10 +186,10 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException {
     final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
-        configRepository.listPublicDestinationDefinitions(false).stream(),
-        configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
+        destinationService.listPublicDestinationDefinitions(false).stream(),
+        destinationService.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
 
     // Hide destination definitions from the list via feature flag
     final List<StandardDestinationDefinition> shownDestinationDefs = destinationDefs
@@ -198,7 +207,7 @@ public class DestinationDefinitionsHandler {
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
     final List<Entry<StandardDestinationDefinition, Boolean>> standardDestinationDefinitionBooleanMap =
-        configRepository.listGrantableDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false);
+        destinationService.listGrantableDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false);
     final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap =
         getVersionsForDestinationDefinitions(standardDestinationDefinitionBooleanMap.stream().map(Entry::getKey).toList());
     return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap);
@@ -225,18 +234,18 @@ public class DestinationDefinitionsHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID definitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
     final UUID workspaceId = destinationDefinitionIdWithWorkspaceId.getWorkspaceId();
-    if (!configRepository.workspaceCanUseDefinition(definitionId, workspaceId)) {
+    if (!workspaceService.workspaceCanUseDefinition(definitionId, workspaceId)) {
       throw new IdNotFoundKnownException("Cannot find the requested definition with given id for this workspace", definitionId.toString());
     }
     return getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(definitionId));
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
     final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
     final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
-    if (!configRepository.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
+    if (!actorDefinitionService.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
       final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
       throw new IdNotFoundKnownException(message, definitionId.toString());
     }
@@ -264,10 +273,10 @@ public class DestinationDefinitionsHandler {
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
-      configRepository.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
+      destinationService.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
           customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
-      configRepository.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
+      destinationService.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
           customDestinationDefinitionCreate.getScopeId(), ScopeType.fromValue(customDestinationDefinitionCreate.getScopeType().toString()));
     }
 
@@ -288,10 +297,28 @@ public class DestinationDefinitionsHandler {
       throw new BadRequestProblem(message, new ProblemMessageData().message(message));
     }
 
-    final StandardDestinationDefinition currentDestination = configRepository
+    final StandardDestinationDefinition currentDestination = destinationService
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
-    final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
+    final ActorDefinitionVersion currentVersion = actorDefinitionService.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
 
+    final StandardDestinationDefinition newDestination = buildDestinationDefinitionUpdate(currentDestination, destinationDefinitionUpdate);
+
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
+    destinationService.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
+
+    final StandardDestinationDefinition updatedDestinationDefinition = destinationService
+        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
+    return buildDestinationDefinitionRead(newDestination, newVersion);
+  }
+
+  @VisibleForTesting
+  StandardDestinationDefinition buildDestinationDefinitionUpdate(final StandardDestinationDefinition currentDestination,
+                                                                 final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
@@ -307,27 +334,21 @@ public class DestinationDefinitionsHandler {
         .withMetrics(currentDestination.getMetrics())
         .withResourceRequirements(updatedResourceReqs);
 
-    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+    if (destinationDefinitionUpdate.getName() != null && currentDestination.getCustom()) {
+      newDestination.withName(destinationDefinitionUpdate.getName());
+    }
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
-        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
-    configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
-
-    final StandardDestinationDefinition updatedDestinationDefinition = configRepository
-        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
-    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
-    return buildDestinationDefinitionRead(newDestination, newVersion);
+    return newDestination;
   }
 
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     // "delete" all destinations associated with the destination definition as well. This will cascade
     // to connections that depend on any deleted
     // destinations. Delete destinations first in case a failure occurs mid-operation.
 
     final StandardDestinationDefinition persistedDestinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
 
     for (final DestinationRead destinationRead : destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionIdRequestBody)
         .getDestinations()) {
@@ -335,16 +356,16 @@ public class DestinationDefinitionsHandler {
     }
 
     persistedDestinationDefinition.withTombstone(true);
-    configRepository.updateStandardDestinationDefinition(persistedDestinationDefinition);
+    destinationService.updateStandardDestinationDefinition(persistedDestinationDefinition);
   }
 
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardDestinationDefinition standardDestinationDefinition =
-        configRepository.getStandardDestinationDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
+        destinationService.getStandardDestinationDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
     final ActorDefinitionVersion actorDefinitionVersion =
-        configRepository.getActorDefinitionVersion(standardDestinationDefinition.getDefaultVersionId());
-    configRepository.writeActorDefinitionWorkspaceGrant(
+        actorDefinitionService.getActorDefinitionVersion(standardDestinationDefinition.getDefaultVersionId());
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.getActorDefinitionId(),
         actorDefinitionIdWithScope.getScopeId(),
         ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
@@ -355,7 +376,7 @@ public class DestinationDefinitionsHandler {
 
   public void revokeDestinationDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws IOException {
-    configRepository.deleteActorDefinitionWorkspaceGrant(
+    actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.getActorDefinitionId(),
         actorDefinitionIdWithScope.getScopeId(),
         ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));

@@ -25,7 +25,8 @@ import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -71,18 +72,21 @@ public class JobCreationAndStatusUpdateHelper {
   public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC, REFRESH);
 
   private final JobPersistence jobPersistence;
-  private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
+  private final ConnectionService connectionService;
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   public JobCreationAndStatusUpdateHelper(final JobPersistence jobPersistence,
-                                          final ConfigRepository configRepository,
+                                          final ActorDefinitionService actorDefinitionService,
+                                          final ConnectionService connectionService,
                                           final JobNotifier jobNotifier,
                                           final JobTracker jobTracker,
                                           final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.jobPersistence = jobPersistence;
-    this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
+    this.connectionService = connectionService;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
@@ -190,7 +194,7 @@ public class JobCreationAndStatusUpdateHelper {
     final List<ReleaseStage> releaseStages = getJobToReleaseStages(job);
     final var releaseStagesOrdered = orderByReleaseStageAsc(releaseStages);
     final var connectionId = job.getScope() == null ? null : UUID.fromString(job.getScope());
-    final var geography = configRepository.getGeographyForConnection(connectionId);
+    final var geography = connectionService.getGeographyForConnection(connectionId);
 
     final List<MetricAttribute> baseMetricAttributes = List.of(
         new MetricAttribute(MetricTags.GEOGRAPHY, geography == null ? null : geography.toString()),
@@ -264,7 +268,7 @@ public class JobCreationAndStatusUpdateHelper {
       default -> throw new IllegalArgumentException("Unexpected config type: " + job.getConfigType());
     };
 
-    return configRepository.getActorDefinitionVersions(actorDefVersionIds).stream().map(ActorDefinitionVersion::getReleaseStage).toList();
+    return actorDefinitionService.getActorDefinitionVersions(actorDefVersionIds).stream().map(ActorDefinitionVersion::getReleaseStage).toList();
   }
 
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job) throws IOException {

@@ -1,8 +1,6 @@
 import { render, renderHook } from "@testing-library/react";
 import React, { useEffect } from "react";
 
-import { mockProInstanceConfig } from "test-utils/mock-data/mockInstanceConfig";
-
 import { FeatureService, IfFeatureEnabled, useFeature, useFeatureService } from "./FeatureService";
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -39,18 +37,6 @@ describe("Feature Service", () => {
       const getFeature = (feature: FeatureItem) => renderHook(() => useFeature(feature), { wrapper }).result.current;
       expect(getFeature(FeatureItem.AllowDBTCloudIntegration)).toBe(true);
       expect(getFeature(FeatureItem.AllowUpdateConnectors)).toBe(false);
-    });
-
-    it("should set features based on airbyte pro edition", () => {
-      const wrapperWithInstanceConfig: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-        <FeatureService features={[FeatureItem.AllowDBTCloudIntegration]} instanceConfig={mockProInstanceConfig}>
-          {children}
-        </FeatureService>
-      );
-      const getFeature = (feature: FeatureItem) =>
-        renderHook(() => useFeature(feature), { wrapper: wrapperWithInstanceConfig }).result.current;
-
-      expect(getFeature(FeatureItem.APITokenManagement)).toBe(true);
     });
 
     it("overwrite features can overwrite default features", () => {

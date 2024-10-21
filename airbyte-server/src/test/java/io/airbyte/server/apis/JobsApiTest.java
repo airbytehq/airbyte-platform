@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -49,10 +49,11 @@ class JobsApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetJobDebugInfo() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testGetJobDebugInfo()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(jobHistoryHandler.getJobDebugInfo(Mockito.any()))
         .thenReturn(new JobDebugInfoRead())
-        .thenThrow(new ConfigNotFoundException("", ""));
+        .thenThrow(new io.airbyte.config.persistence.ConfigNotFoundException("", ""));
     final String path = "/api/v1/jobs/get_debug_info";
     testEndpointStatus(
         HttpRequest.POST(path, new JobIdRequestBody()),

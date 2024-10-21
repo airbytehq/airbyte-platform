@@ -25,7 +25,7 @@ interface CurrentPaymentMethodProps {
 const CurrentPaymentMethod: React.FC<CurrentPaymentMethodProps> = ({ paymentMethod }) => {
   if (paymentMethod.type === "card") {
     return (
-      <FlexContainer alignItems="center" justifyContent="space-between">
+      <FlexContainer alignItems="center" justifyContent="space-between" wrap="wrap">
         <FlexContainer alignItems="center">
           <CreditCardLogo brand={paymentMethod.cardBrand} />
           <Text size="lg" bold>

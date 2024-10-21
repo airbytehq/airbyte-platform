@@ -1,10 +1,10 @@
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
 import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
-import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { assertNever } from "core/utils/asserts";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -31,7 +31,7 @@ export const useStreamsStatuses = (
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
-  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI", false);
+  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI");
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
@@ -46,7 +46,10 @@ export const useStreamsStatuses = (
 
   // TODO: Ideally we can pull this from the stream status endpoint directly once the "pending" status has been updated to reflect the correct status
   // for now, we'll use this
-  const syncProgressMap = useStreamsSyncProgress(connectionId, connectionStatus.isRunning);
+  const syncProgressMap = useStreamsSyncProgress(
+    connectionId,
+    connectionStatus.status === ConnectionSyncStatus.running
+  );
 
   const enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[] = connection.syncCatalog.streams.filter(
     (stream) =>
@@ -80,7 +83,21 @@ export const useStreamsStatuses = (
       };
 
       if (!hasPerStreamStatuses) {
-        streamStatus.status = connectionStatus.status as unknown as StreamStatusType; // safe cast as the StreamStatusType is a superset of ConnectionStatusType, but enums cannot be extended so TS does not know this
+        if (connectionStatus.status === ConnectionSyncStatus.failed) {
+          streamStatus.status = StreamStatusType.Failed;
+        } else if (connectionStatus.status === ConnectionSyncStatus.incomplete) {
+          streamStatus.status = StreamStatusType.Incomplete;
+        } else if (connectionStatus.status === ConnectionSyncStatus.paused) {
+          streamStatus.status = StreamStatusType.Paused;
+        } else if (connectionStatus.status === ConnectionSyncStatus.pending) {
+          streamStatus.status = StreamStatusType.Pending;
+        } else if (connectionStatus.status === ConnectionSyncStatus.running) {
+          streamStatus.status = StreamStatusType.Syncing;
+        } else if (connectionStatus.status === ConnectionSyncStatus.synced) {
+          streamStatus.status = StreamStatusType.Synced;
+        } else {
+          assertNever(connectionStatus.status);
+        }
         streamStatus.isRunning = !!syncProgressItem;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
@@ -90,7 +107,7 @@ export const useStreamsStatuses = (
       streamStatuses.set(streamKey, streamStatus);
     });
 
-    if (hasPerStreamStatuses && !isConnectionDisabled) {
+    if (hasPerStreamStatuses) {
       // push each stream status entry into to the corresponding stream's history
       data.streamStatuses.forEach((streamStatus) => {
         const streamKey = getStreamKey(streamStatus);
@@ -116,14 +133,15 @@ export const useStreamsStatuses = (
             runningJobConfigType: syncProgressItem?.configType,
             isRateLimitedUiEnabled,
           });
-
           // incomplete stream statuses have no knowledge of FailureType (e.g. config vs. system error)
           // so any Incomplete stream status should be forced to Failed if the connection has a config error
           if (
-            connectionStatus.status === ConnectionStatusType.Failed &&
+            connectionStatus.status === ConnectionSyncStatus.failed &&
             detectedStatus.status === StreamStatusType.Incomplete
           ) {
             detectedStatus.status = StreamStatusType.Failed;
+          } else if (isConnectionDisabled) {
+            detectedStatus.status = StreamStatusType.Paused;
           }
 
           if (detectedStatus.status != null) {
@@ -136,16 +154,6 @@ export const useStreamsStatuses = (
             detectedStatus.status === StreamStatusType.Queued;
 
           mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
-        }
-      });
-    }
-
-    if (isConnectionDisabled) {
-      data.streamStatuses.forEach((streamStatus) => {
-        const streamKey = getStreamKey(streamStatus);
-        const mappedStreamStatus = streamStatuses.get(streamKey);
-        if (mappedStreamStatus) {
-          mappedStreamStatus.status = StreamStatusType.Paused;
         }
       });
     }

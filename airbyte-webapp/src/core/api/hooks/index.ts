@@ -12,6 +12,8 @@ export * from "./connectorOAuth";
 export * from "./connectorUpdates";
 export * from "./destinations";
 export * from "./destinationDefinitions";
+export * from "./diagnostics";
+export * from "./enterpriseSources";
 export * from "./filters";
 export * from "./geographies";
 export * from "./health";

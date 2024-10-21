@@ -12,8 +12,8 @@ import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
@@ -33,7 +33,7 @@ public class AnalyticsTrackingBeanFactory {
   public Supplier<DeploymentMetadataRead> deploymentSupplier(final DeploymentMetadataHandler deploymentMetadataHandler) {
     return () -> {
       final io.airbyte.api.model.generated.DeploymentMetadataRead deploymentMetadataRead = deploymentMetadataHandler.getDeploymentMetadata();
-      return new DeploymentMetadataRead(deploymentMetadataRead.getEnvironment(), deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
+      return new DeploymentMetadataRead(deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
           deploymentMetadataRead.getVersion());
     };
   }
@@ -41,10 +41,10 @@ public class AnalyticsTrackingBeanFactory {
   @Singleton
   @Named("workspaceFetcher")
   @Replaces(named = "workspaceFetcher")
-  public Function<UUID, WorkspaceRead> workspaceFetcher(final ConfigRepository configRepository) {
+  public Function<UUID, WorkspaceRead> workspaceFetcher(final WorkspaceService workspaceService) {
     return (final UUID workspaceId) -> {
       try {
-        final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
+        final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
         return new WorkspaceRead(
             workspace.getWorkspaceId(),
             workspace.getCustomerId(),

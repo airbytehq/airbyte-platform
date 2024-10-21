@@ -64,3 +64,6 @@ properties:
     description: Context object with IDs of the relevant connection, source, destination, etc.
     type: object
     "$ref": ConnectionContext.yaml
+  useAsyncReplicate:
+    description: whether we should use async replicate
+    type: boolean

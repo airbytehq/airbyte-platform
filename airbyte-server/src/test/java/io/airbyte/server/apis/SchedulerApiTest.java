@@ -7,7 +7,7 @@ package io.airbyte.server.apis;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.SourceCoreConfig;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -24,7 +24,8 @@ import org.mockito.Mockito;
 class SchedulerApiTest extends BaseControllerTest {
 
   @Test
-  void testExecuteDestinationCheckConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteDestinationCheckConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(schedulerHandler.checkDestinationConnectionFromDestinationCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -38,7 +39,8 @@ class SchedulerApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testExecuteSourceCheckConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteSourceCheckConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -52,7 +54,8 @@ class SchedulerApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testExecuteSourceDiscoverSchema() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testExecuteSourceDiscoverSchema()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceCreate(Mockito.any()))
         .thenReturn(new CheckConnectionRead());
     final String path = "/api/v1/scheduler/sources/check_connection";

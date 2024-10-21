@@ -2,13 +2,15 @@ import React, { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { LoadingPage, MainPageWithScroll } from "components";
+import { LoadingPage } from "components";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { HeadTitle } from "components/HeadTitle";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useCurrentWorkspace, useCurrentWorkspaceState } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -36,43 +38,44 @@ export const AllConnectionsPage: React.FC = () => {
       <>
         <HeadTitle titles={[{ id: "sidebar.connections" }]} />
         {hasConnections ? (
-          <MainPageWithScroll
-            softScrollEdge={false}
-            pageTitle={
-              <PageHeader
-                leftComponent={
-                  <FlexContainer direction="column">
-                    <FlexItem>
-                      <Heading as="h1" size="lg">
-                        <FormattedMessage id="sidebar.connections" />
-                      </Heading>
-                    </FlexItem>
-                    <FlexItem>
-                      <Suspense fallback={null}>
-                        <ConnectionsSummary />
-                      </Suspense>
-                    </FlexItem>
-                  </FlexContainer>
-                }
-                endComponent={
-                  <FlexItem className={styles.alignSelfStart}>
-                    <Button
-                      disabled={!canCreateConnection}
-                      icon="plus"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => onCreateClick()}
-                      data-testid="new-connection-button"
-                    >
-                      <FormattedMessage id="connection.newConnection" />
-                    </Button>
+          <div className={styles.container}>
+            <PageHeader
+              className={styles.pageHeader}
+              leftComponent={
+                <FlexContainer direction="column">
+                  <FlexItem>
+                    <Heading as="h1" size="lg">
+                      <FormattedMessage id="sidebar.connections" />
+                    </Heading>
                   </FlexItem>
-                }
-              />
-            }
-          >
-            <ConnectionsListCard />
-          </MainPageWithScroll>
+                  <FlexItem>
+                    <Suspense fallback={null}>
+                      <ConnectionsSummary />
+                    </Suspense>
+                  </FlexItem>
+                </FlexContainer>
+              }
+              endComponent={
+                <FlexItem className={styles.alignSelfStart}>
+                  <Button
+                    disabled={!canCreateConnection}
+                    icon="plus"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => onCreateClick()}
+                    data-testid="new-connection-button"
+                  >
+                    <FormattedMessage id="connection.newConnection" />
+                  </Button>
+                </FlexItem>
+              }
+            />
+            <ScrollParent props={{ className: styles.pageBody }}>
+              <Box m="xl">
+                <ConnectionsListCard />
+              </Box>
+            </ScrollParent>
+          </div>
         ) : (
           <ConnectionOnboarding onCreate={onCreateClick} />
         )}

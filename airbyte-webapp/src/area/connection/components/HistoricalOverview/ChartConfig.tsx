@@ -3,18 +3,13 @@ import { CategoricalChartState } from "recharts/types/chart/generateCategoricalC
 import { BaseAxisProps } from "recharts/types/util/types";
 import { scaleLinear } from "victory-vendor/d3-scale";
 
-import { Link } from "components/ui/Link";
-
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
+import { useCurrentConnection } from "core/api";
 import { useModalService } from "hooks/services/Modal";
-import { nextOpenJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
-import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+import { openJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
 
 import styles from "./ChartConfig.module.scss";
 
-export const BAR_WIDTH = 30;
+export const MAX_BAR_WIDTH = 30;
 
 // this is the scale used for bar charts with axis[type=number]
 // https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L760
@@ -25,7 +20,13 @@ const axisScale = scaleLinear();
 // we're going to move the bars manually if they overlap, so we want to force the bar width
 // https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L1290-L1297
 // @ts-expect-error abusing recharts' internals
-axisScale.bandwidth = () => BAR_WIDTH;
+axisScale.bandwidth = function scaleBarWidth(this: typeof axisScale) {
+  const [left, right] = this.range();
+  // unfortunately there is now way to access the number of bars in the chart from here,
+  // there's two options: 8 and 30, so we'll just use 30 which gives a size that works in both cases
+  const width = right - left - 120; // 120 gives ~2px padding on each side of every bar
+  return Math.floor(Math.min(MAX_BAR_WIDTH, width / 30));
+};
 
 export const xAxisConfig: XAxisProps = {
   type: "number",
@@ -61,12 +62,15 @@ export const adjustPositions = (_data: ChartTick[] | ChartBar[], xAxisDefinition
   const areDataTicks = isDataChartTicks(_data);
   const itemPositionKey = areDataTicks ? "coordinate" : "x";
 
+  // @ts-expect-error `scaleLinear` doesn't have a bandwidth method, but we added it above
+  const barWidth = xAxisDefinition.scale.bandwidth();
+
   // if the items are too close together, adjust the x/coordinate of the next bar to avoid overlapping
   for (let i = 0; i < data.length - 1; i++) {
     const item = data[i];
     const nextItem = data[i + 1];
-    if (nextItem[itemPositionKey] - item[itemPositionKey] < BAR_WIDTH) {
-      nextItem[itemPositionKey] = item[itemPositionKey] + BAR_WIDTH + 1;
+    if (nextItem[itemPositionKey] - item[itemPositionKey] < barWidth) {
+      nextItem[itemPositionKey] = item[itemPositionKey] + barWidth + 1;
     }
   }
 
@@ -96,8 +100,8 @@ export const adjustPositions = (_data: ChartTick[] | ChartBar[], xAxisDefinition
   for (let i = data.length - 1; i > 0; i--) {
     const item = data[i];
     const prevItem = data[i - 1];
-    if (item[itemPositionKey] - prevItem[itemPositionKey] < BAR_WIDTH) {
-      prevItem[itemPositionKey] = item[itemPositionKey] - BAR_WIDTH - 1;
+    if (item[itemPositionKey] - prevItem[itemPositionKey] < barWidth) {
+      prevItem[itemPositionKey] = item[itemPositionKey] - barWidth - 1;
     } else {
       break;
     }
@@ -109,10 +113,8 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
   const { top: offsetTop = 0, bottom: offsetBottom = 0 } = offset!;
   const availableHeight = height - offsetTop - offsetBottom;
   const { openModal } = useModalService();
-  const isTimelineEnabled = useExperiment("connection.timeline", false);
 
-  const { connection } = useConnectionEditService();
-  const createLink = useCurrentWorkspaceLink();
+  const connection = useCurrentConnection();
 
   const jobId = chartState.activePayload?.at(0)?.payload?.jobId;
 
@@ -120,33 +122,13 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
     return null;
   }
 
-  const pathname = createLink(
-    `/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}`
-  );
-  const hash = jobId.toString();
-
   const handleOpenLogs = () =>
-    nextOpenJobLogsModal({
+    openJobLogsModal({
       openModal,
       jobId,
       connectionId: connection.connectionId,
       connectionName: connection.name,
     });
-
-  if (!isTimelineEnabled) {
-    return (
-      <Link to={`${pathname}#${hash}`}>
-        <rect
-          x={0}
-          y={offsetTop}
-          width="100%"
-          height={availableHeight}
-          fill="transparent"
-          data-testid="streams-graph-to-jobs-link"
-        />
-      </Link>
-    );
-  }
 
   return (
     <rect

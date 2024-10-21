@@ -12,9 +12,9 @@ import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -31,10 +31,12 @@ import jakarta.inject.Singleton;
 public class TemporalBeanFactory {
 
   @Singleton
-  public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository,
-                                                 final TrackingClient trackingClient,
-                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper);
+  public OAuthConfigSupplier oAuthConfigSupplier(final TrackingClient trackingClient,
+                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                                 final OAuthService oauthService,
+                                                 final SourceService sourceService,
+                                                 final DestinationService destinationService) {
+    return new OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oauthService, sourceService, destinationService);
   }
 
   @Singleton

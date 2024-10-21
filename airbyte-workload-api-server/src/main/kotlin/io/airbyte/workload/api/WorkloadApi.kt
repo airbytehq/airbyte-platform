@@ -111,6 +111,7 @@ open class WorkloadApi(
       workloadCreateRequest.type,
       autoId,
       workloadCreateRequest.deadline ?: defaultDeadlineValues.createStepDeadline(),
+      workloadCreateRequest.signalInput,
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,

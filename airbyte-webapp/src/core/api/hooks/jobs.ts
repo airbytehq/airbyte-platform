@@ -1,12 +1,4 @@
-import {
-  Updater,
-  UseQueryOptions,
-  useInfiniteQuery,
-  useIsMutating,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { UseQueryOptions, useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 
 import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
 
@@ -19,67 +11,14 @@ import {
   listJobsFor,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AttemptStats, JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { AttemptStats } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
-  list: (
-    connectionId: string | undefined,
-    filters: string | Record<string, string | number | string[] | undefined> = {}
-  ) => [...jobsKeys.all(connectionId), { filters }] as const,
   useListJobsForConnectionStatus: (connectionId: string) =>
     [...jobsKeys.all(connectionId), "connectionStatus"] as const,
-};
-
-export const useListJobs = (requestParams: Omit<JobListRequestBody, "pagination">, pageSize: number) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = jobsKeys.list(requestParams.configId, {
-    includingJobId: requestParams.includingJobId,
-    statuses: requestParams.statuses,
-    updatedAtStart: requestParams.updatedAtStart,
-    updatedAtEnd: requestParams.updatedAtEnd,
-    pageSize,
-  });
-
-  return useInfiniteQuery(
-    queryKey,
-    async ({ pageParam = 0 }: { pageParam?: number }) => {
-      return {
-        data: await listJobsFor(
-          {
-            ...requestParams,
-            includingJobId: pageParam > 0 ? undefined : requestParams.includingJobId,
-            pagination: { pageSize, rowOffset: pageSize * pageParam },
-          },
-          requestOptions
-        ),
-        pageParam,
-      };
-    },
-    {
-      refetchInterval: (data) => {
-        const jobStatus = data?.pages[0].data.jobs[0]?.job?.status;
-        return jobStatus && jobStatusesIndicatingFinishedExecution.includes(jobStatus) ? 10000 : 2500;
-      },
-      getPreviousPageParam: (firstPage) => {
-        return firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined;
-      },
-      getNextPageParam: (lastPage, allPages) => {
-        if (allPages.reduce((acc, page) => acc + page.data.jobs.length, 0) < lastPage.data.totalJobCount) {
-          if (lastPage.pageParam === 0 && requestParams.includingJobId) {
-            // the API will sometimes return more items than we request. If we include includingJobId, it will return as many pages as necessary to include the job with the given id. In this case, we cannot trust the pageParam, so we need to calculate the actual page number.
-            const actualPageNumber = lastPage.data.jobs.length / pageSize - 1;
-            return actualPageNumber + 1;
-          }
-          // all the data we have loaded is less than the total indicated by the API, so we can get another page
-          return lastPage.pageParam + 1;
-        }
-        return undefined;
-      },
-    }
-  );
 };
 
 export const useListJobsForConnectionStatus = (connectionId: string) => {
@@ -108,12 +47,6 @@ export const useListJobsForConnectionStatus = (connectionId: string) => {
       },
     }
   );
-};
-
-export const useSetConnectionJobsData = (connectionId: string) => {
-  const queryClient = useQueryClient();
-  return (data: Updater<JobReadList | undefined, JobReadList>) =>
-    queryClient.setQueriesData(jobsKeys.useListJobsForConnectionStatus(connectionId), data);
 };
 
 // A disabled useQuery that can be called manually to download job logs

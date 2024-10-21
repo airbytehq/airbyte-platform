@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -32,7 +32,7 @@ import org.mockito.Mockito;
 class ConnectionApiTest extends BaseControllerTest {
 
   @Test
-  void testAutoDisableConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testAutoDisableConnection() throws JsonValidationException, IOException, ConfigNotFoundException {
     Mockito.when(connectionsHandler.autoDisableConnection(Mockito.any()))
         .thenReturn(new InternalOperationResult())
         .thenThrow(new ConstraintViolationException(new HashSet<>()))
@@ -50,7 +50,8 @@ class ConnectionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCreateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(connectionsHandler.createConnection(Mockito.any()))
         .thenReturn(new ConnectionRead())
         .thenThrow(new ConstraintViolationException(new HashSet<>()));
@@ -64,7 +65,8 @@ class ConnectionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(connectionsHandler.updateConnection(Mockito.any(), Mockito.any(), Mockito.any()))
         .thenReturn(new ConnectionRead())
         .thenThrow(new ConstraintViolationException(new HashSet<>()))
@@ -110,7 +112,8 @@ class ConnectionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchConnections()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(matchSearchHandler.searchConnections(Mockito.any()))
         .thenReturn(new ConnectionReadList())
         .thenThrow(new ConfigNotFoundException("", ""));

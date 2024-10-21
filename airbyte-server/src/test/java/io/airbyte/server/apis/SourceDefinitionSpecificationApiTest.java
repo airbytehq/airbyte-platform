@@ -23,7 +23,8 @@ import org.mockito.Mockito;
 class SourceDefinitionSpecificationApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateCustomSourceDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCreateCustomSourceDefinition()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(Mockito.any()))
         .thenReturn(new SourceDefinitionSpecificationRead())
         .thenThrow(new ConfigNotFoundException("", ""));

@@ -7,10 +7,12 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.airbyte.config.JsonsSchemaConstants.PROPERTIES
+import io.airbyte.config.JsonsSchemaConstants.TYPE
+import io.airbyte.config.JsonsSchemaConstants.TYPE_OBJECT
 import io.airbyte.config.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.util.UUID
 
 val log = KotlinLogging.logger {}
 
@@ -29,50 +31,50 @@ class DestinationCatalogGenerator(
    * Apply the mapper transformations to the catalog in order to generate the destination catalog.
    * It won't modify tbe input catalog, it creates a copy of the configure catalog, then mutate the copy and then returns it.
    */
-  fun generateDestinationCatalog(
-    inputCatalog: ConfiguredAirbyteCatalog,
-    connectionId: UUID,
-  ): CatalogGenerationResult {
+  fun generateDestinationCatalog(inputCatalog: ConfiguredAirbyteCatalog): CatalogGenerationResult {
     val resultCatalog = Jsons.clone(inputCatalog)
 
     return resultCatalog.streams.fold(CatalogGenerationResult(resultCatalog, mapOf())) { acc, it ->
-      val errors = applyCatalogMapperTransformations(it, connectionId)
+      val errors = applyCatalogMapperTransformations(it)
       CatalogGenerationResult(resultCatalog, acc.errors + Pair(it.stream.streamDescriptor, errors))
     }
   }
 
-  internal fun applyCatalogMapperTransformations(
-    stream: ConfiguredAirbyteStream,
-    connectionId: UUID,
-  ): Map<ConfiguredMapper, MapperError> {
-    val (updateFields, _, errors) = applyMapperToFields(stream, connectionId)
+  private fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<ConfiguredMapper, MapperError> {
+    val (updateFields, _, errors) = applyMapperToFields(stream)
 
     val jsonSchema =
       """ 
       { 
-        "type": "object", 
+        "$TYPE": "$TYPE_OBJECT", 
         "${'$'}schema": "http://json-schema.org/schema#", 
-        "properties":
-          ${generateJsonSchemaFromFields(updateFields, stream.stream.jsonSchema)}  
+        "$PROPERTIES":
+          ${generateJsonSchemaFromFields(updateFields.fields, stream.stream.jsonSchema)},
+        "additionalProperties": true
       } 
       """.trimIndent()
-    stream.fields = updateFields
+    stream.fields = updateFields.fields
     stream.stream.jsonSchema = Jsons.deserialize(jsonSchema)
+    stream.cursorField = updateFields.cursor
+    stream.primaryKey = updateFields.primaryKey
+    stream.stream.sourceDefinedPrimaryKey = updateFields.sourceDefinedPrimaryKey
+    stream.stream.defaultCursorField = updateFields.sourceDefaultCursor
 
     return errors
   }
 
-  data class MapperToFieldAccumulator(val field: List<Field>, val validConfig: List<ConfiguredMapper>, val errors: Map<ConfiguredMapper, MapperError>)
+  data class MapperToFieldAccumulator(
+    val slimStream: SlimStream,
+    val validConfig: List<ConfiguredMapper>,
+    val errors: Map<ConfiguredMapper, MapperError>,
+  )
 
   enum class MapperError {
     MISSING_MAPPER,
     INVALID_MAPPER_CONFIG,
   }
 
-  internal fun applyMapperToFields(
-    stream: ConfiguredAirbyteStream,
-    connectionId: UUID,
-  ): MapperToFieldAccumulator {
+  internal fun applyMapperToFields(stream: ConfiguredAirbyteStream): MapperToFieldAccumulator {
     val result =
       stream.mappers.map {
         Pair(
@@ -80,19 +82,35 @@ class DestinationCatalogGenerator(
           it,
         )
       }
-        .fold(MapperToFieldAccumulator(stream.fields ?: listOf(), listOf(), mapOf())) { fields, (mapperInstance, configuredMapper) ->
+        .fold(
+          MapperToFieldAccumulator(
+            SlimStream(
+              fields = stream.fields ?: listOf(),
+              cursor = stream.cursorField,
+              primaryKey = stream.primaryKey,
+              sourceDefinedPrimaryKey = stream.stream.sourceDefinedPrimaryKey,
+              sourceDefaultCursor = stream.stream.defaultCursorField,
+            ),
+            listOf(),
+            mapOf(),
+          ),
+        ) {
+            mapperAcc, (mapperInstance, configuredMapper) ->
           if (mapperInstance == null) {
             log.warn { "Trying to use a mapper named ${configuredMapper.name} which doesn't have a known implementation. The mapper won't be apply" }
-            MapperToFieldAccumulator(fields.field, fields.validConfig, fields.errors + Pair(configuredMapper, MapperError.MISSING_MAPPER))
+            mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.MISSING_MAPPER))
           } else {
             try {
-              MapperToFieldAccumulator(mapperInstance.schema(configuredMapper, fields.field), fields.validConfig + configuredMapper, fields.errors)
+              mapperAcc.copy(
+                slimStream = mapperInstance.schema(configuredMapper, mapperAcc.slimStream),
+                validConfig = mapperAcc.validConfig + configuredMapper,
+              )
             } catch (e: Exception) {
               log.warn {
                 "Trying to use a mapper named ${configuredMapper.name} which failed to resolve its schema for the config:" +
                   " ${configuredMapper.config}. The mapper won't be apply"
               }
-              MapperToFieldAccumulator(fields.field, fields.validConfig, fields.errors + Pair(configuredMapper, MapperError.INVALID_MAPPER_CONFIG))
+              mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.INVALID_MAPPER_CONFIG))
             }
           }
         }
@@ -109,7 +127,7 @@ class DestinationCatalogGenerator(
     return Jsons.serialize(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
-          Pair(it.name, jsonSchema.get(it.name))
+          Pair(it.name, jsonSchema.get(PROPERTIES).get(it.name))
         } else {
           Pair(it.name, Jsons.jsonNode(it.type.toMap()))
         }

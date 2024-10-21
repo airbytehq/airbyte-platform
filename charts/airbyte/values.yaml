@@ -22,6 +22,17 @@ global:
   airbyteUrl: "https://airbyte.example.com
 "
 
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    tag: ""
+
+  # Docker image pull secret
+  imagePullSecrets: []
+
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
@@ -172,13 +183,10 @@ global:
       images:
         ## JOB_KUBE_BUSYBOX_IMAGE
         # -- busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_SOCAT_IMAGE
-        # -- socat image used by the job pod
-        socat: ""
+        busybox: "busybox:1.35"
         ## JOB_KUBE_CURL_IMAGE
         # -- curl image used by the job pod
-        curl: ""
+        curl: "curlimages/curl:8.1.1"
 
 ## @section Common Parameters
 
@@ -848,10 +856,6 @@ worker:
   debug:
     enabled: false
 
-  containerOrchestrator:
-    # -- Orchestrator image
-    image: ""
-
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
@@ -991,14 +995,159 @@ workload-launcher:
     # -- Enable or disable Orchestrator
     enabled: true
     # -- Orchestrator image
-    image: ""
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/container-orchestrator:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   connectorSidecar:
     # -- Connector Sidecar image
-    image: ""
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/connector-sidecar:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
-  # -- Workload init image
   workloadInit:
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
+
+  ## current no exist documentations
+  activityMaxAttempt: ""
+  activityInitialDelayBetweenAttemptsSeconds: ""
+  activityMaxDelayBetweenAttemptsSeconds: ""
+
+  maxNotifyWorkers: 5
+
+## @section Rollout Worker Parameters
+
+connector-rollout-worker:
+  enabled: false
+  # -- Number of connector rollout worker replicas
+  replicaCount: 1
+
+  image:
+    # -- The repository to use for the airbyte connector rollout worker image.
+    repository: airbyte/connector-rollout-worker
+    # -- The pull policy to use for the airbyte connector rollout worker image
+    pullPolicy: IfNotPresent
+
+  # -- Add extra annotations to the connector rollout worker pods
+  podAnnotations: {}
+
+  # -- Add extra labels to the connector rollout worker pods
+  podLabels: {}
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  livenessProbe:
+    # -- Enable livenessProbe on the connector rollout worker
+    enabled: true
+    # -- Initial delay seconds for livenessProbe
+    initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
+    periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
+    timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
+    failureThreshold: 3
+    # -- Success threshold for livenessProbe
+    successThreshold: 1
+
+  readinessProbe:
+    # -- Enable readinessProbe on the connector rollout worker
+    enabled: true
+    # -- Initial delay seconds for readinessProbe
+    initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
+    periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
+    timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
+    failureThreshold: 3
+    # -- Success threshold for readinessProbe
+    successThreshold: 1
+
+  ## connector rollout worker resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 200m
+    ##    memory: 1Gi
+    # -- The resources limits for the connector rollout worker container
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    memory: 256Mi
+    ##    cpu: 250m
+    # -- The requested resources for the connector rollout worker container
+    requests: {}
+
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
+
+  # -- Tolerations for connector rollout worker pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: []
+
+  # Affinity and anti-affinity for connector rollout worker pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+
+  log:
+    # -- The log level to log at
+    level: "INFO"
+
+  ## Example:
+  ##
+  ## extraEnv:
+  ## - name: JOB_KUBE_TOLERATIONS
+  ##   value: "key=airbyte-server,operator=Equals,value=true,effect=NoSchedule"
+  # -- Additional env vars for connector rollout worker pods
+  extraEnv: []
+
+  ## Examples (when using `connector rollout worker.containerSecurityContext.readOnlyRootFilesystem=true`):
+  ## extraVolumeMounts:
+  ##   - name: tmpdir
+  ##     mountPath: /tmp
+  # -- Additional volumeMounts for connector rollout worker containers
+  extraVolumeMounts: []
+
+  ## Examples (when using `connector-rollout-worker.containerSecurityContext.readOnlyRootFilesystem=true`):
+  ## extraVolumes:
+  ##   - name: tmpdir
+  ##     emptyDir: {}
+  # -- Additional volumes for connector rollout worker pods
+  extraVolumes: []
+
+  extraContainers: []
+
+  hpa:
+    enabled: false
+
+  debug:
+    enabled: false
+
+  containerOrchestrator:
+    # -- Enable or disable Orchestrator
+    enabled: true
+    # -- Orchestrator image
     image: ""
 
   ## current no exist documentations
@@ -1576,14 +1725,16 @@ externalDatabase:
   # -- Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
   jdbcUrl: ""
 
-## @section Logs parameters
-
 minio:
   image:
     # -- Minio image used by Minio helm chart
     repository: minio/minio
     # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
+
+  mcImage:
+    repository: airbyte/mc
+    tag: latest
 
   storage:
     volumeClaimValue: 2Gi
@@ -1601,7 +1752,6 @@ minio:
   affinity: {}
 
 ## @section cron parameters
-
 cron:
   enabled: true
   # -- Number of cron replicas
@@ -1873,7 +2023,6 @@ connector-builder-server:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-
 keycloak:
   enabled: true
   env_vars: {}
@@ -1882,6 +2031,10 @@ keycloak:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  image:
+    repository: airbyte/keycloak
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
     # gid=0(root)
@@ -1889,7 +2042,7 @@ keycloak:
 
   initContainers:
     initDb:
-      image: {}
+      image: "postgres:13-alpine"
 
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
@@ -1931,6 +2084,10 @@ keycloak-setup:
   enabled: true
   env_vars: {}
 
+  image:
+    repository: airbyte/keycloak-setup
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -1951,7 +2108,7 @@ keycloak-setup:
 
   initContainers:
     keycloakReadinessCheck:
-      image: {}
+      image: "curlimages/curl:8.1.1"
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
@@ -2214,3 +2371,8 @@ featureflag-server:
     # - secretName: chart-example-tls
     #   hosts:
     #   - chart-example.local
+
+testWebapp:
+  image:
+    repository: busybox
+    tag: latest

@@ -34,6 +34,7 @@ class WorkloadMapperKtTest {
         terminationSource = "terminationSource",
         deadline = Instant.now().atOffset(ZoneOffset.UTC),
         autoId = UUID.randomUUID(),
+        signalInput = "signalPayload",
       )
 
     val apiWorkload = domainWorkload.toApi()
@@ -51,6 +52,7 @@ class WorkloadMapperKtTest {
     assertEquals(domainWorkload.terminationReason, apiWorkload.terminationReason)
     assertEquals(domainWorkload.terminationSource, apiWorkload.terminationSource)
     assertEquals(domainWorkload.autoId, apiWorkload.autoId)
+    assertEquals(domainWorkload.signalInput, apiWorkload.signalInput)
   }
 
   @Test

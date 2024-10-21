@@ -81,6 +81,8 @@ tags:
     description: Interactions with permission related resources.
   - name: organization
     description: Interactions with organizations.
+  - name: organization_payment_config
+    description: Interactions with organization payment configs
   - name: deployment_metadata
     description: Metadata about the Airbyte deployment
   - name: applications
@@ -645,6 +647,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceDefinitionReadList"
+  /v1/source_definitions/list_enterprise_source_stubs:
+    post:
+      tags:
+        - source_definition
+      summary: List all enterprise source connector stubs from a specified GCS bucket.
+      operationId: listEnterpriseSourceStubs
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+
   /v1/source_definitions/create_custom:
     post:
       tags:
@@ -839,6 +855,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ResolveActorDefinitionVersionResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/actor_definition_versions/get_default:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get the default actor definition version for the actor.
+      operationId: getActorDefinitionVersionDefault
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetActorDefinitionVersionDefaultRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/create_manifest:
@@ -2340,6 +2377,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectionEventList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/backfill:
+    post:
+      tags:
+        - connection
+      summary: Backfill events for a connection
+      operationId: backfillConnectionEvents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsBackfillRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -4199,26 +4255,6 @@ paths:
                 properties:
                   attemptNumber:
                     $ref: "#/components/schemas/AttemptNumber"
-  /v1/attempt/set_workflow_in_attempt:
-    post:
-      tags:
-        - attempt
-        - internal
-      summary: For worker to register the workflow id in attempt.
-      operationId: setWorkflowInAttempt
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetWorkflowInAttemptRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalOperationResult"
   /v1/attempt/save_stream_metadata:
     post:
       tags:
@@ -4571,6 +4607,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerPortalRead"
+  /v1/billing/handle_webhook:
+    post:
+      summary: Handle an external billing event (ie a webhook from an external payment provider service)
+      tags:
+        - billing
+        - cloud-only
+      operationId: handleWebhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingEvent"
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          description: Invalid payload
+        "401":
+          description: Invalid signature
+      # This route is unsecured as it accepts webhook events from an external service, which are validated by their signature.
+      security: []
+
   /v1/billing/list_invoices:
     post:
       summary: Get a list of past invoices of the customer
@@ -4609,6 +4667,111 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
+  /v1/billing/organization_balance:
+    post:
+      summary: Get the current balance of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getOrganizationBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully got organization's balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationBalanceRead"
+  /v1/billing/trial_status:
+    post:
+      summary: Get the current trial status of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: getOrganizationTrialStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved the trial status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationTrialStatusRead"
+  /v1/organization_payment_config/{organizationId}:
+    get:
+      summary: Get an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: getOrganizationPaymentConfig
+      parameters:
+        - in: path
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "200":
+          description: Successfully retrieved the organization payment config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationPaymentConfigRead"
+    delete:
+      summary: Delete an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: deleteOrganizationPaymentConfig
+      parameters:
+        - in: path
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "204":
+          description: Successfully deleted organization payment config
+        "404":
+          description: Payment config didn't exist
+  /v1/organization_payment_config:
+    post:
+      summary: Create or update an organization payment config
+      tags:
+        - organization_payment_config
+        - billing
+        - cloud-only
+        - admin-api
+      operationId: updateOrganizationPaymentConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationPaymentConfigUpdateRequestBody"
+      responses:
+        "200":
+          description: Updated the organization payment config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationPaymentConfigRead"
+        "404":
+          description: Couldn't find the organization id
+
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -4701,6 +4864,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get_usage:
+    post:
+      tags:
+        - organization
+        - cloud-only
+      summary: Get usage for an organization
+      operationId: getOrganizationUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
   /v1/deployment/metadata:
@@ -4954,29 +5138,49 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
 
       operationId: getConnectorRolloutsList
-      summary: Get all connector rollouts matching the provided state
+      summary: Get all connector rollouts matching the provided actor definition ID & docker image version
       tags:
         - connector_rollout
 
-  /v1/connector_rollout/create:
+  # Connector Rollouts
+  /v1/connector_rollout/list_by_actor_definition_id:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+              $ref: "#/components/schemas/ConnectorRolloutListByActorDefinitionIdRequestBody"
+
       responses:
         "200":
-          description: Newly created connector rollout entry
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutCreateResponse"
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-      operationId: createConnectorRollout
-      summary: Create a new connector rollout
+      operationId: getConnectorRolloutsListByActorDefinitionId
+      summary: Get all connector rollouts matching the provided actor definition ID
+      tags:
+        - connector_rollout
+
+  # Connector Rollouts
+  /v1/connector_rollout/list_all:
+    post:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutListResponse"
+          description: An array of connector rollouts
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getConnectorRolloutsListAll
+      summary: Get all connector rollouts
       tags:
         - connector_rollout
 
@@ -4995,7 +5199,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorRolloutReadResponse"
-
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -5004,25 +5209,171 @@ paths:
       tags:
         - connector_rollout
 
-  /v1/connector_rollout/update:
+  /v1/connector_rollout/start:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectorRolloutUpdateRequestBody"
+              $ref: "#/components/schemas/ConnectorRolloutStartRequestBody"
+      responses:
+        "200":
+          description: Started connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Start a connector rollout by ID. This will update the state of the rollout from INITIALIZED to WORKFLOW_STARTED, and add the Temporal run ID of the workflow to the rollout entry.
+      operationId: startConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/rollout:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutRequestBody"
       responses:
         "200":
           description: Updated connector rollout object
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutUpdateResponse"
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-      summary: Update a connector rollout by ID
-      operationId: updateConnectorRollout
+      summary: Roll out a release candidate. This will pin the actors to the release candidate version ID.
+      operationId: doConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/update_state:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateStateRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update rollout state
+      operationId: updateConnectorRolloutState
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/finalize:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutFinalizeRequestBody"
+      responses:
+        "200":
+          description: Finalized connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutFinalizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
+      operationId: finalizeConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_start:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualStartRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually start a connector rollout workflow. This will update the state of the rollout from INITIALIZED to WORKFLOW_STARTED, and add the Temporal run ID of the workflow to the rollout entry.
+      operationId: manualStartConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_rollout:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualRolloutRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually roll out a release candidate. This will pin the actors to the release candidate version ID.
+      operationId: manualDoConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_finalize:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutManualFinalizeRequestBody"
+      responses:
+        "200":
+          description: Finalized connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutManualFinalizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Manually finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
+      operationId: manualFinalizeConnectorRollout
       tags:
         - connector_rollout
 
@@ -5147,6 +5498,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
 
+  /v1/diagnostic_tool/generate_report:
+    post:
+      summary: Generate a diagnostic report
+      tags:
+        - diagnostic_tool
+      operationId: generateDiagnosticReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticReportRequestBody"
+      responses:
+        "200":
+          description: Successfully generated diagnostic report
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/signal:
+    post:
+      tags:
+        - signal
+      summary: Signal that an operation is terminal
+      operationId: signal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalInput"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   # Airbyte API
   /public:
     get:
@@ -6978,10 +7367,21 @@ components:
     # Connector Rollouts
     ConnectorRolloutRead:
       type: object
+      required:
+        - id
+        - actor_definition_id
+        - release_candidate_version_id
+        - state
       properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
         id:
           type: string
           format: uuid
+        workflow_run_id:
+          type: string
         actor_definition_id:
           type: string
           format: uuid
@@ -6997,22 +7397,25 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         current_target_rollout_pct:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         final_target_rollout_pct:
           type: integer
           minimum: 0
           maximum: 100
+          format: int32
         has_breaking_changes:
           type: boolean
         max_step_wait_time_mins:
           type: integer
           minimum: 0
+          format: int32
         updated_by:
           type: string
-          format: uuid
         created_at:
           type: string
           format: date-time
@@ -7036,11 +7439,19 @@ components:
       type: string
       enum:
         - initialized
+        - workflow_started
         - in_progress
         - paused
         - finalizing
         - succeeded
         - errored
+        - failed_rolled_back
+        - canceled_rolled_back
+
+    ConnectorRolloutStateTerminal:
+      type: string
+      enum:
+        - succeeded
         - failed_rolled_back
         - canceled_rolled_back
 
@@ -7054,14 +7465,25 @@ components:
     ConnectorRolloutListRequestBody:
       type: object
       required:
-        - sourceDefinitionId
-        - dockerImageTag
+        - docker_image_tag
+        - actor_definition_id
       properties:
-        sourceDefinitionId:
+        docker_repository:
           type: string
-          format: UUID
-        dockerImageTag:
+        docker_image_tag:
           type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutListByActorDefinitionIdRequestBody:
+      type: object
+      required:
+        - actor_definition_id
+      properties:
+        actor_definition_id:
+          type: string
+          format: uuid
 
     ConnectorRolloutListResponse:
       type: object
@@ -7074,59 +7496,41 @@ components:
     ConnectorRolloutCreateRequestBody:
       type: object
       required:
-        - id
+        - docker_repository
+        - docker_image_tag
         - actor_definition_id
-        - release_candidate_version_id
-        - state
-        - initial_rollout_pct
-        - final_target_rollout_pct
-        - has_breaking_changes
-        - max_step_wait_time_mins
-        - expires_at
       properties:
-        id:
+        docker_repository:
           type: string
-          format: uuid
+        docker_image_tag:
+          type: string
         actor_definition_id:
           type: string
           format: uuid
-        release_candidate_version_id:
-          type: string
-          format: uuid
-        state:
-          $ref: "#/components/schemas/ConnectorRolloutState"
         initial_rollout_pct:
           type: integer
-          minimum: 1
-          maximum: 100
-        current_target_rollout_pct:
-          type: integer
+          format: int32
           minimum: 1
           maximum: 100
         final_target_rollout_pct:
           type: integer
+          format: int32
           minimum: 1
           maximum: 100
         has_breaking_changes:
           type: boolean
         max_step_wait_time_mins:
           type: integer
+          format: int32
           minimum: 0
-        updated_by:
-          type: string
-          format: uuid
-        error_msg:
-          type: string
-        failed_reason:
-          type: string
-        rollout_strategy:
-          $ref: "#/components/schemas/ConnectorRolloutStrategy"
         expires_at:
           type: string
           format: date-time
 
     ConnectorRolloutCreateResponse:
       type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
@@ -7142,27 +7546,201 @@ components:
 
     ConnectorRolloutReadResponse:
       type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
 
-    ConnectorRolloutUpdateRequestBody:
+    ConnectorRolloutStartRequestBody:
       type: object
       required:
         - id
-        - data
+        - workflow_run_id
+        - rollout_strategy
       properties:
         id:
           type: string
           format: uuid
-        data:
-          $ref: "#/components/schemas/ConnectorRolloutCreateRequestBody"
+        workflow_run_id:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
 
-    ConnectorRolloutUpdateResponse:
+    ConnectorRolloutStartResponse:
       type: object
+      required:
+        - data
       properties:
         data:
           $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutRequestBody:
+      type: object
+      required:
+        - id
+        - actor_ids
+        - rollout_strategy
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorId"
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
+
+    ConnectorRolloutResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutUpdateStateRequestBody:
+      required:
+        - state
+      properties:
+        id:
+          type: string
+          format: uuid
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutState"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+
+    ConnectorRolloutFinalizeRequestBody:
+      type: object
+      required:
+        - id
+        - state
+        - rollout_strategy
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutStateTerminal"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        updated_by:
+          type: string
+          format: uuid
+
+    ConnectorRolloutManualFinalizeResponse:
+      type: object
+      required:
+        - data
+      properties:
+        status:
+          type: string
+
+    ConnectorRolloutFinalizeResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectorRolloutRead"
+
+    ConnectorRolloutManualStartRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - updated_by
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+
+    ConnectorRolloutManualRolloutRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - id
+        - updated_by
+        - actor_ids
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+        actor_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorId"
+
+    ConnectorRolloutManualFinalizeRequestBody:
+      type: object
+      required:
+        - docker_repository
+        - docker_image_tag
+        - actor_definition_id
+        - id
+        - updated_by
+        - state
+      properties:
+        docker_repository:
+          type: string
+        docker_image_tag:
+          type: string
+        actor_definition_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ConnectorRolloutStateTerminal"
+        error_msg:
+          type: string
+        failed_reason:
+          type: string
 
     # WORKSPACE
     WorkspaceId:
@@ -7485,6 +8063,11 @@ components:
                 - disabled
                 - locked
                 - manual
+            accountType:
+              type: string
+              enum:
+                - free
+                - internal
             gracePeriodEndsAt:
               type: integer
               format: int64
@@ -7596,24 +8179,26 @@ components:
         destinationDefinition:
           $ref: "#/components/schemas/DestinationDefinitionRead"
         usage:
-          type: object
-          required:
-            - free
-            - regular
-            - internal
-          properties:
-            free:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
-            regular:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
-            internal:
-              type: array
-              items:
-                $ref: "#/components/schemas/TimeframeUsage"
+          $ref: "#/components/schemas/UsageBucket"
+    UsageBucket:
+      type: object
+      required:
+        - free
+        - regular
+        - internal
+      properties:
+        free:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
+        regular:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
+        internal:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeframeUsage"
     TimeframeUsage:
       type: object
       required:
@@ -7626,7 +8211,7 @@ components:
         timeframeEnd:
           type: string
         quantity:
-          type: string
+          type: number
           format: double
     ConsumptionTimeWindow:
       type: string
@@ -7730,6 +8315,13 @@ components:
           type: string
         baseActorDefinitionVersionId:
           $ref: "#/components/schemas/NullableActorDefinitionVersionId"
+        contributionPullRequestUrl:
+          type: string
+          nullable: true
+        contributionActorDefinitionId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:
@@ -7747,6 +8339,41 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        baseActorDefinitionVersionInfo:
+          $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
+        contributionInfo:
+          $ref: "#/components/schemas/ContributionInfo"
+    BaseActorDefinitionVersionInfo:
+      type: object
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+        - actorDefinitionId
+        - icon
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        icon:
+          type: string
+        documentationUrl:
+          type: string
+    ContributionInfo:
+      type: object
+      required:
+        - pullRequestUrl
+        - actorDefinitionId
+      properties:
+        pullRequestUrl:
+          type: string
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
@@ -8109,6 +8736,8 @@ components:
         - sourceDefinitionId
         - dockerImageTag
       properties:
+        name:
+          type: string
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
         dockerImageTag:
@@ -8186,6 +8815,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
+    EnterpriseSourceStub:
+      type: object
+      required:
+        - id
+        - name
+        - url
+        - icon
+      properties:
+        id:
+          type: string
+          description: The id of the enterprise source connector stub. We use "source-<name>-enterprise" as the ID since these connectors do not necessarily exist yet, and do not have a guaranteed definitionId
+        name:
+          type: string
+          description: The name of the enterprise connector
+        url:
+          type: string
+          description: A url associated with the Enterprise connector. Currently represents a link to the documentation.
+        icon:
+          type: string
+          description: The url of the connector's icon
+        label:
+          type: string
+          description: The connector's label (ie, "enterprise")
+        type:
+          type: string
+          description: The connector's type (ie, "enterprise_source")
+    EnterpriseSourceStubsReadList:
+      type: object
+      required:
+        - enterpriseSourceStubs
+      properties:
+        enterpriseSourceStubs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnterpriseSourceStub"
+          description: A list of source stubs fetched from a JSON file.
     ScopeId:
       type: string
       format: uuid
@@ -8243,6 +8908,13 @@ components:
           $ref: "#/components/schemas/ActorType"
         dockerImageTag:
           type: string
+    GetActorDefinitionVersionDefaultRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
     ListDeclarativeManifestsRequestBody:
       type: object
       required:
@@ -8287,7 +8959,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
         setAsActiveManifest:
           type: boolean
         declarativeManifest:
@@ -8302,7 +8974,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
         version:
           $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
@@ -8653,6 +9325,8 @@ components:
         - destinationDefinitionId
         - dockerImageag
       properties:
+        name:
+          type: string
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
         dockerImageTag:
@@ -8961,6 +9635,7 @@ components:
         - supportsRefreshes
         - supportState
         - isVersionOverrideApplied
+        - supportsFileTransfer
       properties:
         dockerRepository:
           type: string
@@ -8982,6 +9657,8 @@ components:
         cdkVersion:
           description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
           type: string
+        supportsFileTransfer:
+          type: boolean
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -8989,6 +9666,7 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportRefreshes
+        - supportFileTransfer
       properties:
         versionId:
           $ref: "#/components/schemas/ActorDefinitionVersionId"
@@ -8997,6 +9675,8 @@ components:
         dockerImageTag:
           type: string
         supportRefreshes:
+          type: boolean
+        supportFileTransfer:
           type: boolean
     ActorDefinitionBreakingChange:
       type: object
@@ -9481,16 +10161,14 @@ components:
       type: object
       required:
         - connectionId
-        - lastSyncJobStatus
-        - lastSuccessfulSync
-        - nextSync
-        - isRunning
-        - isLastCompletedJobReset
+        - connectionSyncStatus
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
-        lastSyncJobStatus:
-          $ref: "#/components/schemas/JobStatus"
+        connectionSyncStatus:
+          $ref: "#/components/schemas/ConnectionSyncStatus"
+        scheduleData:
+          $ref: "#/components/schemas/ConnectionScheduleData"
         lastSuccessfulSync:
           type: integer
           format: int64
@@ -9498,13 +10176,9 @@ components:
           $ref: "#/components/schemas/JobId"
         lastSyncAttemptNumber:
           $ref: "#/components/schemas/AttemptNumber"
-        nextSync:
+        lastSyncJobCreatedAt:
           type: integer
           format: int64
-        isRunning:
-          type: boolean
-        isLastCompletedJobReset:
-          type: boolean
         failureReason:
           $ref: "#/components/schemas/FailureReason"
     ConnectionSyncProgressRead:
@@ -9800,6 +10474,23 @@ components:
           description: The end datetime of a time range to filter by
           type: string
           format: date-time
+    ConnectionEventsBackfillRequestBody:
+      type: object
+      required:
+        - connectionId
+        - createdAtStart
+        - createdAtEnd
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        createdAtStart:
+          description: The start datetime of a time range to backfill events
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to backfill events
+          type: string
+          format: date-time
 
     ConnectionLastJobPerStreamRead:
       type: array
@@ -9955,6 +10646,23 @@ components:
               type: string
             cronTimeZone:
               type: string
+    ConnectionSyncStatus:
+      description: >
+        The first of the following that matches for a given connection:
+          * `RUNNING` - a job is currently running
+          * `FAILED` - user action is required due to a breaking change or config error
+          * `PAUSED` - connection is not active (inactive or deprecated)
+          * `PENDING` - there is no previous sync job or the last completed job was a reset
+          * `INCOMPLETE` - the last sync job's status is `failed`, user is not expected to be able to fix the issue
+          * `SYNCED` - connection did not meet any of the above conditions, it has synced and is currently at rest
+      type: string
+      enum:
+        - running
+        - failed
+        - paused
+        - pending
+        - incomplete
+        - synced
     NamespaceDefinitionType:
       type: string
       description: Method used for computing final namespace in destination
@@ -10153,6 +10861,10 @@ components:
       properties:
         url:
           type: string
+    BillingEvent:
+      description: Generic event for billing, mapped to a JsonNode
+      type: object
+      additionalProperties: true # required for mapping to JsonNode
     InvoiceRead:
       type: object
       required:
@@ -10246,6 +10958,111 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
+    OrganizationBalanceRead:
+      type: object
+      required:
+        - hidden
+        - planType
+      properties:
+        hidden:
+          description: Whether the organization balance is hidden and should not be shown to the user.
+          type: boolean
+        planType:
+          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
+          type: string
+          enum:
+            - in_arrears
+            - prepaid
+          deprecated: true
+        upcomingInvoice:
+          type: object
+          description: Describe the current state of the upcoming invoice. If `hidden` is `true`, this will be `null`, since no balance should be shown.
+          required:
+            - currency
+            - amount
+            - dueDate
+          properties:
+            currency:
+              type: string
+            amount:
+              type: string
+              description: The amount of the next upcoming invoice formatted as a decimal number wrapped inside a string.
+            dueDate:
+              $ref: "#/components/schemas/LocalDate"
+        credits:
+          type: object
+          required:
+            - balance
+            - blocks
+          properties:
+            balance:
+              type: number
+              format: double
+            blocks:
+              type: array
+              items:
+                $ref: "#/components/schemas/CreditBlockRead"
+    CreditBlockRead:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+        expiryDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
+    OrganizationTrialStatusRead:
+      type: object
+      required:
+        - trialStatus
+      properties:
+        trialStatus:
+          type: string
+          description: Indicates the status of the trial for an organization
+          enum:
+            - pre_trial
+            - in_trial
+            - post_trial
+            - unknown
+          x-enum-descriptions:
+            - The trial has not yet started for this organization
+            - The organization is currently in the trial. End of the trial is indicated by the `trialEndsAt` property
+            - The organization has left the trial already
+            - The trial status is unknown
+        trialEndsAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+
+    # Organization payment config
+    OrganizationPaymentConfigRead:
+      type: object
+      required:
+        - organizationId
+        - paymentStatus
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum:
+            - uninitialized
+            - okay
+            - grace_period
+            - disabled
+            - locked
+            - manual
+        paymentProviderId:
+          type: string
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        usageCategoryOverwrite:
+          type: string
+          enum:
+            - free
+            - internal
+    OrganizationPaymentConfigUpdateRequestBody:
+      $ref: "#/components/schemas/OrganizationPaymentConfigRead"
 
     # ORGANIZATIONS
     OrganizationId:
@@ -10369,6 +11186,46 @@ components:
           $ref: "#/components/schemas/PermissionType"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    OrganizationUsageRequestBody:
+      type: object
+      required:
+        - organizationId
+        - timeWindow
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+    OrganizationUsageRead:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    IndividualWorkspaceUsageRead:
+      type: object
+      required:
+        - workspace
+        - usage
+      properties:
+        workspace:
+          type: object
+          required:
+            - id
+            - name
+            - tombstoned
+          properties:
+            id:
+              $ref: "#/components/schemas/WorkspaceId"
+            name:
+              type: string
+            tombstoned:
+              type: boolean
+        usage:
+          $ref: "#/components/schemas/UsageBucket"
 
     # PERMISSIONS
     PermissionIdRequestBody:
@@ -10455,10 +11312,12 @@ components:
         - instance_admin # Permission to do anything (all permissions below)
         - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
         - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
+        - organization_runner # Permission to read everything and run/cancel jobs
         - organization_reader # Permission to read all workspaces within an organization
         - organization_member # Permission to read organization basic information, not having permissions to any workspaces within an organization
         - workspace_owner # TODO: remove this old enum. It is equivalent to `workspace_admin`.
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
+        - workspace_runner # Permission to read everything and run/cancel jobs
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
@@ -10468,10 +11327,12 @@ components:
       enum:
         - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
         - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
+        - organization_runner # Permission to read everything and run/cancel jobs
         - organization_reader # Permission to read all workspaces within an organization
         - organization_member # Permission to read organization basic information, not having permissions to any workspaces within an organization
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+        - workspace_runner # Permission to read everything and run/cancel jobs
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
     PermissionCheckRequest:
@@ -10758,9 +11619,15 @@ components:
         selectedFields:
           description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
           $ref: "#/components/schemas/SelectedFields"
+        # TODO(pedro): remove `hashedFields` once the UI is updated to use `mappers`.
         hashedFields:
-          description: Fields that should be hashed before being written to the destination.
+          description: Fields that should be hashed before being written to the destination. Deprecated, use `mappers` instead.
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
         minimumGenerationId:
           type: integer
           format: int64
@@ -10783,6 +11650,25 @@ components:
           items:
             type: string
       x-sdk-component: true
+    StreamMapperType:
+      type: string
+      enum:
+        - hashing
+        - field-renaming
+    ConfiguredStreamMapper:
+      type: object
+      required:
+        - type
+        - mapperConfiguration
+      properties:
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
+      x-sdk-component: true
+    MapperConfiguration:
+      type: object
+      description: The values required to configure the mapper.
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
       type: array
@@ -11433,6 +12319,114 @@ components:
         - stream
         - legacy
         - not_set
+    CatalogConfigDiff:
+      type: object
+      description: Describes the difference between two configured catalogs.
+      properties:
+        streamsEnabled:
+          description: list of new streams enabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        streamsDisabled:
+          description: list of streams disabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsEnabled:
+          description: list of new fields enabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsDisabled:
+          description: list of fields disabled. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamFieldStatusChanged"
+        fieldsDataTypeChanged:
+          description: list of changes ofr field data type. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDataTypeDiff"
+        primaryKeysChanged:
+          description: list of changes for primary keys. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamConfigDiff"
+        cursorFieldsChanged:
+          description: list of changes for cursor fields. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamConfigDiff"
+        syncModesChanged:
+          description: list of changes for sync mode. Order does not matter.
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamSyncModeDiff"
+    StreamFieldStatusChanged:
+      type: object
+      description: Describes the fields newly enabled or disabled in a stream.
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        status:
+          type: string
+          enum:
+            - enabled
+            - disabled
+        fields:
+          type: array
+          items:
+            type: string
+    FieldDataTypeDiff:
+      type: object
+      description: Field data type changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        fieldName:
+          type: string
+        prev:
+          type: string
+        current:
+          type: string
+    StreamConfigDiff:
+      type: object
+      description: Stream configuration changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        configType:
+          type: string
+          enum:
+            - primary_key
+            - cursor_field
+        prev:
+          type: string
+        current:
+          type: string
+    StreamSyncModeDiff:
+      type: object
+      description: Sync mode changed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        prevSourceSyncMode:
+          type: string
+        prevDestinationSyncMode:
+          type: string
+        currentSourceSyncMode:
+          type: string
+        currentDestinationSyncMode:
+          type: string
     CatalogDiff:
       type: object
       description: Describes the difference between two Airbyte catalogs.
@@ -11616,6 +12610,10 @@ components:
         memory_request:
           type: string
         memory_limit:
+          type: string
+        ephemeral_storage_request:
+          type: string
+        ephemeral_storage_limit:
           type: string
     # DB Migration
     DbMigrationState:
@@ -12187,22 +13185,6 @@ components:
       format: int32
     WorkflowId:
       type: string
-    SetWorkflowInAttemptRequestBody:
-      type: object
-      required:
-        - jobId
-        - attemptNumber
-        - workflowId
-      properties:
-        jobId:
-          $ref: "#/components/schemas/JobId"
-        attemptNumber:
-          $ref: "#/components/schemas/AttemptNumber"
-        workflowId:
-          $ref: "#/components/schemas/WorkflowId"
-        processingTaskQueue:
-          type: string
-          default: ""
     SaveStatsRequestBody:
       type: object
       required:
@@ -12444,18 +13426,20 @@ components:
         - initialSetupComplete
         - trackingStrategy
         - version
+        - licenseStatus
       properties:
         edition:
           type: string
           enum:
             - community
             - pro
+            - enterprise
+            - trial
         version:
           description: release version for the corresponding edition
           type: string
         licenseStatus:
           $ref: "#/components/schemas/LicenseStatus"
-          nullable: true
         licenseExpirationDate:
           type: integer
           format: int64
@@ -12510,7 +13494,6 @@ components:
       required:
         - edition
         - licenseStatus
-        - usedNodes
         - usedEditors
         - expirationDate
       properties:
@@ -12765,13 +13748,10 @@ components:
     DeploymentMetadataRead:
       type: object
       required:
-        - environment
         - id
         - mode
         - version
       properties:
-        environment:
-          type: string
         id:
           type: string
           format: uuid
@@ -12820,6 +13800,8 @@ components:
           type: array
           items:
             type: string
+        details:
+          type: object
     InvalidInputExceptionInfo:
       type: object
       required:
@@ -14004,6 +14986,11 @@ components:
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
       x-sdk-component: true
     StreamConfigurations:
       description: A list of configured stream options for a connection.
@@ -14063,11 +15050,33 @@ components:
         - destination
       x-sdk-component: true
 
+    LocalDate:
+      type: string
+      format: date
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
     ISO8601DateTime:
       type: string
       format: date-time
-      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSS''Z''")'
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSSZ")'
 
+    DiagnosticReportRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    SignalInput:
+      type: object
+      required:
+        - workflowType
+        - workflowId
+      properties:
+        workflowType:
+          type: string
+        workflowId:
+          type: string
   responses:
     NotFoundResponse:
       description: Object with given id was not found.

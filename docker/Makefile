@@ -6,9 +6,8 @@ OS ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 
 PUBLISH ?= false
 
-BASE_JAVA_IMAGE_VERSION ?= 3.2.3
+BASE_JAVA_IMAGE_VERSION ?= 3.3.0
 BASE_JAVA_IMAGE = airbyte/airbyte-base-java-image:$(BASE_JAVA_IMAGE_VERSION)
-BASE_SOCAT_IMAGE_VERSION ?= 1.8.0.0
 BASE_BUSYBOX_IMAGE_VERSION ?= 1.28
 ALPINE_IMAGE_VERSION ?= 3.18
 
@@ -45,6 +44,7 @@ image.airbyte-base-java-python-image: buildx.start
 	fi
 
 image.airbyte-base-java-worker-image: ## Build the airbyte/airbyte-base-java-worker-image
+image.airbyte-base-java-worker-image: buildx.start
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/airbyte-base-java-worker-image:$(VERSION) \
 			--build-arg JDK_IMAGE=$(BASE_JAVA_IMAGE) \
@@ -58,21 +58,8 @@ image.airbyte-base-java-worker-image: ## Build the airbyte/airbyte-base-java-wor
 			-f $(IMAGES_DIR)/airbyte-base-java-worker-image/Dockerfile . ; \
 	fi
 
-image.airbyte-socat: ## Build the airbyte/socat image
-	@if [ "$(PUBLISH)" = "true" ]; then \
-		docker buildx build -t airbyte/socat:$(VERSION) \
-			--build-arg BASE_SOCAT_IMAGE_VERSION=$(BASE_SOCAT_IMAGE_VERSION) \
-			--platform linux/amd64,linux/arm64 \
-			--push \
-			-f $(IMAGES_DIR)/airbyte-socat/Dockerfile . ; \
-	else \
-		docker build \
-			--build-arg BASE_SOCAT_IMAGE_VERSION=$(BASE_SOCAT_IMAGE_VERSION) \
-			-t airbyte/socat:$(VERSION) \
-			-f $(IMAGES_DIR)/airbyte-socat/Dockerfile . ; \
-	fi
-
 image.airbyte-busybox: ## Build the airbyte/busybox image
+image.airbyte-busybox: buildx.start 
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/busybox:$(VERSION) \
 			--build-arg BASE_BUSYBOX_IMAGE_VERSION=$(BASE_BUSYBOX_IMAGE_VERSION) \
@@ -87,6 +74,7 @@ image.airbyte-busybox: ## Build the airbyte/busybox image
 	fi
 
 image.airbyte-mc: ## Build the airbyte/mc image
+image.airbyte-mc: buildx.start
 	@if [ "$(PUBLISH)" = "true" ]; then \
 		docker buildx build -t airbyte/mc:$(VERSION) \
 			--build-arg ALPINE_IMAGE_VERSION=$(ALPINE_IMAGE_VERSION) \

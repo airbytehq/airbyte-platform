@@ -17,10 +17,11 @@ dependencies {
   implementation(libs.failsafe)
 
   implementation(project(":oss:airbyte-commons"))
-  implementation(project(":oss:airbyte-commons-logging"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-notification"))

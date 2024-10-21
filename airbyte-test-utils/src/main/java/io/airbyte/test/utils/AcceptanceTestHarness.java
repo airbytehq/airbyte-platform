@@ -100,7 +100,7 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.test.container.AirbyteTestContainer;
+import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import java.io.IOException;
@@ -144,7 +144,6 @@ import org.testcontainers.utility.MountableFile;
  * Containers and states include:
  * <li>source postgres SQL</li>
  * <li>destination postgres SQL</li>
- * <li>{@link AirbyteTestContainer}</li>
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
@@ -154,7 +153,6 @@ public class AcceptanceTestHarness {
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
   private static final UUID DEFAULT_ORGANIZATION_ID = OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
-  private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
@@ -224,8 +222,8 @@ public class AcceptanceTestHarness {
   private String sourceDatabaseName;
   private String destinationDatabaseName;
 
-  private AirbyteTestContainer airbyteTestContainer;
   private final AirbyteApiClient apiClient;
+  private final TestFlagsSetter testFlagsSetter;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
 
@@ -253,10 +251,19 @@ public class AcceptanceTestHarness {
   public AcceptanceTestHarness(final AirbyteApiClient apiClient,
                                final UUID defaultWorkspaceId,
                                final String postgresSqlInitFile)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, null, defaultWorkspaceId, postgresSqlInitFile);
+  }
+
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient,
+                               final TestFlagsSetter testFlagsSetter,
+                               final UUID defaultWorkspaceId,
+                               final String postgresSqlInitFile)
       throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // reads env vars to assign static variables
     assignEnvVars();
     this.apiClient = apiClient;
+    this.testFlagsSetter = testFlagsSetter;
     this.defaultWorkspaceId = defaultWorkspaceId;
     this.postgresSqlInitFile = postgresSqlInitFile;
 
@@ -304,6 +311,7 @@ public class AcceptanceTestHarness {
         null,
         List.of(),
         List.of(),
+        List.of(),
         null,
         null,
         null);
@@ -325,6 +333,19 @@ public class AcceptanceTestHarness {
     this(apiClient, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
   }
 
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId, final TestFlagsSetter testFlagsSetter)
+      throws GeneralSecurityException, URISyntaxException, IOException, InterruptedException {
+    this(apiClient, testFlagsSetter, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
+  }
+
+  public AirbyteApiClient getApiClient() {
+    return apiClient;
+  }
+
+  public TestFlagsSetter getTestFlagsSetter() {
+    return testFlagsSetter;
+  }
+
   public void stopDbAndContainers() {
     if (isGke) {
       try {
@@ -336,10 +357,6 @@ public class AcceptanceTestHarness {
     } else {
       sourcePsql.stop();
       destinationPsql.stop();
-    }
-
-    if (airbyteTestContainer != null) {
-      airbyteTestContainer.stop();
     }
   }
 
@@ -1032,6 +1049,7 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
+            null,
             dockerImageTag,
             null));
   }
@@ -1041,6 +1059,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            null,
             null));
   }
 
@@ -1360,6 +1379,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
             stream.getConfig().getHashedFields(),
+            stream.getConfig().getMappers(),
             stream.getConfig().getMinimumGenerationId(),
             stream.getConfig().getGenerationId(),
             stream.getConfig().getSyncId())))

@@ -116,7 +116,7 @@ function formInputToInputInEditing({ key, definition, required, isLocked }: Buil
     required,
     isLocked,
     isNew: false,
-    showDefaultValueField: Boolean(definition.default),
+    showDefaultValueField: definition.default !== undefined,
     type: getType(definition),
   };
 }

@@ -1,4 +1,3 @@
-{{- if eq .Values.global.deploymentMode "oss"  }}
 {{- $airbyteYmlDict := (default "" .Values.global.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
@@ -20,7 +19,7 @@ data:
   {{- if $airbyteYmlDict }}
   AIRBYTE_URL: {{ (index $airbyteYmlDict "webapp-url") | quote }}
   {{- else}}
-  AIRBYTE_URL: {{ .Values.global.airbyteUrl }}
+  AIRBYTE_URL: {{ .Values.global.airbyteUrl | quote }}
   {{- end }}
 
   AIRBYTE_SERVER_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
@@ -35,13 +34,8 @@ data:
   KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
-{{- if eq (index .Values "workload-api-server" "enabled") true }}
-  # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
-  # block can be removed
   WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
-  {{- else }}
-  WORKLOAD_API_HOST: http://localhost # placeholder value
-  {{- end }}
+
 
   {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
   INITIAL_USER_FIRST_NAME: {{ .Values.global.auth.instanceAdmin.firstName }}
@@ -95,17 +89,12 @@ data:
   JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
   {{- end }}
 
-  {{- if $.Values.global.jobs.kube.images.busybox }}
-  JOB_KUBE_BUSYBOX_IMAGE: {{ $.Values.global.jobs.kube.images.busybox | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.images.socat }}
-  JOB_KUBE_SOCAT_IMAGE: {{ $.Values.global.jobs.kube.images.socat | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.images.curl }}
-  JOB_KUBE_CURL_IMAGE: {{ $.Values.global.jobs.kube.images.curl | quote }}
-  {{- end }}
+  JOB_KUBE_BUSYBOX_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.busybox $) }}
+  JOB_KUBE_CURL_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.curl $) }}
+  {{ $workloadLauncher := (index .Values "workload-launcher") }}
+  CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
+  WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
+  CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
 
   JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
@@ -118,7 +107,6 @@ data:
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
   LOCAL_ROOT: /tmp/airbyte_local
   LOG_LEVEL: {{ default "INFO" (((.Values.global).logging).level) }}
-  LOG4J_CONFIGURATION_FILE: {{ include "airbyte.logging.log4jConfig" . | quote }}
   MICROMETER_METRICS_ENABLED: "false"
   MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
@@ -152,9 +140,9 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator.image") | quote }}
-  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit.image") | quote }}
-  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar.image") | quote }}
+  FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT: 5G
+  FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST: 5G
+
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
@@ -163,9 +151,7 @@ data:
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
-  WORKLOAD_LAUNCHER_ENABLED: "true"
-  WORKLOAD_API_SERVER_ENABLED: "true"
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""
-{{- end }}
+  ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v0/connector_stubs.json" }}

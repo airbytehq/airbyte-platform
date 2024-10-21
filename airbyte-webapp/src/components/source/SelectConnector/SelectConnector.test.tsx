@@ -8,9 +8,11 @@ import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { SelectConnector } from "./SelectConnector";
 
 const mockTrackSelectConnector = jest.fn();
+const mockTrackSelectEnterpriseStub = jest.fn();
 
 jest.mock("./useTrackSelectConnector", () => ({
   useTrackSelectConnector: () => mockTrackSelectConnector,
+  useTrackSelectEnterpriseStub: () => mockTrackSelectEnterpriseStub,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
@@ -22,10 +24,11 @@ jest.mock("core/api", () => ({
   useFilters: (defaultFilters: unknown) => {
     return [defaultFilters, () => null];
   },
+  useEnterpriseSourceStubsList: () => ({ enterpriseSourceDefinitions: [] }),
 }));
 
 describe(`${SelectConnector.name}`, () => {
-  it("Tracks an analytics event when a connector is selected", async () => {
+  it("Tracks an analytics event when a regular connector is selected", async () => {
     const { getByText } = await render(
       <SelectConnector
         connectorType="source"
@@ -39,5 +42,6 @@ describe(`${SelectConnector.name}`, () => {
     await userEvent.click(connectorButton);
 
     expect(mockTrackSelectConnector).toHaveBeenCalledTimes(1);
+    expect(mockTrackSelectEnterpriseStub).not.toHaveBeenCalled();
   });
 });

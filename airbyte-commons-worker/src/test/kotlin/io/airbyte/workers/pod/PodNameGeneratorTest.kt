@@ -4,8 +4,7 @@
 
 package io.airbyte.workers.pod
 
-import io.airbyte.workers.pod.PodNameGenerator.Companion.ORCH_POD_PREFIX
-import io.airbyte.workers.pod.PodNameGenerator.Companion.REPL_POD_PREFIX
+import io.airbyte.workers.pod.PodConstants.REPL_POD_PREFIX
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,14 +16,6 @@ internal class PodNameGeneratorTest {
   @BeforeEach
   internal fun setUp() {
     podNameGenerator = PodNameGenerator(namespace = namespace)
-  }
-
-  @Test
-  internal fun testGetReplicationOrchestratorPodName() {
-    val jobId = "12345"
-    val attemptId = 0L
-    val podName = podNameGenerator.getReplicationOrchestratorPodName(jobId = jobId, attemptId = attemptId)
-    assertEquals("$ORCH_POD_PREFIX-job-$jobId-attempt-$attemptId", podName)
   }
 
   @Test

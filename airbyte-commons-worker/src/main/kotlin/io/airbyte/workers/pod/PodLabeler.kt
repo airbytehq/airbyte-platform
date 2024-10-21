@@ -1,5 +1,15 @@
 package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.Metadata.CHECK_JOB
+import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
+import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
+import io.airbyte.workers.pod.Metadata.ORCHESTRATOR_REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.READ_STEP
+import io.airbyte.workers.pod.Metadata.REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.SPEC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
+import io.airbyte.workers.pod.Metadata.WRITE_STEP
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_NAME
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_VERSION
@@ -11,18 +21,6 @@ import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
-import io.airbyte.workers.process.Metadata
-import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.DISCOVER_JOB
-import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.SPEC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workers.process.ProcessFactory
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -151,8 +149,8 @@ class PodLabeler {
   }
 
   private fun getImageMetadataPair(imageName: String): Pair<String, String> {
-    val shortImageName = ProcessFactory.getShortImageName(imageName)
-    val imageVersion = ProcessFactory.getImageVersion(imageName)
+    val shortImageName = PodUtils.getShortImageName(imageName)
+    val imageVersion = PodUtils.getImageVersion(imageName)
 
     return shortImageName to imageVersion
   }

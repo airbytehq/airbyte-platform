@@ -16,7 +16,7 @@ import static org.jooq.impl.DSL.select;
 
 import io.airbyte.config.Organization;
 import io.airbyte.config.SsoConfig;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;

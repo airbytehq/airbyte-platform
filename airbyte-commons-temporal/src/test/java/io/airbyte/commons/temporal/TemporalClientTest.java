@@ -230,21 +230,22 @@ public class TemporalClientTest {
     @Test
     void testSubmitGetSpec() {
       final SpecWorkflow specWorkflow = mock(SpecWorkflow.class);
-      when(workflowClient.newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC)))
+      when(workflowClient.newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC, JOB_UUID)))
           .thenReturn(specWorkflow);
       final JobGetSpecConfig getSpecConfig = new JobGetSpecConfig().withDockerImage(IMAGE_NAME1);
 
       temporalClient.submitGetSpec(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, getSpecConfig);
       specWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG);
-      verify(workflowClient).newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC));
+      verify(workflowClient).newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC, JOB_UUID));
     }
 
     @Test
     void testSubmitCheckConnection() {
       final CheckConnectionWorkflow checkConnectionWorkflow = mock(CheckConnectionWorkflow.class);
       when(
-          workflowClient.newWorkflowStub(CheckConnectionWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION)))
-              .thenReturn(checkConnectionWorkflow);
+          workflowClient.newWorkflowStub(CheckConnectionWorkflow.class,
+              TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION, JOB_UUID)))
+                  .thenReturn(checkConnectionWorkflow);
       final JobCheckConnectionConfig checkConnectionConfig = new JobCheckConnectionConfig()
           .withDockerImage(IMAGE_NAME1)
           .withConnectionConfiguration(Jsons.emptyObject());
@@ -254,14 +255,15 @@ public class TemporalClientTest {
       temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig, new ActorContext());
       checkConnectionWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
       verify(workflowClient).newWorkflowStub(CheckConnectionWorkflow.class,
-          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION));
+          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION, JOB_UUID));
     }
 
     @Test
     void testSubmitDiscoverSchema() {
       final DiscoverCatalogWorkflow discoverCatalogWorkflow = mock(DiscoverCatalogWorkflow.class);
-      when(workflowClient.newWorkflowStub(DiscoverCatalogWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA)))
-          .thenReturn(discoverCatalogWorkflow);
+      when(workflowClient.newWorkflowStub(DiscoverCatalogWorkflow.class,
+          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA, JOB_UUID)))
+              .thenReturn(discoverCatalogWorkflow);
       final JobDiscoverCatalogConfig checkConnectionConfig = new JobDiscoverCatalogConfig()
           .withDockerImage(IMAGE_NAME1)
           .withConnectionConfiguration(Jsons.emptyObject());
@@ -272,7 +274,7 @@ public class TemporalClientTest {
           WorkloadPriority.DEFAULT);
       discoverCatalogWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
       verify(workflowClient).newWorkflowStub(DiscoverCatalogWorkflow.class,
-          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA));
+          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA, JOB_UUID));
     }
 
   }

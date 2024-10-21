@@ -2,6 +2,8 @@
 
 package io.airbyte.connector_builder.templates
 
+import io.airbyte.connector_builder.services.GithubContributionService
+import io.airbyte.connector_builder.utils.BuilderContributionInfo
 import io.airbyte.connector_builder.utils.ManifestParser
 import io.pebbletemplates.pebble.PebbleEngine
 import io.pebbletemplates.pebble.template.PebbleTemplate
@@ -60,6 +62,24 @@ class ContributionTemplates {
     } ?: emptyList()
   }
 
+  fun getAllowedHosts(streams: List<Map<String, Any>>): List<String> {
+    val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
+
+    val hosts =
+      streams.mapNotNull { stream ->
+        val retriever = stream["retriever"] as? Map<String, Any>
+        val requester = retriever?.get("requester") as? Map<String, Any>
+        val baseUrl = requester?.get("url_base") as? String
+
+        baseUrl?.let { url ->
+          hostnameRegex.find(url)?.groupValues?.getOrNull(1)
+        }
+      }
+
+    // Since the requester is on every stream, we only need unique hostnames
+    return hosts.distinct()
+  }
+
   /**
    * Converts a primary key to a string representation.
    *
@@ -99,60 +119,54 @@ class ContributionTemplates {
 
   // TEMPLATES
 
-  fun renderContributionReadmeMd(
-    connectorImageName: String,
-    connectorName: String,
-    description: String,
-  ): String {
-    val context = mapOf("connectorImageName" to connectorImageName, "connectorName" to connectorName, "description" to description)
+  fun renderContributionReadmeMd(contributionInfo: BuilderContributionInfo): String {
+    val context =
+      mapOf(
+        "connectorImageName" to contributionInfo.connectorImageName,
+        "connectorName" to contributionInfo.connectorName,
+        "description" to contributionInfo.description,
+      )
     return renderTemplateString("contribution_templates/readme.md.peb", context)
   }
 
-  fun renderContributionDocsMd(
-    connectorImageName: String,
-    connectorVersionTag: String,
-    connectorName: String,
-    description: String,
-    manifestParser: ManifestParser,
-    releaseDate: String,
-    authorUsername: String,
-  ): String {
+  fun renderContributionDocsMd(contributionInfo: BuilderContributionInfo): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
     val streams = toTemplateStreams(manifestParser.streams)
     val specProperties = toTemplateSpecProperties(manifestParser.spec)
     val context =
       mapOf(
-        "connectorImageName" to connectorImageName,
-        "connectorName" to connectorName,
-        "versionTag" to connectorVersionTag,
-        "description" to description,
+        "connectorImageName" to contributionInfo.connectorImageName,
+        "connectorName" to contributionInfo.connectorName,
+        "versionTag" to contributionInfo.versionTag,
+        "description" to contributionInfo.description,
         "specProperties" to specProperties,
         "streams" to streams,
-        "releaseDate" to releaseDate,
-        "changelogMessage" to "Initial release by [@$authorUsername](https://github.com/$authorUsername) via Connector Builder",
+        "releaseDate" to contributionInfo.updateDate,
+        "changelogMessage" to contributionInfo.changelogMessage,
       )
     return renderTemplateString("contribution_templates/docs.md.peb", context)
   }
 
   fun renderContributionMetadataYaml(
-    connectorImageName: String,
-    connectorName: String,
-    actorDefinitionId: String,
-    versionTag: String,
-    baseImage: String,
-    allowedHosts: List<String>,
-    connectorDocsSlug: String,
-    releaseDate: String,
+    contributionInfo: BuilderContributionInfo,
+    githubContributionService: GithubContributionService,
   ): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
+    val allowedHosts = getAllowedHosts(manifestParser.streams)
+
+    // TODO: Ensure metadata is correctly formatted
+    // TODO: Merge metadata with existing metadata if it exists
     val context =
       mapOf(
+        // TODO: Parse Allowed Hosts from manifest
         "allowedHosts" to allowedHosts,
-        "connectorImageName" to connectorImageName,
-        "baseImage" to baseImage,
-        "actorDefinitionId" to actorDefinitionId,
-        "versionTag" to versionTag,
-        "connectorName" to connectorName,
-        "releaseDate" to releaseDate,
-        "connectorDocsSlug" to connectorDocsSlug,
+        "connectorImageName" to contributionInfo.connectorImageName,
+        "baseImage" to contributionInfo.baseImage,
+        "actorDefinitionId" to contributionInfo.actorDefinitionId,
+        "versionTag" to contributionInfo.versionTag,
+        "connectorName" to contributionInfo.connectorName,
+        "releaseDate" to contributionInfo.updateDate,
+        "connectorDocsSlug" to githubContributionService.connectorDocsSlug,
       )
     return renderTemplateString("contribution_templates/metadata.yaml.peb", context)
   }
@@ -161,8 +175,29 @@ class ContributionTemplates {
     return renderTemplateString("contribution_templates/icon.svg", emptyMap())
   }
 
-  fun renderAcceptanceTestConfigYaml(connectorImageName: String): String {
-    val context = mapOf("connectorImageName" to connectorImageName)
+  fun renderAcceptanceTestConfigYaml(contributionInfo: BuilderContributionInfo): String {
+    val context = mapOf("connectorImageName" to contributionInfo.connectorImageName)
     return renderTemplateString("contribution_templates/acceptance-test-config.yml.peb", context)
+  }
+
+  fun renderContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
+    val streams = toTemplateStreams(manifestParser.streams)
+    val specProperties = toTemplateSpecProperties(manifestParser.spec)
+    val context =
+      mapOf(
+        "connectorImageName" to contributionInfo.connectorImageName,
+        "connectorName" to contributionInfo.connectorName,
+        "description" to contributionInfo.description,
+        "specProperties" to specProperties,
+        "streams" to streams,
+      )
+    val templatePath =
+      if (contributionInfo.isEdit) {
+        "contribution_templates/pull-request-edit.md.peb"
+      } else {
+        "contribution_templates/pull-request-new-connector.md.peb"
+      }
+    return renderTemplateString(templatePath, context)
   }
 }

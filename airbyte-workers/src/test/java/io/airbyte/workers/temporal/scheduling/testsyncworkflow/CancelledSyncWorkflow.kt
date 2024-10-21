@@ -28,4 +28,6 @@ class CancelledSyncWorkflow : SyncWorkflow {
           .withTotalStats(SyncStats()),
       )
   }
+
+  override fun checkAsyncActivityStatus() {}
 }

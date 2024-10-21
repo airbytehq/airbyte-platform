@@ -111,7 +111,7 @@ describe("auth button", () => {
 
   it("renders an error if there are any auth fields with empty values", () => {
     // auth errors
-    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: { field: "form.empty.error" } });
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: { field: "required" } });
 
     mockUseConnectorForm.mockImplementationOnce(() => {
       const { selectedConnectorDefinition } = baseUseConnectorFormValues;

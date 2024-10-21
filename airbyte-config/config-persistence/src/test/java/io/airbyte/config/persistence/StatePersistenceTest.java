@@ -23,23 +23,20 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
-import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.init.DatabaseInitializationException;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
@@ -74,54 +71,56 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   private static final String GLOBAL_STATE = "\"my global state\"";
   private static final String STATE = "state";
 
+  private ConnectionService connectionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
+
   @BeforeEach
   void beforeEach() throws DatabaseInitializationException, IOException, JsonValidationException, SQLException {
     truncateAllTables();
 
-    connectionId = setupTestData();
     statePersistence = new StatePersistence(database);
+
+    final var featureFlagClient = mock(TestClient.class);
+    final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    connectionService = mock(ConnectionService.class);
+    final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        new ActorDefinitionServiceJooqImpl(database),
+        mock(ScopedConfigurationService.class));
+    connectionService = new ConnectionServiceJooqImpl(database);
+    sourceService = new SourceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater);
+    destinationService = new DestinationServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        connectionService,
+        actorDefinitionVersionUpdater);
+    workspaceService = new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
+
+    connectionId = setupTestData();
+
   }
 
   private UUID setupTestData() throws JsonValidationException, IOException {
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-
-    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
@@ -140,12 +139,12 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     // we don't need sync operations in this test suite, zero them out.
     final StandardSync sync = Jsons.clone(MockData.standardSyncs().get(0)).withOperationIds(Collections.emptyList());
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-    configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
-    configRepository.writeStandardSync(sync);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
+    sourceService.writeSourceConnectionNoSecrets(sourceConnection);
+    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2, Collections.emptyList());
+    destinationService.writeDestinationConnectionNoSecrets(destinationConnection);
+    connectionService.writeStandardSync(sync);
 
     return sync.getConnectionId();
   }
@@ -915,46 +914,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private UUID setupSecondConnection() throws JsonValidationException, IOException {
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-
-    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    final ConfigRepository configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
-
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
     final StandardSourceDefinition sourceDefinition = MockData.publicSourceDefinition();
     final SourceConnection sourceConnection = MockData.sourceConnections().get(0);
@@ -969,12 +928,12 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     // we don't need sync operations in this test suite, zero them out.
     final StandardSync sync = Jsons.clone(MockData.standardSyncs().get(1)).withOperationIds(Collections.emptyList());
 
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-    configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
-    configRepository.writeStandardSync(sync);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
+    sourceService.writeSourceConnectionNoSecrets(sourceConnection);
+    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2, Collections.emptyList());
+    destinationService.writeDestinationConnectionNoSecrets(destinationConnection);
+    connectionService.writeStandardSync(sync);
     return sync.getConnectionId();
   }
 

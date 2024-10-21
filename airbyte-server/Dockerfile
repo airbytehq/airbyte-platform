@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.0
 
 FROM scratch as builder
 WORKDIR /app
@@ -14,4 +14,4 @@ COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server
-ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
+CMD ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]

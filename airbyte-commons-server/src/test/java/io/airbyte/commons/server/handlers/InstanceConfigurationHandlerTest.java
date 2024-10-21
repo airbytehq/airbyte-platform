@@ -28,17 +28,24 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +67,7 @@ class InstanceConfigurationHandlerTest {
   private static final String EMAIL = "org@airbyte.io";
   private static final String DEFAULT_ORG_NAME = "Default Org Name";
   private static final String DEFAULT_USER_NAME = "Default User Name";
+  private static final String DEFAULT_USER_EMAIL = ""; // matches what we do in production code
   private static final Integer MAX_NODES = 12;
   private static final Integer MAX_EDITORS = 50;
   private static final Date EXPIRATION_DATE = new Date(2025, 12, 3);
@@ -76,6 +84,8 @@ class InstanceConfigurationHandlerTest {
   private AuthConfigs mAuthConfigs;
   @Mock
   private PermissionService permissionService;
+  @Mock
+  private Optional<KubernetesClient> mKubernetesClient;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -89,7 +99,7 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense
-        .setLicense(new AirbyteLicense(LicenseType.PRO, Optional.of(EXPIRATION_DATE), Optional.of(MAX_NODES), Optional.of(MAX_EDITORS)));
+        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, Optional.of(EXPIRATION_DATE), Optional.of(MAX_NODES), Optional.of(MAX_EDITORS)));
   }
 
   @ParameterizedTest
@@ -159,7 +169,9 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService);
+        permissionService,
+        Optional.empty(),
+        mKubernetesClient);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -187,12 +199,16 @@ class InstanceConfigurationHandlerTest {
 
   @ParameterizedTest
   @CsvSource({
-    "true, true",
-    "true, false",
-    "false, true",
-    "false, false"
+    "true, true, true",
+    "true, true, false",
+    "true, false, true",
+    "true, false, false",
+    "false, true, true",
+    "false, true, false",
+    "false, false, true",
+    "false, false, false"
   })
-  void testSetupInstanceConfiguration(final boolean userNamePresent, final boolean orgNamePresent)
+  void testSetupInstanceConfiguration(final boolean userNamePresent, final boolean orgNamePresent, final boolean userWithEmailAlreadyExists)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     stubGetDefaultOrganization();
@@ -245,14 +261,22 @@ class InstanceConfigurationHandlerTest {
       requestBody.setOrganizationName(expectedOrgName);
     }
 
+    final String expectedEmailUpdate;
+    if (userWithEmailAlreadyExists) {
+      expectedEmailUpdate = DEFAULT_USER_EMAIL; // email should not be updated if it would conflict with an existing user
+      when(mUserPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(new User().withEmail(EMAIL)));
+    } else {
+      expectedEmailUpdate = EMAIL;
+    }
+
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.setupInstanceConfiguration(requestBody);
 
     assertEquals(expected, actual);
 
-    // verify the user was updated with the email and name from the request
+    // verify the user was updated with the expected email and name from the request
     verify(mUserPersistence).writeAuthenticatedUser(eq(new AuthenticatedUser()
         .withUserId(USER_ID)
-        .withEmail(EMAIL)
+        .withEmail(expectedEmailUpdate)
         .withName(expectedUserName)));
 
     // verify the organization was updated with the name from the request
@@ -280,11 +304,76 @@ class InstanceConfigurationHandlerTest {
     assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
   }
 
+  @Test
+  void testInvalidLicenseTest() {
+    final ActiveAirbyteLicense license = new ActiveAirbyteLicense();
+    license.setLicense(null);
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(license),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty(),
+        mKubernetesClient);
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
+  }
+
+  @Test
+  void testExpiredLicenseTest() {
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
+        mKubernetesClient);
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
+  }
+
+  @Test
+  void testExceededEditorsLicenseTest() {
+
+    final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty(),
+        mKubernetesClient);
+    when(permissionService.listPermissions()).thenReturn(
+        Stream.generate(UUID::randomUUID)
+            .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
+            .limit(MAX_EDITORS + 10).toList());
+    assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXCEEDED);
+  }
+
   private void stubGetDefaultUser() throws IOException {
     when(mUserPersistence.getDefaultUser()).thenReturn(
         Optional.of(new AuthenticatedUser()
             .withUserId(USER_ID)
-            .withName(DEFAULT_USER_NAME)));
+            .withName(DEFAULT_USER_NAME)
+            .withEmail(DEFAULT_USER_EMAIL)));
   }
 
   private void stubGetDefaultOrganization() throws IOException {
@@ -317,7 +406,9 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService);
+        permissionService,
+        Optional.empty(),
+        mKubernetesClient);
   }
 
 }

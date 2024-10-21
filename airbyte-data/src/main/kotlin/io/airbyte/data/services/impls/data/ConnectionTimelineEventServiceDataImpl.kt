@@ -25,7 +25,19 @@ class ConnectionTimelineEventServiceDataImpl(
   ): ConnectionTimelineEvent {
     val serializedEvent = mapper.writeValueAsString(event)
     val timelineEvent =
-      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, null)
+      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, OffsetDateTime.now())
+    return repository.save(timelineEvent)
+  }
+
+  override fun writeEventWithTimestamp(
+    connectionId: UUID,
+    event: ConnectionEvent,
+    userId: UUID?,
+    createdAt: OffsetDateTime,
+  ): ConnectionTimelineEvent {
+    val serializedEvent = mapper.writeValueAsString(event)
+    val timelineEvent =
+      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, createdAt)
     return repository.save(timelineEvent)
   }
 

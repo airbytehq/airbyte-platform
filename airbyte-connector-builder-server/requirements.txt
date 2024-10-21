@@ -4,14 +4,16 @@
 #
 #    pip-compile
 #
-airbyte-cdk==4.6.2
+airbyte-cdk==5.14.0
     # via -r requirements.in
-airbyte-protocol-models-pdv2==0.12.2
+airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyio==4.4.0
+anyio==4.6.2.post1
     # via httpx
+attributes-doc==0.4.0
+    # via serpyco-rs
 attrs==24.2.0
     # via
     #   cattrs
@@ -19,20 +21,20 @@ attrs==24.2.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-bracex==2.5
+bracex==2.5.post1
     # via wcmatch
 cachetools==5.5.0
     # via airbyte-cdk
-cattrs==24.1.0
+cattrs==24.1.2
     # via requests-cache
-certifi==2024.7.4
+certifi==2024.8.30
     # via
     #   httpcore
     #   httpx
     #   requests
-cffi==1.17.0
+cffi==1.17.1
     # via cryptography
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via requests
 click==8.1.7
     # via nltk
@@ -50,11 +52,11 @@ genson==1.2.2
     # via airbyte-cdk
 h11==0.14.0
     # via httpcore
-httpcore==1.0.5
+httpcore==1.0.6
     # via httpx
 httpx==0.27.2
     # via langsmith
-idna==3.8
+idna==3.10
     # via
     #   anyio
     #   httpx
@@ -75,31 +77,34 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.106
+langsmith==0.1.136
     # via langchain-core
-markupsafe==2.1.5
+markupsafe==3.0.1
     # via jinja2
 nltk==3.8.1
     # via airbyte-cdk
+numpy==2.1.2
+    # via pandas
 orjson==3.10.7
     # via
     #   airbyte-cdk
     #   langsmith
 packaging==23.2
     # via langchain-core
+pandas==2.2.2
+    # via airbyte-cdk
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==4.2.2
+platformdirs==4.3.6
     # via requests-cache
 pycparser==2.22
     # via cffi
-pydantic==2.8.2
+pydantic==2.9.2
     # via
     #   airbyte-cdk
-    #   airbyte-protocol-models-pdv2
     #   langchain-core
     #   langsmith
-pydantic-core==2.20.1
+pydantic-core==2.23.4
     # via pydantic
 pyjwt==2.9.0
     # via airbyte-cdk
@@ -110,23 +115,31 @@ pyrsistent==0.20.0
 python-dateutil==2.9.0.post0
     # via
     #   airbyte-cdk
+    #   pandas
     #   pendulum
 pytz==2024.1
-    # via airbyte-cdk
+    # via
+    #   airbyte-cdk
+    #   pandas
 pytzdata==2020.1
     # via pendulum
 pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-regex==2024.7.24
+regex==2024.9.11
     # via nltk
 requests==2.32.3
     # via
     #   airbyte-cdk
     #   langsmith
     #   requests-cache
+    #   requests-toolbelt
 requests-cache==1.2.1
+    # via airbyte-cdk
+requests-toolbelt==1.0.0
+    # via langsmith
+serpyco-rs==1.11.0
     # via airbyte-cdk
 six==1.16.0
     # via
@@ -148,9 +161,12 @@ typing-extensions==4.12.2
     #   cattrs
     #   pydantic
     #   pydantic-core
+    #   serpyco-rs
+tzdata==2024.2
+    # via pandas
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.2.2
+urllib3==2.2.3
     # via
     #   requests
     #   requests-cache
@@ -158,6 +174,8 @@ wcmatch==8.4
     # via airbyte-cdk
 wrapt==1.16.0
     # via deprecated
+xmltodict==0.13.0
+    # via airbyte-cdk
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

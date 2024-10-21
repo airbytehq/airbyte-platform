@@ -11,7 +11,7 @@ import io.airbyte.config.secrets.SecretsTestCase
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.function.Consumer
 
-class NestedOneOfTestCase() : SecretsTestCase {
+class NestedOneOfTestCase : SecretsTestCase {
   override val name: String
     get() = "nested_oneof"
 

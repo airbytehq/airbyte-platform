@@ -7,10 +7,7 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ResourceRequirements
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.sync.OrchestratorConstants
-import io.fabric8.kubernetes.api.model.ContainerPort
-import io.fabric8.kubernetes.api.model.ContainerPortBuilder
+import io.airbyte.workers.pod.KubeContainerInfo
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.TolerationBuilder
@@ -90,18 +87,6 @@ class ContainerConfigBeanFactory {
     return KubeContainerInfo(
       containerOrchestratorImage,
       containerOrchestratorImagePullPolicy,
-    )
-  }
-
-  @Singleton
-  @Named("orchestratorContainerPorts")
-  fun orchestratorContainerPorts(): List<ContainerPort> {
-    return listOf(
-      ContainerPortBuilder().withContainerPort(OrchestratorConstants.SERVER_PORT).build(),
-      ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT1).build(),
-      ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT2).build(),
-      ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT3).build(),
-      ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT4).build(),
     )
   }
 
@@ -205,6 +190,36 @@ class ContainerConfigBeanFactory {
       .withCpuRequest(cpuRequest)
       .withMemoryLimit(memoryLimit)
       .withMemoryRequest(memoryRequest)
+  }
+
+  @Singleton
+  @Named("fileTransferReqs")
+  fun fileTransferReqs(
+    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-limit}") ephemeralStorageLimit: String,
+    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-request}") ephemeralStorageRequest: String,
+  ): ResourceRequirements {
+    return ResourceRequirements()
+      .withEphemeralStorageLimit(ephemeralStorageLimit)
+      .withEphemeralStorageRequest(ephemeralStorageRequest)
+  }
+
+  @Singleton
+  @Named("replicationPodTolerations")
+  fun replicationPodTolerations(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<Toleration> {
+    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+      return listOf()
+    }
+    return workerConfigs.workerKubeTolerations
+      .map { t ->
+        TolerationBuilder()
+          .withKey(t.key)
+          .withEffect(t.effect)
+          .withOperator(t.operator)
+          .withValue(t.value)
+          .build()
+      }
   }
 
   @Singleton

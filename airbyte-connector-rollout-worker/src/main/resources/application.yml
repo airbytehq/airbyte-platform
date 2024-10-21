@@ -1,0 +1,128 @@
+micronaut:
+  application:
+    name: airbyte-connector-rollout-worker
+  packages:
+    - io.airbyte.connector.rollout.worker
+  inject:
+    visibility: all # Enable verbose logging for bean injection
+  env:
+    cloud-deduction: true
+  server:
+    port: 8016
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
+  security:
+    enabled: false
+
+airbyte:
+  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    keycloak-auth-client:
+      secret-name: ${KEYCLOAK_AUTH_CLIENT_SECRET_NAME:}
+      secret-key: ${KEYCLOAK_AUTH_CLIENT_SECRET_KEY:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
+  acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  local:
+    docker-mount: ${LOCAL_DOCKER_MOUNT:}
+    root: ${LOCAL_ROOT}
+  role: ${AIRBYTE_ROLE:}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
+  version: ${AIRBYTE_VERSION}
+  workflow:
+    failure:
+      restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
+  connector_rollouts:
+    github_workflow:
+      dispatch_url: "https://api.github.com/repos/airbytehq/airbyte/actions/workflows/finalize_rollout.yml/dispatches"
+      github_token: ${CONNECTOR_ROLLOUT_GITHUB_AIRBYTE_PAT:}
+
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
+
+datadog:
+  agent:
+    host: ${DD_AGENT_HOST:}
+    port: ${DD_DOGSTATSD_PORT:}
+  orchestrator.disabled.integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
+google.application.credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: false
+
+logger:
+  levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

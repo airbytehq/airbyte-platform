@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
+import { useParams } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
 import * as yup from "yup";
 
@@ -20,11 +21,13 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import {
+  BuilderProjectWithManifest,
   GENERATE_CONTRIBUTION_NOTIFICATION_ID,
   useBuilderCheckContribution,
   useBuilderGenerateContribution,
   useGetBuilderProjectBaseImage,
   useListBuilderProjectVersions,
+  useUpdateBuilderProject,
 } from "core/api";
 import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
 import { useFormatError } from "core/errors";
@@ -318,6 +321,7 @@ interface ContributeToAirbyteFormProps {
 
 const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ imageNameError, setImageNameError }) => {
   const isEdit = useWatch({ name: "isEditing" });
+  const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   return (
     <FlexContainer direction="column" gap="none">
@@ -350,6 +354,11 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
             })}
           />
         }
+        onFocus={() => {
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_FORM_FOCUSED, {
+            actionDescription: "User focused the description field in the Contribute to Airbyte modal",
+          });
+        }}
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
@@ -374,7 +383,7 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
               <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.subText" />
             </Text>
             <ExternalLink
-              href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic"
+              href="https://docs.airbyte.com/contributing-to-airbyte/submit-new-connector#obtaining-your-github-access-token"
               className={styles.githubTokenLink}
               variant="primary"
             >
@@ -420,6 +429,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   // TODO: Remove image name error related code when editing is no longer behind a feature flag
   const [imageNameError, setImageNameError] = useState<string | null>(null);
   const { mutateAsync: generateContribution, isLoading: isSubmittingContribution } = useBuilderGenerateContribution();
+
+  const { projectId } = useParams<{
+    projectId: string;
+  }>();
+  if (!projectId) {
+    throw new Error("Could not find project id in path");
+  }
+  const { mutateAsync: updateProject } = useUpdateBuilderProject(projectId);
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
 
@@ -479,6 +496,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
       base_image: baseImage,
     });
+    const newProject: BuilderProjectWithManifest = {
+      name: values.name,
+      manifest: jsonManifestWithDescription,
+      yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
+      contributionPullRequestUrl: contribution.pull_request_url,
+      contributionActorDefinitionId: contribution.actor_definition_id,
+    };
+    await updateProject(newProject);
     registerNotification({
       id: GENERATE_CONTRIBUTION_NOTIFICATION_ID,
       type: "success",
@@ -586,7 +611,7 @@ const ConnectorImageNameInput: React.FC<{
   const [footer, setFooter] = useState<string | null>(null);
   const { getCachedCheck, fetchContributionCheck } = useBuilderCheckContribution();
 
-  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace", false);
+  const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
 
   const updateErrorAndFooter = useCallback(
     (contributionCheck: CheckContributionRead) => {

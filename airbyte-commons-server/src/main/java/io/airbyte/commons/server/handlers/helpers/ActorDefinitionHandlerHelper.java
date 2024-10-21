@@ -148,7 +148,9 @@ public class ActorDefinitionHandlerHelper {
         .withInternalSupportLevel(currentVersion.getInternalSupportLevel())
         .withCdkVersion(currentVersion.getCdkVersion())
         .withLastPublished(currentVersion.getLastPublished())
-        .withAllowedHosts(currentVersion.getAllowedHosts());
+        .withAllowedHosts(currentVersion.getAllowedHosts())
+        .withSupportsFileTransfer(currentVersion.getSupportsFileTransfer())
+        .withSupportsRefreshes(currentVersion.getSupportsRefreshes());
   }
 
   private ConnectorSpecification getSpecForImage(final String dockerRepository,

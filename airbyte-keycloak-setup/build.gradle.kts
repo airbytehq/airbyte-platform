@@ -18,9 +18,12 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
+
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

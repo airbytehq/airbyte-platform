@@ -35,7 +35,7 @@ export const FieldCursorCell: React.FC<FieldCursorCellProps> = ({ row }) => {
   const cursorDefined = shouldDefineCursor && SyncSchemaFieldObject.isPrimitive(field);
   const isSelectedCursor = isCursor(streamNode.config, field.path);
 
-  const cursorButton = isSelectedCursor ? (
+  const cursorLabel = isSelectedCursor ? (
     <FlexContainer gap="sm">
       <Icon type="cursor" color="primary" size="sm" />
       <Text color="blue">
@@ -45,14 +45,14 @@ export const FieldCursorCell: React.FC<FieldCursorCellProps> = ({ row }) => {
   ) : null;
 
   return (
-    <FlexContainer alignItems="center" justifyContent="flex-start">
+    <FlexContainer alignItems="center" justifyContent="flex-start" data-testid="field-cursor-cell">
       {isSelectedCursor && !cursorDefined ? (
-        <Tooltip placement="bottom" control={cursorButton}>
+        <Tooltip placement="bottom" control={cursorLabel}>
           <FormattedMessage id="form.field.sourceDefinedCursor" />
           <TooltipLearnMoreLink url={links.sourceDefinedCursorLink} />
         </Tooltip>
       ) : (
-        cursorButton
+        cursorLabel
       )}
     </FlexContainer>
   );

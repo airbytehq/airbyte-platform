@@ -10,11 +10,14 @@ import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.ConnectorEnumRolloutState;
 import io.airbyte.config.ConnectorPackageInfo;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistryEntryGeneratedFields;
 import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.ConnectorRollout;
+import io.airbyte.config.RolloutConfiguration;
 import io.airbyte.config.SourceFileInfo;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -27,6 +30,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,6 +39,9 @@ import java.util.stream.Collectors;
  * Utility class for converting between the connector registry and platform types.
  */
 public class ConnectorRegistryConverters {
+
+  public static final RolloutConfiguration DEFAULT_ROLLOUT_CONFIGURATION =
+      new RolloutConfiguration().withInitialPercentage(0L).withMaxPercentage(0L).withAdvanceDelayMinutes(0L);
 
   /**
    * Convert the connector registry source type to the platform source definition type.
@@ -163,7 +170,8 @@ public class ConnectorRegistryConverters {
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes())
-        .withLanguage(def.getLanguage());
+        .withLanguage(def.getLanguage())
+        .withSupportsFileTransfer(def.getSupportsFileTransfer());
   }
 
   /**
@@ -225,6 +233,89 @@ public class ConnectorRegistryConverters {
       }
       default -> throw new IllegalArgumentException("Unknown source type: " + sourceType);
     }
+  }
+
+  public static ConnectorRollout toConnectorRollout(final ConnectorRegistrySourceDefinition rcDef,
+                                                    final ActorDefinitionVersion rcAdv,
+                                                    final ActorDefinitionVersion initialAdv) {
+    assert rcDef.getSourceDefinitionId().equals(rcAdv.getActorDefinitionId());
+    assert Objects.equals(rcDef.getDockerRepository(), rcAdv.getDockerRepository());
+    assert Objects.equals(rcDef.getDockerImageTag(), rcAdv.getDockerImageTag());
+    if (rcDef.getReleases() != null) {
+      boolean hasBreakingChange = rcDef.getReleases().getBreakingChanges() != null
+          && rcDef.getReleases().getBreakingChanges().getAdditionalProperties().containsKey(rcDef.getDockerImageTag());
+      RolloutConfiguration rolloutConfiguration = rcDef.getReleases().getRolloutConfiguration();
+      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, initialAdv, hasBreakingChange);
+    }
+    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, initialAdv, false);
+  }
+
+  public static ConnectorRollout toConnectorRollout(final ConnectorRegistryDestinationDefinition rcDef,
+                                                    final ActorDefinitionVersion rcAdv,
+                                                    final ActorDefinitionVersion initialAdv) {
+    assert rcDef.getDestinationDefinitionId().equals(rcAdv.getActorDefinitionId());
+    assert Objects.equals(rcDef.getDockerRepository(), rcAdv.getDockerRepository());
+    assert Objects.equals(rcDef.getDockerImageTag(), rcAdv.getDockerImageTag());
+    if (rcDef.getReleases() != null) {
+      boolean hasBreakingChange = rcDef.getReleases().getBreakingChanges() != null
+          && rcDef.getReleases().getBreakingChanges().getAdditionalProperties().containsKey(rcDef.getDockerImageTag());
+      RolloutConfiguration rolloutConfiguration = rcDef.getReleases().getRolloutConfiguration();
+      return ConnectorRegistryConverters.toConnectorRollout(rolloutConfiguration, rcAdv, initialAdv, hasBreakingChange);
+    }
+    return ConnectorRegistryConverters.toConnectorRollout(null, rcAdv, initialAdv, false);
+  }
+
+  private static ConnectorRollout toConnectorRollout(final RolloutConfiguration rolloutConfiguration,
+                                                     final ActorDefinitionVersion rcAdv,
+                                                     final ActorDefinitionVersion initialAdv,
+                                                     final boolean hasBreakingChange) {
+    ConnectorRollout connectorRollout = new ConnectorRollout()
+        .withId(UUID.randomUUID())
+        .withActorDefinitionId(rcAdv.getActorDefinitionId())
+        .withReleaseCandidateVersionId(rcAdv.getVersionId())
+        .withInitialVersionId(initialAdv.getVersionId())
+        .withState(ConnectorEnumRolloutState.INITIALIZED)
+        .withHasBreakingChanges(hasBreakingChange);
+
+    if (rolloutConfiguration == null) {
+      return connectorRollout
+          .withInitialRolloutPct(DEFAULT_ROLLOUT_CONFIGURATION.getInitialPercentage())
+          .withFinalTargetRolloutPct(DEFAULT_ROLLOUT_CONFIGURATION.getMaxPercentage())
+          .withMaxStepWaitTimeMins(DEFAULT_ROLLOUT_CONFIGURATION.getAdvanceDelayMinutes());
+    }
+
+    return connectorRollout
+        .withInitialRolloutPct(rolloutConfiguration.getInitialPercentage())
+        .withFinalTargetRolloutPct(rolloutConfiguration.getMaxPercentage())
+        .withMaxStepWaitTimeMins(rolloutConfiguration.getAdvanceDelayMinutes());
+  }
+
+  public static List<ConnectorRegistrySourceDefinition> toRcSourceDefinitions(@Nullable final ConnectorRegistrySourceDefinition def) {
+    if (def == null || def.getReleases() == null || def.getReleases().getReleaseCandidates() == null) {
+      return Collections.emptyList();
+    }
+
+    return def
+        .getReleases()
+        .getReleaseCandidates()
+        .getAdditionalProperties().values()
+        .stream()
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  public static List<ConnectorRegistryDestinationDefinition> toRcDestinationDefinitions(@Nullable final ConnectorRegistryDestinationDefinition def) {
+    if (def == null || def.getReleases() == null || def.getReleases().getReleaseCandidates() == null) {
+      return Collections.emptyList();
+    }
+
+    return def
+        .getReleases()
+        .getReleaseCandidates()
+        .getAdditionalProperties().values()
+        .stream()
+        .filter(Objects::nonNull)
+        .toList();
   }
 
   private static String getProtocolVersion(final ConnectorSpecification spec) {

@@ -1,12 +1,18 @@
 import registerCypressGrep from "@cypress/grep";
+import { FeatureSet } from "@src/core/services/features/types";
 import { Experiments } from "@src/hooks/services/Experiment/experiments";
 import { requestWorkspaceId, completeInitialSetup } from "commands/api";
 require("dd-trace/ci/cypress/support");
 
 export const featureFlags: Partial<Experiments> = {};
+export const featureServiceOverrides: FeatureSet = {};
 
 export const setFeatureFlags = (flags: Record<string, boolean>) => {
   Object.assign(featureFlags, flags);
+};
+
+export const setFeatureServiceFlags = (flags: Record<string, boolean>) => {
+  Object.assign(featureServiceOverrides, flags);
 };
 
 Cypress.on("window:load", (window) => {
@@ -20,6 +26,7 @@ Cypress.on("window:load", (window) => {
   window.document.head.appendChild(style);
 
   window._e2eOverwrites = featureFlags;
+  window._e2eFeatureOverwrites = featureServiceOverrides;
 });
 
 // we use cypress grep tags to split cypress tests in multiple CI jobs.

@@ -10,6 +10,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import io.airbyte.api.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -46,6 +47,15 @@ public class ActorDefinitionVersionApiController implements ActorDefinitionVersi
   @Override
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(@Body final DestinationIdRequestBody destinationIdRequestBody) {
     return ApiHelper.execute(() -> actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(destinationIdRequestBody));
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/get_default")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ActorDefinitionVersionRead getActorDefinitionVersionDefault(@Body final GetActorDefinitionVersionDefaultRequestBody actorDefinitionVersionDefaultRequestBody) {
+    return ApiHelper.execute(() -> actorDefinitionVersionHandler.getDefaultVersion(actorDefinitionVersionDefaultRequestBody));
   }
 
   @SuppressWarnings("LineLength")

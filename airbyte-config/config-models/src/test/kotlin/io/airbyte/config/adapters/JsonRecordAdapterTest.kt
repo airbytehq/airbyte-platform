@@ -3,6 +3,7 @@ package io.airbyte.config.adapters
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -47,6 +48,20 @@ class JsonRecordAdapterTest {
     assertEquals("42", adapter.get(INT_FIELD).asString())
 
     assertEquals("4.2", adapter.get(NUMBER_FIELD).asString())
+  }
+
+  @Test
+  fun `tracking meta changes`() {
+    val adapter = getAdapterFromRecord(jsonRecordString)
+
+    adapter.trackFieldError("test", AirbyteRecord.Change.TRUNCATED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
+
+    val expectedMetaChange =
+      AirbyteRecordMessageMetaChange()
+        .withField("test")
+        .withChange(AirbyteRecordMessageMetaChange.Change.TRUNCATED)
+        .withReason(AirbyteRecordMessageMetaChange.Reason.PLATFORM_SERIALIZATION_ERROR)
+    assertEquals(listOf(expectedMetaChange), adapter.asProtocol.record.meta.changes)
   }
 
   @Test

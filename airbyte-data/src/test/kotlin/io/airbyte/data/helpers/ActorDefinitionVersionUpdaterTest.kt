@@ -10,6 +10,7 @@ import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.persistence.MockData
+import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ScopedConfigurationService
@@ -69,7 +70,8 @@ internal class ActorDefinitionVersionUpdaterTest {
         .withDockerImageTag("2.0.0")
 
     val STREAM_SCOPED_BREAKING_CHANGE: ActorDefinitionBreakingChange =
-      MockData.actorDefinitionBreakingChange(NEW_VERSION.dockerImageTag)
+      MockData
+        .actorDefinitionBreakingChange(NEW_VERSION.dockerImageTag)
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withScopedImpact(
           listOf(
@@ -78,8 +80,8 @@ internal class ActorDefinitionVersionUpdaterTest {
         )
 
     @JvmStatic
-    fun getBreakingChangesForUpgradeMethodSource(): Stream<Arguments> {
-      return Stream.of(
+    fun getBreakingChangesForUpgradeMethodSource(): Stream<Arguments> =
+      Stream.of(
         // Version increases
         Arguments.of("0.0.1", "2.0.0", listOf("1.0.0", "2.0.0")),
         Arguments.of("1.0.0", "1.0.1", listOf<String>()),
@@ -101,18 +103,16 @@ internal class ActorDefinitionVersionUpdaterTest {
         Arguments.of("2.0.1", "1.0.1", listOf<String>()),
         Arguments.of("2.0.0", "2.0.0", listOf<String>()),
       )
-    }
 
     @JvmStatic
-    fun getBreakingChangesAfterVersionMethodSource(): List<Arguments> {
-      return listOf(
+    fun getBreakingChangesAfterVersionMethodSource(): List<Arguments> =
+      listOf(
         Arguments.of("0.1.0", listOf("1.0.0", "2.0.0", "3.0.0")),
         Arguments { arrayOf("1.0.0", listOf("2.0.0", "3.0.0")) },
         Arguments { arrayOf("2.0.0", listOf("3.0.0")) },
         Arguments { arrayOf("3.0.0", listOf<String>()) },
         Arguments { arrayOf("4.0.0", listOf<String>()) },
       )
-    }
   }
 
   @BeforeEach
@@ -265,7 +265,9 @@ internal class ActorDefinitionVersionUpdaterTest {
     val breakingChangesForUpgrade =
       actorDefinitionVersionUpdater.getBreakingChangesForUpgrade(initialImageTag, upgradeImageTag, breakingChangesForDef)
     val actualBreakingChangeVersionsForUpgrade =
-      breakingChangesForUpgrade.stream().map { obj: ActorDefinitionBreakingChange -> obj.version }
+      breakingChangesForUpgrade
+        .stream()
+        .map { obj: ActorDefinitionBreakingChange -> obj.version }
         .toList()
     assertEquals(expectedBreakingChangeVersionsForUpgrade.size, actualBreakingChangeVersionsForUpgrade.size)
     assertTrue(actualBreakingChangeVersionsForUpgrade.containsAll(expectedBreakingChangeVersionsForUpgrade))
@@ -560,6 +562,170 @@ internal class ActorDefinitionVersionUpdaterTest {
     }
   }
 
+  @Test
+  fun testCreateReleaseCandidatePinsForActors() {
+    val eligibleButNotPinnedActorId = UUID.randomUUID()
+    val actors =
+      listOf(
+        ActorWorkspaceOrganizationIds(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+        ActorWorkspaceOrganizationIds(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+      )
+
+    every {
+      actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
+    } returns actors
+
+    val allEligible = actors + listOf(ActorWorkspaceOrganizationIds(eligibleButNotPinnedActorId, UUID.randomUUID(), UUID.randomUUID()))
+    val scopeMaps = allEligible.map { idsToConfigScopeMap(it) }
+
+    // Setup: no actors are pinned for the release candidate
+    every {
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        scopeMaps,
+      )
+    } returns emptyMap()
+
+    // Collect written configs to perform assertions
+    val capturedConfigsToWrite = mutableListOf<List<ScopedConfiguration>>()
+    every {
+      scopedConfigurationService.insertScopedConfigurations(capture(capturedConfigsToWrite))
+    } returns listOf()
+
+    // Act: call method under test
+    actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
+      actors.map { it.actorId }.toSet(),
+      ACTOR_DEFINITION_ID,
+      DEFAULT_VERSION.versionId,
+      UUID.randomUUID(),
+    )
+
+    // Assert: we've pinned 2 actors for the release candidate
+    verify {
+      actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        any(),
+      )
+      scopedConfigurationService.insertScopedConfigurations(any())
+    }
+
+    assertEquals(2, capturedConfigsToWrite.first().size)
+  }
+
+  @Test
+  fun testCreateReleaseCandidatePinsWhenActorIsAlreadyPinned() {
+    val pinnedActorId = UUID.randomUUID()
+    val ineligibleAndNotPinnedActorId = UUID.randomUUID()
+    val actors =
+      listOf(
+        ActorWorkspaceOrganizationIds(pinnedActorId, UUID.randomUUID(), UUID.randomUUID()),
+        ActorWorkspaceOrganizationIds(ineligibleAndNotPinnedActorId, UUID.randomUUID(), UUID.randomUUID()),
+      )
+
+    every {
+      actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
+    } returns actors
+
+    val scopeMaps = actors.map { idsToConfigScopeMap(it) }
+
+    // Setup: we return the pinned actor
+    every {
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        scopeMaps,
+      )
+    } returnsMany
+      listOf(
+        mapOf(
+          pinnedActorId to ScopedConfiguration(),
+        ),
+      )
+
+    // Collect written configs to perform assertions
+    val capturedConfigsToWrite = mutableListOf<List<ScopedConfiguration>>()
+    every {
+      scopedConfigurationService.insertScopedConfigurations(capture(capturedConfigsToWrite))
+    } returns listOf()
+
+    // Act: call method under test
+    assertThrows<InvalidRequestException> {
+      actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
+        actors.map { it.actorId }.toSet(),
+        ACTOR_DEFINITION_ID,
+        DEFAULT_VERSION.versionId,
+        UUID.randomUUID(),
+      )
+    }
+
+    verify {
+      actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        scopeMaps,
+      )
+    }
+
+    // Assert: no actors are pinned
+    verify(exactly = 0) {
+      scopedConfigurationService.insertScopedConfigurations(any())
+    }
+    assertEquals(0, capturedConfigsToWrite.size)
+  }
+
+  @Test
+  fun testUnpinReleaseCandidatesVersion() {
+    val actorIds = setOf(UUID.randomUUID(), UUID.randomUUID())
+    val releaseCandidateVersionId = UUID.randomUUID()
+    val scopedConfigurationsToDelete = actorIds.map { buildReleaseCandidateScopedConfig(it, DEFAULT_VERSION.versionId, releaseCandidateVersionId) }
+
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithValues(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigScopeType.ACTOR,
+        ConfigOriginType.RELEASE_CANDIDATE,
+        listOf(releaseCandidateVersionId.toString()),
+      )
+    } returns scopedConfigurationsToDelete
+
+    actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(ACTOR_DEFINITION_ID, releaseCandidateVersionId)
+
+    verifyAll {
+      scopedConfigurationService.listScopedConfigurationsWithValues(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigScopeType.ACTOR,
+        ConfigOriginType.RELEASE_CANDIDATE,
+        listOf(releaseCandidateVersionId.toString()),
+      )
+
+      scopedConfigurationService.deleteScopedConfigurations(scopedConfigurationsToDelete.map { it.id })
+    }
+  }
+
+  @Test
+  fun testUnpinReleaseCandidatesVersionWithNoRCsToUnpin() {
+    actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(ACTOR_DEFINITION_ID, UUID.randomUUID())
+
+    verify {
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+    }
+    verify(exactly = 0) {
+      scopedConfigurationService.deleteScopedConfigurations(any())
+    }
+  }
+
   @ParameterizedTest
   @MethodSource("getBreakingChangesAfterVersionMethodSource")
   fun testGetBreakingChangesAfterVersion(
@@ -574,10 +740,12 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
 
     val actualBreakingChanges =
-      actorDefinitionVersionUpdater.getBreakingChangesAfterVersion(
-        versionTag,
-        breakingChanges,
-      ).map { it.version.serialize() }.toList()
+      actorDefinitionVersionUpdater
+        .getBreakingChangesAfterVersion(
+          versionTag,
+          breakingChanges,
+        ).map { it.version.serialize() }
+        .toList()
 
     assertEquals(expectedBreakingChanges, actualBreakingChanges)
   }
@@ -646,8 +814,8 @@ internal class ActorDefinitionVersionUpdaterTest {
   private fun buildBreakingChangeScopedConfig(
     actorId: UUID,
     breakingChange: ActorDefinitionBreakingChange,
-  ): ScopedConfiguration {
-    return ScopedConfiguration()
+  ): ScopedConfiguration =
+    ScopedConfiguration()
       .withKey(ConnectorVersionKey.key)
       .withValue(DEFAULT_VERSION.versionId.toString())
       .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
@@ -656,10 +824,24 @@ internal class ActorDefinitionVersionUpdaterTest {
       .withScopeId(actorId)
       .withOriginType(ConfigOriginType.BREAKING_CHANGE)
       .withOrigin(breakingChange.version.serialize())
-  }
 
-  private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId {
-    return ConfigScopeMapWithId(
+  private fun buildReleaseCandidateScopedConfig(
+    actorId: UUID,
+    defaultVersionId: UUID,
+    releaseCandidateVersionId: UUID,
+  ): ScopedConfiguration =
+    ScopedConfiguration()
+      .withKey(ConnectorVersionKey.key)
+      .withValue(releaseCandidateVersionId.toString())
+      .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+      .withResourceId(ACTOR_DEFINITION_ID)
+      .withScopeType(ConfigScopeType.ACTOR)
+      .withScopeId(actorId)
+      .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
+      .withOrigin(defaultVersionId.toString())
+
+  private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId =
+    ConfigScopeMapWithId(
       awoIds.actorId,
       mapOf(
         ConfigScopeType.ACTOR to awoIds.actorId,
@@ -667,5 +849,4 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigScopeType.ORGANIZATION to awoIds.organizationId,
       ),
     )
-  }
 }

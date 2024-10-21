@@ -18,7 +18,7 @@ import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
@@ -35,7 +35,8 @@ import org.mockito.Mockito;
 class SourceApiTest extends BaseControllerTest {
 
   @Test
-  void testCheckConnectionToSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceId(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -49,7 +50,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCheckConnectionToSourceForUpdate() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCheckConnectionToSourceForUpdate()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(Mockito.any()))
         .thenReturn(new CheckConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -63,7 +65,7 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCloneSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCloneSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(sourceHandler.cloneSource(Mockito.any()))
         .thenReturn(new SourceRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -77,7 +79,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testCreateSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(sourceHandler.createSourceWithOptionalSecret(Mockito.any()))
         .thenReturn(new SourceRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -91,7 +94,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(sourceHandler).deleteSource(Mockito.any(SourceIdRequestBody.class));
@@ -106,7 +110,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDiscoverSchemaForSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDiscoverSchemaForSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(schedulerHandler.discoverSchemaForSourceFromSourceId(Mockito.any()))
         .thenReturn(new SourceDiscoverSchemaRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -144,7 +149,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListSourcesForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListSourcesForWorkspace()
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     Mockito.when(sourceHandler.listSourcesForWorkspace(Mockito.any()))
         .thenReturn(new SourceReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -158,7 +164,7 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSearchSources() throws JsonValidationException, IOException, ConfigNotFoundException {
     Mockito.when(sourceHandler.searchSources(Mockito.any()))
         .thenReturn(new SourceReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -172,7 +178,8 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateSources() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateSources()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     Mockito.when(sourceHandler.updateSource(Mockito.any()))
         .thenReturn(new SourceRead())
         .thenThrow(new ConfigNotFoundException("", ""));

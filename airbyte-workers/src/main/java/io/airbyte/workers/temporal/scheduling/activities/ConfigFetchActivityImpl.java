@@ -311,24 +311,6 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     }
   }
 
-  @Override
-  public Optional<Boolean> getBreakingChange(final UUID connectionId) {
-    try {
-      final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
-      final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
-      return Optional.ofNullable(connectionRead.getBreakingChange());
-    } catch (final ClientException e) {
-      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
-        throw e;
-      }
-      throw new RetryableException(e);
-    } catch (final IOException e) {
-      log.info("Encountered an error fetching the connection's breaking change status: ", e);
-      return Optional.empty();
-    }
-  }
-
   private Long getIntervalInSecond(final ConnectionScheduleDataBasicSchedule schedule) {
     return getSecondsInUnit(schedule.getTimeUnit()) * schedule.getUnits();
   }

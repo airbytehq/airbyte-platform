@@ -327,7 +327,7 @@ public class JobHistoryHandler {
   }
 
   public JobDebugInfoRead getJobDebugInfo(final JobIdRequestBody jobIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
     final JobInfoRead jobinfoRead = jobConverter.getJobInfoRead(job);
 
@@ -444,33 +444,34 @@ public class JobHistoryHandler {
         .collect(Collectors.toList());
   }
 
-  private SourceRead getSourceRead(final ConnectionRead connectionRead) throws JsonValidationException, IOException, ConfigNotFoundException {
+  private SourceRead getSourceRead(final ConnectionRead connectionRead)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(connectionRead.getSourceId());
     return sourceHandler.getSource(sourceIdRequestBody);
   }
 
   private DestinationRead getDestinationRead(final ConnectionRead connectionRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(connectionRead.getDestinationId());
     return destinationHandler.getDestination(destinationIdRequestBody);
   }
 
   private SourceDefinitionRead getSourceDefinitionRead(final SourceRead sourceRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceRead.getSourceDefinitionId());
     return sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody);
   }
 
   private DestinationDefinitionRead getDestinationDefinitionRead(final DestinationRead destinationRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
         new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationRead.getDestinationDefinitionId());
     return destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody);
   }
 
   private JobDebugInfoRead buildJobDebugInfoRead(final JobInfoRead jobInfoRead)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String configId = jobInfoRead.getJob().getConfigId();
     final StandardSync standardSync;
     try {

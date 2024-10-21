@@ -8,19 +8,15 @@ import io.airbyte.workers.models.PostprocessCatalogInput;
 import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
-import java.util.UUID;
 
 @ActivityInterface
 public interface DiscoverCatalogHelperActivity {
 
   @ActivityMethod
-  boolean shouldUseWorkload(final UUID workspaceId);
+  void reportSuccess();
 
   @ActivityMethod
-  void reportSuccess(final Boolean workloadEnabled);
-
-  @ActivityMethod
-  void reportFailure(final Boolean workloadEnabled);
+  void reportFailure();
 
   /**
    * Perform catalog diffing, subsequent disabling of the connection and any other necessary

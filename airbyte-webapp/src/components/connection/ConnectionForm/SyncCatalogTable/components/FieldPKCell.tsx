@@ -35,7 +35,7 @@ export const FieldPKCell: React.FC<FieldPKCellProps> = ({ row }) => {
   const primaryKeyDefined = shouldDefinePk && SyncSchemaFieldObject.isPrimitive(field);
   const isSelectedPrimaryKey = isPrimaryKey(streamNode.config, field.path);
 
-  const pkButton = isSelectedPrimaryKey ? (
+  const pkLabel = isSelectedPrimaryKey ? (
     <FlexContainer gap="sm">
       <Icon type="keyCircle" color="primary" size="sm" />
       <Text color="blue">
@@ -45,14 +45,14 @@ export const FieldPKCell: React.FC<FieldPKCellProps> = ({ row }) => {
   ) : null;
 
   return (
-    <FlexContainer alignItems="center" justifyContent="flex-start">
+    <FlexContainer alignItems="center" justifyContent="flex-start" data-testid="field-pk-cell">
       {isSelectedPrimaryKey && !primaryKeyDefined ? (
-        <Tooltip placement="bottom" control={pkButton}>
+        <Tooltip placement="bottom" control={pkLabel}>
           <FormattedMessage id="form.field.sourceDefinedPK" />
           <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
         </Tooltip>
       ) : (
-        pkButton
+        pkLabel
       )}
     </FlexContainer>
   );

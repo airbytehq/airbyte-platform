@@ -50,20 +50,6 @@ app.kubernetes.io/name: {{ include "airbyte.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Define imageTag
-*/}}
-
-{{- define "workload-launcher.imageTag" -}}
-{{- if .Values.image.tag }}
-    {{- printf "%s" .Values.image.tag }}
-{{- else if ((.Values.global.image).tag) }}
-    {{- printf "%s" .Values.global.image.tag }}
-{{- else }}
-    {{- printf "%s" .Chart.AppVersion }}
-{{- end }}
-{{- end }}
-
 ## DEFAULT HELM VALUES
 # Secret Manager Defaults
 {{/*
@@ -110,6 +96,30 @@ Get awsSecretManager secret access key secret key or default
   {{- printf "%s" $awsSecretManagerSecretAccessKeySecretKey -}}
 {{- else -}}
   {{- printf "aws-secret-manager-secret-access-key" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get azureKeyVault clientId or default
+*/}}
+{{- define "airbyte.azureKeyVaultClientIdSecretKey" -}}
+{{- $azureKeyVaultClientIdSecretKey := . -}}
+{{- if $azureKeyVaultClientIdSecretKey -}}
+  {{- printf "%s" $azureKeyVaultClientIdSecretKey -}}
+{{- else -}}
+  {{- printf "azure-key-vault-client-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get azureKeyVault clientSecret or default
+*/}}
+{{- define "airbyte.azureKeyVaultClientSecretSecretKey" -}}
+{{- $azureKeyVaultClientSecretSecretKey := . -}}
+{{- if $azureKeyVaultClientSecretSecretKey -}}
+  {{- printf "%s" $azureKeyVaultClientSecretSecretKey -}}
+{{- else -}}
+  {{- printf "azure-key-vault-client-secret" -}}
 {{- end -}}
 {{- end -}}
 

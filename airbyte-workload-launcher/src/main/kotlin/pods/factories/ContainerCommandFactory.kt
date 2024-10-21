@@ -97,7 +97,9 @@ object ContainerCommandFactory {
     EXIT_CODE=$?
 
     # write its exit code to a file for the sidecar
-    echo ${'$'}EXIT_CODE > $EXIT_CODE_FILE
+    echo ${'$'}EXIT_CODE > TEMP_EXIT_CODE.txt
+    # use a swap file to make creation and writing atomic
+    mv TEMP_EXIT_CODE.txt $EXIT_CODE_FILE
 
     # propagate connector exit code by assuming it
     exit ${'$'}EXIT_CODE

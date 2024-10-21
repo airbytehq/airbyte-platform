@@ -23,6 +23,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:init"))
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -37,6 +38,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)

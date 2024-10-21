@@ -10,7 +10,6 @@ import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
@@ -21,7 +20,6 @@ export const ConnectionPageHeader = () => {
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const connectionTimeline = useExperiment("connection.timeline", false);
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -40,23 +38,13 @@ export const ConnectionPageHeader = () => {
         to: basePath,
         disabled: schemaRefreshing,
       },
-      ...(connectionTimeline
-        ? [
-            {
-              id: ConnectionRoutePaths.Timeline,
-              name: <FormattedMessage id="connection.timeline" />,
-              to: `${basePath}/${ConnectionRoutePaths.Timeline}`,
-              disabled: schemaRefreshing,
-            },
-          ]
-        : [
-            {
-              id: ConnectionRoutePaths.JobHistory,
-              name: <FormattedMessage id="connectionForm.jobHistory" />,
-              to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
-              disabled: schemaRefreshing,
-            },
-          ]),
+
+      {
+        id: ConnectionRoutePaths.Timeline,
+        name: <FormattedMessage id="connection.timeline" />,
+        to: `${basePath}/${ConnectionRoutePaths.Timeline}`,
+        disabled: schemaRefreshing,
+      },
       {
         id: ConnectionRoutePaths.Replication,
         name: (
@@ -87,7 +75,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, connectionTimeline, connection.schemaChange, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, connection.schemaChange, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

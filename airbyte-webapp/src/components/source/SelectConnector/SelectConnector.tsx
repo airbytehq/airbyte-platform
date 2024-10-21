@@ -1,28 +1,36 @@
 import classNames from "classnames";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { Button } from "components/ui/Button";
+import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
 import { SortableTableHeader } from "components/ui/Table/SortableTableHeader";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useFilters } from "core/api";
-import { ConnectorDefinition } from "core/domain/connector";
+import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { useCurrentWorkspace, useFilters, useEnterpriseSourceStubsList } from "core/api";
+import { EnterpriseSourceStub } from "core/api/types/AirbyteClient";
+import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useModalService } from "hooks/services/Modal";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+import { RoutePaths, SourcePaths } from "pages/routePaths";
 
 import { ConnectorList } from "./ConnectorList";
 import { RequestConnectorModal } from "./RequestConnectorModal";
 import styles from "./SelectConnector.module.scss";
-import { useTrackSelectConnector } from "./useTrackSelectConnector";
+import { useTrackSelectConnector, useTrackSelectEnterpriseStub } from "./useTrackSelectConnector";
+
+const AIRBYTE_CONNECTORS_CHECKBOX = "airbyteConnectorsCheckbox";
+const ENTERPRISE_CONNECTORS_CHECKBOX = "enterpriseConnectorsCheckbox";
 
 export type ConnectorTab = "certified" | "marketplace" | "custom";
 export type ConnectorSortColumn = "name" | "successRate" | "usage";
@@ -48,22 +56,85 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { email } = useCurrentWorkspace();
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
+  const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
 
-  const [{ search: searchTerm, tab: selectedTab, col: sortColumn, asc }, setFilterValue] = useFilters<{
+  const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
+  const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
+
+  const handleAirbyteCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (showEnterpriseConnectors || e.target.checked) {
+      setShowAirbyteConnectors(e.target.checked);
+    }
+  };
+
+  const handleEnterpriseCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (showAirbyteConnectors || e.target.checked) {
+      setShowEnterpriseConnectors(e.target.checked);
+    }
+  };
+
+  // Fetch enterprise source stubs
+  const { enterpriseSourceDefinitions } = useEnterpriseSourceStubsList();
+
+  const createLink = useCurrentWorkspaceLink();
+
+  const onSelectEnterpriseSourceStub = (definition: EnterpriseSourceStub) => {
+    // This is a temporary routing solution to navigate to the enterprise stub sales funnel.
+    // If/when we implement enterprise connectors in the catalog, we should use onSelectConnectorDefinition.
+    navigate(createLink(`/${RoutePaths.Source}/${SourcePaths.EnterpriseSource.replace(":id", definition.id)}`));
+  };
+
+  interface BaseFilters {
     search: string;
     tab: ConnectorTab;
     col: ConnectorSortColumn;
     asc: "true" | "false";
-  }>({
-    search: "",
-    tab: "certified",
-    col: "name",
-    asc: "true",
-  });
-  const isSortAscending = asc === "true";
+  }
 
-  const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
-    if (isSourceDefinition(definition)) {
+  /*
+  by splitting these into source_* and destination_* , we avoid a fun race condition:
+    * the views in this flow are based on a mix of component states and URL params
+    * filters are stored in and read from URL params
+  
+  If the filter names are kept the same between source and destination selection,
+  when in an empty workspace (no sources or destinations), and selecting a source connector after applying filters, the following happens:
+    * any filters are stored in the URL
+    * user selects a connector, sourceDefinitionId is added to the URL triggering the source configuration view
+    * onSubmit of source configuration, CreateNewSource::onCreateSource fires, adding sourceId to the URL
+    * CreateConnectionPage sees `sourceId` and renders DefineDestination
+      * empty workspaces default to create a destination, and we're back here in SelectConnector
+      * SelectConnector defines its filters, grabbing the existing filters from the URL
+    * CreateConnectionPage's useEffect watching URL's `sourceId` that deletes all URL params except `sourceId` (removing any set filters)
+    * Another render pass is triggered, and the filter logic sees the filter values in memory don't match the URL, insertting the filters back into the URL
+  */
+  type DynamicFilters = {
+    [Key in keyof BaseFilters as `${typeof connectorType}_${Key}`]: BaseFilters[Key];
+  };
+
+  const searchFilterName = `${connectorType}_search` as const;
+  const tabFilterName = `${connectorType}_tab` as const;
+  const colFilterName = `${connectorType}_col` as const;
+  const ascFilterName = `${connectorType}_asc` as const;
+
+  const [
+    { [searchFilterName]: searchTerm, [tabFilterName]: selectedTab, [colFilterName]: sortColumn, [ascFilterName]: asc },
+    setFilterValue,
+  ] = useFilters<DynamicFilters>({
+    [searchFilterName]: "",
+    [tabFilterName]: "certified",
+    [colFilterName]: "name",
+    [ascFilterName]: "true",
+  } as DynamicFilters);
+
+  const isSortAscending = asc === "true";
+  const navigate = useNavigate();
+
+  const handleConnectorButtonClick = (definition: ConnectorDefinitionOrEnterpriseStub) => {
+    if ("isEnterprise" in definition) {
+      // Handle EnterpriseSourceStubs first
+      trackSelectEnterpriseStub(definition);
+      onSelectEnterpriseSourceStub(definition);
+    } else if (isSourceDefinition(definition)) {
       trackSelectConnector(definition.sourceDefinitionId, definition.name);
       onSelectConnectorDefinition(definition.sourceDefinitionId);
     } else {
@@ -90,22 +161,25 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const handleSortClick = useCallback(
     (clickedColumn: ConnectorSortColumn) => {
       if (clickedColumn === sortColumn) {
-        setFilterValue("asc", !isSortAscending ? "true" : "false");
+        setFilterValue(ascFilterName, !isSortAscending ? "true" : "false");
       } else {
-        setFilterValue("col", clickedColumn);
-        setFilterValue("asc", clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
+        setFilterValue(colFilterName, clickedColumn);
+        setFilterValue(ascFilterName, clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
       }
     },
-    [isSortAscending, setFilterValue, sortColumn]
+    [isSortAscending, setFilterValue, sortColumn, ascFilterName, colFilterName]
   );
 
   const setSelectedTab = useCallback(
     (tab: ConnectorTab) => {
-      setFilterValue("tab", tab);
-      setFilterValue("col", "name");
-      setFilterValue("asc", "true");
+      setFilterValue(tabFilterName, tab);
+      setFilterValue(colFilterName, "name");
+      setFilterValue(ascFilterName, "true");
+      // Reset filter checkboxes when switching tabs
+      setShowAirbyteConnectors(true);
+      setShowEnterpriseConnectors(true);
     },
-    [setFilterValue]
+    [setFilterValue, tabFilterName, colFilterName, ascFilterName]
   );
 
   const hasCustomConnectors = useMemo(
@@ -113,30 +187,47 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     [connectorDefinitions]
   );
 
+  // Combine regular connectors with enterprise stubs
+  const connectorListWithEnterpriseStubs = useMemo<ConnectorDefinitionOrEnterpriseStub[]>(() => {
+    if (connectorType === "source") {
+      return [...connectorDefinitions, ...enterpriseSourceDefinitions];
+    }
+    return connectorDefinitions;
+  }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions]);
+
+  // Filter all connectors based on search term
   const allSearchResults = useMemo(
     () =>
-      connectorDefinitions.filter((definition) =>
+      connectorListWithEnterpriseStubs.filter((definition) =>
         definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())
       ),
-    [searchTerm, connectorDefinitions]
+    [connectorListWithEnterpriseStubs, searchTerm]
   );
 
-  const searchResultsByTab: Record<ConnectorTab, ConnectorDefinition[]> = useMemo(
+  const searchResultsByTab: Record<ConnectorTab, ConnectorDefinitionOrEnterpriseStub[]> = useMemo(
     () =>
       allSearchResults.reduce(
         (acc, definition) => {
-          if (definition.supportLevel) {
-            switch (definition.supportLevel) {
-              case "certified":
+          const isEnterpriseConnector = "isEnterprise" in definition;
+          const supportLevel = isEnterpriseConnector ? "certified" : definition.supportLevel;
+
+          switch (supportLevel) {
+            case "certified":
+              if (
+                (isEnterpriseConnector && showEnterpriseConnectors) ||
+                (!isEnterpriseConnector && showAirbyteConnectors)
+              ) {
                 acc.certified.push(definition);
-                break;
-              case "community":
-                acc.marketplace.push(definition);
-                break;
-              case "none":
-                acc.custom.push(definition);
-                break;
-            }
+              }
+              break;
+            case "community":
+              acc.marketplace.push(definition);
+              break;
+            case "none":
+              acc.custom.push(definition);
+              break;
+            case undefined:
+              break;
           }
           return acc;
         },
@@ -144,9 +235,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           certified: [],
           marketplace: [],
           custom: [],
-        } as Record<ConnectorTab, ConnectorDefinition[]>
+        } as Record<ConnectorTab, ConnectorDefinitionOrEnterpriseStub[]>
       ),
-    [allSearchResults]
+    [allSearchResults, showAirbyteConnectors, showEnterpriseConnectors]
   );
 
   const certifiedBadge = useMemo(
@@ -255,7 +346,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       >
         <SearchInput
           value={searchTerm}
-          onChange={(e) => setFilterValue("search", e.target.value)}
+          onChange={(e) => setFilterValue(searchFilterName, e.target.value)}
           placeholder={formatMessage(
             { id: "connector.searchPlaceholder" },
             { tabName: getTabDisplayName(selectedTab) }
@@ -288,6 +379,51 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
             />
           )}
         </Tabs>
+        {selectedTab === "certified" && (
+          <FlexContainer direction="row" gap="lg" alignItems="center">
+            <Text size="lg">
+              <FormattedMessage id="connector.checkboxFilter.type" />
+            </Text>
+            <FlexContainer alignItems="center" justifyContent="space-between" gap="md">
+              <CheckBox
+                id={AIRBYTE_CONNECTORS_CHECKBOX}
+                checked={showAirbyteConnectors}
+                onChange={handleAirbyteCheckboxChange}
+                disabled={showAirbyteConnectors && !showEnterpriseConnectors}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label
+                htmlFor={AIRBYTE_CONNECTORS_CHECKBOX}
+                className={classNames(styles.checkboxLabel, {
+                  [styles.disabledCheckboxLabel]: showAirbyteConnectors && !showEnterpriseConnectors,
+                })}
+              >
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.certified" />
+                </Text>
+              </label>
+            </FlexContainer>
+            <FlexContainer alignItems="center" justifyContent="space-between" gap="md">
+              <CheckBox
+                id={ENTERPRISE_CONNECTORS_CHECKBOX}
+                checked={showEnterpriseConnectors}
+                onChange={handleEnterpriseCheckboxChange}
+                disabled={showEnterpriseConnectors && !showAirbyteConnectors}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label
+                htmlFor={ENTERPRISE_CONNECTORS_CHECKBOX}
+                className={classNames(styles.checkboxLabel, {
+                  [styles.disabledCheckboxLabel]: showEnterpriseConnectors && !showAirbyteConnectors,
+                })}
+              >
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.enterprise" />
+                </Text>
+              </label>
+            </FlexContainer>
+          </FlexContainer>
+        )}
         <FlexContainer
           direction="row"
           justifyContent="space-between"
