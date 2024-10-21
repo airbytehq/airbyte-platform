@@ -9,6 +9,9 @@ object Constants {
   const val DEFAULT_NAMESPACE = "default"
   const val AIRBYTE_API_CLIENT_EXCEPTION = "AirbyteApiClientException"
 
+  // 10 mins
+  const val VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS = 600
+
   // 3 hours
   const val VERIFY_ACTIVITY_TIMEOUT_MILLIS = 10800000
 

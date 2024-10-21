@@ -35,19 +35,32 @@ class VerifyDefaultVersionActivityImpl(private val airbyteApiClient: AirbyteApiC
 
         if (response.dockerImageTag == releaseCandidateTagPrefix) {
           return
-        } else {
-          // sleep for 30 seconds and retry
-          Thread.sleep(input.timeBetweenPolls.toLong())
         }
-      } catch (e: Exception) {
-        when (e) {
-          is IOException, is ClientException -> {
-            logger.error { "Error verifying default version for ${input.dockerRepository}:${input.dockerImageTag}: $e" }
-            throw Activity.wrap(e)
-          }
-        }
+      } catch (e: IOException) {
+        logger.error { "Error verifying default version for ${input.dockerRepository}:${input.dockerImageTag}: $e" }
+        throw Activity.wrap(e)
+      } catch (e: ClientException) {
+        logger.error { "Error verifying default version for ${input.dockerRepository}:${input.dockerImageTag}: $e" }
+        throw Activity.wrap(e)
       }
+
+      heartbeatAndSleep(input.timeBetweenPolls.toLong())
     }
+
     throw IllegalStateException("Timed out waiting for default version to be ready")
+  }
+
+  fun heartbeatAndSleep(timeBetweenPolls: Long) {
+    Activity.getExecutionContext().heartbeat<Any>(null)
+    sleep(timeBetweenPolls)
+  }
+
+  private fun sleep(millis: Long) {
+    try {
+      Thread.sleep(millis)
+    } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
+      throw java.lang.RuntimeException(e)
+    }
   }
 }

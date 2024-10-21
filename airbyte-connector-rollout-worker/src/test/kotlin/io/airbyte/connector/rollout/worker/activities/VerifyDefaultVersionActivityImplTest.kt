@@ -5,8 +5,11 @@ import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.client.model.generated.SupportState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputVerifyDefaultVersion
 import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivityImpl
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -30,21 +33,38 @@ class VerifyDefaultVersionActivityImplTest {
     airbyteApiClient = mockk<AirbyteApiClient>()
     actorDefinitionVersionApi = mockk<ActorDefinitionVersionApi>()
     every { airbyteApiClient.actorDefinitionVersionApi } returns actorDefinitionVersionApi
-    verifyDefaultVersionActivity = VerifyDefaultVersionActivityImpl(airbyteApiClient)
+
+    val realActivity = VerifyDefaultVersionActivityImpl(airbyteApiClient)
+    verifyDefaultVersionActivity = spyk(realActivity)
+
+    every { verifyDefaultVersionActivity.heartbeatAndSleep(any()) } just Runs
   }
 
   @Test
   fun `test verifyDefaultVersion`() {
+    // Mock the ActorDefinitionVersionApi to return the response dynamically
     every {
       actorDefinitionVersionApi.getActorDefinitionVersionDefault(any())
-    } returns
-      ActorDefinitionVersionRead(
-        dockerImageTag = DOCKER_IMAGE_TAG,
-        dockerRepository = DOCKER_REPOSITORY,
-        isVersionOverrideApplied = true,
-        supportState = SupportState.SUPPORTED,
-        supportsRefreshes = true,
-        supportsFileTransfer = false,
+    } returnsMany
+      listOf(
+        ActorDefinitionVersionRead(
+          // Initial incorrect tag
+          dockerImageTag = "0.1",
+          dockerRepository = DOCKER_REPOSITORY,
+          isVersionOverrideApplied = true,
+          supportState = SupportState.SUPPORTED,
+          supportsRefreshes = true,
+          supportsFileTransfer = false,
+        ),
+        ActorDefinitionVersionRead(
+          // Correct tag for subsequent verification
+          dockerImageTag = DOCKER_IMAGE_TAG,
+          dockerRepository = DOCKER_REPOSITORY,
+          isVersionOverrideApplied = true,
+          supportState = SupportState.SUPPORTED,
+          supportsRefreshes = true,
+          supportsFileTransfer = false,
+        ),
       )
 
     // Test without "-rc" suffix in the input dockerImageTag
@@ -54,6 +74,10 @@ class VerifyDefaultVersionActivityImplTest {
         dockerImageTag = DOCKER_IMAGE_TAG,
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
+        // 1 second limit
+        limit = 1000,
+        // Poll every half second
+        timeBetweenPolls = 500,
       )
 
     verifyDefaultVersionActivity.verifyDefaultVersion(input)
@@ -81,7 +105,8 @@ class VerifyDefaultVersionActivityImplTest {
       actorDefinitionVersionApi.getActorDefinitionVersionDefault(any())
     } returns
       ActorDefinitionVersionRead(
-        dockerImageTag = DOCKER_IMAGE_TAG,
+        // Different tag that will cause a timeout
+        dockerImageTag = "0.2",
         dockerRepository = DOCKER_REPOSITORY,
         isVersionOverrideApplied = true,
         supportState = SupportState.SUPPORTED,
@@ -92,13 +117,13 @@ class VerifyDefaultVersionActivityImplTest {
     val input =
       ConnectorRolloutActivityInputVerifyDefaultVersion(
         dockerRepository = DOCKER_REPOSITORY,
-        // Different tag
-        dockerImageTag = "0.2",
+        dockerImageTag = DOCKER_IMAGE_TAG,
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
-        // 1 second
+        // 1 second limit
         limit = 1000,
-        timeBetweenPolls = 1000,
+        // Poll every half second
+        timeBetweenPolls = 500,
       )
 
     // Use assertThrows to verify that the exception is thrown due to timeout

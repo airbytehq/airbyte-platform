@@ -86,8 +86,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private val verifyActivityOptions =
-    defaultActivityOptions
-      .toBuilder()
+    defaultActivityOptions.toBuilder()
+      .setHeartbeatTimeout(
+        Duration.ofSeconds(Constants.VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS.toLong()),
+      )
       .setStartToCloseTimeout(
         Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
       ).build()
