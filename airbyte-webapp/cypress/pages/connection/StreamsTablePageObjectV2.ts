@@ -96,6 +96,12 @@ export class StreamsTablePageObjectV2 {
       .should(expectedResult ? "exist" : "not.exist");
   }
 
+  isAmountOfCountedStreamsOutOfTotalDisplayed(amount: string, expectedResult: boolean) {
+    cy.get(headerRowNamespaceCell)
+      .contains(`${amount} streams`)
+      .should(expectedResult ? "exist" : "not.exist");
+  }
+
   isOpenNamespaceModalGearButtonDisplayed(expectedResult: boolean) {
     cy.get(openNamespaceModalGearButton).should(expectedResult ? "exist" : "not.exist");
   }

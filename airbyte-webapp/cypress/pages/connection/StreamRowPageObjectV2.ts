@@ -44,8 +44,7 @@ export class StreamRowPageObjectV2 {
     cy.get(this.namespace)
       .nextAll('[data-testid^="row-depth-1-stream"]')
       .filter(this.stream)
-      .first()
-      .should(expectedResult ? "exist" : "not.exist");
+      .should(expectedResult ? "have.length" : "not.have.length", 1);
   }
 
   // Stream sync
