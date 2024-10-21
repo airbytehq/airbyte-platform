@@ -47,5 +47,5 @@ dependencies:
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.620.2
-digest: sha256:b936d93598f541a9c67d45f4658e7cfa571e6aec4241d15edf144bdfb0560cc3
-generated: "2024-09-17T20:33:32.000484522Z"
+digest: sha256:124eaec7bfdd585f6e848a7b5efb880e33b67769bbe46cf73063c1d7fb074468
+generated: "2024-10-03T14:41:50.578734-04:00"
