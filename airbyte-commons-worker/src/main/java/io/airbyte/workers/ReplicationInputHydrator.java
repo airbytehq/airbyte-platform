@@ -135,8 +135,10 @@ public class ReplicationInputHydrator {
 
     final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
     if (sourceActorConfig.getUseFileTransfer() && !resolvedDestinationVersion.getSupportFileTransfer()) {
-      LOGGER.error("Destination does not support file transfers, but source requires it.");
-      throw new WorkerException("Destination does not support file transfers, but source requires it.");
+      final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
+          + resolvedDestinationVersion.getDockerImageTag();
+      LOGGER.error(errorMessage);
+      throw new WorkerException(errorMessage);
     }
 
     // Retrieve the connection, which we need in a few places.
