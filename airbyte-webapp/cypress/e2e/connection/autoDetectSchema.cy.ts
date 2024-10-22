@@ -259,8 +259,8 @@ describe("Connection - Auto-detect schema changes with SyncCatalog V2", () => {
   });
 
   after(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": false });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
 
     if (destination) {
       requestDeleteDestination({ destinationId: destination.destinationId });

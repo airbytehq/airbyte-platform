@@ -90,6 +90,12 @@ export class StreamRowPageObjectV2 {
   }
 
   // Sync mode
+  isSyncModeDropdownDisplayed(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamSyncModeSelectButton).should(expectedResult ? "have.length" : "not.have.length", 1);
+    });
+  }
+
   selectSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     const syncMode = `${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`;
 
@@ -104,6 +110,13 @@ export class StreamRowPageObjectV2 {
     });
   }
 
+  isSelectedSyncModeDisplayed(source: SyncMode, dest: DestinationSyncMode): void {
+    this.withinStream(() => {
+      cy.get(streamSyncModeSelectButton).contains(`${SYNC_MODE_STRINGS[source]}`);
+      cy.get(streamSyncModeSelectButton).contains(`${SYNC_MODE_STRINGS[dest]}`);
+    });
+  }
+
   isSyncModeDropdownDisabled(expectedResult: boolean) {
     this.withinStream(() => {
       cy.get(streamSyncModeSelectButton).should(expectedResult ? "be.disabled" : "not.be.disabled");
@@ -111,9 +124,28 @@ export class StreamRowPageObjectV2 {
   }
 
   // PK
+  selectPKs(pks: string[]) {
+    this.withinStream(() => {
+      cy.get(streamPKCell).within(() => {
+        cy.get("button").click();
+        pks.forEach((pk) => {
+          cy.contains(pk).click();
+        });
+      });
+    });
+  }
+
   isMissedPKErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
       cy.contains("Primary key missing").should(expectedResult ? "be.visible" : "not.be.visible");
+    });
+  }
+
+  isPKComboboxBtnDisplayed(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamPKCell)
+        .filter("button")
+        .should(expectedResult ? "have.length" : "not.have.length", 1);
     });
   }
 
@@ -125,10 +157,33 @@ export class StreamRowPageObjectV2 {
     });
   }
 
+  isSelectedPKDisplayed(expectedValue: string) {
+    this.withinStream(() => {
+      cy.get(streamPKCell).should("have.text", expectedValue);
+    });
+  }
+
   // Cursor
+  selectCursor(cursor: string) {
+    this.withinStream(() => {
+      cy.get(streamCursorCell).within(() => {
+        cy.get("button").click();
+        cy.contains(cursor).click();
+      });
+    });
+  }
+
   isMissedCursorErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
       cy.contains("Cursor missing").should(expectedResult ? "be.visible" : "not.be.visible");
+    });
+  }
+
+  isCursorComboboxBtnDisplayed(expectedResult: boolean) {
+    this.withinStream(() => {
+      cy.get(streamCursorCell)
+        .filter("button")
+        .should(expectedResult ? "have.length" : "not.have.length", 1);
     });
   }
 
@@ -160,6 +215,18 @@ export class StreamRowPageObjectV2 {
   isFieldSyncCheckboxDisabled(fieldName: string, expectedResult: boolean) {
     this.withinField(fieldName, () => {
       cy.get(fieldSyncCheckbox).should(expectedResult ? "be.disabled" : "not.be.disabled");
+    });
+  }
+
+  isFieldSyncCheckboxDisplayed(fieldName: string, expectedResult: boolean) {
+    this.withinField(fieldName, () => {
+      cy.get(fieldSyncCheckbox).should(expectedResult ? "have.length" : "not.have.length", 1);
+    });
+  }
+
+  isFieldTypeDisplayed(fieldName: string, fieldType: string, expectedResult: boolean) {
+    this.withinField(fieldName, () => {
+      cy.contains(fieldType).should(expectedResult ? "exist" : "not.exist");
     });
   }
 

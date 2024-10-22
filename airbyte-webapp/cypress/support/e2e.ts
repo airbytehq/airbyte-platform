@@ -1,5 +1,5 @@
 import registerCypressGrep from "@cypress/grep";
-import { FeatureSet } from "@src/core/services/features/types";
+import { FeatureItem, FeatureSet } from "@src/core/services/features/types";
 import { Experiments } from "@src/hooks/services/Experiment/experiments";
 import { requestWorkspaceId, completeInitialSetup } from "commands/api";
 require("dd-trace/ci/cypress/support");
@@ -7,12 +7,20 @@ require("dd-trace/ci/cypress/support");
 export const featureFlags: Partial<Experiments> = {};
 export const featureServiceOverrides: FeatureSet = {};
 
-export const setFeatureFlags = (flags: Record<string, boolean>) => {
-  Object.assign(featureFlags, flags);
+export const setFeatureFlags = (flags: Partial<Experiments>) => {
+  if (Object.keys(flags).length === 0) {
+    Object.keys(featureFlags).forEach((key) => delete featureFlags[key as keyof Experiments]);
+  } else {
+    Object.assign(featureFlags, flags);
+  }
 };
 
-export const setFeatureServiceFlags = (flags: Record<string, boolean>) => {
-  Object.assign(featureServiceOverrides, flags);
+export const setFeatureServiceFlags = (flags: FeatureSet) => {
+  if (Object.keys(flags).length === 0) {
+    Object.keys(featureServiceOverrides).forEach((key) => delete featureServiceOverrides[key as FeatureItem]);
+  } else {
+    Object.assign(featureServiceOverrides, flags);
+  }
 };
 
 Cypress.on("window:load", (window) => {

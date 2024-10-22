@@ -82,6 +82,167 @@ describe("Sync catalog", () => {
   });
 });
 
+describe("Stream", { testIsolation: false }, () => {
+  let postgresSource: SourceRead;
+  let postgresDestination: DestinationRead;
+  let connection: WebBackendConnectionRead;
+
+  before(() => {
+    setFeatureFlags({ "connection.syncCatalogV2": true });
+    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
+
+    cleanDBSource();
+    runDbQuery(createCarsTableQuery);
+
+    createPostgresSourceViaApi()
+      .then((source) => {
+        postgresSource = source;
+      })
+      .then(() => createPostgresDestinationViaApi())
+      .then((destination) => {
+        postgresDestination = destination;
+      })
+      .then(() => createNewConnectionViaApi(postgresSource, postgresDestination))
+      .then((connectionResponse) => {
+        connection = connectionResponse;
+
+        visit(connection, "replication");
+      });
+  });
+
+  after(() => {
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
+
+    // cleanup
+    if (postgresSource) {
+      requestDeleteSource({ sourceId: postgresSource.sourceId });
+    }
+    if (postgresDestination) {
+      requestDeleteDestination({
+        destinationId: postgresDestination.destinationId,
+      });
+    }
+    if (connection) {
+      requestDeleteConnection({ connectionId: connection.connectionId });
+    }
+    cleanDBSource();
+  });
+
+  const carsStreamRow = new StreamRowPageObjectV2("public", "cars");
+
+  describe("enabled state", () => {
+    it("should have checked checkbox", () => {
+      carsStreamRow.isStreamSyncEnabled(true);
+    });
+    it("should have all fields with checked checkbox", () => {
+      carsStreamRow.toggleExpandCollapseStream();
+      carsStreamRow.isFieldSyncEnabled("color", true);
+      carsStreamRow.isFieldSyncEnabled("id", true);
+      carsStreamRow.isFieldSyncEnabled("mark", true);
+      carsStreamRow.isFieldSyncEnabled("model", true);
+    });
+    it("should show selected SyncMode dropdown", () => {
+      carsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      carsStreamRow.isSelectedSyncModeDisplayed(SyncMode.incremental, DestinationSyncMode.append_dedup);
+    });
+    it("should show selected PK", () => {
+      carsStreamRow.isSelectedPKDisplayed("id");
+    });
+    it("should show selected Cursor", () => {
+      carsStreamRow.isMissedCursorErrorDisplayed(true);
+    });
+  });
+
+  describe("disabled state", () => {
+    it("should have not checked checkbox", () => {
+      carsStreamRow.toggleStreamSync(false);
+      carsStreamRow.isStreamSyncEnabled(false);
+    });
+    it("should have all fields with unchecked checkbox", () => {
+      carsStreamRow.isFieldSyncEnabled("color", false);
+      carsStreamRow.isFieldSyncEnabled("id", false);
+      carsStreamRow.isFieldSyncEnabled("mark", false);
+      carsStreamRow.isFieldSyncEnabled("model", false);
+    });
+    it("should not show selected SyncMode", () => {
+      carsStreamRow.isSyncModeDropdownDisplayed(false);
+    });
+    it("should not show selected PK", () => {
+      carsStreamRow.isPKComboboxBtnDisplayed(false);
+    });
+    it("should not show selected Cursor", () => {
+      carsStreamRow.isCursorComboboxBtnDisplayed(false);
+      carsStreamRow.toggleExpandCollapseStream();
+    });
+  });
+
+  describe("Field", () => {
+    it("should show field checkbox by default", () => {
+      carsStreamRow.toggleExpandCollapseStream();
+      carsStreamRow.toggleStreamSync(true);
+      carsStreamRow.isFieldSyncCheckboxDisplayed("color", true);
+      carsStreamRow.toggleStreamSync(false);
+      carsStreamRow.isFieldSyncCheckboxDisplayed("color", true);
+      carsStreamRow.toggleStreamSync(true);
+    });
+
+    it("should show field type", () => {
+      carsStreamRow.isFieldTypeDisplayed("id", "Integer", true);
+      carsStreamRow.isFieldTypeDisplayed("color", "String", true);
+    });
+
+    it("should have disabled checkbox if field is a PK or Cursor", () => {
+      carsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      carsStreamRow.selectCursor("mark");
+
+      carsStreamRow.isFieldSyncEnabled("id", true);
+      carsStreamRow.isFieldSyncCheckboxDisabled("id", true);
+      carsStreamRow.isFieldSyncEnabled("mark", true);
+      carsStreamRow.isFieldSyncCheckboxDisabled("mark", true);
+    });
+
+    it("should show PK and Cursor labels", () => {
+      carsStreamRow.isPKField("id", true);
+      carsStreamRow.isCursorField("mark", true);
+    });
+
+    it("should enable the stream and required fields", () => {
+      carsStreamRow.toggleStreamSync(false);
+      carsStreamRow.isStreamSyncEnabled(false);
+      carsStreamRow.toggleFieldSync("color", true);
+
+      carsStreamRow.isFieldSyncEnabled("color", true);
+      carsStreamRow.isFieldSyncEnabled("id", true);
+      carsStreamRow.isFieldSyncCheckboxDisabled("id", true);
+      carsStreamRow.isFieldSyncEnabled("mark", true);
+      carsStreamRow.isFieldSyncCheckboxDisabled("mark", true);
+    });
+  });
+
+  describe("Field - disabled columnSelection", () => {
+    before(() => {
+      setFeatureFlags({ "connection.columnSelection": false });
+      visit(connection, "replication");
+    });
+
+    after(() => {
+      setFeatureFlags({});
+    });
+
+    it("should not show field sync checkbox for default, PK and Cursor fields", () => {
+      carsStreamRow.toggleStreamSync(true);
+      carsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      carsStreamRow.selectCursor("mark");
+      carsStreamRow.toggleExpandCollapseStream();
+
+      carsStreamRow.isFieldSyncCheckboxDisplayed("id", false);
+      carsStreamRow.isFieldSyncCheckboxDisplayed("mark", false);
+      carsStreamRow.isFieldSyncCheckboxDisplayed("color", false);
+    });
+  });
+});
+
 describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
@@ -132,8 +293,8 @@ describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   });
 
   after(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": false });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
 
     // cleanup
     if (postgresSource) {
@@ -245,8 +406,8 @@ describe("Tab filter", { testIsolation: false }, () => {
   });
 
   after(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": false });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
 
     // cleanup
     if (postgresSource) {

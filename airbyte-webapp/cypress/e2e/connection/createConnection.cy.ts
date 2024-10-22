@@ -249,8 +249,8 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
 
     after(() => {
-      setFeatureFlags({ "connection.syncCatalogV2": false });
-      setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+      setFeatureFlags({});
+      setFeatureServiceFlags({});
     });
 
     it("should have no streams checked by default", () => {
@@ -376,8 +376,8 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
 
     after(() => {
-      setFeatureFlags({ "connection.syncCatalogV2": false });
-      setFeatureServiceFlags({ SYNC_CATALOG_V2: false });
+      setFeatureFlags({});
+      setFeatureServiceFlags({});
     });
 
     const usersStreamRow = new StreamRowPageObjectV2("public", "users");
