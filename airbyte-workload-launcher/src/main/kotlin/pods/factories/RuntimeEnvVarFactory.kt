@@ -66,10 +66,11 @@ class RuntimeEnvVarFactory(
   fun replicationConnectorEnvVars(
     launcherConfig: IntegrationLauncherConfig,
     resourceReqs: AirbyteResourceRequirements?,
+    useFileTransfers: Boolean,
   ): List<EnvVar> {
     val awsEnvVars = resolveAwsAssumedRoleEnvVars(launcherConfig)
     val apmEnvVars = getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId))
-    val configurationEnvVars = getConfigurationEnvVars(launcherConfig.dockerImage, launcherConfig.connectionId ?: ANONYMOUS)
+    val configurationEnvVars = getConfigurationEnvVars(launcherConfig.dockerImage, launcherConfig.connectionId ?: ANONYMOUS, useFileTransfers)
     val metadataEnvVars = getMetadataEnvVars(launcherConfig)
     val resourceEnvVars = getResourceEnvVars(resourceReqs)
     val configPassThroughEnv = launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty()
@@ -161,10 +162,14 @@ class RuntimeEnvVarFactory(
   internal fun getConfigurationEnvVars(
     dockerImage: String,
     connectionId: UUID,
+    useFileTransfers: Boolean,
   ): List<EnvVar> {
     val envVars = mutableListOf<EnvVar>()
     envVars.add(EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, true.toString(), null))
-    envVars.add(EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null))
+    envVars.add(EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfers.toString(), null))
+    if (useFileTransfers) {
+      envVars.add(EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null))
+    }
     val concurrentSourceStreamReadEnabled =
       dockerImage.startsWith(MYSQL_SOURCE_NAME) &&
         featureFlagClient.boolVariation(ConcurrentSourceStreamRead, Connection(connectionId))

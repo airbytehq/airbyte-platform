@@ -85,7 +85,7 @@ class PayloadKubeInputMapper(
         input.getSourceResourceReqs()
       }
     val sourceReqs = ResourceConversionUtils.buildResourceRequirements(sourceBaseReqs)
-    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceBaseReqs)
+    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceBaseReqs, input.useFileTransfer)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
     val destinationReqs = ResourceConversionUtils.buildResourceRequirements(input.getDestinationResourceReqs())
@@ -93,6 +93,7 @@ class PayloadKubeInputMapper(
       runTimeEnvVarFactory.replicationConnectorEnvVars(
         input.destinationLauncherConfig,
         input.getDestinationResourceReqs(),
+        input.useFileTransfer,
       )
 
     val labels =

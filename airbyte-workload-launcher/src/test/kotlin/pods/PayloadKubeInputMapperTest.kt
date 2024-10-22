@@ -139,8 +139,8 @@ class PayloadKubeInputMapperTest {
         EnvVar("env-7", "val-7", null),
       )
 
-    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig, any()) } returns expectedSrcRuntimeEnvVars
-    every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig, resourceReqs3) } returns expectedDestRuntimeEnvVars
+    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig, any(), any()) } returns expectedSrcRuntimeEnvVars
+    every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig, resourceReqs3, any()) } returns expectedDestRuntimeEnvVars
     every { envVarFactory.orchestratorEnvVars(input, workloadId) } returns expectedOrchestratorRuntimeEnvVars
 
     every { input.getJobId() } returns jobId

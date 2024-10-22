@@ -161,6 +161,23 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(expected, result)
   }
 
+  @Test
+  fun `builds connector configuration env vars with file transfer (concurrentStreamReadEnabled)`() {
+    every { ffClient.boolVariation(ConcurrentSourceStreamRead, any()) } returns false
+
+    val result = factory.getConfigurationEnvVars("img", UUID.randomUUID(), true)
+
+    val expected =
+      listOf(
+        EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, "true", null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "false", null),
+      )
+
+    assertEquals(expected, result)
+  }
+
   @ParameterizedTest
   @MethodSource("concurrentStreamReadEnabledMatrix")
   fun `builds connector configuration env vars (concurrentStreamReadEnabled)`(
@@ -169,12 +186,12 @@ class RuntimeEnvVarFactoryTest {
   ) {
     every { ffClient.boolVariation(ConcurrentSourceStreamRead, any()) } returns ffEnabled
 
-    val result = factory.getConfigurationEnvVars(sourceImageName, UUID.randomUUID())
+    val result = factory.getConfigurationEnvVars(sourceImageName, UUID.randomUUID(), false)
 
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, "false", null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "true", null),
       )
 
@@ -189,12 +206,12 @@ class RuntimeEnvVarFactoryTest {
   ) {
     every { ffClient.boolVariation(ConcurrentSourceStreamRead, any()) } returns ffEnabled
 
-    val result = factory.getConfigurationEnvVars(sourceImageName, UUID.randomUUID())
+    val result = factory.getConfigurationEnvVars(sourceImageName, UUID.randomUUID(), false)
 
     val expected =
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.USE_FILE_TRANSFER, "false", null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "false", null),
       )
 
@@ -231,7 +248,7 @@ class RuntimeEnvVarFactoryTest {
     val passThroughVars = passThroughEnvMap?.toEnvVarList().orEmpty()
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns awsEnvVars
     every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
-    every { factory.getConfigurationEnvVars(any(), any()) } returns configurationEnvVars
+    every { factory.getConfigurationEnvVars(any(), any(), any()) } returns configurationEnvVars
     every { factory.getMetadataEnvVars(any()) } returns metadataEnvVars
     every { factory.getResourceEnvVars(any()) } returns resourceEnvVars
 
@@ -243,7 +260,7 @@ class RuntimeEnvVarFactoryTest {
 
     val resourceReqs = AirbyteResourceRequirements()
 
-    val result = factory.replicationConnectorEnvVars(config, resourceReqs)
+    val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
     val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars
 
