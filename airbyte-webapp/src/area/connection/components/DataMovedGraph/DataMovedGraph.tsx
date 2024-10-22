@@ -9,7 +9,7 @@ import {
   ClickToJob,
   adjustPositions,
   tooltipConfig,
-  xAxisConfig,
+  getXAxisConfig,
 } from "../HistoricalOverview/ChartConfig";
 import { UpdateTooltipTickPositions } from "../UptimeStatusGraph/UpdateTooltipTickPositions";
 import { UptimeStatusGraphTooltip } from "../UptimeStatusGraph/UptimeStatusGraphTooltip";
@@ -46,7 +46,7 @@ export const DataMovedGraph: React.FC<{ data: ConnectionUptimeHistoryRead; heigh
       <BarChart data={formattedData}>
         <UpdateTooltipTickPositions />
 
-        <XAxis dataKey="date" {...xAxisConfig} />
+        <XAxis dataKey="date" {...getXAxisConfig()} />
 
         <PositionedBar
           minPointSize={3} // ensure that the bar is always visible even when the value is 0

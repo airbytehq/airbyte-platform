@@ -11,33 +11,36 @@ import styles from "./ChartConfig.module.scss";
 
 export const MAX_BAR_WIDTH = 30;
 
-// this is the scale used for bar charts with axis[type=number]
-// https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L760
-const axisScale = scaleLinear();
+export const getXAxisConfig = (): XAxisProps => {
+  // this is the scale used for bar charts with axis[type=number]
+  // https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L760
+  // it needs to be created per chart, not shared between them (else https://github.com/airbytehq/airbyte-internal-issues/issues/10407)
+  const axisScale = scaleLinear();
 
-// recharts wants to use the value in `barSize` as the bar width
-// but will scale it down when bars are overlapping
-// we're going to move the bars manually if they overlap, so we want to force the bar width
-// https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L1290-L1297
-// @ts-expect-error abusing recharts' internals
-axisScale.bandwidth = function scaleBarWidth(this: typeof axisScale) {
-  const [left, right] = this.range();
-  // unfortunately there is now way to access the number of bars in the chart from here,
-  // there's two options: 8 and 30, so we'll just use 30 which gives a size that works in both cases
-  const width = right - left - 120; // 120 gives ~2px padding on each side of every bar
-  return Math.floor(Math.min(MAX_BAR_WIDTH, width / 30));
-};
+  // recharts wants to use the value in `barSize` as the bar width
+  // but will scale it down when bars are overlapping
+  // we're going to move the bars manually if they overlap, so we want to force the bar width
+  // https://github.com/recharts/recharts/blob/master/src/util/ChartUtils.ts#L1290-L1297
+  // @ts-expect-error abusing recharts' internals
+  axisScale.bandwidth = function scaleBarWidth(this: typeof axisScale) {
+    const [left, right] = this.range();
+    // unfortunately there is now way to access the number of bars in the chart from here,
+    // there's two options: 8 and 30, so we'll just use 30 which gives a size that works in both cases
+    const width = right - left - 120; // 120 gives ~2px padding on each side of every bar
+    return Math.floor(Math.min(MAX_BAR_WIDTH, width / 30));
+  };
 
-export const xAxisConfig: XAxisProps = {
-  type: "number",
-  domain: ["auto", "auto"],
-  padding: { left: 25, right: 25 },
-  tickCount: 2,
-  tickFormatter: (x) => new Date(x).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-  interval: "preserveStartEnd",
-  style: { fontSize: "10px" },
-  stroke: styles.labelColor,
-  scale: axisScale,
+  return {
+    type: "number",
+    domain: ["auto", "auto"],
+    padding: { left: 25, right: 25 },
+    tickCount: 2,
+    tickFormatter: (x) => new Date(x).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    interval: "preserveStartEnd",
+    style: { fontSize: "10px" },
+    stroke: styles.labelColor,
+    scale: axisScale,
+  };
 };
 
 export const tooltipConfig: TooltipProps<number, string> = {

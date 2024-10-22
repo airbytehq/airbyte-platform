@@ -19,7 +19,7 @@ import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
 import styles from "./UptimeStatusGraph.module.scss";
 import { UptimeStatusGraphTooltip } from "./UptimeStatusGraphTooltip";
 import { ChartStream, UptimeDayEntry, Waffle } from "./WaffleChart";
-import { ClickToJob, tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
+import { ClickToJob, tooltipConfig, getXAxisConfig } from "../HistoricalOverview/ChartConfig";
 
 const StreamChart = generateCategoricalChart({
   chartName: "StreamChart",
@@ -197,7 +197,7 @@ export const UptimeStatusGraph: React.FC<{ data: UptimeDayEntry[]; height: numbe
             />
           )}
 
-          <XAxis dataKey="date" {...xAxisConfig} />
+          <XAxis dataKey="date" {...getXAxisConfig()} />
 
           <Tooltip
             wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}
