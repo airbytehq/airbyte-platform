@@ -90,6 +90,12 @@ public class RouterService {
       throw new RuntimeException("Jobtype not expected to call - getTaskQueueForWorkspace - " + jobType);
     }
 
+    // Feature flag to disable the data-plane routing of temporal queues
+    if (!featureFlagClient.boolVariation(UseRouteToTaskRouting.INSTANCE,
+        new Multi(List.of(new Workspace(workspaceId))))) {
+      return jobType.name();
+    }
+
     final Geography geography = workspaceService.getGeographyForWorkspace(workspaceId);
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
       // Routing logic to route dataplane jobs to expanded dataplane

@@ -133,6 +133,7 @@ class RouterServiceTest {
 
   @Test
   void testGetWorkspaceTaskQueue() throws IOException, ConfigNotFoundException {
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
 
     Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
@@ -147,6 +148,7 @@ class RouterServiceTest {
 
   @Test
   void testGetWorkspaceTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     Mockito.when(mWorkspaceService.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
@@ -161,6 +163,7 @@ class RouterServiceTest {
 
   @Test
   void testGetWorkspaceOnExpandedTaskQueue() throws IOException, ConfigNotFoundException {
+    Mockito.when(mockFeatureFlagClient.boolVariation(eq(UseRouteToTaskRouting.INSTANCE), any())).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
