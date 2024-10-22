@@ -82,6 +82,7 @@ public class SourceDefinitionsHandler {
   private final ActorDefinitionService actorDefinitionService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
+  private final ApiPojoConverters apiPojoConverters;
 
   @Inject
   public SourceDefinitionsHandler(final ActorDefinitionService actorDefinitionService,
@@ -94,7 +95,8 @@ public class SourceDefinitionsHandler {
                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                   final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator,
                                   final SourceService sourceService,
-                                  final WorkspaceService workspaceService) {
+                                  final WorkspaceService workspaceService,
+                                  final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -106,6 +108,7 @@ public class SourceDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId)
@@ -129,14 +132,14 @@ public class SourceDefinitionsHandler {
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
           .icon(standardSourceDefinition.getIconUrl())
           .protocolVersion(sourceVersion.getProtocolVersion())
-          .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
-          .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
-          .releaseDate(ApiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
-          .lastPublished(ApiPojoConverters.toOffsetDateTime(sourceVersion.getLastPublished()))
+          .supportLevel(apiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
+          .releaseStage(apiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
+          .releaseDate(apiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
+          .lastPublished(apiPojoConverters.toOffsetDateTime(sourceVersion.getLastPublished()))
           .cdkVersion(sourceVersion.getCdkVersion())
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
+          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
           .language(sourceVersion.getLanguage());
 
@@ -274,7 +277,7 @@ public class SourceDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
@@ -323,7 +326,7 @@ public class SourceDefinitionsHandler {
   StandardSourceDefinition buildSourceDefinitionUpdate(final StandardSourceDefinition currentSourceDefinition,
                                                        final SourceDefinitionUpdate sourceDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
-        ? ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
+        ? apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
 
     final StandardSourceDefinition newSource = new StandardSourceDefinition()

@@ -117,6 +117,9 @@ public class WebBackendConnectionsHandler {
   private final DestinationService destinationService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
+  private final CatalogConverter catalogConverter;
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+  private final ApiPojoConverters apiPojoConverters;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
@@ -133,7 +136,10 @@ public class WebBackendConnectionsHandler {
                                       final FieldGenerator fieldGenerator,
                                       final DestinationService destinationService,
                                       final SourceService sourceService,
-                                      final WorkspaceService workspaceService) {
+                                      final WorkspaceService workspaceService,
+                                      final CatalogConverter catalogConverter,
+                                      final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper,
+                                      final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
@@ -150,6 +156,9 @@ public class WebBackendConnectionsHandler {
     this.destinationService = destinationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
+    this.catalogConverter = catalogConverter;
+    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -284,7 +293,7 @@ public class WebBackendConnectionsHandler {
     final DestinationSnippetRead destination = destinationReadById.get(standardSync.getDestinationId());
     final Optional<JobStatusSummary> latestSyncJob = Optional.ofNullable(latestJobByConnectionId.get(standardSync.getConnectionId()));
     final Optional<JobRead> latestRunningSyncJob = Optional.ofNullable(runningJobByConnectionId.get(standardSync.getConnectionId()));
-    final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+    final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);
     final Optional<UUID> currentCatalogId = connectionRead == null ? Optional.empty() : Optional.ofNullable(connectionRead.getSourceCatalogId());
 
     final SchemaChange schemaChange = getSchemaChange(connectionRead, currentCatalogId, latestFetchEvent);
@@ -297,10 +306,10 @@ public class WebBackendConnectionsHandler {
 
     final WebBackendConnectionListItem listItem = new WebBackendConnectionListItem()
         .connectionId(standardSync.getConnectionId())
-        .status(ApiPojoConverters.toApiStatus(standardSync.getStatus()))
+        .status(apiPojoConverters.toApiStatus(standardSync.getStatus()))
         .name(standardSync.getName())
-        .scheduleType(ApiPojoConverters.toApiConnectionScheduleType(standardSync))
-        .scheduleData(ApiPojoConverters.toApiConnectionScheduleData(standardSync))
+        .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
+        .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
         .source(source)
         .destination(destination)
         .isSyncing(latestRunningSyncJob.isPresent())
@@ -642,9 +651,9 @@ public class WebBackendConnectionsHandler {
             source.getWorkspaceId(),
             source.getSourceId());
         final CatalogDiff catalogDiff =
-            connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
-                CatalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
-        breakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
+            connectionsHandler.getDiff(newAirbyteCatalog, catalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
+                catalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
+        breakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
 
@@ -696,12 +705,12 @@ public class WebBackendConnectionsHandler {
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
     if (!skipReset) {
-      final AirbyteCatalog apiExistingCatalog = CatalogConverter.toApi(oldConfiguredCatalog,
-          CatalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
+      final AirbyteCatalog apiExistingCatalog = catalogConverter.toApi(oldConfiguredCatalog,
+          catalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
       final AirbyteCatalog upToDateAirbyteCatalog = updatedConnectionRead.getSyncCatalog();
       final CatalogDiff catalogDiff =
           connectionsHandler.getDiff(apiExistingCatalog, upToDateAirbyteCatalog,
-              CatalogConverter.toConfiguredInternal(upToDateAirbyteCatalog), connectionId);
+              catalogConverter.toConfiguredInternal(upToDateAirbyteCatalog), connectionId);
       final List<StreamDescriptor> apiStreamsToReset = getStreamsToReset(catalogDiff);
       final Set<StreamDescriptor> changedConfigStreamDescriptors =
           connectionsHandler.getConfigurationDiff(apiExistingCatalog, upToDateAirbyteCatalog);

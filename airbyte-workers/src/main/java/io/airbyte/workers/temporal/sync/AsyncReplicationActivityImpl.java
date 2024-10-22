@@ -17,6 +17,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
@@ -38,6 +39,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
+import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
@@ -97,9 +99,11 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                       @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
                                       @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
                                       final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
-                                      final LogClientManager logClientManager) {
+                                      final LogClientManager logClientManager,
+                                      final BackfillHelper backfillHelper,
+                                      final CatalogClientConverters catalogClientConverters) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader,
-        featureFlagClient);
+        featureFlagClient, backfillHelper, catalogClientConverters);
     this.workspaceRoot = workspaceRoot;
     this.airbyteVersion = airbyteVersion;
     this.airbyteApiClient = airbyteApiClient;

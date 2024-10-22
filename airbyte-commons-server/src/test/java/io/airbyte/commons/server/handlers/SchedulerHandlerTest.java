@@ -69,6 +69,7 @@ import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -104,6 +105,7 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
@@ -274,6 +276,8 @@ class SchedulerHandlerTest {
   private DestinationService destinationService;
   private ConnectionService connectionService;
   private OperationService operationService;
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -358,7 +362,9 @@ class SchedulerHandlerTest {
         streamRefreshesHandler,
         connectionTimelineEventHelper,
         sourceService,
-        destinationService);
+        destinationService,
+        catalogConverter,
+        autoPropagateSchemaChangeHelper);
   }
 
   @Test
@@ -998,12 +1004,12 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead1 =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
             .connectionId(connectionId1)
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     final ConnectionRead connectionRead2 =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
             .connectionId(connectionId2)
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
@@ -1069,7 +1075,7 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
@@ -1086,7 +1092,7 @@ class SchedulerHandlerTest {
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = catalogConverter.toApi(persistenceCatalog, sourceVersion);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
@@ -1130,7 +1136,7 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.DISABLE).connectionId(connectionId).sourceId(source.getSourceId()).notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any(), any())).thenReturn(catalogDiff);
@@ -1149,7 +1155,7 @@ class SchedulerHandlerTest {
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = catalogConverter.toApi(persistenceCatalog, sourceVersion);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
@@ -1197,7 +1203,7 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
@@ -1213,7 +1219,7 @@ class SchedulerHandlerTest {
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = catalogConverter.toApi(persistenceCatalog, sourceVersion);
     when(connectionsHandler.disableConnectionIfNeeded(any(), anyBoolean(), any())).thenReturn(
         new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
@@ -1257,7 +1263,7 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
             .notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
@@ -1275,7 +1281,7 @@ class SchedulerHandlerTest {
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = catalogConverter.toApi(persistenceCatalog, sourceVersion);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
@@ -1337,17 +1343,17 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
             .notifySchemaChanges(true);
 
     final ConnectionRead connectionRead2 =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId2).sourceId(source.getSourceId())
             .notifySchemaChanges(true);
 
     final ConnectionRead connectionRead3 =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
+        new ConnectionRead().syncCatalog(catalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
             NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId3).sourceId(source.getSourceId())
             .notifySchemaChanges(false);
 
@@ -1366,7 +1372,7 @@ class SchedulerHandlerTest {
 
     final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = catalogConverter.toApi(persistenceCatalog, sourceVersion);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(catalogDiff1, actual.getCatalogDiff());
@@ -1698,7 +1704,7 @@ class SchedulerHandlerTest {
     mockSourceForDiscoverJob(source, sourceDefinition);
 
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
-        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
+        catalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)
         .supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
         .config(new AirbyteStreamConfiguration().selected(true)));
@@ -1738,7 +1744,7 @@ class SchedulerHandlerTest {
     mockUpdateStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
-    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
         Field.of(SKU, JsonSchemaType.STRING), Field.of("aDifferentField", JsonSchemaType.STRING)), sourceVersion);
 
     final UUID workspaceId = source.getWorkspaceId();
@@ -1776,7 +1782,7 @@ class SchedulerHandlerTest {
     mockRemoveStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
-    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion)
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion)
         .streams(List.of());
 
     final UUID workspaceId = source.getWorkspaceId();
@@ -1814,7 +1820,7 @@ class SchedulerHandlerTest {
     mockUpdateAndAddStreamDiff();
     mockSourceForDiscoverJob(source, sourceDefinition);
 
-    final var catalogWithNewColumn = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
+    final var catalogWithNewColumn = catalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
         Field.of(SKU, JsonSchemaType.STRING)), sourceVersion);
     final var catalogWithNewColumnAndStream = Jsons.clone(catalogWithNewColumn)
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
@@ -1855,7 +1861,7 @@ class SchedulerHandlerTest {
     mockSourceForDiscoverJob(source, sourceDefinition);
 
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
-        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
+        catalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
 
     final UUID workspaceId = source.getWorkspaceId();
@@ -1964,7 +1970,7 @@ class SchedulerHandlerTest {
 
     // NOTE: this is just a clone of the original catalog.
     final io.airbyte.api.model.generated.AirbyteCatalog discoveredCatalog =
-        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
+        catalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
 
     final UUID workspaceId = source.getWorkspaceId();
     final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
@@ -2027,7 +2033,7 @@ class SchedulerHandlerTest {
                                                                          final NonBreakingChangesPreference nonBreakingChangesPreference)
       throws IOException, JsonValidationException {
     final ConnectionRead connectionRead = new ConnectionRead();
-    connectionRead.syncCatalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
+    connectionRead.syncCatalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
         .connectionId(UUID.randomUUID())
         .notifySchemaChanges(false)
         .nonBreakingChangesPreference(nonBreakingChangesPreference);

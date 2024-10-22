@@ -33,9 +33,11 @@ public class NotificationHelper {
   public static final String NOTIFICATION_TRIGGER_SCHEMA = "schema_propagated";
 
   private final WebUrlHelper webUrlHelper;
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
 
-  public NotificationHelper(final WebUrlHelper webUrlHelper) {
+  public NotificationHelper(final WebUrlHelper webUrlHelper, final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper) {
     this.webUrlHelper = webUrlHelper;
+    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
   }
 
   public void notifySchemaPropagated(final NotificationSettings notificationSettings,
@@ -62,7 +64,7 @@ public class NotificationHelper {
       final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
       final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
       final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
-      final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+      final boolean isBreakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(diff);
 
       final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
           .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())

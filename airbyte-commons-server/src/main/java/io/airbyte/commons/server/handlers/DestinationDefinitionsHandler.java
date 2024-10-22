@@ -81,6 +81,7 @@ public class DestinationDefinitionsHandler {
 
   private final DestinationService destinationService;
   private final WorkspaceService workspaceService;
+  private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ActorDefinitionService actorDefinitionService,
@@ -93,7 +94,8 @@ public class DestinationDefinitionsHandler {
                                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                        final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator,
                                        final DestinationService destinationService,
-                                       final WorkspaceService workspaceService) {
+                                       final WorkspaceService workspaceService,
+                                       final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -105,6 +107,7 @@ public class DestinationDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
     this.destinationService = destinationService;
     this.workspaceService = workspaceService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
@@ -127,14 +130,14 @@ public class DestinationDefinitionsHandler {
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
           .icon(standardDestinationDefinition.getIconUrl())
           .protocolVersion(destinationVersion.getProtocolVersion())
-          .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
-          .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
-          .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
-          .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationVersion.getLastPublished()))
+          .supportLevel(apiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
+          .releaseStage(apiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
+          .releaseDate(apiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .lastPublished(apiPojoConverters.toOffsetDateTime(destinationVersion.getLastPublished()))
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
+          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
           .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
@@ -269,7 +272,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
@@ -320,7 +323,7 @@ public class DestinationDefinitionsHandler {
   StandardDestinationDefinition buildDestinationDefinitionUpdate(final StandardDestinationDefinition currentDestination,
                                                                  final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
-        ? ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
+        ? apiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
 
     final StandardDestinationDefinition newDestination = new StandardDestinationDefinition()

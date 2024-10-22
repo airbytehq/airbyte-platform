@@ -42,18 +42,21 @@ public class MatchSearchHandler {
   private final SourceService sourceService;
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
+  private final ApiPojoConverters apiPojoConverters;
 
   @Inject
   public MatchSearchHandler(final DestinationHandler destinationHandler,
                             final SourceHandler sourceHandler,
                             final SourceService sourceService,
                             final DestinationService destinationService,
-                            final ConnectionService connectionService) {
+                            final ConnectionService connectionService,
+                            final ApiPojoConverters apiPojoConverters) {
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.connectionService = connectionService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public static boolean matchSearch(final SourceSearch sourceSearch, final SourceRead sourceRead) {
@@ -96,7 +99,7 @@ public class MatchSearchHandler {
     final List<ConnectionRead> reads = Lists.newArrayList();
     for (final StandardSync standardSync : connectionService.listStandardSyncs()) {
       if (standardSync.getStatus() != StandardSync.Status.DEPRECATED) {
-        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+        final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);
         if (matchSearch(connectionSearch, connectionRead)) {
           reads.add(connectionRead);
         }

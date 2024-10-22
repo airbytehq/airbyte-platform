@@ -41,6 +41,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -55,6 +56,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
@@ -114,6 +116,8 @@ class SourceDefinitionsHandlerTest {
   private SourceService sourceService;
   private WorkspaceService workspaceService;
 
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() {
@@ -147,7 +151,8 @@ class SourceDefinitionsHandlerTest {
             actorDefinitionVersionHelper,
             airbyteCompatibleConnectorsValidator,
             sourceService,
-            workspaceService);
+            workspaceService,
+            apiPojoConverters);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -276,7 +281,7 @@ class SourceDefinitionsHandlerTest {
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersionWithOptionals.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersionWithOptionals.getReleaseDate()))
         .cdkVersion(sourceDefinitionVersionWithOptionals.getCdkVersion())
-        .lastPublished(ApiPojoConverters.toOffsetDateTime(sourceDefinitionVersionWithOptionals.getLastPublished()))
+        .lastPublished(apiPojoConverters.toOffsetDateTime(sourceDefinitionVersionWithOptionals.getLastPublished()))
         .metrics(sourceDefinitionWithOptionals.getMetrics())
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()

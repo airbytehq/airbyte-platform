@@ -88,6 +88,7 @@ public class WorkspacesHandler {
   private final WorkspaceService workspaceService;
   private final Slugify slugify;
   private final TrackingClient trackingClient;
+  private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
@@ -99,7 +100,8 @@ public class WorkspacesHandler {
                            final SourceHandler sourceHandler,
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
-                           final TrackingClient trackingClient) {
+                           final TrackingClient trackingClient,
+                           final ApiPojoConverters apiPojoConverters) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -111,6 +113,7 @@ public class WorkspacesHandler {
     this.workspaceService = workspaceService;
     this.slugify = new Slugify();
     this.trackingClient = trackingClient;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -538,7 +541,7 @@ public class WorkspacesHandler {
       workspace.setNotificationSettings(NotificationSettingsConverter.toConfig(workspacePatch.getNotificationSettings()));
     }
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
     // Empty List is a valid value for webhookConfigs
     if (workspacePatch.getWebhookConfigs() != null) {

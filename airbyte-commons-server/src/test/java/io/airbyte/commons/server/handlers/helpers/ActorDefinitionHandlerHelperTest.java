@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
@@ -34,6 +35,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -66,6 +68,7 @@ class ActorDefinitionHandlerHelperTest {
   private static final String VALID_PROTOCOL_VERSION = "0.1.0";
   private static final String INVALID_PROTOCOL_VERSION = "123.0.0";
   private static final URI DOCUMENTATION_URL = UriBuilder.of("").scheme("https").host("docs.com").build();
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
 
   private static final String LATEST = "latest";
   private static final String DEV = "dev";
@@ -97,7 +100,8 @@ class ActorDefinitionHandlerHelperTest {
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     actorDefinitionService = mock(ActorDefinitionService.class);
     actorDefinitionHandlerHelper = new ActorDefinitionHandlerHelper(
-        synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider, actorDefinitionService);
+        synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider, actorDefinitionService,
+        apiPojoConverters);
 
   }
 

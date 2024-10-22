@@ -5,8 +5,6 @@
 package io.airbyte.commons.converters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -24,14 +22,20 @@ import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.SyncMode;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+@MicronautTest
 class CatalogClientConvertersTest {
 
-  private static final FieldGenerator fieldGenerator = spy(new FieldGenerator());
+  @Inject
+  private FieldGenerator fieldGenerator;
+  @Inject
+  private CatalogClientConverters catalogClientConverters;
   public static final String ID_FIELD_NAME = "id";
   private static final String STREAM_NAME = "users-data";
   private static final AirbyteStream STREAM = new AirbyteStream()
@@ -84,19 +88,17 @@ class CatalogClientConvertersTest {
   @Test
   void testConvertToClientAPI() {
     assertEquals(EXPECTED_CLIENT_CATALOG,
-        CatalogClientConverters.toAirbyteCatalogClientApi(BASIC_MODEL_CATALOG));
+        catalogClientConverters.toAirbyteCatalogClientApi(BASIC_MODEL_CATALOG));
   }
 
   @Test
   void testConvertToProtocol() {
     assertEquals(BASIC_MODEL_CATALOG,
-        CatalogClientConverters.toAirbyteProtocol(EXPECTED_CLIENT_CATALOG));
+        catalogClientConverters.toAirbyteProtocol(EXPECTED_CLIENT_CATALOG));
   }
 
   @Test
   void testConvertInternalWithMapping() {
-    reset(fieldGenerator);
-
     final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
 
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
@@ -121,7 +123,7 @@ class CatalogClientConvertersTest {
                     CLIENT_STREAM,
                     streamConfig)));
 
-    final ConfiguredAirbyteCatalog configuredCatalog = CatalogClientConverters.toConfiguredAirbyteInternal(clientCatalog);
+    final ConfiguredAirbyteCatalog configuredCatalog = catalogClientConverters.toConfiguredAirbyteInternal(clientCatalog);
     final var stream = configuredCatalog.getStreams().getFirst();
     assertEquals(STREAM_NAME, stream.getStream().getName());
     assertEquals(1, stream.getFields().size());
@@ -137,7 +139,7 @@ class CatalogClientConvertersTest {
     for (final Boolean isResumable : boolValues) {
       final AirbyteCatalog catalog = new AirbyteCatalog()
           .withStreams(List.of(new AirbyteStream().withName("user").withIsResumable(isResumable)));
-      final io.airbyte.api.client.model.generated.AirbyteCatalog apiCatalog = CatalogClientConverters.toAirbyteCatalogClientApi(catalog);
+      final io.airbyte.api.client.model.generated.AirbyteCatalog apiCatalog = catalogClientConverters.toAirbyteCatalogClientApi(catalog);
       assertEquals(isResumable, apiCatalog.getStreams().get(0).getStream().isResumable());
     }
   }
@@ -176,7 +178,7 @@ class CatalogClientConvertersTest {
       final List<AirbyteStreamAndConfiguration> streams = List.of(streamAndConf);
       final var apiCatalog = new io.airbyte.api.client.model.generated.AirbyteCatalog(streams);
 
-      final AirbyteCatalog catalog = CatalogClientConverters.toAirbyteProtocol(apiCatalog);
+      final AirbyteCatalog catalog = catalogClientConverters.toAirbyteProtocol(apiCatalog);
       assertEquals(isResumable, catalog.getStreams().get(0).getIsResumable());
     }
   }

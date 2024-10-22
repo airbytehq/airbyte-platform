@@ -47,7 +47,9 @@ import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -73,6 +75,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.JobService;
@@ -106,6 +109,8 @@ import org.mockito.Mockito;
 @DisplayName("Job History Handler")
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class JobHistoryHandlerTest {
+
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
 
   private static final long JOB_ID = 100L;
   private static final String JOB_CONFIG_ID = "ef296385-6796-413f-ac1b-49c4caba3f2b";
@@ -283,7 +288,8 @@ class JobHistoryHandlerTest {
         temporalClient,
         featureFlagClient,
         mock(LogClientManager.class),
-        jobService);
+        jobService,
+        apiPojoConverters);
   }
 
   @Nested

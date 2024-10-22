@@ -101,6 +101,7 @@ public class JobHistoryHandler {
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
   private final JobService jobService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final ConnectionService connectionService,
@@ -112,7 +113,8 @@ public class JobHistoryHandler {
                            final TemporalClient temporalClient,
                            final FeatureFlagClient featureFlagClient,
                            final LogClientManager logClientManager,
-                           final JobService jobService) {
+                           final JobService jobService,
+                           final ApiPojoConverters apiPojoConverters) {
     this.featureFlagClient = featureFlagClient;
     this.jobService = jobService;
     jobConverter = new JobConverter(logClientManager);
@@ -125,6 +127,7 @@ public class JobHistoryHandler {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.airbyteVersion = airbyteVersion;
     this.temporalClient = temporalClient;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   @SuppressWarnings("UnstableApiUsage")
@@ -480,7 +483,7 @@ public class JobHistoryHandler {
       throw new ConfigNotFoundException(e.getType(), e.getMessage());
     }
 
-    final ConnectionRead connection = ApiPojoConverters.internalToConnectionRead(standardSync);
+    final ConnectionRead connection = apiPojoConverters.internalToConnectionRead(standardSync);
     final SourceRead source = getSourceRead(connection);
     final DestinationRead destination = getDestinationRead(connection);
     final SourceDefinitionRead sourceDefinitionRead = getSourceDefinitionRead(source);

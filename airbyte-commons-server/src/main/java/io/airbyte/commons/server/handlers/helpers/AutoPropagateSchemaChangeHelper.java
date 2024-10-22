@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.NotSupportedException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,7 +32,14 @@ import lombok.extern.slf4j.Slf4j;
  * Helper that allows to generate the catalogs to be auto propagated.
  */
 @Slf4j
+@Singleton
 public class AutoPropagateSchemaChangeHelper {
+
+  private final CatalogConverter catalogConverter;
+
+  public AutoPropagateSchemaChangeHelper(final CatalogConverter catalogConverter) {
+    this.catalogConverter = catalogConverter;
+  }
 
   private enum DefaultSyncModeCase {
     SOURCE_CURSOR_AND_PRIMARY_KEY,
@@ -51,10 +59,10 @@ public class AutoPropagateSchemaChangeHelper {
    * updated.
    *
    * @param transform the transformation to be applied to the destination
-   * @return a list of strings describing the changes that will be applied to the destination.
+   * @return a string describing the changes that will be applied to the destination.
    */
   @VisibleForTesting
-  static String staticFormatDiff(final StreamTransform transform) {
+  String formatDiff(final StreamTransform transform) {
     final String namespace = transform.getStreamDescriptor().getNamespace();
     final String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
     final String streamName = transform.getStreamDescriptor().getName();
@@ -103,21 +111,21 @@ public class AutoPropagateSchemaChangeHelper {
   }
 
   /**
-   * This is auto propagating schema changes, it replaces the stream in the old catalog by using the
-   * ones from the new catalog. The list of transformations contains the information of which stream
-   * to update.
+   * This method auto-propagates schema changes by replacing streams in the old catalog with those
+   * from the new catalog based on the provided transformations.
    *
    * @param oldCatalog the currently saved catalog
-   * @param newCatalog the new catalog, which contains all the stream even the unselected ones
-   * @param transformations list of transformation per stream
-   * @param nonBreakingChangesPreference User preference for the auto propagation
-   * @return an Airbyte catalog the changes being auto propagated
+   * @param newCatalog the new catalog, which contains all the streams, even the unselected ones
+   * @param transformations list of transformations per stream
+   * @param nonBreakingChangesPreference user preference for the auto propagation
+   * @return an UpdateSchemaResult containing the updated catalog, applied diff, and change
+   *         descriptions
    */
-  public static UpdateSchemaResult getUpdatedSchema(final AirbyteCatalog oldCatalog,
-                                                    final AirbyteCatalog newCatalog,
-                                                    final List<StreamTransform> transformations,
-                                                    final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                    final List<DestinationSyncMode> supportedDestinationSyncModes) {
+  public UpdateSchemaResult getUpdatedSchema(final AirbyteCatalog oldCatalog,
+                                             final AirbyteCatalog newCatalog,
+                                             final List<StreamTransform> transformations,
+                                             final NonBreakingChangesPreference nonBreakingChangesPreference,
+                                             final List<DestinationSyncMode> supportedDestinationSyncModes) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
@@ -151,31 +159,30 @@ public class AutoPropagateSchemaChangeHelper {
                   newlySelectedFields.stream().map(field -> new SelectedFieldInfo().fieldPath(List.of(field)))).toList();
               streamConfig.setSelectedFields(allSelectedFields);
             }
-            changes.add(staticFormatDiff(transformation));
+            changes.add(formatDiff(transformation));
             appliedDiff.addTransformsItem(transformation);
           }
         }
         case ADD_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             final var streamAndConfigurationToAdd = newCatalogPerStream.get(streamDescriptor);
-            // If we're propagating it, we want to enable it! Otherwise, it'll just get dropped when we update
-            // the catalog.
-            streamAndConfigurationToAdd.getConfig()
-                .selected(true);
-            CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
+            // Enable the stream if we're propagating it; otherwise, it'll get dropped when we update the
+            // catalog.
+            streamAndConfigurationToAdd.getConfig().selected(true);
+            catalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
                 streamAndConfigurationToAdd.getConfig());
-            CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
+            catalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
             // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
             // supported sync modes.
             oldCatalogPerStream.put(streamDescriptor, streamAndConfigurationToAdd);
-            changes.add(staticFormatDiff(transformation));
+            changes.add(formatDiff(transformation));
             appliedDiff.addTransformsItem(transformation);
           }
         }
         case REMOVE_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             oldCatalogPerStream.remove(streamDescriptor);
-            changes.add(staticFormatDiff(transformation));
+            changes.add(formatDiff(transformation));
             appliedDiff.addTransformsItem(transformation);
           }
         }
@@ -187,7 +194,7 @@ public class AutoPropagateSchemaChangeHelper {
   }
 
   @VisibleForTesting
-  static Map<StreamDescriptor, AirbyteStreamAndConfiguration> extractStreamAndConfigPerStreamDescriptor(final AirbyteCatalog catalog) {
+  Map<StreamDescriptor, AirbyteStreamAndConfiguration> extractStreamAndConfigPerStreamDescriptor(final AirbyteCatalog catalog) {
     return catalog.getStreams().stream().collect(Collectors.toMap(
         airbyteStreamAndConfiguration -> new StreamDescriptor().name(airbyteStreamAndConfiguration.getStream().getName())
             .namespace(airbyteStreamAndConfiguration.getStream().getNamespace()),
@@ -202,16 +209,15 @@ public class AutoPropagateSchemaChangeHelper {
    * @param connectionRead the connection info
    * @return whether the diff should be propagated
    */
-  public static boolean shouldAutoPropagate(final CatalogDiff diff,
-                                            final ConnectionRead connectionRead) {
+  public boolean shouldAutoPropagate(final CatalogDiff diff,
+                                     final ConnectionRead connectionRead) {
     if (!containsChanges(diff)) {
-      // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
-      // some other bit of metadata.
-      // We want to acknowledge it and update to the latest source catalog id, but not bother the user
-      // about it.
+      // If there's no diff, we always propagate because it means there's a diff in a disabled stream or
+      // some other metadata.
+      // We want to acknowledge it and update to the latest source catalog ID without bothering the user.
       return true;
     }
-    final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final boolean nonBreakingChange = !containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
@@ -219,7 +225,7 @@ public class AutoPropagateSchemaChangeHelper {
     return nonBreakingChange && autoPropagationIsEnabledForConnection;
   }
 
-  public static boolean containsChanges(final CatalogDiff diff) {
+  public boolean containsChanges(final CatalogDiff diff) {
     return !diff.getTransforms().isEmpty();
   }
 
@@ -230,7 +236,7 @@ public class AutoPropagateSchemaChangeHelper {
    * @return {@code true} if any breaking field transforms are included in the diff, {@code false}
    *         otherwise.
    */
-  public static boolean containsBreakingChange(final CatalogDiff diff) {
+  public boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
       if (streamTransform.getTransformType() != StreamTransform.TransformTypeEnum.UPDATE_STREAM) {
         continue;

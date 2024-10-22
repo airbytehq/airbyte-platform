@@ -39,6 +39,7 @@ import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -69,6 +70,7 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
@@ -116,6 +118,8 @@ class AttemptHandlerTest {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
   private final StreamAttemptMetadataService streamAttemptMetadataService = mock(StreamAttemptMetadataService.class);
 
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+
   private final AttemptHandler handler = new AttemptHandler(jobPersistence,
       statePersistence,
       jobConverter,
@@ -126,7 +130,8 @@ class AttemptHandlerTest {
       connectionService,
       destinationService,
       actorDefinitionVersionHelper,
-      streamAttemptMetadataService);
+      streamAttemptMetadataService,
+      apiPojoConverters);
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -174,7 +179,7 @@ class AttemptHandlerTest {
 
     verify(jobPersistence).writeAttemptSyncConfig(jobIdCapture.capture(), attemptNumberCapture.capture(), attemptSyncConfigCapture.capture());
 
-    final io.airbyte.config.AttemptSyncConfig expectedAttemptSyncConfig = ApiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig);
+    final io.airbyte.config.AttemptSyncConfig expectedAttemptSyncConfig = apiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig);
 
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
     assertEquals(JOB_ID, jobIdCapture.getValue());

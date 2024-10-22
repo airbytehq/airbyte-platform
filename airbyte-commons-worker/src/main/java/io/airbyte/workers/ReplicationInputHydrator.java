@@ -73,14 +73,21 @@ public class ReplicationInputHydrator {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final FeatureFlagClient featureFlagClient;
 
+  private final BackfillHelper backfillHelper;
+  private final CatalogClientConverters catalogClientConverters;
+
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
                                   final SecretsRepositoryReader secretsRepositoryReader,
-                                  final FeatureFlagClient featureFlagClient) {
+                                  final FeatureFlagClient featureFlagClient,
+                                  final BackfillHelper backfillHelper,
+                                  final CatalogClientConverters catalogClientConverters) {
     this.airbyteApiClient = airbyteApiClient;
     this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.featureFlagClient = featureFlagClient;
+    this.backfillHelper = backfillHelper;
+    this.catalogClientConverters = catalogClientConverters;
   }
 
   private <T> T retry(final CheckedSupplier<T> supplier) {
@@ -156,8 +163,8 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    if (BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
-      streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
+    if (backfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+      streamsToBackfill = backfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
     }
@@ -261,9 +268,9 @@ public class ReplicationInputHydrator {
                                            final ConfiguredAirbyteCatalog catalog)
       throws Exception {
     if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
-      final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
+      final var streamsToBackfill = backfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
       LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
-      final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
+      final State resetState = backfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
       if (resetState != null) {
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the
         // backfill process.
@@ -283,7 +290,7 @@ public class ReplicationInputHydrator {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
     final ConfiguredAirbyteCatalog catalog =
-        CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
+        catalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
     return catalog;
   }
 

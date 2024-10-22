@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -30,6 +28,7 @@ import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -90,6 +89,8 @@ public class SourceHandler {
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final CatalogConverter catalogConverter;
+  private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -106,7 +107,9 @@ public class SourceHandler {
                        final WorkspaceService workspaceService,
                        final SecretPersistenceConfigService secretPersistenceConfigService,
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
-                       final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
+                       final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
+                       final CatalogConverter catalogConverter,
+                       final ApiPojoConverters apiPojoConverters) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -122,6 +125,8 @@ public class SourceHandler {
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
+    this.catalogConverter = catalogConverter;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -387,7 +392,7 @@ public class SourceHandler {
 
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
       throws JsonValidationException, IOException {
-    final AirbyteCatalog persistenceCatalog = CatalogConverter.toProtocol(request.getCatalog());
+    final AirbyteCatalog persistenceCatalog = catalogConverter.toProtocol(request.getCatalog());
     final UUID catalogId = writeActorCatalog(persistenceCatalog, request);
 
     return new DiscoverCatalogResult().catalogId(catalogId);
@@ -520,7 +525,7 @@ public class SourceHandler {
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
+        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
   protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {

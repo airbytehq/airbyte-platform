@@ -19,8 +19,10 @@ import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.NotFoundException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.ActorType;
@@ -30,6 +32,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
@@ -63,6 +66,7 @@ class ActorDefinitionVersionHandlerTest {
   private ActorDefinitionHandlerHelper mActorDefinitionHandlerHelper;
 
   private ActorDefinitionVersionHandler actorDefinitionVersionHandler;
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
 
   @BeforeEach
   void setUp() {
@@ -78,7 +82,8 @@ class ActorDefinitionVersionHandlerTest {
         mActorDefinitionService,
         mActorDefinitionVersionResolver,
         mActorDefinitionVersionHelper,
-        mActorDefinitionHandlerHelper);
+        mActorDefinitionHandlerHelper,
+        apiPojoConverters);
   }
 
   private ActorDefinitionVersion createActorDefinitionVersion() {

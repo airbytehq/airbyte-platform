@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
-import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor;
-import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,6 +28,7 @@ import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import java.util.List;
@@ -41,6 +40,9 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class AutoPropagateSchemaChangeHelperTest {
+
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper =
+      new AutoPropagateSchemaChangeHelper(new CatalogConverter(new FieldGenerator()));
 
   private static final String NAME1 = "name1";
   private static final String NAMESPACE1 = "namespace1";
@@ -76,7 +78,8 @@ class AutoPropagateSchemaChangeHelperTest {
         .stream(new AirbyteStream().name(NAME2).namespace(NAMESPACE2).addSupportedSyncModesItem(SyncMode.INCREMENTAL));
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1, airbyteStreamConfiguration2));
 
-    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> result = extractStreamAndConfigPerStreamDescriptor(airbyteCatalog);
+    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> result =
+        autoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor(airbyteCatalog);
 
     Assertions.assertThat(result).hasSize(2);
     Assertions.assertThat(result).isEqualTo(
@@ -94,7 +97,8 @@ class AutoPropagateSchemaChangeHelperTest {
         .stream(new AirbyteStream().name(NAME2).addSupportedSyncModesItem(SyncMode.INCREMENTAL));
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1, airbyteStreamConfiguration2));
 
-    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> result = extractStreamAndConfigPerStreamDescriptor(airbyteCatalog);
+    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> result =
+        autoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor(airbyteCatalog);
 
     Assertions.assertThat(result).hasSize(2);
     Assertions.assertThat(result).isEqualTo(
@@ -116,8 +120,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
@@ -136,8 +142,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -160,8 +168,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -190,8 +200,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -220,8 +232,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -243,8 +257,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -264,8 +280,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
@@ -283,8 +301,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -303,8 +323,10 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
+        autoPropagateSchemaChangeHelper
+            .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+                SUPPORTED_DESTINATION_SYNC_MODES)
+            .catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -316,12 +338,12 @@ class AutoPropagateSchemaChangeHelperTest {
     final StreamTransform transform = new StreamTransform()
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"));
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform)).isEqualTo("Added new stream 'bar.foo'");
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform)).isEqualTo("Added new stream 'bar.foo'");
 
     final StreamTransform transformNoNS = new StreamTransform()
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo"));
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transformNoNS)).isEqualTo("Added new stream 'foo'");
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transformNoNS)).isEqualTo("Added new stream 'foo'");
   }
 
   @Test
@@ -329,12 +351,12 @@ class AutoPropagateSchemaChangeHelperTest {
     final StreamTransform transform = new StreamTransform()
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"));
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform)).isEqualTo("Removed stream 'bar.foo'");
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform)).isEqualTo("Removed stream 'bar.foo'");
 
     final StreamTransform transformNoNS = new StreamTransform()
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("foo"));
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transformNoNS)).isEqualTo("Removed stream 'foo'");
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transformNoNS)).isEqualTo("Removed stream 'foo'");
   }
 
   @Test
@@ -348,7 +370,7 @@ class AutoPropagateSchemaChangeHelperTest {
             new FieldTransform().fieldName(List.of("path", "other_field"))
                 .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
 
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform))
         .isEqualTo("Modified stream 'bar.foo': Added fields ['path.new_field', 'path.other_field']");
   }
 
@@ -363,7 +385,7 @@ class AutoPropagateSchemaChangeHelperTest {
             new FieldTransform().fieldName(List.of("path", "other_field"))
                 .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA))));
 
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform))
         .isEqualTo("Modified stream 'bar.foo': Altered fields ['path.new_field', 'path.other_field']");
   }
 
@@ -378,7 +400,7 @@ class AutoPropagateSchemaChangeHelperTest {
             new FieldTransform().fieldName(List.of("other_field"))
                 .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD))));
 
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform))
         .isEqualTo("Modified stream 'bar.foo': Removed fields ['path.new_field', 'other_field']");
   }
 
@@ -410,14 +432,14 @@ class AutoPropagateSchemaChangeHelperTest {
             new FieldTransform().fieldName(List.of("properties", "changed_type"))
                 .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA))));
 
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.formatDiff(transform))
         .isEqualTo(
             "Modified stream 'bar.foo': Added fields ['path.new_field'], Removed fields ['old_field', 'old_path.deprecated'], Altered fields ['properties.changed_type']");
   }
 
   @Test
   void emptyDiffShouldAlwaysPropagate() {
-    Assertions.assertThat(AutoPropagateSchemaChangeHelper.shouldAutoPropagate(new CatalogDiff(),
+    Assertions.assertThat(autoPropagateSchemaChangeHelper.shouldAutoPropagate(new CatalogDiff(),
         new ConnectionRead().nonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE))).isTrue();
   }
 
@@ -427,7 +449,8 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
     final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result =
-        getUpdatedSchema(oldAirbyteCatalog, oldAirbyteCatalog, List.of(), NonBreakingChangesPreference.PROPAGATE_FULLY,
+        autoPropagateSchemaChangeHelper.getUpdatedSchema(oldAirbyteCatalog, oldAirbyteCatalog, List.of(),
+            NonBreakingChangesPreference.PROPAGATE_FULLY,
             SUPPORTED_DESTINATION_SYNC_MODES);
 
     Assertions.assertThat(result.catalog()).isEqualTo(oldAirbyteCatalog);
@@ -443,7 +466,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final CatalogDiff catalogDiff1 = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithNoBreakingTransforms)));
 
-    assertFalse(AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff1));
+    assertFalse(autoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff1));
 
     final StreamTransformUpdateStream updateWithBreakingFieldTransform = new StreamTransformUpdateStream()
         .addFieldTransformsItem(new FieldTransform().breaking(true))
@@ -451,7 +474,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final CatalogDiff catalogDiff2 = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithBreakingFieldTransform)));
 
-    assertTrue(AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff2));
+    assertTrue(autoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff2));
 
     final StreamTransformUpdateStream updateWithBreakingAttributeTransform = new StreamTransformUpdateStream()
         .addFieldTransformsItem(new FieldTransform().breaking(false))
@@ -459,7 +482,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final CatalogDiff catalogDiff3 = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithBreakingAttributeTransform)));
 
-    assertTrue(AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff3));
+    assertTrue(autoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff3));
   }
 
   @Nested
@@ -500,7 +523,7 @@ class AutoPropagateSchemaChangeHelperTest {
               .updateStream(new StreamTransformUpdateStream().fieldTransforms(
                   List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                       .fieldName(List.of("ssn"))))));
-      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = autoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
       assertEquals(1, fieldIsSelected(result.catalog(), List.of("id")));
       assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
@@ -516,7 +539,7 @@ class AutoPropagateSchemaChangeHelperTest {
               .updateStream(new StreamTransformUpdateStream().fieldTransforms(
                   List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                       .fieldName(List.of("ssn"))))));
-      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = autoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
       assertEquals(1, fieldIsSelected(result.catalog(), List.of("ssn")));
     }
@@ -530,7 +553,7 @@ class AutoPropagateSchemaChangeHelperTest {
               .updateStream(new StreamTransformUpdateStream().fieldTransforms(
                   List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                       .fieldName(List.of("address", "zip"))))));
-      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = autoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
       assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
     }
@@ -544,7 +567,7 @@ class AutoPropagateSchemaChangeHelperTest {
               .updateStream(new StreamTransformUpdateStream().fieldTransforms(
                   List.of(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                       .fieldName(List.of("username", "domain"))))));
-      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = autoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
       assertEquals(0, fieldIsSelected(result.catalog(), List.of("username")));
       assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));
@@ -561,7 +584,7 @@ class AutoPropagateSchemaChangeHelperTest {
                       .fieldName(List.of("username", "domain")),
                       new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
                           .fieldName(List.of("username"))))));
-      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = AutoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
+      final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result = autoPropagateSchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
       assertEquals(1, fieldIsSelected(result.catalog(), List.of("username")));
       assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));

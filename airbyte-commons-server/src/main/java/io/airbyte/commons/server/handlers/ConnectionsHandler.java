@@ -218,6 +218,11 @@ public class ConnectionsHandler {
   private final ConnectionService connectionService;
   private final WorkspaceService workspaceService;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
+  private final CatalogConverter catalogConverter;
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+  private final ApiPojoConverters apiPojoConverters;
+
+  private final ConnectionScheduleHelper connectionScheduleHelper;
 
   // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
@@ -247,7 +252,11 @@ public class ConnectionsHandler {
                             final DestinationService destinationService,
                             final ConnectionService connectionService,
                             final WorkspaceService workspaceService,
-                            final DestinationCatalogGenerator destinationCatalogGenerator) {
+                            final DestinationCatalogGenerator destinationCatalogGenerator,
+                            final CatalogConverter catalogConverter,
+                            final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper,
+                            final ApiPojoConverters apiPojoConverters,
+                            final ConnectionScheduleHelper connectionScheduleHelper) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -275,6 +284,10 @@ public class ConnectionsHandler {
     this.connectionService = connectionService;
     this.workspaceService = workspaceService;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
+    this.catalogConverter = catalogConverter;
+    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
+    this.apiPojoConverters = apiPojoConverters;
+    this.connectionScheduleHelper = connectionScheduleHelper;
   }
 
   /**
@@ -287,7 +300,7 @@ public class ConnectionsHandler {
     // the helper to ensure both fields
     // make sense together.
     if (patch.getScheduleType() != null) {
-      ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, patch.getScheduleType(), patch.getScheduleData());
+      connectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, patch.getScheduleType(), patch.getScheduleData());
     }
 
     // the rest of the fields are straightforward to patch. If present in the patch, set the field to
@@ -298,11 +311,11 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
-      final ConfiguredAirbyteCatalog configuredCatalog = CatalogConverter.toConfiguredInternal(patch.getSyncCatalog());
+      final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(patch.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
 
       sync.setCatalog(configuredCatalog);
-      sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
+      sync.withFieldSelectionData(catalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
     if (patch.getName() != null) {
@@ -326,7 +339,7 @@ public class ConnectionsHandler {
     }
 
     if (patch.getStatus() != null) {
-      sync.setStatus(ApiPojoConverters.toPersistenceStatus(patch.getStatus()));
+      sync.setStatus(apiPojoConverters.toPersistenceStatus(patch.getStatus()));
     }
 
     if (patch.getSourceCatalogId() != null) {
@@ -334,11 +347,11 @@ public class ConnectionsHandler {
     }
 
     if (patch.getResourceRequirements() != null) {
-      sync.setResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
+      sync.setResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
     }
 
     if (patch.getGeography() != null) {
-      sync.setGeography(ApiPojoConverters.toPersistenceGeography(patch.getGeography()));
+      sync.setGeography(apiPojoConverters.toPersistenceGeography(patch.getGeography()));
     }
 
     if (patch.getBreakingChange() != null) {
@@ -354,11 +367,11 @@ public class ConnectionsHandler {
     }
 
     if (patch.getNonBreakingChangesPreference() != null) {
-      sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
+      sync.setNonBreakingChangesPreference(apiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
     }
 
     if (patch.getBackfillPreference() != null) {
-      sync.setBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
+      sync.setBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
     }
   }
 
@@ -594,16 +607,16 @@ public class ConnectionsHandler {
         .withSourceId(connectionCreate.getSourceId())
         .withDestinationId(connectionCreate.getDestinationId())
         .withOperationIds(operationIds)
-        .withStatus(ApiPojoConverters.toPersistenceStatus(connectionCreate.getStatus()))
+        .withStatus(apiPojoConverters.toPersistenceStatus(connectionCreate.getStatus()))
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
-            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
-        .withBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
+            apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
+        .withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
     if (connectionCreate.getResourceRequirements() != null) {
-      standardSync.withResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
+      standardSync.withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }
 
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
@@ -612,10 +625,10 @@ public class ConnectionsHandler {
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
       final ConfiguredAirbyteCatalog configuredCatalog =
-          CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
+          catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
       standardSync.withCatalog(configuredCatalog);
-      standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
+      standardSync.withFieldSelectionData(catalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
       standardSync.withFieldSelectionData(new FieldSelectionData());
@@ -626,7 +639,7 @@ public class ConnectionsHandler {
     }
 
     if (connectionCreate.getScheduleType() != null) {
-      ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(standardSync, connectionCreate.getScheduleType(),
+      connectionScheduleHelper.populateSyncFromScheduleTypeAndData(standardSync, connectionCreate.getScheduleType(),
           connectionCreate.getScheduleData());
     } else {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
@@ -656,7 +669,7 @@ public class ConnectionsHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     if (connectionCreate.getGeography() != null) {
-      return ApiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
+      return apiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
     }
 
     // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
@@ -674,7 +687,7 @@ public class ConnectionsHandler {
   private void populateSyncFromLegacySchedule(final StandardSync standardSync, final ConnectionCreate connectionCreate) {
     if (connectionCreate.getSchedule() != null) {
       final Schedule schedule = new Schedule()
-          .withTimeUnit(ApiPojoConverters.toPersistenceTimeUnit(connectionCreate.getSchedule().getTimeUnit()))
+          .withTimeUnit(apiPojoConverters.toPersistenceTimeUnit(connectionCreate.getSchedule().getTimeUnit()))
           .withUnits(connectionCreate.getSchedule().getUnits());
       // Populate the legacy field.
       // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove.
@@ -685,7 +698,7 @@ public class ConnectionsHandler {
       standardSync
           .withScheduleType(ScheduleType.BASIC_SCHEDULE);
       standardSync.withScheduleData(new ScheduleData().withBasicSchedule(
-          new BasicSchedule().withTimeUnit(ApiPojoConverters.toBasicScheduleTimeUnit(connectionCreate.getSchedule().getTimeUnit()))
+          new BasicSchedule().withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(connectionCreate.getSchedule().getTimeUnit()))
               .withUnits(connectionCreate.getSchedule().getUnits())));
     } else {
       standardSync.withManual(true);
@@ -763,7 +776,7 @@ public class ConnectionsHandler {
 
     validateConnectionPatch(workspaceHelper, sync, connectionPatch);
 
-    final ConnectionRead initialConnectionRead = ApiPojoConverters.internalToConnectionRead(sync);
+    final ConnectionRead initialConnectionRead = apiPojoConverters.internalToConnectionRead(sync);
     LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead);
 
     if (connectionPatch.getSyncCatalog() != null
@@ -849,7 +862,7 @@ public class ConnectionsHandler {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
     for (final StandardSync standardSync : connectionService.listWorkspaceStandardSyncs(workspaceIdRequestBody.getWorkspaceId(), includeDeleted)) {
-      connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
+      connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync));
     }
 
     return new ConnectionReadList().connections(connectionReads);
@@ -863,7 +876,7 @@ public class ConnectionsHandler {
   public ConnectionReadList listConnectionsForSource(final UUID sourceId, final boolean includeDeleted) throws IOException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
     for (final StandardSync standardSync : connectionService.listConnectionsBySource(sourceId, includeDeleted)) {
-      connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
+      connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync));
     }
     return new ConnectionReadList().connections(connectionReads);
   }
@@ -875,7 +888,7 @@ public class ConnectionsHandler {
       if (standardSync.getStatus() == StandardSync.Status.DEPRECATED) {
         continue;
       }
-      connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
+      connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync));
     }
 
     return new ConnectionReadList().connections(connectionReads);
@@ -899,8 +912,8 @@ public class ConnectionsHandler {
       throws JsonValidationException {
 
     return new CatalogDiff().transforms(CatalogDiffHelpers.getCatalogDiff(
-        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(oldCatalog)),
-        CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(newCatalog)), configuredCatalog)
+        CatalogHelpers.configuredCatalogToCatalog(catalogConverter.toProtocolKeepAllStreams(oldCatalog)),
+        CatalogHelpers.configuredCatalogToCatalog(catalogConverter.toProtocolKeepAllStreams(newCatalog)), configuredCatalog)
         .stream()
         .map(CatalogDiffConverters::streamTransformToApi)
         .toList());
@@ -910,7 +923,7 @@ public class ConnectionsHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
-    final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
+    final var configuredCatalog = catalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
     final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
 
     return getDiff(rawCatalog.orElse(catalogWithSelectedFieldsAnnotated), discoveredCatalog, configuredCatalog, connectionRead.getConnectionId());
@@ -993,10 +1006,10 @@ public class ConnectionsHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destination, sourceConnection.getWorkspaceId());
     final List<DestinationSyncMode> supportedDestinationSyncModes =
         Enums.convertListTo(destinationVersion.getSpec().getSupportedDestinationSyncModes(), DestinationSyncMode.class);
-    final var convertedCatalog = Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
+    final var convertedCatalog = Optional.of(catalogConverter.toApi(jsonCatalog, sourceVersion));
     if (convertedCatalog.isPresent()) {
       convertedCatalog.get().getStreams().forEach((streamAndConfiguration) -> {
-        CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfiguration, supportedDestinationSyncModes);
+        catalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfiguration, supportedDestinationSyncModes);
       });
     }
     return convertedCatalog;
@@ -1011,7 +1024,7 @@ public class ConnectionsHandler {
   public ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSync standardSync = connectionService.getStandardSync(connectionId);
-    return ApiPojoConverters.internalToConnectionRead(standardSync);
+    return apiPojoConverters.internalToConnectionRead(standardSync);
   }
 
   private ConnectionRead buildConnectionRead(final UUID connectionId, final Long jobId)
@@ -1043,7 +1056,7 @@ public class ConnectionsHandler {
     }
 
     catalogWithGeneration.ifPresent(standardSync::setCatalog);
-    return ApiPojoConverters.internalToConnectionRead(standardSync);
+    return apiPojoConverters.internalToConnectionRead(standardSync);
   }
 
   public ConnectionReadList listConnectionsForWorkspaces(final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
@@ -1060,7 +1073,7 @@ public class ConnectionsHandler {
     for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
       final UUID workspaceId = entry.getKey();
       for (final StandardSync standardSync : entry.getValue()) {
-        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+        final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);
         connectionRead.setWorkspaceId(workspaceId);
         connectionReads.add(connectionRead);
       }
@@ -1079,7 +1092,7 @@ public class ConnectionsHandler {
         false);
 
     for (final StandardSync standardSync : standardSyncs) {
-      final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+      final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);
       connectionReads.add(connectionRead);
     }
     return new ConnectionReadList().connections(connectionReads);
@@ -1482,7 +1495,7 @@ public class ConnectionsHandler {
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
         catalog,
-        CatalogConverter.toConfiguredInternal(currentCatalog),
+        catalogConverter.toConfiguredInternal(currentCatalog),
         connectionId);
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
@@ -1494,7 +1507,7 @@ public class ConnectionsHandler {
     final var workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     final var source = sourceService.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
-    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
+    if (autoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
           workspaceId,
@@ -1533,7 +1546,7 @@ public class ConnectionsHandler {
                                                 final List<DestinationSyncMode> supportedDestinationSyncModes) {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    final AutoPropagateSchemaChangeHelper.UpdateSchemaResult propagateResult = AutoPropagateSchemaChangeHelper.getUpdatedSchema(
+    final AutoPropagateSchemaChangeHelper.UpdateSchemaResult propagateResult = autoPropagateSchemaChangeHelper.getUpdatedSchema(
         currentSyncCatalog,
         newCatalog,
         transformations,
@@ -1660,7 +1673,7 @@ public class ConnectionsHandler {
       patch.status(ConnectionStatus.INACTIVE);
       autoDisabledReason = ConnectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING;
     } else if (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE
-        && AutoPropagateSchemaChangeHelper.containsChanges(diff)) {
+        && autoPropagateSchemaChangeHelper.containsChanges(diff)) {
       patch.status(ConnectionStatus.INACTIVE);
       autoDisabledReason = ConnectionAutoDisabledReason.DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES;
     }
@@ -1682,7 +1695,7 @@ public class ConnectionsHandler {
     final var discoveredCatalog = retrieveDiscoveredCatalog(discoveredCatalogId, sourceVersion);
 
     final var diff = getDiff(connectionRead, discoveredCatalog);
-    final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final boolean containsBreakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     final ConnectionRead updatedConnection = disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
     return new SourceDiscoverSchemaRead()
         .breakingChange(containsBreakingChange)
@@ -1699,7 +1712,7 @@ public class ConnectionsHandler {
     final io.airbyte.protocol.models.AirbyteCatalog persistenceCatalog = Jsons.object(
         catalog.getCatalog(),
         io.airbyte.protocol.models.AirbyteCatalog.class);
-    return CatalogConverter.toApi(persistenceCatalog, sourceVersion);
+    return catalogConverter.toApi(persistenceCatalog, sourceVersion);
   }
 
   /**

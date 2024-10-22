@@ -41,8 +41,10 @@ import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
@@ -52,6 +54,7 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookOperationConfigs;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
@@ -114,6 +117,7 @@ class WorkspacesHandlerTest {
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
   private TrackingClient trackingClient;
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -141,7 +145,8 @@ class WorkspacesHandlerTest {
             sourceHandler,
             uuidSupplier,
             workspaceService,
-            trackingClient);
+            trackingClient,
+            apiPojoConverters);
   }
 
   private StandardWorkspace generateWorkspace() {
@@ -877,7 +882,7 @@ class WorkspacesHandlerTest {
     workspacesHandler =
         new WorkspacesHandler(workspacePersistence, organizationPersistence,
             secretsRepositoryWriter, permissionPersistence, connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient);
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters);
 
     final UUID uuid = UUID.randomUUID();
     when(uuidSupplier.get()).thenReturn(uuid);

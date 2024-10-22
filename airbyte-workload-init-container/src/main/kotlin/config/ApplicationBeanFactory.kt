@@ -1,6 +1,7 @@
 package io.airbyte.initContainer.config
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import io.airbyte.commons.protocol.ProtocolSerializer
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -11,6 +12,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.BackfillHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
@@ -23,8 +25,17 @@ class ApplicationBeanFactory {
     resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
+    backfillHelper: BackfillHelper,
+    catalogClientConverters: CatalogClientConverters,
   ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient)
+    return ReplicationInputHydrator(
+      airbyteApiClient,
+      resumableFullRefreshStatsHelper,
+      secretsRepositoryReader,
+      featureFlagClient,
+      backfillHelper,
+      catalogClientConverters,
+    )
   }
 
   @Singleton

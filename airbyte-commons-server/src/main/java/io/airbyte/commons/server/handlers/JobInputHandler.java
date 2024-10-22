@@ -95,6 +95,7 @@ public class JobInputHandler {
   private final ConnectionService connectionService;
   private final SourceService sourceService;
   private final DestinationService destinationService;
+  private final ApiPojoConverters apiPojoConverters;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobInputHandler.class);
 
@@ -109,7 +110,8 @@ public class JobInputHandler {
                          final ContextBuilder contextBuilder,
                          final ConnectionService connectionService,
                          final SourceService sourceService,
-                         final DestinationService destinationService) {
+                         final DestinationService destinationService,
+                         final ApiPojoConverters apiPojoConverters) {
     this.jobPersistence = jobPersistence;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
@@ -121,6 +123,7 @@ public class JobInputHandler {
     this.connectionService = connectionService;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   /**
@@ -316,7 +319,7 @@ public class JobInputHandler {
     attemptHandler.saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(jobId)
         .attemptNumber(attemptNumber)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
+        .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
   }
 
   /**

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.converters.ApiPojoConverters.internalToConnectionRead;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static io.airbyte.config.EnvConfigs.DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE;
@@ -94,6 +93,7 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -293,6 +293,10 @@ class ConnectionsHandlerTest {
   private CatalogService catalogService;
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
+  private final ConnectionScheduleHelper connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters);
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -418,7 +422,8 @@ class ConnectionsHandlerTest {
             actorDefinitionVersionHelper,
             destinationService,
             actorDefinitionHandlerHelper,
-            actorDefinitionVersionUpdater);
+            actorDefinitionVersionUpdater,
+            apiPojoConverters);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -434,9 +439,12 @@ class ConnectionsHandlerTest {
         workspaceService,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        catalogConverter,
+        apiPojoConverters);
 
-    matchSearchHandler = new MatchSearchHandler(destinationHandler, sourceHandler, sourceService, destinationService, connectionService);
+    matchSearchHandler =
+        new MatchSearchHandler(destinationHandler, sourceHandler, sourceService, destinationService, connectionService, apiPojoConverters);
     jobNotifier = mock(JobNotifier.class);
     featureFlagClient = mock(TestClient.class);
     job = mock(Job.class);
@@ -486,7 +494,11 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator);
+          destinationCatalogGenerator,
+          catalogConverter,
+          autoPropagateSchemaChangeHelper,
+          apiPojoConverters,
+          connectionSchedulerHelper);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -639,8 +651,8 @@ class ConnectionsHandlerTest {
       final ConnectionReadList actualConnectionReadListWithDeleted = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody, true);
       final List<ConnectionRead> connections = actualConnectionReadListWithDeleted.getConnections();
       assertEquals(2, connections.size());
-      assertEquals(internalToConnectionRead(standardSync), connections.get(0));
-      assertEquals(internalToConnectionRead(standardSyncDeleted), connections.get(1));
+      assertEquals(apiPojoConverters.internalToConnectionRead(standardSync), connections.get(0));
+      assertEquals(apiPojoConverters.internalToConnectionRead(standardSyncDeleted), connections.get(1));
 
     }
 
@@ -1118,7 +1130,7 @@ class ConnectionsHandlerTest {
                 .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest())
                 .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit()))
             .sourceCatalogId(standardSync.getSourceCatalogId())
-            .geography(ApiPojoConverters.toApiGeography(standardSync.getGeography()))
+            .geography(apiPojoConverters.toApiGeography(standardSync.getGeography()))
             .notifySchemaChanges(standardSync.getNotifySchemaChanges())
             .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
             .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
@@ -1259,7 +1271,7 @@ class ConnectionsHandlerTest {
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
 
         final String streamName = "stream-name";
-        when(destinationCatalogGenerator.generateDestinationCatalog(CatalogConverter.toConfiguredInternal(catalog)))
+        when(destinationCatalogGenerator.generateDestinationCatalog(catalogConverter.toConfiguredInternal(catalog)))
             .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
                 Map.of(
                     new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
@@ -1642,7 +1654,7 @@ class ConnectionsHandlerTest {
 
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
-            .withFieldSelectionData(CatalogConverter.getFieldSelectionData(catalogForUpdate));
+            .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate));
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
@@ -1680,7 +1692,7 @@ class ConnectionsHandlerTest {
 
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
-            .withFieldSelectionData(CatalogConverter.getFieldSelectionData(catalogForUpdate));
+            .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate));
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
@@ -1702,7 +1714,7 @@ class ConnectionsHandlerTest {
 
         final String streamName = "stream-name";
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
-        when(destinationCatalogGenerator.generateDestinationCatalog(CatalogConverter.toConfiguredInternal(catalogForUpdate)))
+        when(destinationCatalogGenerator.generateDestinationCatalog(catalogConverter.toConfiguredInternal(catalogForUpdate)))
             .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
                 Map.of(
                     new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
@@ -1817,7 +1829,7 @@ class ConnectionsHandlerTest {
 
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
-            .withFieldSelectionData(CatalogConverter.getFieldSelectionData(catalogForUpdate));
+            .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate));
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
@@ -1868,8 +1880,8 @@ class ConnectionsHandlerTest {
             .withSchedule(null)
             .withManual(true)
             .withCatalog(expectedPersistedCatalog)
-            .withFieldSelectionData(CatalogConverter.getFieldSelectionData(catalogForUpdate))
-            .withResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(resourceRequirements))
+            .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate))
+            .withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(resourceRequirements))
             .withSourceCatalogId(newSourceCatalogId)
             .withOperationIds(List.of(operationId, otherOperationId))
             .withGeography(Geography.EU);
@@ -1888,7 +1900,7 @@ class ConnectionsHandlerTest {
             standardSync.getDestinationId(),
             standardSync.getOperationIds(),
             newSourceCatalogId,
-            ApiPojoConverters.toApiGeography(standardSync.getGeography()),
+            apiPojoConverters.toApiGeography(standardSync.getGeography()),
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
@@ -1913,7 +1925,7 @@ class ConnectionsHandlerTest {
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
             .connectionId(standardSync.getConnectionId())
             .operationIds(Collections.singletonList(operationId))
-            .syncCatalog(CatalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()));
+            .syncCatalog(catalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()));
 
         assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
@@ -1989,7 +2001,8 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator);
+          destinationCatalogGenerator, catalogConverter, autoPropagateSchemaChangeHelper,
+          apiPojoConverters, connectionSchedulerHelper);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2228,7 +2241,8 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator);
+          destinationCatalogGenerator,
+          catalogConverter, autoPropagateSchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper);
     }
 
     @Test
@@ -2566,9 +2580,9 @@ class ConnectionsHandlerTest {
 
       // convert the AirbyteCatalog model to the AirbyteCatalog API model
 
-      final AirbyteCatalog convertedGoodCatalog = CatalogConverter.toApi(goodCatalog, null);
-      final AirbyteCatalog convertedGoodCatalogAltered = CatalogConverter.toApi(goodCatalogAltered, null);
-      final AirbyteCatalog convertedBadCatalog = CatalogConverter.toApi(badCatalog, null);
+      final AirbyteCatalog convertedGoodCatalog = catalogConverter.toApi(goodCatalog, null);
+      final AirbyteCatalog convertedGoodCatalogAltered = catalogConverter.toApi(goodCatalogAltered, null);
+      final AirbyteCatalog convertedBadCatalog = catalogConverter.toApi(badCatalog, null);
 
       // No issue for valid catalogs
 
@@ -3155,7 +3169,9 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator);
+          destinationCatalogGenerator,
+          catalogConverter, autoPropagateSchemaChangeHelper,
+          apiPojoConverters, connectionSchedulerHelper);
     }
 
     @Test
@@ -3166,7 +3182,7 @@ class ConnectionsHandlerTest {
       // notification function is called correctly requires the original object.
       final StandardSync originalSync = Jsons.clone(standardSync);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
-          CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+          catalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
           .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).sourceDefinedCursor(false)
               .jsonSchema(Jsons.emptyObject()).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
@@ -3204,7 +3220,8 @@ class ConnectionsHandlerTest {
       // the notification function is being called with copy of the originalSync that does not contain the
       // updated catalog
       // This is ok as we only pass that object to get connectionId and connectionName
-      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE, internalToConnectionRead(originalSync),
+      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
+          apiPojoConverters.internalToConnectionRead(originalSync),
           source, EMAIL);
     }
 
@@ -3215,7 +3232,7 @@ class ConnectionsHandlerTest {
       // See test above for why this part is necessary.
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
-      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
           io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
               Field.of(SKU, JsonSchemaType.STRING),
               newField),
@@ -3239,7 +3256,8 @@ class ConnectionsHandlerTest {
                   .breaking(false)
                   .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
       assertEquals(expectedDiff, actualResult.getPropagatedDiff());
-      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE, internalToConnectionRead(originalSync),
+      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
+          apiPojoConverters.internalToConnectionRead(originalSync),
           source, EMAIL);
     }
 
@@ -3277,14 +3295,19 @@ class ConnectionsHandlerTest {
     }
 
     @Test
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     void diffCatalogADisablesForBreakingChange()
-        throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-      try (final MockedStatic<AutoPropagateSchemaChangeHelper> helper = Mockito.mockStatic(AutoPropagateSchemaChangeHelper.class)) {
-        helper.when(() -> AutoPropagateSchemaChangeHelper.containsBreakingChange(any())).thenReturn(true);
+        throws JsonValidationException, ConfigNotFoundException, IOException,
+        io.airbyte.config.persistence.ConfigNotFoundException, NoSuchFieldException, IllegalAccessException {
+      final AutoPropagateSchemaChangeHelper helper = mock(AutoPropagateSchemaChangeHelper.class);
+      final java.lang.reflect.Field field = ConnectionsHandler.class.getDeclaredField("autoPropagateSchemaChangeHelper");
+      field.setAccessible(true);
+      field.set(connectionsHandler, helper);
 
-        final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, SOURCE_CATALOG_ID);
-        assertEquals(true, result.getBreakingChange());
-      }
+      when(helper.containsBreakingChange(any())).thenReturn(true);
+
+      final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, SOURCE_CATALOG_ID);
+      assertEquals(true, result.getBreakingChange());
 
       final ArgumentCaptor<StandardSync> syncCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(connectionService).writeStandardSync(syncCaptor.capture());
@@ -3321,7 +3344,7 @@ class ConnectionsHandlerTest {
     @Test
     void postprocessDiscoveredComposesDiffingAndSchemaPropagation()
         throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-      final var catalog = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+      final var catalog = catalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       final var diffResult = new SourceDiscoverSchemaRead().catalog(catalog);
       final var transform = new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
           .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM));
@@ -3371,7 +3394,11 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator);
+          destinationCatalogGenerator,
+          catalogConverter,
+          autoPropagateSchemaChangeHelper,
+          apiPojoConverters,
+          connectionSchedulerHelper);
     }
 
     @Test

@@ -32,6 +32,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))

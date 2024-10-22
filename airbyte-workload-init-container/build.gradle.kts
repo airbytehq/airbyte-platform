@@ -39,6 +39,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-featureflag"))

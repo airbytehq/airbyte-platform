@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -26,6 +24,7 @@ import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
@@ -69,6 +68,7 @@ public class DestinationHandler {
   private final DestinationService destinationService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
+  private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -80,7 +80,8 @@ public class DestinationHandler {
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final DestinationService destinationService,
                             final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
-                            final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
+                            final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
+                            final ApiPojoConverters apiPojoConverters) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -91,6 +92,7 @@ public class DestinationHandler {
     this.destinationService = destinationService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -431,7 +433,7 @@ public class DestinationHandler {
         .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
+        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
   protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,

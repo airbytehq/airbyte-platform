@@ -39,6 +39,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -52,6 +53,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
@@ -112,6 +114,7 @@ class DestinationDefinitionsHandlerTest {
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
   private DestinationService destinationService;
   private WorkspaceService workspaceService;
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -144,7 +147,8 @@ class DestinationDefinitionsHandlerTest {
         actorDefinitionVersionHelper,
         airbyteCompatibleConnectorsValidator,
         destinationService,
-        workspaceService);
+        workspaceService,
+        apiPojoConverters);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -250,7 +254,7 @@ class DestinationDefinitionsHandlerTest {
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithOptionals.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithOptionals.getReleaseDate()))
         .cdkVersion(destinationDefinitionVersionWithOptionals.getCdkVersion())
-        .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
+        .lastPublished(apiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
         .metrics(destinationDefinitionWithOptionals.getMetrics())
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()

@@ -6,6 +6,7 @@ package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
@@ -18,6 +19,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.BackfillHelper
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
@@ -49,8 +51,17 @@ class ApplicationBeanFactory {
     resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
+    backfillHelper: BackfillHelper,
+    catalogClientConverters: CatalogClientConverters,
   ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient)
+    return ReplicationInputHydrator(
+      airbyteApiClient,
+      resumableFullRefreshStatsHelper,
+      secretsRepositoryReader,
+      featureFlagClient,
+      backfillHelper,
+      catalogClientConverters,
+    )
   }
 
   @Singleton

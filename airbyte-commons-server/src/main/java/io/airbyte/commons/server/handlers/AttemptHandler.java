@@ -83,6 +83,7 @@ public class AttemptHandler {
   private final DestinationService destinationService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final StreamAttemptMetadataService streamAttemptMetadataService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public AttemptHandler(final JobPersistence jobPersistence,
                         final StatePersistence statePersistence,
@@ -94,7 +95,8 @@ public class AttemptHandler {
                         final ConnectionService connectionService,
                         final DestinationService destinationService,
                         final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                        final StreamAttemptMetadataService streamAttemptMetadataService) {
+                        final StreamAttemptMetadataService streamAttemptMetadataService,
+                        final ApiPojoConverters apiPojoConverters) {
     this.jobPersistence = jobPersistence;
     this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
@@ -106,6 +108,7 @@ public class AttemptHandler {
     this.destinationService = destinationService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.streamAttemptMetadataService = streamAttemptMetadataService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
@@ -312,7 +315,7 @@ public class AttemptHandler {
       jobPersistence.writeAttemptSyncConfig(
           requestBody.getJobId(),
           requestBody.getAttemptNumber(),
-          ApiPojoConverters.attemptSyncConfigToInternal(requestBody.getSyncConfig()));
+          apiPojoConverters.attemptSyncConfigToInternal(requestBody.getSyncConfig()));
     } catch (final IOException ioe) {
       LOGGER.error("IOException when saving AttemptSyncConfig for attempt;", ioe);
       return new InternalOperationResult().succeeded(false);

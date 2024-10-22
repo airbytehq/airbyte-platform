@@ -47,12 +47,14 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.client.model.generated.SyncMode;
+import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -61,6 +63,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -193,6 +196,8 @@ class ReplicationInputHydratorTest {
   private AttemptApi attemptApi;
   private DestinationApi destinationApi;
   private ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
+  private BackfillHelper backfillHelper;
+  private CatalogClientConverters catalogClientConverters;
 
   @BeforeEach
   void setup() throws IOException {
@@ -207,6 +212,8 @@ class ReplicationInputHydratorTest {
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
     resumableFullRefreshStatsHelper = mock(ResumableFullRefreshStatsHelper.class);
+    catalogClientConverters = new CatalogClientConverters(new FieldGenerator());
+    backfillHelper = new BackfillHelper(catalogClientConverters);
     when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
@@ -221,7 +228,8 @@ class ReplicationInputHydratorTest {
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient);
+    return new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient, backfillHelper,
+        catalogClientConverters);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {

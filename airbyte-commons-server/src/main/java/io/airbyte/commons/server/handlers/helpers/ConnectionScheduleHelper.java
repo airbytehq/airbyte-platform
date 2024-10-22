@@ -21,6 +21,7 @@ import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Singleton;
 import java.text.ParseException;
 import java.util.TimeZone;
 import org.joda.time.DateTimeZone;
@@ -31,19 +32,26 @@ import org.quartz.CronExpression;
  * config.
  */
 @SuppressWarnings("PMD.PreserveStackTrace")
+@Singleton
 public class ConnectionScheduleHelper {
 
+  private final ApiPojoConverters apiPojoConverters;
+
+  public ConnectionScheduleHelper(final ApiPojoConverters apiPojoConverters) {
+    this.apiPojoConverters = apiPojoConverters;
+  }
+
   /**
-   * Populate schedule data into a standard sync. Mutates the intput object!
+   * Populate schedule data into a standard sync. Mutates the input object!
    *
    * @param standardSync sync to hydrate
    * @param scheduleType schedule type to add to sync
    * @param scheduleData schedule data to add to sync
    * @throws JsonValidationException exception if any of the inputs are invalid json
    */
-  public static void populateSyncFromScheduleTypeAndData(final StandardSync standardSync,
-                                                         final ConnectionScheduleType scheduleType,
-                                                         final ConnectionScheduleData scheduleData)
+  public void populateSyncFromScheduleTypeAndData(final StandardSync standardSync,
+                                                  final ConnectionScheduleType scheduleType,
+                                                  final ConnectionScheduleData scheduleData)
       throws JsonValidationException {
     if (scheduleType != ConnectionScheduleType.MANUAL && scheduleData == null) {
       throw new JsonValidationException("schedule data must be populated if schedule type is populated");
@@ -63,13 +71,13 @@ public class ConnectionScheduleHelper {
         standardSync
             .withScheduleType(ScheduleType.BASIC_SCHEDULE)
             .withScheduleData(new ScheduleData().withBasicSchedule(
-                new BasicSchedule().withTimeUnit(ApiPojoConverters.toBasicScheduleTimeUnit(scheduleData.getBasicSchedule().getTimeUnit()))
+                new BasicSchedule().withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(scheduleData.getBasicSchedule().getTimeUnit()))
                     .withUnits(scheduleData.getBasicSchedule().getUnits())))
             .withManual(false);
         // Populate the legacy format for now as well, since some places still expect it to exist.
         // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove.
         final Schedule schedule = new Schedule()
-            .withTimeUnit(ApiPojoConverters.toLegacyScheduleTimeUnit(scheduleData.getBasicSchedule().getTimeUnit()))
+            .withTimeUnit(apiPojoConverters.toLegacyScheduleTimeUnit(scheduleData.getBasicSchedule().getTimeUnit()))
             .withUnits(scheduleData.getBasicSchedule().getUnits());
         standardSync
             .withManual(false)

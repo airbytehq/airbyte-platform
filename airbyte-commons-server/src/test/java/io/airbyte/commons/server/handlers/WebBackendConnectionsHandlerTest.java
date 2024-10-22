@@ -77,8 +77,10 @@ import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -168,6 +170,9 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -216,7 +221,8 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionVersionHelper,
         destinationService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        apiPojoConverters);
 
     final SourceHandler sourceHandler = new SourceHandler(
         catalogService,
@@ -233,7 +239,9 @@ class WebBackendConnectionsHandlerTest {
         workspaceService,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        catalogConverter,
+        apiPojoConverters);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,
@@ -251,7 +259,9 @@ class WebBackendConnectionsHandlerTest {
         fieldGenerator,
         destinationService,
         sourceService,
-        workspaceService));
+        workspaceService, catalogConverter,
+        autoPropagateSchemaChangeHelper,
+        apiPojoConverters));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
@@ -1095,7 +1105,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
 
     verify(connectionsHandler).getDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog(),
-        CatalogConverter.toConfiguredInternal(result.getSyncCatalog()), expected.getConnectionId());
+        catalogConverter.toConfiguredInternal(result.getSyncCatalog()), expected.getConnectionId());
     verify(connectionsHandler).getConfigurationDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);

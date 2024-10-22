@@ -36,6 +36,7 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -47,6 +48,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
@@ -110,6 +112,8 @@ class SourceHandlerTest {
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private CatalogService catalogService;
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -168,7 +172,7 @@ class SourceHandlerTest {
         workspaceService,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters);
   }
 
   @Test
@@ -523,7 +527,7 @@ class SourceHandlerTest {
     expectedCatalog.getStreams().forEach(s -> s.withSourceDefinedCursor(false));
 
     final SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody()
-        .catalog(CatalogConverter.toApi(expectedCatalog, new ActorDefinitionVersion()))
+        .catalog(catalogConverter.toApi(expectedCatalog, new ActorDefinitionVersion()))
         .sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
@@ -558,14 +562,14 @@ class SourceHandlerTest {
             createAirbyteStream("streamB", Field.of(SKU, JsonSchemaType.STRING))));
 
     final SourceDiscoverSchemaWriteRequestBody requestOne = new SourceDiscoverSchemaWriteRequestBody().catalog(
-        CatalogConverter.toApi(airbyteCatalogWithOneStream, advNoSuggestedStreams)).sourceId(actorId).connectorVersion(connectorVersion)
+        catalogConverter.toApi(airbyteCatalogWithOneStream, advNoSuggestedStreams)).sourceId(actorId).connectorVersion(connectorVersion)
         .configurationHash(hashValue);
     final SourceDiscoverSchemaWriteRequestBody requestTwo = new SourceDiscoverSchemaWriteRequestBody().catalog(
-        CatalogConverter.toApi(airbyteCatalogWithTwoUnsuggestedStreams, advNoSuggestedStreams)).sourceId(actorId)
+        catalogConverter.toApi(airbyteCatalogWithTwoUnsuggestedStreams, advNoSuggestedStreams)).sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
     final SourceDiscoverSchemaWriteRequestBody requestThree = new SourceDiscoverSchemaWriteRequestBody().catalog(
-        CatalogConverter.toApi(airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream, advOneSuggestedStream)).sourceId(actorId)
+        catalogConverter.toApi(airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream, advOneSuggestedStream)).sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 

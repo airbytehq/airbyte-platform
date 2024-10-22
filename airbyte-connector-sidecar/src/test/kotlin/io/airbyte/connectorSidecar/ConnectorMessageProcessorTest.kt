@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
+import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
@@ -12,6 +13,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.protocol.models.AirbyteCatalog
 import io.airbyte.protocol.models.AirbyteConnectionStatus
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage
@@ -58,10 +60,12 @@ class ConnectorMessageProcessorTest {
 
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
+  private val catalogClientConverters = CatalogClientConverters(FieldGenerator())
+
   @BeforeEach
   fun init() {
     every { airbyteApiClient.sourceApi } returns sourceApi
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient)
+    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient, catalogClientConverters)
   }
 
   @Test

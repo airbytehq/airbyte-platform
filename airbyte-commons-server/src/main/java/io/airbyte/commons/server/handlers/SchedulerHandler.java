@@ -154,6 +154,9 @@ public class SchedulerHandler {
   private final SourceService sourceService;
   private final DestinationService destinationService;
 
+  private final CatalogConverter catalogConverter;
+  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+
   @VisibleForTesting
   public SchedulerHandler(final ActorDefinitionService actorDefinitionService,
                           final CatalogService catalogService,
@@ -181,7 +184,9 @@ public class SchedulerHandler {
                           final StreamRefreshesHandler streamRefreshesHandler,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper,
                           final SourceService sourceService,
-                          final DestinationService destinationService) {
+                          final DestinationService destinationService,
+                          final CatalogConverter catalogConverter,
+                          final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper) {
     this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
@@ -214,6 +219,8 @@ public class SchedulerHandler {
         connectionTimelineEventHelper);
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
+    this.catalogConverter = catalogConverter;
+    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -408,7 +415,7 @@ public class SchedulerHandler {
         .logs(new LogRead().logLines(new ArrayList<>()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
+        .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
         .jobInfo(emptyJob)
         .catalogId(currentCatalog.get().getId());
   }
@@ -452,7 +459,7 @@ public class SchedulerHandler {
         .logs(new LogRead().logLines(new ArrayList<>()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
+        .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
         .jobInfo(emptyJob)
         .catalogId(existingCatalog.get().getId());
   }
@@ -561,7 +568,7 @@ public class SchedulerHandler {
       final ActorCatalog catalog = catalogService.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
           io.airbyte.protocol.models.AirbyteCatalog.class);
-      sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceVersion));
+      sourceDiscoverSchemaRead.catalog(catalogConverter.toApi(persistenceCatalog, sourceVersion));
       sourceDiscoverSchemaRead.catalogId(response.getOutput());
     }
 
@@ -666,8 +673,8 @@ public class SchedulerHandler {
           connectionRead.getSyncCatalog();
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
-              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
-      final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+              catalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
+      final boolean containsBreakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(diff);
       final ConnectionRead updatedConnection =
           connectionsHandler.disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {

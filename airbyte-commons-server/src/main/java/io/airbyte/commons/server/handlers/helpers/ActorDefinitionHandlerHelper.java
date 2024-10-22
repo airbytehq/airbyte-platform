@@ -47,17 +47,20 @@ public class ActorDefinitionHandlerHelper {
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionService actorDefinitionService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
                                       final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
                                       final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
                                       final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                      final ActorDefinitionService actorDefinitionService) {
+                                      final ActorDefinitionService actorDefinitionService,
+                                      final ApiPojoConverters apiPojoConverters) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.actorDefinitionService = actorDefinitionService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   /**
@@ -221,7 +224,7 @@ public class ActorDefinitionHandlerHelper {
     if (!breakingChanges.isEmpty()) {
       final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
       return Optional.of(new ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
+          .upcomingBreakingChanges(breakingChanges.stream().map(apiPojoConverters::toApiBreakingChange).toList())
           .minUpgradeDeadline(minUpgradeDeadline));
     } else {
       return Optional.empty();

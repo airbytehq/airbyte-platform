@@ -4,9 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportLevel;
-import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
@@ -52,6 +49,7 @@ public class ActorDefinitionVersionHandler {
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ApiPojoConverters apiPojoConverters;
 
   @Inject
   public ActorDefinitionVersionHandler(final SourceService sourceService,
@@ -59,13 +57,15 @@ public class ActorDefinitionVersionHandler {
                                        final ActorDefinitionService actorDefinitionService,
                                        final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
                                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
+                                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
+                                       final ApiPojoConverters apiPojoConverters) {
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.actorDefinitionService = actorDefinitionService;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -99,7 +99,7 @@ public class ActorDefinitionVersionHandler {
   public ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionByTag(final ResolveActorDefinitionVersionRequestBody resolveVersionReq)
       throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
     final UUID actorDefinitionId = resolveVersionReq.getActorDefinitionId();
-    final ActorType actorType = ApiPojoConverters.toInternalActorType(resolveVersionReq.getActorType());
+    final ActorType actorType = apiPojoConverters.toInternalActorType(resolveVersionReq.getActorType());
     final ActorDefinitionVersion defaultVersion = getDefaultVersion(actorType, actorDefinitionId);
 
     final Optional<ActorDefinitionVersion> optResolvedVersion = actorDefinitionVersionResolver.resolveVersionForTag(
@@ -139,10 +139,10 @@ public class ActorDefinitionVersionHandler {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
-        .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
-        .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
+        .supportState(apiPojoConverters.toApiSupportState(actorDefinitionVersion.getSupportState()))
+        .supportLevel(apiPojoConverters.toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
         .cdkVersion(actorDefinitionVersion.getCdkVersion())
-        .lastPublished(ApiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
+        .lastPublished(apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
         .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied())
         .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer());
 
