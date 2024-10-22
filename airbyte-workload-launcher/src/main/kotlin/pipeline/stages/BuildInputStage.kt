@@ -11,7 +11,7 @@ import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
-import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
@@ -41,7 +41,7 @@ import reactor.core.publisher.Mono
 open class BuildInputStage(
   private val checkInputHydrator: CheckConnectionInputHydrator,
   private val discoverConnectionInputHydrator: DiscoverCatalogInputHydrator,
-  private val replicationInputHydrator: ReplicationInputHydrator,
+  private val replicationInputMapper: ReplicationInputMapper,
   private val deserializer: PayloadDeserializer,
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
@@ -112,7 +112,7 @@ open class BuildInputStage(
 
       WorkloadType.SYNC -> {
         val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(rawPayload)
-        SyncPayload(replicationInputHydrator.mapActivityInputToReplInput(parsed))
+        SyncPayload(replicationInputMapper.toReplicationInput(parsed))
       }
 
       WorkloadType.SPEC -> {

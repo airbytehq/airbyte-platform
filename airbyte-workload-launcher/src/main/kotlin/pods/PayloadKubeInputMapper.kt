@@ -32,6 +32,7 @@ import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
+import io.airbyte.workload.launcher.model.getOrganizationId
 import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -158,7 +159,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildCheckFileMap(workloadId, input, logPath)
 
-    val runtimeEnvVars = runTimeEnvVarFactory.checkConnectorEnvVars(input.launcherConfig, workloadId)
+    val runtimeEnvVars = runTimeEnvVarFactory.checkConnectorEnvVars(input.launcherConfig, input.getOrganizationId(), workloadId)
 
     return ConnectorKubeInput(
       labeler.getCheckLabels() + sharedLabels,
@@ -201,7 +202,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildDiscoverFileMap(workloadId, input, logPath)
 
-    val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, workloadId)
+    val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, input.getOrganizationId(), workloadId)
 
     return ConnectorKubeInput(
       labeler.getDiscoverLabels() + sharedLabels,

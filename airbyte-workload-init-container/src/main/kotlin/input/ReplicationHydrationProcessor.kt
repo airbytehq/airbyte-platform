@@ -1,7 +1,6 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.MetricAttribute
@@ -36,7 +35,6 @@ class ReplicationHydrationProcessor(
   private val serializer: ObjectSerializer,
   private val protocolSerializer: ProtocolSerializer,
   private val fileClient: FileClient,
-  private val featureFlagClient: FeatureFlagClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
 ) : InputHydrationProcessor {

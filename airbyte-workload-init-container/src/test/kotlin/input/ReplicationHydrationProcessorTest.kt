@@ -7,7 +7,6 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.MetricClient
@@ -51,9 +50,6 @@ class ReplicationHydrationProcessorTest {
   lateinit var fileClient: FileClient
 
   @MockK
-  lateinit var featureFlagClient: FeatureFlagClient
-
-  @MockK
   lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
 
   @MockK
@@ -70,7 +66,6 @@ class ReplicationHydrationProcessorTest {
         serializer,
         protocolSerializer,
         fileClient,
-        featureFlagClient,
         destinationCatalogGenerator,
         metricClient,
       )
@@ -129,7 +124,6 @@ class ReplicationHydrationProcessorTest {
     every {
       destinationCatalogGenerator.generateDestinationCatalog(any())
     } returns DestinationCatalogGenerator.CatalogGenerationResult(hydrated.catalog, mapOf())
-    every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     processor.process(input)
 

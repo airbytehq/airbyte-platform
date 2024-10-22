@@ -34,6 +34,7 @@ import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
+import io.airbyte.workload.launcher.model.getOrganizationId
 import io.airbyte.workload.launcher.pods.PayloadKubeInputMapperTest.Fixtures.fileTransferReqs
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -251,6 +252,7 @@ class PayloadKubeInputMapperTest {
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
+    val organizationId = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workloadId = UUID.randomUUID().toString()
     val logPath = "/log/path"
@@ -262,7 +264,7 @@ class PayloadKubeInputMapperTest {
         every { priority } returns workloadPriority
       }
     val expectedEnv = listOf(EnvVar("key-1", "value-1", null))
-    every { envVarFactory.checkConnectorEnvVars(launcherConfig, workloadId) } returns expectedEnv
+    every { envVarFactory.checkConnectorEnvVars(launcherConfig, organizationId, workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
     val checkInputConfig = mockk<JsonNode>()
     val checkConnectionInput = mockk<StandardCheckConnectionInput>()
@@ -271,6 +273,7 @@ class PayloadKubeInputMapperTest {
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.getActorType() } returns ActorType.SOURCE
+    every { input.getOrganizationId() } returns organizationId
     every { input.jobRunConfig } returns jobRunConfig
     every { input.launcherConfig } returns launcherConfig
     every { input.checkConnectionInput } returns checkConnectionInput
@@ -371,6 +374,7 @@ class PayloadKubeInputMapperTest {
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
+    val organizationId = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workloadId = UUID.randomUUID().toString()
     val logPath = "/log/path"
@@ -382,7 +386,7 @@ class PayloadKubeInputMapperTest {
         every { priority } returns workloadPriority
       }
     val expectedEnv = listOf(EnvVar("key-1", "value-1", null))
-    every { envVarFactory.discoverConnectorEnvVars(launcherConfig, workloadId) } returns expectedEnv
+    every { envVarFactory.discoverConnectorEnvVars(launcherConfig, organizationId, workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
     val catalogInputConfig = mockk<JsonNode>()
     val discoverCatalogInput = mockk<StandardDiscoverCatalogInput>()
@@ -390,6 +394,7 @@ class PayloadKubeInputMapperTest {
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
+    every { input.getOrganizationId() } returns organizationId
     every { input.jobRunConfig } returns jobRunConfig
     every { input.launcherConfig } returns launcherConfig
     every { input.discoverCatalogInput } returns discoverCatalogInput

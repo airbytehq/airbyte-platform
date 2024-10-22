@@ -42,14 +42,12 @@ import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -71,7 +69,8 @@ public class ReplicationInputHydrator {
   private final AirbyteApiClient airbyteApiClient;
   private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
   private final SecretsRepositoryReader secretsRepositoryReader;
-  private final FeatureFlagClient featureFlagClient;
+  private final ReplicationInputMapper mapper;
+  private final Boolean useRuntimeSecretPersistence;
 
   private final BackfillHelper backfillHelper;
   private final CatalogClientConverters catalogClientConverters;
@@ -79,15 +78,17 @@ public class ReplicationInputHydrator {
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
                                   final SecretsRepositoryReader secretsRepositoryReader,
-                                  final FeatureFlagClient featureFlagClient,
                                   final BackfillHelper backfillHelper,
-                                  final CatalogClientConverters catalogClientConverters) {
+                                  final CatalogClientConverters catalogClientConverters,
+                                  final ReplicationInputMapper mapper,
+                                  final Boolean useRuntimeSecretPersistence) {
     this.airbyteApiClient = airbyteApiClient;
-    this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
-    this.secretsRepositoryReader = secretsRepositoryReader;
-    this.featureFlagClient = featureFlagClient;
     this.backfillHelper = backfillHelper;
     this.catalogClientConverters = catalogClientConverters;
+    this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.mapper = mapper;
+    this.useRuntimeSecretPersistence = useRuntimeSecretPersistence;
   }
 
   private <T> T retry(final CheckedSupplier<T> supplier) {
@@ -184,12 +185,15 @@ public class ReplicationInputHydrator {
     final JsonNode fullDestinationConfig;
     final JsonNode fullSourceConfig;
     final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+
+    // If the organization is configured to use "run time secrets management" aka "bring your own
+    // secrets manager", then we must look up their secrets config and hydrate from there.
+    // TODO: The runtime secrets client and the default secrets client should implement the same
+    // interface, so we can avoid this conditional look up and delegation in the hydrator itself and do
+    // it at the injection layer.
+    if (useRuntimeSecretPersistence && organizationId != null) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence = new RuntimeSecretPersistence(
-            fromApiSecretPersistenceConfig(secretPersistenceConfig));
+        final RuntimeSecretPersistence runtimeSecretPersistence = getRuntimeSecretPersistence(organizationId);
         fullSourceConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getSourceConfiguration(),
             runtimeSecretPersistence);
         fullDestinationConfig =
@@ -198,12 +202,12 @@ public class ReplicationInputHydrator {
       } catch (final IOException e) {
         throw new RuntimeException(e);
       }
-    } else {
+    } else { // use default configured persistence
       fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
       fullDestinationConfig =
           secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
     }
-    return mapActivityInputToReplInput(replicationActivityInput)
+    return mapper.toReplicationInput(replicationActivityInput)
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)
         .withCatalog(catalog)
@@ -211,29 +215,11 @@ public class ReplicationInputHydrator {
         .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
   }
 
-  /**
-   * Converts ReplicationActivityInput to ReplicationInput by mapping basic files. Does NOT perform
-   * any hydration. Does not copy unhydrated config.
-   */
-  public ReplicationInput mapActivityInputToReplInput(final ReplicationActivityInput replicationActivityInput) {
-    final SourceActorConfig sourceConfiguration = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    return new ReplicationInput()
-        .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
-        .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
-        .withPrefix(replicationActivityInput.getPrefix())
-        .withSourceId(replicationActivityInput.getSourceId())
-        .withDestinationId(replicationActivityInput.getDestinationId())
-        .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
-        .withWorkspaceId(replicationActivityInput.getWorkspaceId())
-        .withConnectionId(replicationActivityInput.getConnectionId())
-        .withIsReset(replicationActivityInput.getIsReset())
-        .withJobRunConfig(replicationActivityInput.getJobRunConfig())
-        .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
-        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
-        .withSignalInput(replicationActivityInput.getSignalInput())
-        .withSourceConfiguration(replicationActivityInput.getSourceConfiguration())
-        .withDestinationConfiguration(replicationActivityInput.getDestinationConfiguration())
-        .withUseFileTransfer(sourceConfiguration.getUseFileTransfer());
+  private RuntimeSecretPersistence getRuntimeSecretPersistence(final UUID organizationId) throws IOException {
+    final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
+        new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
+    return new RuntimeSecretPersistence(
+        fromApiSecretPersistenceConfig(secretPersistenceConfig));
   }
 
   @VisibleForTesting

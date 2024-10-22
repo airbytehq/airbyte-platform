@@ -6,9 +6,6 @@ import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Organization
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper
 import java.io.IOException
 import java.lang.RuntimeException
@@ -20,13 +17,13 @@ import java.util.UUID
 class ConnectorSecretsHydrator(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val airbyteApiClient: AirbyteApiClient,
-  private val featureFlagClient: FeatureFlagClient,
+  private val useRuntimeSecretPersistence: Boolean,
 ) {
   fun hydrateConfig(
     jsonConfig: JsonNode,
     organizationId: UUID?,
   ): JsonNode? {
-    return if (useRuntimeHydration(organizationId)) {
+    return if (useRuntimeSecretPersistence) {
       hydrateFromRuntimePersistence(jsonConfig, organizationId!!) // useRuntimeHydration null checks org id
     } else {
       // Hydrates secrets from Airbyte's secret manager.
@@ -60,7 +57,4 @@ class ConnectorSecretsHydrator(
       runtimeSecretPersistence,
     )
   }
-
-  private fun useRuntimeHydration(organizationId: UUID?): Boolean =
-    organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))
 }

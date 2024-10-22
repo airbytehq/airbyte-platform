@@ -11,6 +11,8 @@ import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -47,6 +49,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> {
     val optionsOverride: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
     val javaOpts = optionsOverride.trim().ifEmpty { containerOrchestratorJavaOpts }
+    val secretPersistenceEnvVars = getSecretPersistenceEnvVars(replicationInput.connectionContext.organizationId)
 
     return listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
@@ -57,7 +60,7 @@ class RuntimeEnvVarFactory(
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, replicationInput.useFileTransfer.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
-    )
+    ) + secretPersistenceEnvVars
   }
 
   fun replicationConnectorEnvVars(
@@ -74,24 +77,31 @@ class RuntimeEnvVarFactory(
     return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv
   }
 
+  // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun checkConnectorEnvVars(
     launcherConfig: IntegrationLauncherConfig,
+    organizationId: UUID,
     workloadId: String,
   ): List<EnvVar> {
     return resolveAwsAssumedRoleEnvVars(launcherConfig) +
+      getSecretPersistenceEnvVars(organizationId) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
   }
 
+  // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun discoverConnectorEnvVars(
     launcherConfig: IntegrationLauncherConfig,
+    organizationId: UUID,
     workloadId: String,
   ): List<EnvVar> {
     return resolveAwsAssumedRoleEnvVars(launcherConfig) +
+      getSecretPersistenceEnvVars(organizationId) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
   }
 
+  // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun specConnectorEnvVars(workloadId: String): List<EnvVar> {
     return listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
@@ -162,6 +172,18 @@ class RuntimeEnvVarFactory(
     envVars.add(EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, concurrentSourceStreamReadEnabled.toString(), null))
 
     return envVars
+  }
+
+  /**
+   * Env vars for controlling runtime secrets hydration behavior.
+   */
+  @VisibleForTesting
+  internal fun getSecretPersistenceEnvVars(organizationId: UUID): List<EnvVar> {
+    val useRuntimeSecretPersistence = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))
+
+    return listOf(
+      EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
+    )
   }
 
   /**

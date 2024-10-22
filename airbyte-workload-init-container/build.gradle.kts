@@ -42,7 +42,6 @@ dependencies {
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
-  implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))

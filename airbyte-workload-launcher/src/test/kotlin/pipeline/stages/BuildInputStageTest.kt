@@ -18,7 +18,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
-import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.JobInput
@@ -57,7 +57,7 @@ class BuildInputStageTest {
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
     val ffClient: TestClient = mockk()
     JobInput(
@@ -69,8 +69,7 @@ class BuildInputStageTest {
         .withDestinationConfiguration(destConfig1),
     )
     every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
-    every { replicationInputHydrator.getHydratedReplicationInput(unhydrated) } returns hydrated
-    every { replicationInputHydrator.mapActivityInputToReplInput(unhydrated) } returns hydrated
+    every { replicationInputHydrator.toReplicationInput(unhydrated) } returns hydrated
 
     val stage =
       BuildInputStage(
@@ -92,7 +91,7 @@ class BuildInputStageTest {
     }
 
     verify {
-      replicationInputHydrator.mapActivityInputToReplInput(unhydrated)
+      replicationInputHydrator.toReplicationInput(unhydrated)
     }
 
     when (val payload = result.payload) {
@@ -126,7 +125,7 @@ class BuildInputStageTest {
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
     val ffClient: TestClient = mockk()
     every { deserializer.toCheckConnectionInput(inputStr) } returns unhydrated
@@ -187,7 +186,7 @@ class BuildInputStageTest {
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
     val ffClient: TestClient = mockk()
 
@@ -231,7 +230,7 @@ class BuildInputStageTest {
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
     every { deserializer.toSpecInput(inputStr) } returns specInput
     val stage =

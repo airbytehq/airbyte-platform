@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConcurrentSourceStreamRead
@@ -8,6 +9,7 @@ import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -20,6 +22,7 @@ import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companio
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCH_JAVA_OPTS
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.connectorAwsAssumedRoleSecretEnvList
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.organizationId
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.workspaceId
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
@@ -247,32 +250,38 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(expected, result)
   }
 
-  @Test
-  fun `builds expected env vars for check connector container`() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `builds expected env vars for check connector container`(useRuntimeSecretPersistence: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
-    val result = factory.checkConnectorEnvVars(config, WORKLOAD_ID)
+    val result = factory.checkConnectorEnvVars(config, organizationId, WORKLOAD_ID)
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
     )
   }
 
-  @Test
-  fun `builds expected env vars for discover connector container`() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `builds expected env vars for discover connector container`(useRuntimeSecretPersistence: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
-    val result = factory.discoverConnectorEnvVars(config, WORKLOAD_ID)
+    val result = factory.discoverConnectorEnvVars(config, organizationId, WORKLOAD_ID)
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -298,8 +307,10 @@ class RuntimeEnvVarFactoryTest {
     optsOverride: String,
     expectedOpts: String,
     useFileTransfer: Boolean,
+    useRuntimeSecretPersistence: Boolean,
   ) {
     every { ffClient.stringVariation(ContainerOrchestratorJavaOpts, any()) } returns optsOverride
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
     val jobRunConfig =
       JobRunConfig()
         .withJobId("2324")
@@ -309,6 +320,7 @@ class RuntimeEnvVarFactoryTest {
         .withJobRunConfig(jobRunConfig)
         .withConnectionId(UUID.randomUUID())
         .withUseFileTransfer(useFileTransfer)
+        .withConnectionContext(ConnectionContext().withOrganizationId(UUID.randomUUID()))
     val result = factory.orchestratorEnvVars(input, WORKLOAD_ID)
 
     assertEquals(
@@ -321,6 +333,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
         EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
       ),
       result,
     )
@@ -329,6 +342,7 @@ class RuntimeEnvVarFactoryTest {
   object Fixtures {
     const val WORKLOAD_ID = "test-workload-id"
     const val CONTAINER_ORCH_JAVA_OPTS = "OPTS"
+    val organizationId = UUID.randomUUID()!!
     val workspaceId = UUID.randomUUID()!!
     val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "creds", null))
   }
@@ -362,12 +376,12 @@ class RuntimeEnvVarFactoryTest {
     @JvmStatic
     private fun orchestratorEnvVarMatrix(): Stream<Arguments> =
       Stream.of(
-        Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true),
-        Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false),
-        Arguments.of("opts 1", "opts 1", true),
-        Arguments.of("opts 2", "opts 2", false),
-        Arguments.of("opts 3 ", "opts 3", true),
-        Arguments.of("  opts 4  ", "opts 4", true),
+        Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true, false),
+        Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false, true),
+        Arguments.of("opts 1", "opts 1", true, true),
+        Arguments.of("opts 2", "opts 2", false, false),
+        Arguments.of("opts 3 ", "opts 3", true, false),
+        Arguments.of("  opts 4  ", "opts 4", true, false),
       )
   }
 }

@@ -16,11 +16,6 @@ airbyte:
   data.plane.service-account:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
-    path: ${FEATURE_FLAG_PATH:/flags}
-    api-key: ${LAUNCHDARKLY_KEY:}
-    base-url: ${FEATURE_FLAG_BASEURL:}
   init:
     operation: ${OPERATION_TYPE:}
   internal-api:
@@ -57,6 +52,7 @@ airbyte:
         client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+    use-runtime-persistence: ${USE_RUNTIME_SECRET_PERSISTENCE:false}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}

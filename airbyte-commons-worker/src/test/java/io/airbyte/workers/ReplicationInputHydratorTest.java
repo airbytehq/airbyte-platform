@@ -57,20 +57,17 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,6 +155,7 @@ class ReplicationInputHydratorTest {
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
   private static final SyncResourceRequirements SYNC_RESOURCE_REQUIREMENTS = new SyncResourceRequirements();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final Boolean useRuntimePersistence = false;
   private static final CatalogDiff CATALOG_DIFF = new CatalogDiff(
       List.of(
           new StreamTransform(
@@ -190,7 +188,6 @@ class ReplicationInputHydratorTest {
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
   private static JobsApi jobsApi;
-  private static FeatureFlagClient featureFlagClient;
   private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
   private AttemptApi attemptApi;
@@ -207,7 +204,6 @@ class ReplicationInputHydratorTest {
     connectionApi = mock(ConnectionApi.class);
     stateApi = mock(StateApi.class);
     jobsApi = mock(JobsApi.class);
-    featureFlagClient = mock(TestClient.class);
     secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
@@ -228,8 +224,14 @@ class ReplicationInputHydratorTest {
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient, backfillHelper,
-        catalogClientConverters);
+    return new ReplicationInputHydrator(
+        airbyteApiClient,
+        resumableFullRefreshStatsHelper,
+        secretsRepositoryReader,
+        backfillHelper,
+        catalogClientConverters,
+        new ReplicationInputMapper(),
+        useRuntimePersistence);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
@@ -419,22 +421,6 @@ class ReplicationInputHydratorTest {
     assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
     CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
         .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
-  }
-
-  @Test
-  void testMapActivityInputToReplInput() {
-    ReplicationActivityInput replicationActivityInput = getDefaultReplicationActivityInputForTest();
-    final JsonNode sourceConfig = Jsons.jsonNode(Map.of("source", "configuration"));
-    replicationActivityInput.setSourceConfiguration(sourceConfig);
-    final JsonNode destinationConfig = Jsons.jsonNode(Map.of("destination", "configuration"));
-    replicationActivityInput.setDestinationConfiguration(destinationConfig);
-
-    ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
-
-    ReplicationInput replicationInput = replicationInputHydrator.mapActivityInputToReplInput(replicationActivityInput);
-
-    assertEquals(sourceConfig, replicationInput.getSourceConfiguration());
-    assertEquals(destinationConfig, replicationInput.getDestinationConfiguration());
   }
 
   private void mockEnableBackfillForConnection(final boolean withRefresh) throws IOException {

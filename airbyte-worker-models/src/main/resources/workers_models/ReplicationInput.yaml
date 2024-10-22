@@ -89,3 +89,5 @@ properties:
     description: whether the sync is transferring files
     type: boolean
     default: false
+  connectionContext:
+    existingJavaType: io.airbyte.config.ConnectionContext
