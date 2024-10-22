@@ -24,6 +24,7 @@ object SourceReadMapper {
       sourceType = DEFINITION_ID_TO_SOURCE_NAME.getOrDefault(sourceRead.sourceDefinitionId, ""),
       workspaceId = sourceRead.workspaceId.toString(),
       configuration = sourceRead.connectionConfiguration,
+      definitionId = sourceRead.sourceDefinitionId.toString(),
     )
   }
 }
