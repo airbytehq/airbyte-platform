@@ -74,7 +74,7 @@ export const OrganizationBillingPage: React.FC = () => {
           </Box>
         </FlexContainer>
       ) : (
-        <FlexContainer gap="2xl" direction="column">
+        <FlexContainer gap="md" direction="column">
           {!!balance?.credits?.balance && balance?.credits?.balance > 0 && (
             <Message
               text={
@@ -90,7 +90,23 @@ export const OrganizationBillingPage: React.FC = () => {
           <BillingBanners />
           <Box py="2xl">
             <EmptyState
-              text={formatMessage({ id: "settings.organization.billing.notSetUp" })}
+              text={
+                <FlexContainer direction="column" alignItems="center" gap="lg">
+                  <FlexItem>{formatMessage({ id: "settings.organization.billing.notSetUp" })}</FlexItem>
+                  <FlexItem>
+                    <FormattedMessage
+                      id="settings.organization.billing.notSetUpDetails"
+                      values={{
+                        lnk: (node: React.ReactNode) => (
+                          <ExternalLink href={links.creditDescription} opensInNewTab>
+                            {node}
+                          </ExternalLink>
+                        ),
+                      }}
+                    />
+                  </FlexItem>
+                </FlexContainer>
+              }
               button={
                 <Button variant="primary" onClick={goToCustomerPortal} isLoading={redirecting}>
                   <FormattedMessage id="settings.organization.billing.paymentMethod.add" />

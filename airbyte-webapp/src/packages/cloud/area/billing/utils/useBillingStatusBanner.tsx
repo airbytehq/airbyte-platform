@@ -130,7 +130,10 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         level: "info",
         content: formatMessage(
           {
-            id: canManageOrganizationBilling ? "billing.banners.inTrialWithLink" : "billing.banners.inTrial",
+            id:
+              context === "top_level" && canManageOrganizationBilling
+                ? "billing.banners.inTrialWithLink"
+                : "billing.banners.inTrial",
           },
           {
             days: Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0),
@@ -146,7 +149,10 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         level: "info",
         content: formatMessage(
           {
-            id: canManageOrganizationBilling ? "billing.banners.postTrialWithLink" : "billing.banners.postTrial",
+            id:
+              context === "top_level" && canManageOrganizationBilling
+                ? "billing.banners.postTrialWithLink"
+                : "billing.banners.postTrial",
           },
           {
             lnk: (node: React.ReactNode) => (

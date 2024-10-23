@@ -1049,6 +1049,7 @@
   "settings.organization.usage.description": "Organization usage is measured in <lnk>credits</lnk>.",
   "settings.billing.credits.minimumVisibleAmount": "< {zeroPointZeroOne}",
   "settings.organization.billing.notSetUp": "Billing has not yet been set up for this organization. Start by adding a payment method.",
+  "settings.organization.billing.notSetUpDetails": "Read more about <lnk>our pricing</lnk>.",
   "settings.organization.billing.title": "Billing",
   "settings.organization.billing.billingInformation": "Billing information",
   "settings.organization.billing.billingInformationError": "Error loading billing information",

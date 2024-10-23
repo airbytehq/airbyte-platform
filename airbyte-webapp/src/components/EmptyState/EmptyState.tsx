@@ -18,7 +18,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon = "cactus", text, d
     <FlexContainer alignItems="center" justifyContent="center" className={styles.circle}>
       <Icon type={icon} color="action" />
     </FlexContainer>
-    <Text color="grey500" size="lg">
+    <Text color="grey500" size="lg" align="center">
       {text}
     </Text>
     {description && <Text color="grey400">{description}</Text>}
