@@ -11665,6 +11665,7 @@ components:
       enum:
         - hashing
         - field-renaming
+      x-sdk-component: true
     ConfiguredStreamMapper:
       type: object
       required:
@@ -11679,6 +11680,7 @@ components:
     MapperConfiguration:
       type: object
       description: The values required to configure the mapper.
+      x-sdk-component: true
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
       type: array
