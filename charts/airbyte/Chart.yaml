@@ -93,7 +93,3 @@ dependencies:
     name: keycloak-setup
     repository: https://airbytehq.github.io/helm-charts/
     version: 0.620.2
-  - condition: postgres.enabled  
-    name: postgresql
-    repository: https://charts.bitnami.com/bitnami
-    version: 16.0.4   
