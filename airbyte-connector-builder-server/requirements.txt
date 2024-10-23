@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==5.14.0
+airbyte-cdk==5.15.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.13.0
     # via airbyte-cdk
@@ -77,15 +77,15 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.136
+langsmith==0.1.137
     # via langchain-core
-markupsafe==3.0.1
+markupsafe==3.0.2
     # via jinja2
 nltk==3.8.1
     # via airbyte-cdk
 numpy==2.1.2
     # via pandas
-orjson==3.10.7
+orjson==3.10.10
     # via
     #   airbyte-cdk
     #   langsmith
