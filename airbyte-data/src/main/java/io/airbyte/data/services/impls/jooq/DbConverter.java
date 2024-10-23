@@ -487,6 +487,7 @@ public class DbConverter {
         .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
         .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
         .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL))
+        .withDeadlineAction(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.DEADLINE_ACTION))
         .withScopedImpact(scopedImpact);
   }
 

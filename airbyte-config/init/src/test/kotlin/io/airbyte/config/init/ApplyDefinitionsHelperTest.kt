@@ -743,6 +743,7 @@ internal class ApplyDefinitionsHelperTest {
         VersionBreakingChange()
           .withMessage("Sample message")
           .withUpgradeDeadline("2023-07-20")
+          .withDeadlineAction("nothing")
           .withMigrationDocumentationUrl("https://example.com"),
       )
 

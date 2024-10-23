@@ -58,6 +58,8 @@ class ConnectorRegistryConvertersTest {
 
   private static final String UPGRADE_DEADLINE = "2023-07-20";
 
+  private static final String DEADLINE_ACTION = "upgrade";
+
   private static final String DOCUMENTATION_URL = "https://example.com";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification().withConnectionSpecification(
       Jsons.jsonNode(ImmutableMap.of("key", "val"))).withProtocolVersion(PROTOCOL_VERSION);
@@ -71,13 +73,15 @@ class ConnectorRegistryConvertersTest {
 
   private static final BreakingChanges sourceRegistryBreakingChanges = new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
       new VersionBreakingChange()
-          .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
+          .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withDeadlineAction(DEADLINE_ACTION)
+          .withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
               List.of(breakingChangeScope)));
 
   private static final BreakingChanges destinationBreakingChanges =
       new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
           new VersionBreakingChange()
-              .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
+              .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withDeadlineAction(DEADLINE_ACTION)
+              .withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
                   List.of(breakingChangeScope)));
 
   private static final BreakingChanges destinationRegistryBreakingChangesWithoutScopedImpact =
@@ -89,6 +93,7 @@ class ConnectorRegistryConvertersTest {
       .withVersion(new Version(PROTOCOL_VERSION))
       .withMigrationDocumentationUrl(DOCUMENTATION_URL)
       .withUpgradeDeadline(UPGRADE_DEADLINE)
+      .withDeadlineAction(DEADLINE_ACTION)
       .withMessage(SAMPLE_MESSAGE)
       .withScopedImpact(List.of(breakingChangeScope)));
 

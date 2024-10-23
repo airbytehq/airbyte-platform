@@ -208,6 +208,7 @@ public class ConnectorRegistryConverters {
             .withVersion(new Version(entry.getKey()))
             .withMigrationDocumentationUrl(entry.getValue().getMigrationDocumentationUrl())
             .withUpgradeDeadline(entry.getValue().getUpgradeDeadline())
+            .withDeadlineAction(entry.getValue().getDeadlineAction())
             .withMessage(entry.getValue().getMessage())
             .withScopedImpact(getValidatedScopedImpact(entry.getValue().getScopedImpact())))
         .collect(Collectors.toList());
