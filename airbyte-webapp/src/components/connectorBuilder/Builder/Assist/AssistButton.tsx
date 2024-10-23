@@ -14,6 +14,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { HttpError } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import {
@@ -53,7 +54,7 @@ const isConfigEqual = (found?: object, currentValue?: object): boolean => {
   // This is because the assist data may contain more information than what is currently in the form.
   // Or the form may contain more information than what is in the assist data.
   // For now, we'll just compare the entire object.
-  return isEqual(found, currentValue);
+  return isEqual(removeEmptyProperties(found), removeEmptyProperties(currentValue));
 };
 
 const replaceStreamsSubpath = (subpath: string): string => {
