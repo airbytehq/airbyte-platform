@@ -177,8 +177,8 @@ class PayloadKubeInputMapperTest {
     assertEquals(containerInfo.image, result.orchestratorImage)
     assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
     assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
-    assertEquals(ResourceConversionUtils.buildResourceRequirements(resourceReqs1), result.orchestratorReqs)
-    assertEquals(ResourceConversionUtils.buildResourceRequirements(resourceReqs3), result.destinationReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.orchestratorReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs3), result.destinationReqs)
     val expectedSourceReqs =
       if (useFileTransfer) {
         resourceReqs2
@@ -187,7 +187,7 @@ class PayloadKubeInputMapperTest {
       } else {
         resourceReqs2
       }
-    assertEquals(ResourceConversionUtils.buildResourceRequirements(expectedSourceReqs), result.sourceReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(expectedSourceReqs), result.sourceReqs)
 
     assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
     assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars)

@@ -74,7 +74,7 @@ class PayloadKubeInputMapper(
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = ResourceConversionUtils.buildResourceRequirements(input.getOrchestratorResourceReqs())
+    val orchestratorReqs = ResourceConversionUtils.domainToApi(input.getOrchestratorResourceReqs())
     val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
     val sourceImage = input.sourceLauncherConfig.dockerImage
@@ -84,11 +84,11 @@ class PayloadKubeInputMapper(
       } else {
         input.getSourceResourceReqs()
       }
-    val sourceReqs = ResourceConversionUtils.buildResourceRequirements(sourceBaseReqs)
+    val sourceReqs = ResourceConversionUtils.domainToApi(sourceBaseReqs)
     val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceBaseReqs, input.useFileTransfer)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage
-    val destinationReqs = ResourceConversionUtils.buildResourceRequirements(input.getDestinationResourceReqs())
+    val destinationReqs = ResourceConversionUtils.domainToApi(input.getDestinationResourceReqs())
     val destinationRuntimeEnvVars =
       runTimeEnvVarFactory.replicationConnectorEnvVars(
         input.destinationLauncherConfig,

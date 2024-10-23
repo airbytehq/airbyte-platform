@@ -68,12 +68,17 @@ class ConnectorPodFactory(
       secretVolumeMounts.add(dataPlaneCreds.mount)
     }
 
-    val connectorResourceReqs = ResourceConversionUtils.buildResourceRequirements(connectorReqs)
+    val connectorResourceReqs = ResourceConversionUtils.domainToApi(connectorReqs)
     val internalVolumeMounts = volumeMounts + secretVolumeMounts
+
+    val initContainerReqs =
+      ResourceConversionUtils.domainToApi(
+        ResourceConversionUtils.sumResourceRequirements(connectorReqs, sidecarReqs),
+      )
 
     val init: Container =
       if (useFetchingInit) {
-        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars, workspaceId)
+        initContainerFactory.createFetching(initContainerReqs, internalVolumeMounts, runtimeEnvVars, workspaceId)
       } else {
         initContainerFactory.createWaiting(connectorResourceReqs, internalVolumeMounts)
       }
@@ -145,7 +150,7 @@ class ConnectorPodFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
-      .withResources(ResourceConversionUtils.buildResourceRequirements(sidecarReqs))
+      .withResources(ResourceConversionUtils.domainToApi(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }

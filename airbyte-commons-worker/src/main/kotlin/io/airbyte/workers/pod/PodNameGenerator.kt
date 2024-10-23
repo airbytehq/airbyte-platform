@@ -5,7 +5,6 @@
 package io.airbyte.workers.pod
 
 import io.airbyte.workers.pod.PodConstants.KUBE_NAME_LEN_LIMIT
-import io.airbyte.workers.pod.PodConstants.REPL_POD_PREFIX
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
@@ -17,7 +16,7 @@ class PodNameGenerator(
     jobId: String,
     attemptId: Long,
   ): String {
-    return "$REPL_POD_PREFIX-job-$jobId-attempt-$attemptId"
+    return "replication-job-$jobId-attempt-$attemptId"
   }
 
   fun getCheckPodName(
