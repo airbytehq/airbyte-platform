@@ -81,10 +81,12 @@ components:
         - "instance_admin"
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_owner"
         - "workspace_admin"
+        - "workspace_runner"
         - "workspace_editor"
         - "workspace_reader"
       x-speakeasy-component: true
@@ -96,10 +98,12 @@ components:
       enum:
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_admin"
         - "workspace_editor"
+        - "workspace_runner"
         - "workspace_reader"
       x-speakeasy-component: true
     UserId:
@@ -136,6 +140,17 @@ components:
           type: "array"
           items:
             type: "string"
+      x-speakeasy-component: true
+    ConfiguredStreamMapper:
+      type: "object"
+      required:
+        - "type"
+        - "mapperConfiguration"
+      properties:
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -1074,6 +1089,13 @@ components:
             "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description:
+            "Mappers that should be applied to the stream before writing\
+            \ to the destination."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
       x-speakeasy-component: true
     StreamConfigurations:
       description: "A list of configured stream options for a connection."

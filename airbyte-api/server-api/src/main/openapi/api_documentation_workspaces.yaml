@@ -253,10 +253,12 @@ components:
         - "instance_admin"
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_owner"
         - "workspace_admin"
+        - "workspace_runner"
         - "workspace_editor"
         - "workspace_reader"
       x-speakeasy-component: true
@@ -268,10 +270,12 @@ components:
       enum:
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_admin"
         - "workspace_editor"
+        - "workspace_runner"
         - "workspace_reader"
       x-speakeasy-component: true
     UserId:
@@ -308,6 +312,17 @@ components:
           type: "array"
           items:
             type: "string"
+      x-speakeasy-component: true
+    ConfiguredStreamMapper:
+      type: "object"
+      required:
+        - "type"
+        - "mapperConfiguration"
+      properties:
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -1246,6 +1261,13 @@ components:
             "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description:
+            "Mappers that should be applied to the stream before writing\
+            \ to the destination."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
       x-speakeasy-component: true
     StreamConfigurations:
       description: "A list of configured stream options for a connection."
@@ -1452,21 +1474,21 @@ components:
               description: "The Client Secret of your OAuth application."
               airbyte_secret: true
       title: null
-    snapchat-marketing:
+    drift:
       properties:
-        client_id:
-          title: "Client ID"
-          type: "string"
-          description: "The Client ID of your Snapchat developer application."
-          airbyte_secret: true
-          order: 0
-        client_secret:
-          title: "Client Secret"
-          type: "string"
-          description: "The Client Secret of your Snapchat developer application."
-          airbyte_secret: true
-          order: 1
-      title: "Snapchat Marketing Spec"
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description: "The Client ID of your Drift developer application."
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description: "The Client Secret of your Drift developer application."
+              airbyte_secret: true
+      title: null
     gitlab:
       properties:
         credentials:
@@ -1693,6 +1715,21 @@ components:
               description: "The Client Secret of your OAuth application."
               airbyte_secret: true
       title: "Pinterest Spec"
+    rd-station-marketing:
+      properties:
+        authorization:
+          properties:
+            client_id:
+              title: "Client ID"
+              type: "string"
+              description: "The Client ID of your RD Station developer application."
+              airbyte_secret: true
+            client_secret:
+              title: "Client Secret"
+              type: "string"
+              description: "The Client Secret of your RD Station developer application"
+              airbyte_secret: true
+      title: "RD Station Marketing Spec"
     zendesk-support:
       properties:
         credentials:
@@ -1913,21 +1950,6 @@ components:
               description: "OAuth Client secret"
               airbyte_secret: true
       title: "GitHub Source Spec"
-    square:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Square-issued ID of your application"
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Square-issued application secret for your application"
-              airbyte_secret: true
-      title: "Square Spec"
     mailchimp:
       properties:
         credentials:
@@ -2021,6 +2043,8 @@ components:
           $ref: "#/components/schemas/azure-blob-storage"
         - title: bing-ads
           $ref: "#/components/schemas/bing-ads"
+        - title: drift
+          $ref: "#/components/schemas/drift"
         - title: facebook-marketing
           $ref: "#/components/schemas/facebook-marketing"
         - title: github
@@ -2061,6 +2085,8 @@ components:
           $ref: "#/components/schemas/notion"
         - title: pinterest
           $ref: "#/components/schemas/pinterest"
+        - title: rd-station-marketing
+          $ref: "#/components/schemas/rd-station-marketing"
         - title: retently
           $ref: "#/components/schemas/retently"
         - title: salesforce
@@ -2071,12 +2097,8 @@ components:
           $ref: "#/components/schemas/slack"
         - title: smartsheets
           $ref: "#/components/schemas/smartsheets"
-        - title: snapchat-marketing
-          $ref: "#/components/schemas/snapchat-marketing"
         - title: snowflake
           $ref: "#/components/schemas/snowflake"
-        - title: square
-          $ref: "#/components/schemas/square"
         - title: surveymonkey
           $ref: "#/components/schemas/surveymonkey"
         - title: tiktok-marketing
@@ -2151,6 +2173,7 @@ components:
         - asana
         - azure-blob-storage
         - bing-ads
+        - drift
         - facebook-marketing
         - github
         - gitlab
@@ -2171,13 +2194,12 @@ components:
         - monday
         - notion
         - pinterest
+        - rd-station-marketing
         - retently
         - salesforce
         - slack
         - smartsheets
-        - snapchat-marketing
         - snowflake
-        - square
         - surveymonkey
         - tiktok-marketing
         - trello

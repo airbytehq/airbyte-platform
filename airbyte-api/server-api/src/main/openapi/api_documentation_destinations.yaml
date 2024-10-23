@@ -295,10 +295,12 @@ components:
         - "instance_admin"
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_owner"
         - "workspace_admin"
+        - "workspace_runner"
         - "workspace_editor"
         - "workspace_reader"
       x-speakeasy-component: true
@@ -310,10 +312,12 @@ components:
       enum:
         - "organization_admin"
         - "organization_editor"
+        - "organization_runner"
         - "organization_reader"
         - "organization_member"
         - "workspace_admin"
         - "workspace_editor"
+        - "workspace_runner"
         - "workspace_reader"
       x-speakeasy-component: true
     UserId:
@@ -350,6 +354,17 @@ components:
           type: "array"
           items:
             type: "string"
+      x-speakeasy-component: true
+    ConfiguredStreamMapper:
+      type: "object"
+      required:
+        - "type"
+        - "mapperConfiguration"
+      properties:
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -1288,6 +1303,13 @@ components:
             "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
           $ref: "#/components/schemas/SelectedFields"
+        mappers:
+          description:
+            "Mappers that should be applied to the stream before writing\
+            \ to the destination."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
       x-speakeasy-component: true
     StreamConfigurations:
       description: "A list of configured stream options for a connection."
@@ -5769,37 +5791,24 @@ components:
     destination-dev-null:
       title: "E2E Test Destination Spec"
       type: "object"
-      required:
-        - "test_destination"
-        - "destinationType"
       properties:
         test_destination:
-          title: "Test Destination"
-          type: "object"
-          description: "The type of destination to be used"
           oneOf:
             - title: "Logging"
-              required:
-                - "test_destination_type"
-                - "logging_config"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "LOGGING"
-                  default: "LOGGING"
                   enum:
                     - "LOGGING"
+                  default: "LOGGING"
                 logging_config:
-                  title: "Logging Configuration"
-                  type: "object"
-                  description: "Configurate how the messages are logged."
                   oneOf:
                     - title: "First N Entries"
-                      description: "Log first N entries per stream."
                       type: "object"
-                      required:
-                        - "logging_type"
-                        - "max_entry_count"
+                      additionalProperties: true
+                      description: "Log first N entries per stream."
                       properties:
                         logging_type:
                           type: "string"
@@ -5807,26 +5816,26 @@ components:
                             - "FirstN"
                           default: "FirstN"
                         max_entry_count:
-                          title: "N"
+                          type: "number"
+                          minimum: 1
+                          maximum: 1000
+                          default: 100
                           description:
                             "Number of entries to log. This destination is\
                             \ for testing only. So it won't make sense to log infinitely.\
                             \ The maximum is 1,000 entries."
-                          type: "number"
-                          default: 100
+                          title: "N"
                           examples:
                             - 100
-                          minimum: 1
-                          maximum: 1000
+                      required:
+                        - "logging_type"
+                        - "max_entry_count"
                     - title: "Every N-th Entry"
+                      type: "object"
+                      additionalProperties: true
                       description:
                         "For each stream, log every N-th entry with a maximum\
                         \ cap."
-                      type: "object"
-                      required:
-                        - "logging_type"
-                        - "nth_entry_to_log"
-                        - "max_entry_count"
                       properties:
                         logging_type:
                           type: "string"
@@ -5834,38 +5843,39 @@ components:
                             - "EveryNth"
                           default: "EveryNth"
                         nth_entry_to_log:
-                          title: "N"
+                          type: "integer"
+                          minimum: 1
+                          maximum: 1000
                           description:
                             "The N-th entry to log for each stream. N starts\
                             \ from 1. For example, when N = 1, every entry is logged;\
                             \ when N = 2, every other entry is logged; when N = 3, one\
                             \ out of three entries is logged."
-                          type: "number"
-                          example:
+                          title: "N"
+                          examples:
                             - 3
+                        max_entry_count:
+                          type: "number"
                           minimum: 1
                           maximum: 1000
-                        max_entry_count:
-                          title: "Max Log Entries"
-                          description:
-                            "Max number of entries to log. This destination\
-                            \ is for testing only. So it won't make sense to log infinitely.\
-                            \ The maximum is 1,000 entries."
-                          type: "number"
                           default: 100
+                          description:
+                            "Number of entries to log. This destination is\
+                            \ for testing only. So it won't make sense to log infinitely.\
+                            \ The maximum is 1,000 entries."
+                          title: "Max Log Entries"
                           examples:
                             - 100
-                          minimum: 1
-                          maximum: 1000
+                      required:
+                        - "logging_type"
+                        - "nth_entry_to_log"
+                        - "max_entry_count"
                     - title: "Random Sampling"
+                      type: "object"
+                      additionalProperties: true
                       description:
                         "For each stream, randomly log a percentage of the\
                         \ entries with a maximum cap."
-                      type: "object"
-                      required:
-                        - "logging_type"
-                        - "sampling_ratio"
-                        - "max_entry_count"
                       properties:
                         logging_type:
                           type: "string"
@@ -5873,72 +5883,88 @@ components:
                             - "RandomSampling"
                           default: "RandomSampling"
                         sampling_ratio:
-                          title: "Sampling Ratio"
-                          description: "A positive floating number smaller than 1."
                           type: "number"
-                          default: 0.001
-                          examples:
-                            - 0.001
                           minimum: 0
                           maximum: 1
+                          description: "A positive floating number smaller than 1."
+                          title: "Sampling Ratio"
+                          examples:
+                            - 0.001
+                          default: 0.001
                         seed:
-                          title: "Random Number Generator Seed"
+                          type: "number"
                           description:
                             "When the seed is unspecified, the current time\
                             \ millis will be used as the seed."
-                          type: "number"
+                          title: "Random Number Generator Seed"
                           examples:
                             - 1900
                         max_entry_count:
-                          title: "Max Log Entries"
-                          description:
-                            "Max number of entries to log. This destination\
-                            \ is for testing only. So it won't make sense to log infinitely.\
-                            \ The maximum is 1,000 entries."
                           type: "number"
-                          default: 100
-                          examples:
-                            - 100
                           minimum: 1
                           maximum: 1000
-            - title: "Silent"
+                          default: 100
+                          description:
+                            "Number of entries to log. This destination is\
+                            \ for testing only. So it won't make sense to log infinitely.\
+                            \ The maximum is 1,000 entries."
+                          title: "Max Log Entries"
+                          examples:
+                            - 100
+                      required:
+                        - "logging_type"
+                        - "sampling_ratio"
+                        - "max_entry_count"
+                  description: "Configurate how the messages are logged."
+                  title: "Logging Configuration"
+                  type: "object"
               required:
                 - "test_destination_type"
+                - "logging_config"
+            - title: "Silent"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "SILENT"
-                  default: "SILENT"
                   enum:
                     - "SILENT"
+                  default: "SILENT"
+              required:
+                - "test_destination_type"
             - title: "Throttled"
+              type: "object"
+              additionalProperties: true
+              properties:
+                test_destination_type:
+                  type: "string"
+                  enum:
+                    - "THROTTLED"
+                  default: "THROTTLED"
+                millis_per_record:
+                  type: "integer"
+                  description: "The number of milliseconds to wait between each record."
               required:
                 - "test_destination_type"
                 - "millis_per_record"
+            - title: "Failing"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "THROTTLED"
-                  default: "THROTTLED"
                   enum:
-                    - "THROTTLED"
-                millis_per_record:
-                  description: "Number of milli-second to pause in between records."
+                    - "FAILING"
+                  default: "FAILING"
+                num_messages:
                   type: "integer"
-            - title: "Failing"
+                  description: "Number of messages after which to fail."
               required:
                 - "test_destination_type"
                 - "num_messages"
-              properties:
-                test_destination_type:
-                  type: "string"
-                  const: "FAILING"
-                  default: "FAILING"
-                  enum:
-                    - "FAILING"
-                num_messages:
-                  description: "Number of messages after which to fail."
-                  type: "integer"
+          description: "The type of destination to be used"
+          title: "Test Destination"
+          type: "object"
         destinationType:
           title: "dev-null"
           const: "dev-null"
@@ -5946,39 +5972,30 @@ components:
             - "dev-null"
           order: 0
           type: "string"
+      required:
+        - "test_destination"
+        - "destinationType"
     destination-dev-null-update:
       title: "E2E Test Destination Spec"
       type: "object"
-      required:
-        - "test_destination"
       properties:
         test_destination:
-          title: "Test Destination"
-          type: "object"
-          description: "The type of destination to be used"
           oneOf:
             - title: "Logging"
-              required:
-                - "test_destination_type"
-                - "logging_config"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "LOGGING"
-                  default: "LOGGING"
                   enum:
                     - "LOGGING"
+                  default: "LOGGING"
                 logging_config:
-                  title: "Logging Configuration"
-                  type: "object"
-                  description: "Configurate how the messages are logged."
                   oneOf:
                     - title: "First N Entries"
-                      description: "Log first N entries per stream."
                       type: "object"
-                      required:
-                        - "logging_type"
-                        - "max_entry_count"
+                      additionalProperties: true
+                      description: "Log first N entries per stream."
                       properties:
                         logging_type:
                           type: "string"
@@ -5986,26 +6003,26 @@ components:
                             - "FirstN"
                           default: "FirstN"
                         max_entry_count:
-                          title: "N"
+                          type: "number"
+                          minimum: 1
+                          maximum: 1000
+                          default: 100
                           description:
                             "Number of entries to log. This destination is\
                             \ for testing only. So it won't make sense to log infinitely.\
                             \ The maximum is 1,000 entries."
-                          type: "number"
-                          default: 100
+                          title: "N"
                           examples:
                             - 100
-                          minimum: 1
-                          maximum: 1000
+                      required:
+                        - "logging_type"
+                        - "max_entry_count"
                     - title: "Every N-th Entry"
+                      type: "object"
+                      additionalProperties: true
                       description:
                         "For each stream, log every N-th entry with a maximum\
                         \ cap."
-                      type: "object"
-                      required:
-                        - "logging_type"
-                        - "nth_entry_to_log"
-                        - "max_entry_count"
                       properties:
                         logging_type:
                           type: "string"
@@ -6013,38 +6030,39 @@ components:
                             - "EveryNth"
                           default: "EveryNth"
                         nth_entry_to_log:
-                          title: "N"
+                          type: "integer"
+                          minimum: 1
+                          maximum: 1000
                           description:
                             "The N-th entry to log for each stream. N starts\
                             \ from 1. For example, when N = 1, every entry is logged;\
                             \ when N = 2, every other entry is logged; when N = 3, one\
                             \ out of three entries is logged."
-                          type: "number"
-                          example:
+                          title: "N"
+                          examples:
                             - 3
+                        max_entry_count:
+                          type: "number"
                           minimum: 1
                           maximum: 1000
-                        max_entry_count:
-                          title: "Max Log Entries"
-                          description:
-                            "Max number of entries to log. This destination\
-                            \ is for testing only. So it won't make sense to log infinitely.\
-                            \ The maximum is 1,000 entries."
-                          type: "number"
                           default: 100
+                          description:
+                            "Number of entries to log. This destination is\
+                            \ for testing only. So it won't make sense to log infinitely.\
+                            \ The maximum is 1,000 entries."
+                          title: "Max Log Entries"
                           examples:
                             - 100
-                          minimum: 1
-                          maximum: 1000
+                      required:
+                        - "logging_type"
+                        - "nth_entry_to_log"
+                        - "max_entry_count"
                     - title: "Random Sampling"
+                      type: "object"
+                      additionalProperties: true
                       description:
                         "For each stream, randomly log a percentage of the\
                         \ entries with a maximum cap."
-                      type: "object"
-                      required:
-                        - "logging_type"
-                        - "sampling_ratio"
-                        - "max_entry_count"
                       properties:
                         logging_type:
                           type: "string"
@@ -6052,72 +6070,90 @@ components:
                             - "RandomSampling"
                           default: "RandomSampling"
                         sampling_ratio:
-                          title: "Sampling Ratio"
-                          description: "A positive floating number smaller than 1."
                           type: "number"
-                          default: 0.001
-                          examples:
-                            - 0.001
                           minimum: 0
                           maximum: 1
+                          description: "A positive floating number smaller than 1."
+                          title: "Sampling Ratio"
+                          examples:
+                            - 0.001
+                          default: 0.001
                         seed:
-                          title: "Random Number Generator Seed"
+                          type: "number"
                           description:
                             "When the seed is unspecified, the current time\
                             \ millis will be used as the seed."
-                          type: "number"
+                          title: "Random Number Generator Seed"
                           examples:
                             - 1900
                         max_entry_count:
-                          title: "Max Log Entries"
-                          description:
-                            "Max number of entries to log. This destination\
-                            \ is for testing only. So it won't make sense to log infinitely.\
-                            \ The maximum is 1,000 entries."
                           type: "number"
-                          default: 100
-                          examples:
-                            - 100
                           minimum: 1
                           maximum: 1000
-            - title: "Silent"
+                          default: 100
+                          description:
+                            "Number of entries to log. This destination is\
+                            \ for testing only. So it won't make sense to log infinitely.\
+                            \ The maximum is 1,000 entries."
+                          title: "Max Log Entries"
+                          examples:
+                            - 100
+                      required:
+                        - "logging_type"
+                        - "sampling_ratio"
+                        - "max_entry_count"
+                  description: "Configurate how the messages are logged."
+                  title: "Logging Configuration"
+                  type: "object"
               required:
                 - "test_destination_type"
+                - "logging_config"
+            - title: "Silent"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "SILENT"
-                  default: "SILENT"
                   enum:
                     - "SILENT"
+                  default: "SILENT"
+              required:
+                - "test_destination_type"
             - title: "Throttled"
+              type: "object"
+              additionalProperties: true
+              properties:
+                test_destination_type:
+                  type: "string"
+                  enum:
+                    - "THROTTLED"
+                  default: "THROTTLED"
+                millis_per_record:
+                  type: "integer"
+                  description: "The number of milliseconds to wait between each record."
               required:
                 - "test_destination_type"
                 - "millis_per_record"
+            - title: "Failing"
+              type: "object"
+              additionalProperties: true
               properties:
                 test_destination_type:
                   type: "string"
-                  const: "THROTTLED"
-                  default: "THROTTLED"
                   enum:
-                    - "THROTTLED"
-                millis_per_record:
-                  description: "Number of milli-second to pause in between records."
+                    - "FAILING"
+                  default: "FAILING"
+                num_messages:
                   type: "integer"
-            - title: "Failing"
+                  description: "Number of messages after which to fail."
               required:
                 - "test_destination_type"
                 - "num_messages"
-              properties:
-                test_destination_type:
-                  type: "string"
-                  const: "FAILING"
-                  default: "FAILING"
-                  enum:
-                    - "FAILING"
-                num_messages:
-                  description: "Number of messages after which to fail."
-                  type: "integer"
+          description: "The type of destination to be used"
+          title: "Test Destination"
+          type: "object"
+      required:
+        - "test_destination"
     destination-snowflake-cortex:
       title: "Destination Config"
       description:
