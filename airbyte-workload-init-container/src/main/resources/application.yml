@@ -64,10 +64,9 @@ airbyte:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-id: ${WORKLOAD_ID:}
-
-logger:
-  levels:
-    com.zaxxer.hikari: ERROR
-    com.zaxxer.hikari.pool: ERROR
+#logger:
+#  levels:
+#    com.zaxxer.hikari: ERROR
+#    com.zaxxer.hikari.pool: ERROR
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG

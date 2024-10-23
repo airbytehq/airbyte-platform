@@ -4,14 +4,14 @@
 package io.airbyte.initContainer
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.runtime.Micronaut
+import io.micronaut.context.ApplicationContext
 
 private val logger = KotlinLogging.logger {}
 
 fun main() {
   logger.info { "Init start" }
 
-  Micronaut.build()
+  ApplicationContext.builder()
     .deduceEnvironment(false)
     .start()
 
