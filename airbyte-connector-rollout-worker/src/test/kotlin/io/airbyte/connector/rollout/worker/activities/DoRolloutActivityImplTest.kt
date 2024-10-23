@@ -21,6 +21,7 @@ class DoRolloutActivityImplTest {
   companion object {
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
     private const val DOCKER_IMAGE_TAG = "0.1"
+    private const val TARGET_PERCENTAGE = 0
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
     private val ACTOR_IDS = listOf(UUID.randomUUID())
@@ -45,6 +46,7 @@ class DoRolloutActivityImplTest {
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
         actorIds = ACTOR_IDS,
+        targetPercentage = TARGET_PERCENTAGE,
       )
 
     doRolloutActivity.doRollout(input)

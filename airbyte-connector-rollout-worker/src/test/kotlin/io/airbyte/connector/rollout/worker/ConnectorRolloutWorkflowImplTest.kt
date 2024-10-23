@@ -308,6 +308,7 @@ class ConnectorRolloutWorkflowImplTest {
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
         ACTOR_IDS,
+        null,
       ),
     )
     verify(doRolloutActivity).doRollout(MockitoHelper.anyObject())

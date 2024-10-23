@@ -494,7 +494,7 @@ internal class ActorDefinitionVersionUpdaterTest {
   }
 
   @Test
-  fun testGetUpgradeCandidates() {
+  fun `testGetUpgradeCandidates`() {
     val pinnedActorId = UUID.randomUUID()
     val pinnedActorId2 = UUID.randomUUID()
     val unpinnedActorId = UUID.randomUUID()

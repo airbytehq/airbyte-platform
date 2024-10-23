@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
@@ -17,6 +18,8 @@ import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.ActorSelectionInfo
+import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
@@ -47,6 +50,7 @@ internal class ConnectorRolloutHandlerTest {
   private val scopedConfigurationService = mockk<ScopedConfigurationService>()
   private val userPersistence = mockk<UserPersistence>()
   private val connectorRolloutClient = mockk<ConnectorRolloutClient>()
+  private val rolloutActorFinder = mockk<RolloutActorFinder>()
   private val connectorRolloutHandler =
     ConnectorRolloutHandler(
       connectorRolloutService,
@@ -54,6 +58,7 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionVersionUpdater,
       connectorRolloutClient,
       userPersistence,
+      rolloutActorFinder,
     )
 
   companion object {
@@ -131,7 +136,7 @@ internal class ConnectorRolloutHandlerTest {
   }
 
   @Test
-  fun `test doConnectorRollout with scoped configurations insertion`() {
+  fun `test getAndRollOutConnectorRollout with scoped configurations insertion`() {
     val rolloutId = UUID.randomUUID()
     val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
     val actorDefinitionId = UUID.randomUUID()
@@ -150,7 +155,7 @@ internal class ConnectorRolloutHandlerTest {
       }
 
     val connectorRolloutRequestBody =
-      createMockConnectorRolloutRequestBody(rolloutId, rolloutStrategy).apply {
+      createMockConnectorRolloutRequestBody(rolloutId, rolloutStrategy, actorIds, null).apply {
         this.actorIds = actorIds
       }
 
@@ -400,11 +405,11 @@ internal class ConnectorRolloutHandlerTest {
 
   @ParameterizedTest
   @MethodSource("validUpdateStates")
-  fun `test getAndRollOutConnectorRollout with valid state`() {
+  fun `test getAndRollOutConnectorRollout with valid state`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
-        this.state = ConnectorEnumRolloutState.IN_PROGRESS
+        this.state = state
       }
 
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
@@ -413,7 +418,7 @@ internal class ConnectorRolloutHandlerTest {
 
     val result =
       connectorRolloutHandler.getAndRollOutConnectorRollout(
-        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL),
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, listOf(UUID.randomUUID()), null),
       )
 
     assertEquals(connectorRollout, result)
@@ -437,7 +442,137 @@ internal class ConnectorRolloutHandlerTest {
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
       connectorRolloutHandler.getAndRollOutConnectorRollout(
-        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL),
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, listOf(UUID.randomUUID()), null),
+      )
+    }
+
+    verify { connectorRolloutService.getConnectorRollout(rolloutId) }
+  }
+
+  @Test
+  fun `test getAndRollOutConnectorRollout with actorIds`() {
+    val rolloutId = UUID.randomUUID()
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+      }
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { scopedConfigurationService.listScopedConfigurationsWithScopes(any(), any(), any(), any(), any()) } returns emptyList()
+    every { actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(any(), any(), any(), any()) } returns Unit
+
+    val result =
+      connectorRolloutHandler.getAndRollOutConnectorRollout(
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, actorIds, null),
+      )
+
+    assertEquals(connectorRollout, result)
+
+    verify {
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(actorIds.toSet(), ACTOR_DEFINITION_ID, any(), any())
+    }
+  }
+
+  @Test
+  fun `test getAndRollOutConnectorRollout with targetPercentage`() {
+    val rolloutId = UUID.randomUUID()
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+      }
+    val mockActorSelectionInfo = ActorSelectionInfo(actorIds, 2, 2, 2, 0, 100)
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { scopedConfigurationService.listScopedConfigurationsWithScopes(any(), any(), any(), any(), any()) } returns emptyList()
+    every { actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(any(), any(), any(), any()) } returns Unit
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns mockActorSelectionInfo
+
+    val result =
+      connectorRolloutHandler.getAndRollOutConnectorRollout(
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, actorIds, 100),
+      )
+
+    assertEquals(connectorRollout, result)
+
+    verify {
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(actorIds.toSet(), ACTOR_DEFINITION_ID, any(), any())
+    }
+    verify { rolloutActorFinder.getActorSelectionInfo(any(), any()) }
+  }
+
+  @Test
+  fun `test getAndRollOutConnectorRollout with actorIds and targetPercentage`() {
+    val rolloutId = UUID.randomUUID()
+    val inputActorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val selectedActorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+        currentTargetRolloutPct = 100
+      }
+    val mockActorSelectionInfo = ActorSelectionInfo(selectedActorIds, 3, 2, 2, 1, 100)
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { scopedConfigurationService.listScopedConfigurationsWithScopes(any(), any(), any(), any(), any()) } returns emptyList()
+    every { actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(any(), any(), any(), any()) } returns Unit
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns mockActorSelectionInfo
+
+    val result =
+      connectorRolloutHandler.getAndRollOutConnectorRollout(
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, inputActorIds, 100),
+      )
+
+    assertEquals(connectorRollout, result)
+
+    verify(exactly = 1) {
+      connectorRolloutService.getConnectorRollout(rolloutId)
+    }
+    verify(exactly = 1) {
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+    }
+    verify(exactly = 1) {
+      actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(inputActorIds.toSet(), any(), any(), any())
+      actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(selectedActorIds.toSet(), any(), any(), any())
+    }
+  }
+
+  @Test
+  fun `test getAndRollOutConnectorRollout with no actorIds or targetPercentage throws`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+      }
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+
+    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+      connectorRolloutHandler.getAndRollOutConnectorRollout(
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, null, null),
+      )
+    }
+
+    verify { connectorRolloutService.getConnectorRollout(rolloutId) }
+  }
+
+  @Test
+  fun `test getAndRollOutConnectorRollout with too few eligible actorIds found throws`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+        currentTargetRolloutPct = 100
+      }
+    val mockActorSelectionInfo = ActorSelectionInfo(listOf(), 3, 2, 2, 1, 100)
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns mockActorSelectionInfo
+
+    assertThrows<ConnectorRolloutNotEnoughActorsProblem> {
+      connectorRolloutHandler.getAndRollOutConnectorRollout(
+        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, null, 50),
       )
     }
 
@@ -813,11 +948,14 @@ internal class ConnectorRolloutHandlerTest {
   private fun createMockConnectorRolloutRequestBody(
     rolloutId: UUID,
     rolloutStrategy: ConnectorRolloutStrategy,
+    actorIds: List<UUID>?,
+    targetPercentage: Int?,
   ): ConnectorRolloutRequestBody =
     ConnectorRolloutRequestBody()
       .id(rolloutId)
       .rolloutStrategy(rolloutStrategy)
-      .actorIds(listOf(UUID.randomUUID()))
+      .actorIds(actorIds)
+      .targetPercentage(targetPercentage)
 
   private fun createMockConnectorRolloutFinalizeRequestBody(
     rolloutId: UUID,

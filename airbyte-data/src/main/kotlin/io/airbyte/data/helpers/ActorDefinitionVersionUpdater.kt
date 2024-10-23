@@ -223,7 +223,7 @@ class ActorDefinitionVersionUpdater(
   }
 
   @VisibleForTesting
-  internal fun getUpgradeCandidates(
+  fun getUpgradeCandidates(
     actorDefinitionId: UUID,
     configScopeMaps: Collection<ConfigScopeMapWithId>,
   ): Set<UUID> {

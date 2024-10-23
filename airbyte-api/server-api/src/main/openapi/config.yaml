@@ -7582,7 +7582,6 @@ components:
       type: object
       required:
         - id
-        - actor_ids
         - rollout_strategy
       properties:
         id:
@@ -7592,6 +7591,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ActorId"
+        target_percentage:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
         updated_by:
@@ -7692,7 +7696,6 @@ components:
         - actor_definition_id
         - id
         - updated_by
-        - actor_ids
       properties:
         docker_repository:
           type: string
@@ -7711,6 +7714,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ActorId"
+        target_percentage:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
 
     ConnectorRolloutManualFinalizeRequestBody:
       type: object

@@ -7,6 +7,7 @@ data class ConnectorRolloutActivityInputRollout(
   var dockerImageTag: String,
   var actorDefinitionId: UUID,
   var rolloutId: UUID,
-  var actorIds: List<UUID>,
+  var actorIds: List<UUID>?,
+  var targetPercentage: Int?,
   var updatedBy: UUID? = null,
 )

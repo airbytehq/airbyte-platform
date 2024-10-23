@@ -659,6 +659,27 @@ components:
               default: Invalid connector rollout request.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ConnectorRolloutNotEnoughActorsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/not-enough-actors
+            title:
+              type: string
+              default: Not Enough Actors for Connector Rollout
+            detail:
+              type: string
+              default: Not enough actors are eligible for the progressive rollout.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     ProblemCronData:
       type: object
       properties:

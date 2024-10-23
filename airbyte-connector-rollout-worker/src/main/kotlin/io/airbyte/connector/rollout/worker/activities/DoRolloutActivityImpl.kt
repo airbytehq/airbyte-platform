@@ -33,8 +33,9 @@ class DoRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : Do
     val body =
       ConnectorRolloutRequestBody(
         input.rolloutId,
-        input.actorIds,
         ConnectorRolloutStrategy.MANUAL,
+        input.actorIds,
+        input.targetPercentage,
         input.updatedBy,
       )
 

@@ -17,13 +17,16 @@ import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.ActorSelectionInfo
 import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTION
+import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
@@ -54,6 +57,7 @@ open class ConnectorRolloutHandler
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
     private val connectorRolloutClient: ConnectorRolloutClient,
     private val userPersistence: UserPersistence,
+    private val rolloutActorFinder: RolloutActorFinder,
   ) {
     @VisibleForTesting
     open fun buildConnectorRolloutRead(connectorRollout: ConnectorRollout): ConnectorRolloutRead {
@@ -215,7 +219,7 @@ open class ConnectorRolloutHandler
 
     @VisibleForTesting
     open fun getAndRollOutConnectorRollout(connectorRolloutRequest: ConnectorRolloutRequestBody): ConnectorRollout {
-      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutRequest.id)
+      var connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutRequest.id)
       if (connectorRollout.state !in
         setOf(
           ConnectorEnumRolloutState.WORKFLOW_STARTED,
@@ -230,10 +234,56 @@ open class ConnectorRolloutHandler
           ),
         )
       }
+      if (connectorRolloutRequest.actorIds == null && connectorRolloutRequest.targetPercentage == null) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message(
+            "ActorIds or targetPercentage must be provided, but neither were found.",
+          ),
+        )
+      }
+      if (connectorRolloutRequest.actorIds != null) {
+        try {
+          actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
+            connectorRolloutRequest.actorIds.toSet(),
+            connectorRollout.actorDefinitionId,
+            connectorRollout.initialVersionId,
+            connectorRollout.releaseCandidateVersionId,
+          )
+        } catch (e: InvalidRequestException) {
+          throw ConnectorRolloutInvalidRequestProblem(
+            ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"),
+          )
+        }
+        connectorRollout =
+          connectorRollout
+            .withState(ConnectorEnumRolloutState.IN_PROGRESS)
+            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString()))
+            .withUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond())
+      }
+      if (connectorRolloutRequest.targetPercentage != null) {
+        connectorRollout = pinByPercentage(connectorRollout, connectorRolloutRequest.targetPercentage!!, connectorRolloutRequest.rolloutStrategy!!)
+      }
+
+      return connectorRollout
+    }
+
+    open fun pinByPercentage(
+      connectorRollout: ConnectorRollout,
+      targetPercentage: Int,
+      rolloutStrategy: ConnectorRolloutStrategy,
+    ): ConnectorRollout {
+      val actorSelectionInfo = getActorSelectionInfo(connectorRollout, targetPercentage)
+      if (actorSelectionInfo.actorIdsToPin.isEmpty()) {
+        throw ConnectorRolloutNotEnoughActorsProblem(
+          ProblemMessageData().message(
+            "No additional actors are eligible to be pinned for the progressive rollout.",
+          ),
+        )
+      }
 
       try {
         actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
-          connectorRolloutRequest.actorIds.toSet(),
+          actorSelectionInfo.actorIdsToPin.toSet(),
           connectorRollout.actorDefinitionId,
           connectorRollout.initialVersionId,
           connectorRollout.releaseCandidateVersionId,
@@ -244,8 +294,9 @@ open class ConnectorRolloutHandler
 
       return connectorRollout
         .withState(ConnectorEnumRolloutState.IN_PROGRESS)
-        .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString()))
+        .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
         .withUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond())
+        .withCurrentTargetRolloutPct(actorSelectionInfo.percentagePinned.toLong())
     }
 
     @VisibleForTesting
@@ -429,6 +480,7 @@ open class ConnectorRolloutHandler
             connectorRolloutUpdate.actorDefinitionId,
             connectorRolloutUpdate.id,
             connectorRolloutUpdate.actorIds,
+            connectorRolloutUpdate.targetPercentage,
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -478,6 +530,22 @@ open class ConnectorRolloutHandler
       val response = ConnectorRolloutManualFinalizeResponse()
       response.status("ok")
       return response
+    }
+
+    @Transactional("config")
+    open fun getActorSelectionInfo(
+      connectorRollout: ConnectorRollout,
+      targetPercent: Int,
+    ): ActorSelectionInfo {
+      val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(connectorRollout, targetPercent)
+      if (actorSelectionInfo.actorIdsToPin.isEmpty()) {
+        throw ConnectorRolloutNotEnoughActorsProblem(
+          ProblemMessageData().message(
+            "No actors are eligible to be pinned for a progressive rollout.",
+          ),
+        )
+      }
+      return actorSelectionInfo
     }
 
     @Cacheable("rollout-updated-by")
