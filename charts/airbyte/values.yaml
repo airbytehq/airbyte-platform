@@ -338,7 +338,7 @@ webapp:
     #   hosts:
     #   - chart-example.local
 
-    api:
+  api:
     # -- The webapp API url
     url: /api/v1/
   connector-builder-server:
