@@ -215,7 +215,9 @@ class KubePodClient(
         kubeInput.nodeSelectors,
         kubeInput.kubePodInfo,
         kubeInput.annotations,
-        kubeInput.extraEnv,
+        kubeInput.connectorReqs,
+        kubeInput.initReqs,
+        kubeInput.runtimeEnvVars,
         kubeInput.workspaceId,
       )
     try {

@@ -155,7 +155,9 @@ class KubePodClientTest {
         connectorKubeInput.nodeSelectors,
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
-        connectorKubeInput.extraEnv,
+        connectorKubeInput.connectorReqs,
+        connectorKubeInput.initReqs,
+        connectorKubeInput.runtimeEnvVars,
         any(),
       )
     } returns pod
@@ -182,6 +184,7 @@ class KubePodClientTest {
         orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        initReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
@@ -261,6 +264,7 @@ class KubePodClientTest {
         orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        initReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
         orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
@@ -333,7 +337,9 @@ class KubePodClientTest {
         connectorKubeInput.nodeSelectors,
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
-        connectorKubeInput.extraEnv,
+        connectorKubeInput.connectorReqs,
+        connectorKubeInput.initReqs,
+        connectorKubeInput.runtimeEnvVars,
         workspaceId,
       )
     } returns pod
@@ -353,7 +359,9 @@ class KubePodClientTest {
         connectorKubeInput.nodeSelectors,
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
-        connectorKubeInput.extraEnv,
+        connectorKubeInput.connectorReqs,
+        connectorKubeInput.initReqs,
+        connectorKubeInput.runtimeEnvVars,
         workspaceId,
       )
     } returns pod
@@ -373,7 +381,9 @@ class KubePodClientTest {
         connectorKubeInput.nodeSelectors,
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
-        connectorKubeInput.extraEnv,
+        connectorKubeInput.connectorReqs,
+        connectorKubeInput.initReqs,
+        connectorKubeInput.runtimeEnvVars,
         workspaceId,
       )
     } returns pod
@@ -398,7 +408,9 @@ class KubePodClientTest {
         connectorKubeInput.nodeSelectors,
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
-        connectorKubeInput.extraEnv,
+        connectorKubeInput.connectorReqs,
+        connectorKubeInput.initReqs,
+        connectorKubeInput.runtimeEnvVars,
         workspaceId,
       )
     } returns connector
@@ -459,6 +471,7 @@ class KubePodClientTest {
         io.fabric8.kubernetes.api.model.ResourceRequirements(),
         io.fabric8.kubernetes.api.model.ResourceRequirements(),
         io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
         emptyList(),
         emptyList(),
         emptyList(),
@@ -471,6 +484,8 @@ class KubePodClientTest {
         mapOf("test-selector" to "val3"),
         KubePodInfo("test-namespace", "test-name", null),
         mapOf("test-annotation" to "val5"),
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model.ResourceRequirements(),
         listOf(EnvVar("extra-env", "val6", null)),
         workspaceId,
       )

@@ -21,13 +21,10 @@ import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
 import java.util.UUID
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class ConnectorPodFactory(
   private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
-  private val connectorReqs: AirbyteResourceRequirements,
-  private val sidecarReqs: AirbyteResourceRequirements,
   private val tolerations: List<Toleration>,
   private val imagePullSecrets: List<LocalObjectReference>,
   private val connectorEnvVars: List<EnvVar>,
@@ -38,12 +35,15 @@ class ConnectorPodFactory(
   private val initContainerFactory: InitContainerFactory,
   private val connectorArgs: Map<String, String>,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
+  private val resourceRequirementsFactory: ResourceRequirementsFactory,
 ) {
   fun create(
     allLabels: Map<String, String>,
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
+    connectorContainerReqs: ResourceRequirements,
+    initContainerReqs: ResourceRequirements,
     runtimeEnvVars: List<EnvVar>,
     workspaceId: UUID,
   ): Pod {
@@ -67,17 +67,11 @@ class ConnectorPodFactory(
       secretVolumeMounts.add(dataPlaneCreds.mount)
     }
 
-    val connectorResourceReqs = ResourceConversionUtils.domainToApi(connectorReqs)
     val internalVolumeMounts = volumeMounts + secretVolumeMounts
-
-    val initContainerReqs =
-      ResourceConversionUtils.domainToApi(
-        ResourceConversionUtils.sumResourceRequirements(connectorReqs, sidecarReqs),
-      )
 
     val init: Container = initContainerFactory.create(initContainerReqs, internalVolumeMounts, runtimeEnvVars, workspaceId)
 
-    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
+    val main: Container = buildMainContainer(connectorContainerReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
     val sidecar: Container = buildSidecarContainer(internalVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -135,6 +129,7 @@ class ConnectorPodFactory(
 
   private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
     val mainCommand = ContainerCommandFactory.sidecar()
+    val sidecarReqs = resourceRequirementsFactory.sidecar()
 
     return ContainerBuilder()
       .withName(ContainerConstants.SIDECAR_CONTAINER_NAME)

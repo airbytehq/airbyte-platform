@@ -15,10 +15,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
-import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getJobId
-import io.airbyte.workers.input.getOrchestratorResourceReqs
-import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -31,7 +28,7 @@ import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrganizationId
-import io.airbyte.workload.launcher.pods.PayloadKubeInputMapperTest.Fixtures.fileTransferReqs
+import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
@@ -46,15 +43,11 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @MethodSource("replicationFlagsInputMatrix")
-  fun `builds a kube input from a replication payload`(
-    useCustomConnector: Boolean,
-    useFileTransfer: Boolean,
-  ) {
+  fun `builds a kube input from a replication payload`(useCustomConnector: Boolean) {
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
     val podName = "a-repl-pod"
@@ -76,6 +69,7 @@ class PayloadKubeInputMapperTest {
     every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
     every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
     every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns false
+    val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
       PayloadKubeInputMapper(
@@ -87,7 +81,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
-        fileTransferReqs,
+        resourceReqFactory,
         envVarFactory,
         ffClient,
         listOf(),
@@ -110,6 +104,10 @@ class PayloadKubeInputMapperTest {
       ResourceRequirements()
         .withCpuLimit("2")
         .withMemoryRequest("300Mi")
+    val resourceReqs4 =
+      ResourceRequirements()
+        .withCpuLimit("1.5")
+        .withMemoryRequest("500Mi")
     val srcLauncherConfig =
       IntegrationLauncherConfig()
         .withDockerImage("src-docker-img")
@@ -133,22 +131,23 @@ class PayloadKubeInputMapperTest {
         EnvVar("env-7", "val-7", null),
       )
 
-    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig, any(), any()) } returns expectedSrcRuntimeEnvVars
+    every { envVarFactory.replicationConnectorEnvVars(srcLauncherConfig, resourceReqs2, any()) } returns expectedSrcRuntimeEnvVars
     every { envVarFactory.replicationConnectorEnvVars(destLauncherConfig, resourceReqs3, any()) } returns expectedDestRuntimeEnvVars
     every { envVarFactory.orchestratorEnvVars(input, workloadId) } returns expectedOrchestratorRuntimeEnvVars
 
+    every { resourceReqFactory.orchestrator(input) } returns resourceReqs1
+    every { resourceReqFactory.replSource(input) } returns resourceReqs2
+    every { resourceReqFactory.replDestination(input) } returns resourceReqs3
+    every { resourceReqFactory.replInit(input) } returns resourceReqs4
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
-    every { input.getOrchestratorResourceReqs() } returns resourceReqs1
-    every { input.getSourceResourceReqs() } returns resourceReqs2
-    every { input.getDestinationResourceReqs() } returns resourceReqs3
     every { input.usesCustomConnector() } returns useCustomConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.sourceLauncherConfig } returns srcLauncherConfig
     every { input.destinationLauncherConfig } returns destLauncherConfig
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
-    every { input.useFileTransfer } returns useFileTransfer
+    every { input.useFileTransfer } returns false
 
     val replLabels = mapOf("orchestrator" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
@@ -169,16 +168,9 @@ class PayloadKubeInputMapperTest {
     assertEquals(srcLauncherConfig.dockerImage, result.sourceImage)
     assertEquals(destLauncherConfig.dockerImage, result.destinationImage)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.orchestratorReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.sourceReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs3), result.destinationReqs)
-    val expectedSourceReqs =
-      if (useFileTransfer) {
-        resourceReqs2
-          .withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
-          .withEphemeralStorageRequest(fileTransferReqs.ephemeralStorageRequest)
-      } else {
-        resourceReqs2
-      }
-    assertEquals(ResourceConversionUtils.domainToApi(expectedSourceReqs), result.sourceReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs4), result.initReqs)
 
     assertEquals(expectedOrchestratorRuntimeEnvVars, result.orchestratorRuntimeEnvVars)
     assertEquals(expectedSrcRuntimeEnvVars, result.sourceRuntimeEnvVars)
@@ -213,6 +205,7 @@ class PayloadKubeInputMapperTest {
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
       PayloadKubeInputMapper(
@@ -224,7 +217,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
-        fileTransferReqs,
+        resourceReqFactory,
         envVarFactory,
         ffClient,
         listOf(),
@@ -251,6 +244,16 @@ class PayloadKubeInputMapperTest {
     val checkInputConfig = mockk<JsonNode>()
     val checkConnectionInput = mockk<StandardCheckConnectionInput>()
     every { checkConnectionInput.connectionConfiguration } returns checkInputConfig
+    val resourceReqs1 =
+      ResourceRequirements()
+        .withCpuLimit("11")
+        .withMemoryRequest("8Mi")
+    val resourceReqs2 =
+      ResourceRequirements()
+        .withCpuLimit("1")
+        .withMemoryRequest("3Mi")
+    every { resourceReqFactory.checkConnector(input) } returns resourceReqs1
+    every { resourceReqFactory.checkInit(input) } returns resourceReqs2
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
@@ -280,7 +283,9 @@ class PayloadKubeInputMapperTest {
     assertEquals(podName, result.kubePodInfo.name)
     assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    assertEquals(expectedEnv, result.extraEnv)
+    assertEquals(expectedEnv, result.runtimeEnvVars)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
   }
 
   @ParameterizedTest
@@ -311,6 +316,7 @@ class PayloadKubeInputMapperTest {
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
       PayloadKubeInputMapper(
@@ -322,7 +328,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
-        fileTransferReqs,
+        resourceReqFactory,
         envVarFactory,
         ffClient,
         listOf(),
@@ -349,6 +355,18 @@ class PayloadKubeInputMapperTest {
     val catalogInputConfig = mockk<JsonNode>()
     val discoverCatalogInput = mockk<StandardDiscoverCatalogInput>()
     every { discoverCatalogInput.connectionConfiguration } returns catalogInputConfig
+    val resourceReqs1 =
+      ResourceRequirements()
+        .withCpuLimit("4")
+        .withCpuRequest("4")
+        .withMemoryRequest("800Mi")
+        .withMemoryLimit("800Mi")
+    val resourceReqs2 =
+      ResourceRequirements()
+        .withCpuLimit("3")
+        .withMemoryRequest("3Mi")
+    every { resourceReqFactory.discoverConnector(input) } returns resourceReqs1
+    every { resourceReqFactory.discoverInit(input) } returns resourceReqs2
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
@@ -377,15 +395,14 @@ class PayloadKubeInputMapperTest {
     assertEquals(podName, result.kubePodInfo.name)
     assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    assertEquals(expectedEnv, result.extraEnv)
+    assertEquals(expectedEnv, result.runtimeEnvVars)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
   }
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a spec payload`(customConnector: Boolean) {
-    // I'm overloading this parameter to exercise the FF. The FF check will be removed shortly
-    val useFetchingInit = customConnector
-
     val ffClient = TestClient()
 
     val labeler: PodLabeler = mockk()
@@ -406,6 +423,7 @@ class PayloadKubeInputMapperTest {
     every { specConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
     val replConfigs: WorkerConfigs = mockk()
+    val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
       PayloadKubeInputMapper(
@@ -417,7 +435,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
-        fileTransferReqs,
+        resourceReqFactory,
         envVarFactory,
         ffClient,
         listOf(),
@@ -444,6 +462,18 @@ class PayloadKubeInputMapperTest {
     every { input.getAttemptId() } returns attemptId
     every { input.jobRunConfig } returns jobRunConfig
     every { input.launcherConfig } returns launcherConfig
+    val resourceReqs1 =
+      ResourceRequirements()
+        .withCpuLimit("1")
+        .withCpuRequest("1")
+        .withMemoryRequest("100Mi")
+        .withMemoryLimit("800Mi")
+    val resourceReqs2 =
+      ResourceRequirements()
+        .withCpuLimit("2")
+        .withMemoryRequest("300Mi")
+    every { resourceReqFactory.specConnector() } returns resourceReqs1
+    every { resourceReqFactory.specInit() } returns resourceReqs2
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
@@ -456,7 +486,9 @@ class PayloadKubeInputMapperTest {
     assertEquals(podName, result.kubePodInfo.name)
     assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    assertEquals(expectedEnv, result.extraEnv)
+    assertEquals(expectedEnv, result.runtimeEnvVars)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
+    assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
   }
 
   @Test
@@ -469,10 +501,8 @@ class PayloadKubeInputMapperTest {
     @JvmStatic
     private fun replicationFlagsInputMatrix(): Stream<Arguments> =
       Stream.of(
-        Arguments.of(true, true),
-        Arguments.of(false, false),
-        Arguments.of(true, false),
-        Arguments.of(false, true),
+        Arguments.of(true),
+        Arguments.of(false),
       )
 
     @JvmStatic
@@ -486,12 +516,5 @@ class PayloadKubeInputMapperTest {
         Arguments.of(false, WorkloadPriority.DEFAULT),
         Arguments.of(false, WorkloadPriority.DEFAULT),
       )
-  }
-
-  object Fixtures {
-    val fileTransferReqs: AirbyteResourceRequirements =
-      AirbyteResourceRequirements()
-        .withEphemeralStorageLimit("1G")
-        .withEphemeralStorageRequest("1G")
   }
 }
