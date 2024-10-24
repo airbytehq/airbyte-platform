@@ -4,48 +4,45 @@ dependencies:
   version: 1.17.1
 - name: airbyte-bootloader
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: temporal
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
-- name: temporal-ui
-  repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: webapp
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
+- name: airbyte-api-server
+  repository: https://airbytehq.github.io/helm-charts/
+  version: 0.64.20
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: workload-api-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: workload-launcher
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: metrics
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: cron
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: connector-builder-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
-- name: connector-rollout-worker
-  repository: https://airbytehq.github.io/helm-charts/
-  version: 1.1.0
+  version: 0.64.20
 - name: keycloak
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
+  version: 0.64.20
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.620.2
-digest: sha256:f5c86f83bd128f2dd725e0a92fdc204ab7782169babf846c065e79f91cd3e63a
-generated: "2024-10-23T11:13:05.733012509+05:30"
+  version: 0.64.20
+digest: sha256:7221417d21e9ca3a0789d657b0e72a9edd17ba0a8d0bd52b72031ed7d51d62e2
+generated: "2024-10-24T12:04:29.296187534+05:30"
