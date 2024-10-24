@@ -5,6 +5,8 @@ const streamNameInput = "input[data-testid='sync-catalog-search']";
 const syncNamespaceCheckbox = "input[data-testid='sync-namespace-checkbox']";
 
 // table controls
+const discardChangesButton = "button[data-testid='cancel-edit-button']";
+const saveChangesButton = "button[data-testid='save-edit-button']";
 const refreshSchemaButton = "button[data-testid='refresh-schema-btn']";
 const expandCollapseAllStreamsButton = "button[data-testid='expand-collapse-all-streams-btn']";
 
@@ -169,6 +171,19 @@ export class StreamsTablePageObjectV2 {
 
   isNoStreamsSelectedErrorDisplayed(expectedResult: boolean) {
     cy.contains(noStreamsSelectedError).should(expectedResult ? "exist" : "not.exist");
+  }
+
+  // form controls
+  clickDiscardChangesButton() {
+    cy.get(discardChangesButton).click();
+  }
+
+  clickSaveChangesButton() {
+    cy.get(saveChangesButton).click();
+  }
+
+  isSaveChangesButtonEnabled(expectedResult: boolean) {
+    cy.get(saveChangesButton).should(expectedResult ? "be.enabled" : "be.disabled");
   }
 }
 

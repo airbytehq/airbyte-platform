@@ -100,7 +100,7 @@ export class StreamRowPageObjectV2 {
     const syncMode = `${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`;
 
     this.withinStream(() => {
-      cy.get(streamSyncModeSelectButton).click({ force: true });
+      cy.get(streamSyncModeSelectButton).click();
       cy.get('li[role="option"]')
         // It's possible that there are multiple options with the same text, so we need to filter by exact text content
         // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
@@ -132,12 +132,16 @@ export class StreamRowPageObjectV2 {
           cy.contains(pk).click();
         });
       });
+      // Press ESC key to close the dropdown
+      cy.get(streamPKCell).type("{esc}");
     });
   }
 
   isMissedPKErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
-      cy.contains("Primary key missing").should(expectedResult ? "be.visible" : "not.be.visible");
+      cy.get(streamPKCell)
+        .contains("Primary key missing")
+        .should(expectedResult ? "exist" : "not.exist");
     });
   }
 
@@ -175,7 +179,9 @@ export class StreamRowPageObjectV2 {
 
   isMissedCursorErrorDisplayed(expectedResult: boolean) {
     this.withinStream(() => {
-      cy.contains("Cursor missing").should(expectedResult ? "be.visible" : "not.be.visible");
+      cy.get(streamCursorCell)
+        .contains("Cursor missing")
+        .should(expectedResult ? "exist" : "not.exist");
     });
   }
 
@@ -192,6 +198,12 @@ export class StreamRowPageObjectV2 {
       cy.get(streamCursorCell)
         .find("button")
         .should(expectedResult ? "be.disabled" : "not.be.disabled");
+    });
+  }
+
+  isSelectedCursorDisplayed(expectedValue: string) {
+    this.withinStream(() => {
+      cy.get(streamCursorCell).should("have.text", expectedValue);
     });
   }
 

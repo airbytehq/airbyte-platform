@@ -19,7 +19,9 @@ import {
   createUsersTableQuery,
   dropUsersTableQuery,
 } from "@cy/commands/db/queries";
+import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "@cy/commands/interceptors";
 import { visit } from "@cy/pages/connection/connectionPageObject";
+import { confirmStreamConfigurationChangedPopup } from "@cy/pages/connection/connectionReplicationPageObject";
 import { StreamRowPageObjectV2 } from "@cy/pages/connection/StreamRowPageObjectV2";
 import { streamsTableV2 } from "@cy/pages/connection/StreamsTablePageObjectV2";
 import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
@@ -239,6 +241,283 @@ describe("Stream", { testIsolation: false }, () => {
       carsStreamRow.isFieldSyncCheckboxDisplayed("id", false);
       carsStreamRow.isFieldSyncCheckboxDisplayed("mark", false);
       carsStreamRow.isFieldSyncCheckboxDisplayed("color", false);
+    });
+  });
+});
+
+describe("Sync Modes", { testIsolation: false }, () => {
+  let postgresSource: SourceRead;
+  let postgresDestination: DestinationRead;
+  let connection: WebBackendConnectionRead;
+
+  before(() => {
+    setFeatureFlags({ "connection.syncCatalogV2": true });
+    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
+
+    cleanDBSource();
+    runDbQuery(createUsersTableQuery);
+    runDbQuery(createCitiesTableQuery);
+
+    createPostgresSourceViaApi()
+      .then((source) => {
+        postgresSource = source;
+      })
+      .then(() => createPostgresDestinationViaApi())
+      .then((destination) => {
+        postgresDestination = destination;
+      })
+      .then(() => createNewConnectionViaApi(postgresSource, postgresDestination))
+      .then((connectionResponse) => {
+        connection = connectionResponse;
+      });
+  });
+
+  beforeEach(() => {
+    interceptUpdateConnectionRequest();
+  });
+
+  after(() => {
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
+
+    // cleanup
+    if (postgresSource) {
+      requestDeleteSource({ sourceId: postgresSource.sourceId });
+    }
+    if (postgresDestination) {
+      requestDeleteDestination({
+        destinationId: postgresDestination.destinationId,
+      });
+    }
+    if (connection) {
+      requestDeleteConnection({ connectionId: connection.connectionId });
+    }
+    cleanDBSource();
+  });
+
+  const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+  const citiesStreamRow = new StreamRowPageObjectV2("public", "cities");
+
+  describe("Full refresh | Append", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      visit(connection, "replication");
+      usersStreamRow.toggleStreamSync(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.append);
+    });
+
+    it("should not display the PK and Cursor combobox buttons", () => {
+      usersStreamRow.isPKComboboxBtnDisplayed(false);
+      usersStreamRow.isMissedPKErrorDisplayed(false);
+      usersStreamRow.isCursorComboboxBtnDisplayed(false);
+      usersStreamRow.isMissedCursorErrorDisplayed(false);
+    });
+
+    it("should allow to save changes", () => {
+      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.append);
+    });
+  });
+
+  describe("Full refresh | Overwrite", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      visit(connection, "replication");
+      usersStreamRow.toggleStreamSync(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+    });
+
+    it("should not display the PK and Cursor combobox buttons", () => {
+      usersStreamRow.isPKComboboxBtnDisplayed(false);
+      usersStreamRow.isMissedPKErrorDisplayed(false);
+      usersStreamRow.isCursorComboboxBtnDisplayed(false);
+      usersStreamRow.isMissedCursorErrorDisplayed(false);
+    });
+
+    it("should allow to save changes", () => {
+      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+    });
+  });
+
+  describe("Full refresh | Overwrite + Deduped", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      visit(connection, "replication");
+      citiesStreamRow.toggleStreamSync(true);
+      citiesStreamRow.isStreamSyncEnabled(true);
+      citiesStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup);
+      citiesStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup);
+    });
+
+    it("should show missing PK error", () => {
+      citiesStreamRow.isMissedPKErrorDisplayed(true);
+      citiesStreamRow.isMissedCursorErrorDisplayed(false);
+      streamsTableV2.isSaveChangesButtonEnabled(false);
+    });
+
+    it("should select PK", () => {
+      citiesStreamRow.selectPKs(["city_code"]);
+      citiesStreamRow.isSelectedPKDisplayed("city_code");
+      citiesStreamRow.isMissedPKErrorDisplayed(false);
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.isPKField("city_code", true);
+    });
+
+    it("should allow to save changes", () => {
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should select multiple PKs", () => {
+      visit(connection, "replication");
+      citiesStreamRow.selectPKs(["city"]);
+      citiesStreamRow.isSelectedPKDisplayed("2 items selected");
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.isPKField("city_code", true);
+      citiesStreamRow.isPKField("city", true);
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      citiesStreamRow.isStreamSyncEnabled(true);
+      citiesStreamRow.isSelectedPKDisplayed("2 items selected");
+      citiesStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+    });
+  });
+
+  describe("Full refresh | Overwrite + Deduped (source-defined PK)", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      visit(connection, "replication");
+      usersStreamRow.toggleStreamSync(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup);
+    });
+
+    it("should NOT show missing PK and Cursor error", () => {
+      usersStreamRow.isMissedPKErrorDisplayed(false);
+      usersStreamRow.isMissedCursorErrorDisplayed(false);
+      streamsTableV2.isSaveChangesButtonEnabled(true);
+    });
+
+    it("should show non-editable selected PK", () => {
+      usersStreamRow.isSelectedPKDisplayed("id");
+      usersStreamRow.isPKComboboxBtnDisabled(true);
+      usersStreamRow.toggleExpandCollapseStream();
+      usersStreamRow.isPKField("id", true);
+    });
+
+    it("should allow to save changes", () => {
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.isSelectedPKDisplayed("id");
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+    });
+  });
+
+  describe("Incremental | Append", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      visit(connection, "replication");
+      usersStreamRow.toggleStreamSync(true);
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.incremental, DestinationSyncMode.append);
+    });
+
+    it("should show missing Cursor error", () => {
+      usersStreamRow.isMissedPKErrorDisplayed(false);
+      usersStreamRow.isMissedCursorErrorDisplayed(true);
+      streamsTableV2.isSaveChangesButtonEnabled(false);
+    });
+
+    it("should select Cursor", () => {
+      usersStreamRow.selectCursor("email");
+      usersStreamRow.isSelectedCursorDisplayed("email");
+      usersStreamRow.toggleExpandCollapseStream();
+      usersStreamRow.isCursorField("email", true);
+    });
+
+    it("should allow to save changes", () => {
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.isSelectedCursorDisplayed("email");
+      usersStreamRow.isSelectedSyncModeDisplayed(SyncMode.incremental, DestinationSyncMode.append);
+    });
+  });
+
+  describe("Incremental | Append + Deduped", { testIsolation: false }, () => {
+    it("should select the sync mode", () => {
+      // trick to unset PK from previous tests
+      visit(connection, "replication");
+      citiesStreamRow.selectPKs(["city_code", "city"]);
+      citiesStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+      streamsTableV2.clickSaveChangesButton();
+      waitForUpdateConnectionRequest();
+
+      visit(connection, "replication");
+      citiesStreamRow.toggleStreamSync(true);
+      citiesStreamRow.isStreamSyncEnabled(true);
+
+      citiesStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      citiesStreamRow.isSelectedSyncModeDisplayed(SyncMode.incremental, DestinationSyncMode.append_dedup);
+    });
+
+    it("should show missing PK and Cursor errors", () => {
+      citiesStreamRow.isMissedPKErrorDisplayed(true);
+      citiesStreamRow.isMissedCursorErrorDisplayed(true);
+      streamsTableV2.isSaveChangesButtonEnabled(false);
+    });
+
+    it("should select PK and Cursor", () => {
+      citiesStreamRow.selectPKs(["city_code"]);
+      citiesStreamRow.isSelectedPKDisplayed("city_code");
+      citiesStreamRow.selectCursor("city");
+      citiesStreamRow.isSelectedCursorDisplayed("city");
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.isPKField("city_code", true);
+      citiesStreamRow.isCursorField("city", true);
+    });
+
+    it("should allow to save changes and discard refresh streams", () => {
+      streamsTableV2.clickSaveChangesButton();
+      confirmStreamConfigurationChangedPopup({ reset: false });
+      waitForUpdateConnectionRequest();
+    });
+
+    it("should verify that changes are applied", () => {
+      visit(connection, "replication");
+      citiesStreamRow.isStreamSyncEnabled(true);
+      citiesStreamRow.isSelectedPKDisplayed("city_code");
+      citiesStreamRow.isSelectedCursorDisplayed("city");
+      citiesStreamRow.isSelectedSyncModeDisplayed(SyncMode.incremental, DestinationSyncMode.append_dedup);
     });
   });
 });
