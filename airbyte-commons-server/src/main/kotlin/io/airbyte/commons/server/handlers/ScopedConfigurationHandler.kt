@@ -93,6 +93,7 @@ open class ScopedConfigurationHandler
     ): String {
       return when (resourceType) {
         ConfigResourceType.ACTOR_DEFINITION -> resolveActorDefinitionName(resourceId)
+        else -> resourceType.name
       }
     }
 

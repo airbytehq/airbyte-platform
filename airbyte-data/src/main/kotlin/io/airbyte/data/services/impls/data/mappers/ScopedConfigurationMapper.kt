@@ -31,12 +31,22 @@ fun ModelConfigScopeType.toEntity(): EntityConfigScopeType {
 fun EntityConfigResourceType.toConfigModel(): ModelConfigResourceType {
   return when (this) {
     EntityConfigResourceType.actor_definition -> ModelConfigResourceType.ACTOR_DEFINITION
+    EntityConfigResourceType.user -> ModelConfigResourceType.USER
+    EntityConfigResourceType.workspace -> ModelConfigResourceType.WORKSPACE
+    EntityConfigResourceType.connection -> ModelConfigResourceType.USER
+    EntityConfigResourceType.source -> ModelConfigResourceType.SOURCE
+    EntityConfigResourceType.destination -> ModelConfigResourceType.DESTINATION
   }
 }
 
 fun ModelConfigResourceType.toEntity(): EntityConfigResourceType {
   return when (this) {
     ModelConfigResourceType.ACTOR_DEFINITION -> EntityConfigResourceType.actor_definition
+    ModelConfigResourceType.USER -> EntityConfigResourceType.user
+    ModelConfigResourceType.WORKSPACE -> EntityConfigResourceType.workspace
+    ModelConfigResourceType.CONNECTION -> EntityConfigResourceType.connection
+    ModelConfigResourceType.SOURCE -> EntityConfigResourceType.source
+    ModelConfigResourceType.DESTINATION -> EntityConfigResourceType.destination
   }
 }
 
