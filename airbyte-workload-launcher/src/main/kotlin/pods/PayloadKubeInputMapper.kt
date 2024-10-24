@@ -4,13 +4,11 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.NodeSelectorOverride
-import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getDestinationResourceReqs
@@ -20,16 +18,12 @@ import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.models.SidecarInput
-import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.ResourceConversionUtils
-import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrganizationId
@@ -48,7 +42,6 @@ import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
  */
 @Singleton
 class PayloadKubeInputMapper(
-  private val serializer: ObjectSerializer,
   private val labeler: PodLabeler,
   private val podNameGenerator: PodNameGenerator,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
@@ -134,7 +127,6 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
-    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -158,15 +150,12 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
       }
 
-    val fileMap = buildCheckFileMap(workloadId, input, logPath)
-
     val runtimeEnvVars = runTimeEnvVarFactory.checkConnectorEnvVars(input.launcherConfig, input.getOrganizationId(), workloadId)
 
     return ConnectorKubeInput(
       labeler.getCheckLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
-      fileMap,
       checkWorkerConfigs.workerKubeAnnotations,
       runtimeEnvVars,
       input.launcherConfig.workspaceId,
@@ -177,7 +166,6 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: DiscoverCatalogInput,
     sharedLabels: Map<String, String>,
-    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -201,15 +189,12 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
       }
 
-    val fileMap = buildDiscoverFileMap(workloadId, input, logPath)
-
     val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, input.getOrganizationId(), workloadId)
 
     return ConnectorKubeInput(
       labeler.getDiscoverLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
-      fileMap,
       discoverWorkerConfigs.workerKubeAnnotations,
       runtimeEnvVars,
       input.launcherConfig.workspaceId,
@@ -220,7 +205,6 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: SpecInput,
     sharedLabels: Map<String, String>,
-    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -239,15 +223,12 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
 
-    val fileMap = buildSpecFileMap(workloadId, input, logPath)
-
     val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(workloadId)
 
     return ConnectorKubeInput(
       labeler.getSpecLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
-      fileMap,
       specWorkerConfigs.workerKubeAnnotations,
       runtimeEnvVars,
       input.launcherConfig.workspaceId,
@@ -280,89 +261,6 @@ class PayloadKubeInputMapper(
     }
   }
 
-  private fun buildCheckFileMap(
-    workloadId: String,
-    input: CheckConnectionInput,
-    logPath: String,
-  ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
-      return mapOf()
-    }
-
-    return mapOf(
-      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
-      FileConstants.SIDECAR_INPUT_FILE to
-        serializer.serialize(
-          SidecarInput(
-            input.checkConnectionInput,
-            null,
-            workloadId,
-            input.launcherConfig,
-            OperationType.CHECK,
-            logPath,
-          ),
-        ),
-    )
-  }
-
-  private fun buildDiscoverFileMap(
-    workloadId: String,
-    input: DiscoverCatalogInput,
-    logPath: String,
-  ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
-      return mapOf()
-    }
-
-    return mapOf(
-      FileConstants.CONNECTION_CONFIGURATION_FILE to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
-      FileConstants.SIDECAR_INPUT_FILE to
-        serializer.serialize(
-          SidecarInput(
-            null,
-            input.discoverCatalogInput,
-            workloadId,
-            input.launcherConfig,
-            OperationType.DISCOVER,
-            logPath,
-          ),
-        ),
-    )
-  }
-
-  private fun buildSpecFileMap(
-    workloadId: String,
-    input: SpecInput,
-    logPath: String,
-  ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
-      return mapOf()
-    }
-
-    return mapOf(
-      FileConstants.SIDECAR_INPUT_FILE to
-        serializer.serialize(
-          SidecarInput(
-            null,
-            null,
-            workloadId,
-            input.launcherConfig,
-            OperationType.SPEC,
-            logPath,
-          ),
-        ),
-    )
-  }
-
-  private fun buildFFContext(workspaceId: UUID): Context {
-    return Multi(
-      buildList {
-        add(Workspace(workspaceId))
-        addAll(contexts)
-      },
-    )
-  }
-
   private fun addEphemeralStorageReqLimits(airbyteSourceReqs: AirbyteResourceRequirements?): AirbyteResourceRequirements {
     return airbyteSourceReqs
       ?.withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
@@ -391,7 +289,6 @@ data class ConnectorKubeInput(
   val connectorLabels: Map<String, String>,
   val nodeSelectors: Map<String, String>,
   val kubePodInfo: KubePodInfo,
-  val fileMap: Map<String, String>,
   val annotations: Map<String, String>,
   val extraEnv: List<EnvVar>,
   val workspaceId: UUID,

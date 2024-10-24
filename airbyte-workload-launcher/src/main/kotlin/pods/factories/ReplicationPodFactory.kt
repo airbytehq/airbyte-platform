@@ -49,7 +49,7 @@ class ReplicationPodFactory(
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
     val replicationVolumes = volumeFactory.replication(isFileTransfer)
-    val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
+    val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
       replContainerFactory.createOrchestrator(
@@ -118,7 +118,7 @@ class ReplicationPodFactory(
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
     val replicationVolumes = volumeFactory.replication(isFileTransfer)
-    val initContainer = initContainerFactory.createFetching(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
+    val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
       replContainerFactory.createOrchestrator(

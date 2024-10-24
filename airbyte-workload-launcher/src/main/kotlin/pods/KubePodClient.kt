@@ -3,11 +3,8 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
-import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.KubeClientException
@@ -165,7 +162,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels, launcherInput.logPath)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -183,7 +180,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels, launcherInput.logPath)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, discoverPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -201,7 +198,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels, launcherInput.logPath)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, specPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -212,19 +209,6 @@ class KubePodClient(
     factory: ConnectorPodFactory,
     podLogLabel: String,
   ) {
-    // Whether we should kube cp init files over or let the init container fetch itself
-    // if true the init container will fetch, if false we copy over the files
-    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
-    // so we check the value here and pass it down.
-    val ffContext =
-      Multi(
-        buildList {
-          add(Workspace(kubeInput.workspaceId))
-          addAll(contexts)
-        },
-      )
-    val useFetchingInit = featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)
-
     var pod =
       factory.create(
         kubeInput.connectorLabels,
@@ -232,7 +216,6 @@ class KubePodClient(
         kubeInput.kubePodInfo,
         kubeInput.annotations,
         kubeInput.extraEnv,
-        useFetchingInit,
         kubeInput.workspaceId,
       )
     try {
@@ -246,31 +229,7 @@ class KubePodClient(
       )
     }
 
-    if (!useFetchingInit) {
-      try {
-        kubePodLauncher.waitForPodInitStartup(pod, POD_INIT_TIMEOUT_VALUE)
-      } catch (e: RuntimeException) {
-        ApmTraceUtils.addExceptionToTrace(e)
-        throw KubeClientException(
-          "$podLogLabel pod failed to init within allotted timeout.",
-          e,
-          KubeCommandType.WAIT_INIT,
-        )
-      }
-
-      try {
-        kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
-      } catch (e: RuntimeException) {
-        ApmTraceUtils.addExceptionToTrace(e)
-        throw KubeClientException(
-          "Failed to copy files to $podLogLabel pod ${kubeInput.kubePodInfo.name}.",
-          e,
-          KubeCommandType.COPY,
-        )
-      }
-    } else {
-      waitForPodInitComplete(pod, podLogLabel)
-    }
+    waitForPodInitComplete(pod, podLogLabel)
 
     try {
       kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)

@@ -42,7 +42,6 @@ private val logger = KotlinLogging.logger {}
 class KubePodLauncher(
   private val kubernetesClient: KubernetesClient,
   private val metricClient: MetricClient,
-  private val kubeCopyClient: KubeCopyClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
   private val featureFlagClient: FeatureFlagClient,
@@ -277,18 +276,6 @@ class KubePodLauncher(
         statuses
       },
       "delete",
-    )
-  }
-
-  fun copyFilesToKubeConfigVolumeMain(
-    pod: Pod,
-    files: Map<String, String>,
-  ) {
-    runKubeCommand(
-      {
-        kubeCopyClient.copyFilesToKubeConfigVolumeMain(pod, files)
-      },
-      "kubectl_cp",
     )
   }
 

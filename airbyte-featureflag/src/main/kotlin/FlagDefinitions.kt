@@ -170,8 +170,6 @@ object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
 
-object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
-
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)

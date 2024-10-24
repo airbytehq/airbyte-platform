@@ -53,10 +53,6 @@ dependencies {
   runtimeOnly(libs.bundles.bouncycastle)
   runtimeOnly(libs.bundles.logback)
 
-  // Required for secret hydration in OSS
-  runtimeOnly(libs.hikaricp)
-  runtimeOnly(libs.h2.database)
-
   kspTest((platform(libs.micronaut.platform)))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(platform(libs.micronaut.platform))

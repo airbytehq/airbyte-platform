@@ -43,9 +43,6 @@ class KubePodLauncherTest {
   @MockK
   private lateinit var metricClient: MetricClient
 
-  @MockK
-  private lateinit var kubeCopyClient: KubeCopyClient
-
   private lateinit var kubePodLauncher: KubePodLauncher
 
   private lateinit var kubernetesClientRetryPolicy: RetryPolicy<Any>
@@ -57,7 +54,6 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        kubeCopyClient,
         "namespace",
         kubernetesClientRetryPolicy,
         mockk(),
@@ -150,7 +146,6 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        kubeCopyClient,
         "namespace",
         kubernetesClientRetryPolicy,
         mockk(),
@@ -190,7 +185,6 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        kubeCopyClient,
         "namespace",
         kubernetesClientRetryPolicy,
         mockk(),
@@ -233,7 +227,6 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        kubeCopyClient,
         "namespace",
         kubernetesClientRetryPolicy,
         mockk(),

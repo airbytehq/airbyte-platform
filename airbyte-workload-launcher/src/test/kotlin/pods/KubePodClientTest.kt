@@ -7,7 +7,6 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -45,8 +44,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.lang.RuntimeException
 import java.util.UUID
 import java.util.concurrent.TimeoutException
@@ -148,11 +145,9 @@ class KubePodClientTest {
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
-    every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels, "/log/path") } returns connectorKubeInput
-    every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
-    every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
-
-    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns true
+    every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels) } returns connectorKubeInput
 
     every {
       podFactory.create(
@@ -162,7 +157,6 @@ class KubePodClientTest {
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
         any(),
-        any(),
       )
     } returns pod
 
@@ -170,7 +164,6 @@ class KubePodClientTest {
     every { launcher.create(capture(slot)) } answers { slot.captured }
     every { launcher.waitForPodInitStartup(any(), any()) } returns Unit
     every { launcher.waitForPodInitComplete(any(), any()) } returns Unit
-    every { launcher.copyFilesToKubeConfigVolumeMain(any(), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminalByPod(any(Pod::class), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
   }
@@ -341,7 +334,6 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
-        any(),
         workspaceId,
       )
     } returns pod
@@ -362,7 +354,6 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
-        any(),
         workspaceId,
       )
     } returns pod
@@ -383,7 +374,6 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
-        any(),
         workspaceId,
       )
     } returns pod
@@ -393,11 +383,8 @@ class KubePodClientTest {
     verify { client.launchConnectorWithSidecar(connectorKubeInput, specPodFactory, "SPEC") }
   }
 
-  @ValueSource(booleans = [true, false])
-  @ParameterizedTest
-  fun `launchConnectorWithSidecar starts a pod and waits on it`(useFetchingInit: Boolean) {
-    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns useFetchingInit
-
+  @Test
+  fun `launchConnectorWithSidecar starts a pod and waits on it`() {
     val connector =
       PodBuilder()
         .withNewMetadata()
@@ -412,20 +399,13 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
-        any(),
         workspaceId,
       )
     } returns connector
 
     client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
 
-    if (!useFetchingInit) {
-      verify { launcher.waitForPodInitStartup(connector, POD_INIT_TIMEOUT_VALUE) }
-
-      verify { launcher.copyFilesToKubeConfigVolumeMain(connector, connectorKubeInput.fileMap) }
-    } else {
-      verify { launcher.waitForPodInitComplete(connector, POD_INIT_TIMEOUT_VALUE) }
-    }
+    verify { launcher.waitForPodInitComplete(connector, POD_INIT_TIMEOUT_VALUE) }
 
     verify { launcher.waitForPodReadyOrTerminalByPod(connector, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
@@ -433,28 +413,6 @@ class KubePodClientTest {
   @Test
   fun `launchConnectorWithSidecar propagates pod creation error`() {
     every { launcher.create(any()) } throws RuntimeException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
-    }
-  }
-
-  // TODO: delete once ConnectorSidecarFetchesInputFromInit rolled out
-  @Test
-  fun `launchConnectorWithSidecar propagates pod wait for init error`() {
-    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns false
-    every { launcher.waitForPodInitStartup(pod, POD_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
-
-    assertThrows<KubeClientException> {
-      client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
-    }
-  }
-
-  // TODO: delete once ConnectorSidecarFetchesInputFromInit rolled out
-  @Test
-  fun `launchConnectorWithSidecar propagates copy file map error`() {
-    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns false
-    every { launcher.copyFilesToKubeConfigVolumeMain(any(), connectorKubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
       client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
@@ -512,7 +470,6 @@ class KubePodClientTest {
         mapOf("test-connector-label" to "val2"),
         mapOf("test-selector" to "val3"),
         KubePodInfo("test-namespace", "test-name", null),
-        mapOf("test-file" to "val4"),
         mapOf("test-annotation" to "val5"),
         listOf(EnvVar("extra-env", "val6", null)),
         workspaceId,
