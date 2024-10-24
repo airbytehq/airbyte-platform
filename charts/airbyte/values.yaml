@@ -19,7 +19,7 @@ global:
     licenseKeySecretKey: "license-key"
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
-  airbyteUrl: ""
+  airbyteUrl: "https://airbyte.example.com"
 
   # Docker image config that will apply to all images.
   image:
@@ -41,7 +41,7 @@ global:
       # -- Secret name where the instanceAdmin configuration is stored
       secretName: "airbyte-config-secrets"
       # -- The first name of the initial user
-      firstName: ""
+      firstName: "numocity"
       # -- The last name of the initial user
       lastName:  ""
       # -- The key within `emailSecretName` where the initial user's email is stored
@@ -1736,7 +1736,7 @@ minio:
     tag: latest
 
   storage:
-    volumeClaimValue: 500Mi
+    volumeClaimValue: 2Gi
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
@@ -2375,3 +2375,4 @@ testWebapp:
   image:
     repository: busybox
     tag: latest
+      
