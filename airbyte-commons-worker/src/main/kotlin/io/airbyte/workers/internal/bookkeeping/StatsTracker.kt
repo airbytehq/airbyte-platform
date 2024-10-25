@@ -118,6 +118,7 @@ class StreamStatsTracker(
         Jsons.getEstimatedByteSize(recordMessage.data).toLong()
       } else {
         recordMessage.additionalProperties["file"]?.let {
+          logger.info { "Received a file transfer record: $it" }
           val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
           fileTransferInformations.bytes
         } ?: Jsons.getEstimatedByteSize(recordMessage.data).toLong()
