@@ -265,8 +265,9 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("publishConnectorBuilderProject throws a helpful error if no associated CDK version is found")
-  void testCreateConnectorBuilderProjectNoCdkVersion() {
+  void testCreateConnectorBuilderProjectNoCdkVersion() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
 
     when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
     when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
@@ -337,6 +338,27 @@ class ConnectorBuilderProjectsHandlerTest {
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId)));
 
     verify(connectorBuilderService, never()).deleteBuilderProject(any(UUID.class));
+  }
+
+  @Test
+  @DisplayName("publishBuilderProject should validate whether the workspace does not match")
+  void testPublishConnectorBuilderProjectValidateWorkspace() throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject project = generateBuilderProject();
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+
+    final UUID wrongWorkspaceId = UUID.randomUUID();
+    final DeclarativeSourceManifest manifest = anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION);
+    final ConnectorBuilderPublishRequestBody publishReq = anyConnectorBuilderProjectRequest()
+        .builderProjectId(project.getBuilderProjectId())
+        .workspaceId(wrongWorkspaceId)
+        .initialDeclarativeManifest(manifest);
+
+    when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+
+    assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(publishReq));
+    verify(connectorBuilderService, never()).insertActiveDeclarativeManifest(any(DeclarativeManifest.class));
+    verify(connectorBuilderService, never()).assignActorDefinitionToConnectorBuilderProject(any(UUID.class), any(UUID.class));
+    verify(connectorBuilderService, never()).deleteBuilderProjectDraft(any(UUID.class));
   }
 
   @Test
@@ -590,20 +612,29 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void whenPublishConnectorBuilderProjectThenReturnActorDefinition() throws IOException {
+  void whenPublishConnectorBuilderProjectThenReturnActorDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
-    final SourceDefinitionIdBody response = connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest());
+    final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(A_WORKSPACE_ID);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+
+    final ConnectorBuilderPublishRequestBody req =
+        anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID);
+    final SourceDefinitionIdBody response = connectorBuilderProjectsHandler.publishConnectorBuilderProject(req);
     assertEquals(A_SOURCE_DEFINITION_ID, response.getSourceDefinitionId());
   }
 
   @Test
-  void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws IOException {
+  void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
-    connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().workspaceId(workspaceId).name(A_SOURCE_NAME)
-        .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
+    final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(
+        anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(workspaceId).name(A_SOURCE_NAME)
+            .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
     verify(sourceService, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
@@ -629,10 +660,14 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void whenPublishConnectorBuilderProjectThenUpdateConnectorBuilderProject() throws IOException {
+  void whenPublishConnectorBuilderProjectThenUpdateConnectorBuilderProject() throws ConfigNotFoundException, IOException, JsonValidationException {
+
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+    final ConnectorBuilderProject project = generateBuilderProject().withWorkspaceId(A_WORKSPACE_ID);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
+        .workspaceId(A_WORKSPACE_ID)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
     verify(connectorBuilderService, times(1)).insertActiveDeclarativeManifest(eq(new DeclarativeManifest()
@@ -645,8 +680,12 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void whenPublishConnectorBuilderProjectThenDraftDeleted() throws IOException {
+  void whenPublishConnectorBuilderProjectThenDraftDeleted() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(A_WORKSPACE_ID);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
+        .workspaceId(A_WORKSPACE_ID)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
     verify(connectorBuilderService, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
@@ -677,7 +716,8 @@ class ConnectorBuilderProjectsHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
     final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
-        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(testingValues).spec(spec));
+        new ConnectorBuilderProjectTestingValuesUpdate().workspaceId(workspaceId).builderProjectId(project.getBuilderProjectId())
+            .testingValues(testingValues).spec(spec));
     assertEquals(response, testingValuesWithObfuscatedSecrets);
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), testingValuesWithSecretCoordinates);
   }
@@ -710,7 +750,8 @@ class ConnectorBuilderProjectsHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
     final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
-        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(newTestingValues).spec(spec));
+        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId)
+            .testingValues(newTestingValues).spec(spec));
     assertEquals(response, testingValuesWithObfuscatedSecrets);
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
   }

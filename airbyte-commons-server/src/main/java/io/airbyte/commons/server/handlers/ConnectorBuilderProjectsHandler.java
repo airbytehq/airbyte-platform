@@ -368,7 +368,8 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
+    validateProjectUnderRightWorkspace(connectorBuilderPublishRequestBody.getBuilderProjectId(), connectorBuilderPublishRequestBody.getWorkspaceId());
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
     manifestInjector.addInjectedDeclarativeManifest(spec);
@@ -424,6 +425,7 @@ public class ConnectorBuilderProjectsHandler {
   public JsonNode updateConnectorBuilderProjectTestingValues(final ConnectorBuilderProjectTestingValuesUpdate testingValuesUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     try {
+      validateProjectUnderRightWorkspace(testingValuesUpdate.getBuilderProjectId(), testingValuesUpdate.getWorkspaceId());
       final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(testingValuesUpdate.getBuilderProjectId(), false);
       final Optional<JsonNode> existingTestingValues = Optional.ofNullable(project.getTestingValues());
 
