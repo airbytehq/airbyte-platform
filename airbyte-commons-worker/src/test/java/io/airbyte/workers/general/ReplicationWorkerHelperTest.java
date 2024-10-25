@@ -27,7 +27,7 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.ConfiguredMapper;
+import io.airbyte.config.MapperConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerDestinationConfig;
@@ -66,6 +66,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -340,7 +342,27 @@ class ReplicationWorkerHelperTest {
 
     final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
     final ConfiguredAirbyteStream stream = mock(ConfiguredAirbyteStream.class);
-    final List<ConfiguredMapper> mappers = List.of(new ConfiguredMapper("test", Map.of()));
+    final List<MapperConfig> mappers = List.of(new MapperConfig() {
+
+      @NotNull
+      @Override
+      public String name() {
+        return "test";
+      }
+
+      @Nullable
+      @Override
+      public String documentationUrl() {
+        return null;
+      }
+
+      @NotNull
+      @Override
+      public Object config() {
+        return Map.of();
+      }
+
+    });
 
     when(stream.getStreamDescriptor()).thenReturn(new StreamDescriptor().withName("stream"));
     when(stream.getMappers()).thenReturn(mappers);

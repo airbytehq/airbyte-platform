@@ -28,12 +28,13 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.validation.json.JsonValidationException;
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 class ConnectionSchedulerHelperTest {
 
   private final ConnectionScheduleHelper connectionScheduleHelper =
-      new ConnectionScheduleHelper(new ApiPojoConverters(new CatalogConverter(new FieldGenerator())));
+      new ConnectionScheduleHelper(new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList())));
 
   private static final String EXPECTED_CRON_TIMEZONE = "UTC";
   private static final String EXPECTED_CRON_EXPRESSION = "* */2 * * * ?";

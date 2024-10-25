@@ -112,7 +112,6 @@ import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
@@ -128,6 +127,7 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobWithStatusAndTimestamp;
+import io.airbyte.config.MapperConfig;
 import io.airbyte.config.MapperOperationName;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.RefreshConfig;
@@ -150,6 +150,7 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.StatePersistence;
@@ -175,6 +176,7 @@ import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
+import io.airbyte.mappers.transformations.HashingMapper;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -200,6 +202,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -293,7 +297,7 @@ class ConnectionsHandlerTest {
   private CatalogService catalogService;
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
-  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
   private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final ConnectionScheduleHelper connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters);
@@ -1275,7 +1279,27 @@ class ConnectionsHandlerTest {
             .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
                 Map.of(
                     new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
-                        new ConfiguredMapper(MapperOperationName.HASHING, Map.of()), MapperError.INVALID_MAPPER_CONFIG))));
+                        new MapperConfig() {
+
+                          @NotNull
+                          @Override
+                          public String name() {
+                            return MapperOperationName.HASHING;
+                          }
+
+                          @Nullable
+                          @Override
+                          public String documentationUrl() {
+                            return null;
+                          }
+
+                          @NotNull
+                          @Override
+                          public Object config() {
+                            return Map.of();
+                          }
+
+                        }, MapperError.INVALID_MAPPER_CONFIG))));
 
         final MapperValidationProblem exception =
             assertThrows(MapperValidationProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
@@ -1718,7 +1742,27 @@ class ConnectionsHandlerTest {
             .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
                 Map.of(
                     new io.airbyte.config.StreamDescriptor().withName(streamName), Map.of(
-                        new ConfiguredMapper(MapperOperationName.HASHING, Map.of()), MapperError.INVALID_MAPPER_CONFIG))));
+                        new MapperConfig() {
+
+                          @NotNull
+                          @Override
+                          public Object config() {
+                            return Map.of();
+                          }
+
+                          @Nullable
+                          @Override
+                          public String documentationUrl() {
+                            return null;
+                          }
+
+                          @NotNull
+                          @Override
+                          public String name() {
+                            return MapperOperationName.HASHING;
+                          }
+
+                        }, MapperError.INVALID_MAPPER_CONFIG))));
 
         final MapperValidationProblem exception =
             assertThrows(MapperValidationProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
@@ -1741,7 +1785,7 @@ class ConnectionsHandlerTest {
         catalogForUpdate.getStreams().getFirst().getConfig().hashedFields(List.of(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME)));
 
         // Expect mapper in the persisted catalog
-        final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
+        final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
         final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateAirbyteCatalogWithTwoFields();
         expectedPersistedCatalog.getStreams().getFirst().setMappers(List.of(hashingMapper));
 
@@ -1775,7 +1819,7 @@ class ConnectionsHandlerTest {
         standardSync.setCatalog(ConnectionHelpers.generateAirbyteCatalogWithTwoFields());
 
         // Send an update that hashes one of the fields, using mappers
-        final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
+        final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
         final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateApiCatalogWithTwoFields();
         catalogForUpdate.getStreams().getFirst().getConfig().addMappersItem(
             new ConfiguredStreamMapper().type(StreamMapperType.HASHING).mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())));

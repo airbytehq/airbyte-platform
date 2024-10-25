@@ -26,16 +26,20 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.FieldSelectionData;
+import io.airbyte.config.MapperConfig;
 import io.airbyte.config.MapperOperationName;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.ProtocolConverters;
+import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.mappers.helpers.MapperHelperKt;
+import io.airbyte.mappers.transformations.Mapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -49,11 +53,12 @@ import org.slf4j.LoggerFactory;
 public class CatalogConverter {
 
   private final FieldGenerator fieldGenerator;
-
+  private final Map<String, Mapper<? extends MapperConfig>> mappers;
   private static final Logger LOGGER = LoggerFactory.getLogger(CatalogConverter.class);
 
-  public CatalogConverter(final FieldGenerator fieldGenerator) {
+  public CatalogConverter(final FieldGenerator fieldGenerator, final List<Mapper<? extends MapperConfig>> mappers) {
     this.fieldGenerator = fieldGenerator;
+    this.mappers = mappers.stream().collect(Collectors.toMap(Mapper::getName, c -> c));
   }
 
   private io.airbyte.api.model.generated.AirbyteStream toApi(final io.airbyte.protocol.models.AirbyteStream stream) {
@@ -68,11 +73,11 @@ public class CatalogConverter {
         .isResumable(stream.getIsResumable());
   }
 
-  public ConfiguredStreamMapper toApi(final ConfiguredMapper mapper) {
+  public ConfiguredStreamMapper toApi(final MapperConfig mapper) {
     return new ConfiguredStreamMapper()
-        .type(Enums.toEnum(mapper.getName(), StreamMapperType.class)
-            .orElseThrow(() -> new IllegalArgumentException("Unexpected mapper name: " + mapper.getName())))
-        .mapperConfiguration(Jsons.jsonNode(mapper.getConfig()));
+        .type(Enums.toEnum(mapper.name(), StreamMapperType.class)
+            .orElseThrow(() -> new IllegalArgumentException("Unexpected mapper name: " + mapper.name())))
+        .mapperConfiguration(Jsons.jsonNode(mapper.config()));
   }
 
   /**
@@ -103,7 +108,7 @@ public class CatalogConverter {
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
                   .selectedFields(List.of())
                   // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.
-                  .hashedFields(configuredStream.getMappers().stream().filter(mapper -> MapperOperationName.HASHING.equals(mapper.getName()))
+                  .hashedFields(configuredStream.getMappers().stream().filter(mapper -> MapperOperationName.HASHING.equals(mapper.name()))
                       .map(this::toApiFieldInfo)
                       .collect(Collectors.toList()))
                   .mappers(configuredStream.getMappers().stream().map(this::toApi).collect(Collectors.toList()))
@@ -219,7 +224,7 @@ public class CatalogConverter {
         .withIsResumable(stream.getIsResumable());
   }
 
-  private List<ConfiguredMapper> toConfiguredHashingMappers(@Nullable final List<SelectedFieldInfo> hashedFields) {
+  private List<? extends MapperConfig> toConfiguredHashingMappers(@Nullable final List<SelectedFieldInfo> hashedFields) {
     if (hashedFields == null) {
       return Collections.emptyList();
     }
@@ -228,19 +233,24 @@ public class CatalogConverter {
     ).toList();
   }
 
-  private List<ConfiguredMapper> toConfiguredMappers(final @Nullable List<io.airbyte.api.model.generated.ConfiguredStreamMapper> mappers) {
-    if (mappers == null) {
+  private List<MapperConfig> toConfiguredMappers(final @Nullable List<io.airbyte.api.model.generated.ConfiguredStreamMapper> mapperConfigs) {
+    if (mapperConfigs == null) {
       return Collections.emptyList();
     }
-    return mappers.stream()
-        .map(mapper -> new ConfiguredMapper(mapper.getType().toString(), Jsons.deserializeToStringMap(mapper.getMapperConfiguration())))
+
+    return mapperConfigs.stream()
+        .map(mapperConfig -> {
+          final String mapperName = mapperConfig.getType().toString();
+          final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
+          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration()));
+        })
         .collect(Collectors.toList());
   }
 
-  private SelectedFieldInfo toApiFieldInfo(final ConfiguredMapper configuredHashingMapper) {
-    Preconditions.checkArgument(MapperOperationName.HASHING.equals(configuredHashingMapper.getName()), "Expected hashing mapper");
+  private SelectedFieldInfo toApiFieldInfo(final MapperConfig configuredHashingMapper) {
+    Preconditions.checkArgument(MapperOperationName.HASHING.equals(configuredHashingMapper.name()), "Expected hashing mapper");
     return new SelectedFieldInfo()
-        .fieldPath(List.of(MapperHelperKt.getHashedFieldName(configuredHashingMapper)));
+        .fieldPath(List.of(MapperHelperKt.getHashedFieldName((HashingMapperConfig) configuredHashingMapper)));
   }
 
   /**

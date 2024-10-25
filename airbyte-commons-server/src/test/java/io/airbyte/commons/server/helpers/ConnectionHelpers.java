@@ -48,6 +48,7 @@ import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,7 +70,7 @@ public class ConnectionHelpers {
   private static final String STANDARD_SYNC_PREFIX = "presto_to_hudi";
   private static final FieldGenerator fieldGenerator = new FieldGenerator();
 
-  private static final CatalogConverter catalogConverters = new CatalogConverter(fieldGenerator);
+  private static final CatalogConverter catalogConverters = new CatalogConverter(fieldGenerator, Collections.emptyList());
 
   private static final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverters);
 

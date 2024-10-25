@@ -116,7 +116,7 @@ class SourceDefinitionsHandlerTest {
   private SourceService sourceService;
   private WorkspaceService workspaceService;
 
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach

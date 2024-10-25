@@ -22,11 +22,11 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.DataType;
 import io.airbyte.config.Field;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.FieldType;
+import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -61,7 +61,7 @@ class CatalogConverterTest {
 
   @Test
   void testConvertInternal() throws JsonValidationException {
-    final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
     final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     final var apiStream = apiCatalog.getStreams().getFirst();
     apiStream.getConfig().setMappers(
@@ -96,7 +96,7 @@ class CatalogConverterTest {
     final var fields = internalStream.getFields();
     assertEquals(2, fields.size());
 
-    final ConfiguredMapper expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    final HashingMapperConfig expectedMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
     assertEquals(expectedMapper, mappers.getFirst());
   }
 

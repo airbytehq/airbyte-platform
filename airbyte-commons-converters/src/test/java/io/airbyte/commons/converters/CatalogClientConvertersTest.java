@@ -13,8 +13,8 @@ import io.airbyte.api.client.model.generated.StreamMapperType;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteStream;
@@ -99,7 +99,7 @@ class CatalogClientConvertersTest {
 
   @Test
   void testConvertInternalWithMapping() {
-    final ConfiguredMapper hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
+    final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
 
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,

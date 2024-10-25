@@ -1,12 +1,9 @@
 package io.airbyte.mappers.transformations
 
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName
-import io.airbyte.config.MapperSpecification
-import io.airbyte.config.MapperSpecificationFieldEnum
-import io.airbyte.config.MapperSpecificationFieldString
 import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.config.mapper.configs.HashingMapperConfig
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.security.MessageDigest
@@ -14,7 +11,7 @@ import java.util.HexFormat
 
 @Singleton
 @Named("HashingMapper")
-class HashingMapper : Mapper {
+class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
   companion object {
     // Needed configuration keys
     const val TARGET_FIELD_CONFIG_KEY = "targetField"
@@ -33,73 +30,48 @@ class HashingMapper : Mapper {
     val supportedMethods = listOf(MD2, MD5, SHA1, SHA224, SHA256, SHA384, SHA512)
   }
 
+  private val hashingMapperSpec = HashingMapperSpec()
+
   override val name: String
     get() = MapperOperationName.HASHING
 
-  override fun spec(): MapperSpecification {
-    return MapperSpecification(
-      name = name,
-      documentationUrl = "",
-      config =
-        mapOf(
-          TARGET_FIELD_CONFIG_KEY to
-            MapperSpecificationFieldString(
-              title = "Field",
-              description = "The field to hash.",
-            ),
-          METHOD_CONFIG_KEY to
-            MapperSpecificationFieldEnum(
-              title = "Hashing method",
-              description = "The hashing algorithm to use.",
-              enum = supportedMethods,
-              default = SHA256,
-              examples = listOf(SHA256),
-            ),
-          FIELD_NAME_SUFFIX_CONFIG_KEY to
-            MapperSpecificationFieldString(
-              title = "Field name suffix",
-              description = "The suffix to append to the field name after hashing.",
-              default = "_hashed",
-            ),
-        ),
-    )
+  override fun spec(): MapperSpec<HashingMapperConfig> {
+    return hashingMapperSpec
   }
 
   override fun schema(
-    config: ConfiguredMapper,
+    config: HashingMapperConfig,
     slimStream: SlimStream,
   ): SlimStream {
-    val (targetField, _, fieldNameSuffix) = getConfigValues(config.config)
-    val resultField = "$targetField$fieldNameSuffix"
+    val resultField = "${config.config.targetField}${config.config.fieldNameSuffix}"
 
     return slimStream
       .deepCopy()
-      .apply { redefineField(targetField, resultField, FieldType.STRING) }
+      .apply { redefineField(config.config.targetField, resultField, FieldType.STRING) }
   }
 
-  override fun map(
-    config: ConfiguredMapper,
+  override fun mapForNonDiscardedRecords(
+    config: HashingMapperConfig,
     record: AirbyteRecord,
   ) {
-    val (targetField, method, fieldNameSuffix) = getConfigValues(config.config)
-    val outputFieldName = "$targetField$fieldNameSuffix"
+    val outputFieldName = "${config.config.targetField}${config.config.fieldNameSuffix}"
 
-    if (record.has(targetField)) {
+    if (record.has(config.config.targetField)) {
       try {
-        val data = record.get(targetField).asString().toByteArray()
+        val data = record.get(config.config.targetField).asString().toByteArray()
 
-        val hashedAndEncodeValue: String = hashAndEncodeData(method, data)
+        val hashedAndEncodeValue: String = hashAndEncodeData(config.config.method.value, data)
         record.set(outputFieldName, hashedAndEncodeValue)
       } catch (e: Exception) {
         // TODO We should use a more precise Reason once available in the protocol
         record.trackFieldError(outputFieldName, AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
       } finally {
-        record.remove(targetField)
+        record.remove(config.config.targetField)
       }
     }
   }
 
-  internal fun hashAndEncodeData(
+  private fun hashAndEncodeData(
     method: String,
     data: ByteArray,
   ): String {
@@ -110,19 +82,5 @@ class HashingMapper : Mapper {
     val hashedValue = MessageDigest.getInstance(method).digest(data)
 
     return HexFormat.of().formatHex(hashedValue)
-  }
-
-  data class HashingConfig(
-    val targetField: String,
-    val method: String,
-    val fieldNameSuffix: String,
-  )
-
-  private fun getConfigValues(config: Map<String, String>): HashingConfig {
-    return HashingConfig(
-      config[TARGET_FIELD_CONFIG_KEY] ?: "",
-      config[METHOD_CONFIG_KEY] ?: "",
-      config[FIELD_NAME_SUFFIX_CONFIG_KEY] ?: "_hashed",
-    )
   }
 }

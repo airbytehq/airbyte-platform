@@ -44,6 +44,7 @@ import io.micronaut.http.uri.UriBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,7 +69,7 @@ class ActorDefinitionHandlerHelperTest {
   private static final String VALID_PROTOCOL_VERSION = "0.1.0";
   private static final String INVALID_PROTOCOL_VERSION = "123.0.0";
   private static final URI DOCUMENTATION_URL = UriBuilder.of("").scheme("https").host("docs.com").build();
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   private static final String LATEST = "latest";
   private static final String DEV = "dev";

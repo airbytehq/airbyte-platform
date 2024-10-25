@@ -1,21 +1,20 @@
 package io.airbyte.mappers.transformations
 
-import io.airbyte.config.ConfiguredMapper
-import io.airbyte.config.MapperSpecification
+import io.airbyte.config.MapperConfig
 import io.airbyte.config.adapters.AirbyteRecord
 
-interface Mapper {
+interface Mapper<T : MapperConfig> {
   val name: String
 
-  fun spec(): MapperSpecification
+  fun spec(): MapperSpec<T>
 
   fun schema(
-    config: ConfiguredMapper,
+    config: T,
     slimStream: SlimStream,
   ): SlimStream
 
   fun map(
-    config: ConfiguredMapper,
+    config: T,
     record: AirbyteRecord,
   )
 }

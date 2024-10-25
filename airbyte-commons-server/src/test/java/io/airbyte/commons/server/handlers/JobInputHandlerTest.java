@@ -102,7 +102,7 @@ class JobInputHandlerTest {
   private DestinationService destinatinonService;
   private ConnectionService connectionService;
 
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @BeforeEach
   void init() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {

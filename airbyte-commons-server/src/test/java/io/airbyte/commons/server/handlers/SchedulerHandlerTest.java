@@ -142,6 +142,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -276,7 +277,7 @@ class SchedulerHandlerTest {
   private DestinationService destinationService;
   private ConnectionService connectionService;
   private OperationService operationService;
-  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
 
   @BeforeEach

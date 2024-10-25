@@ -118,7 +118,7 @@ class AttemptHandlerTest {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
   private final StreamAttemptMetadataService streamAttemptMetadataService = mock(StreamAttemptMetadataService.class);
 
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   private final AttemptHandler handler = new AttemptHandler(jobPersistence,
       statePersistence,

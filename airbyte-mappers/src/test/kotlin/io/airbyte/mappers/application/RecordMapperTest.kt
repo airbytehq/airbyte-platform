@@ -1,8 +1,11 @@
 package io.airbyte.mappers.application
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
+import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
+import io.airbyte.config.mapper.configs.TestConfig
+import io.airbyte.config.mapper.configs.TestEnums
+import io.airbyte.config.mapper.configs.TestMapperConfig
 import io.airbyte.mappers.mocks.TestMapper
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
@@ -32,8 +35,8 @@ class RecordMapperTest {
     recordMapper.applyMappers(
       testRecord,
       listOf(
-        ConfiguredMapper("test", mapOf("target" to "field1")),
-        ConfiguredMapper("test", mapOf("target" to "field1_test")),
+        TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("field1", TestEnums.ONE, "field2")),
+        TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("field1_test", TestEnums.ONE, "field2")),
       ),
     )
 

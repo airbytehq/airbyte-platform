@@ -203,6 +203,9 @@ temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", versio
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 testcontainers-vault = { module = "org.testcontainers:vault",  version = "1.18.3" }
 vault-java-driver = { module = "com.bettercloud:vault-java-driver", version = "5.1.0" }
+network-json-validator = { module = "com.networknt:json-schema-validator", version = "1.5.2" }
+victools-json-schema-generator = { module = "com.github.victools:jsonschema-generator", version = "4.36.0" }
+victools-json-schema-jackson-module = { module = "com.github.victools:jsonschema-module-jackson", version = "4.36.0" }
 
 # Micronaut-related dependencies
 h2-database = { module = "com.h2database:h2", version = "2.2.224" }

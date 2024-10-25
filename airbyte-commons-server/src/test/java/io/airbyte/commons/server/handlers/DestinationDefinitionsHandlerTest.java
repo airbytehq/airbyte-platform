@@ -114,7 +114,7 @@ class DestinationDefinitionsHandlerTest {
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
   private DestinationService destinationService;
   private WorkspaceService workspaceService;
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach

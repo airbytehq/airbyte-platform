@@ -17,8 +17,8 @@ import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FailureReason
+import io.airbyte.config.MapperConfig
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
@@ -124,7 +124,7 @@ class ReplicationWorkerHelper(
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
-  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<ConfiguredMapper>>
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<out MapperConfig>>
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -469,7 +469,7 @@ class ReplicationWorkerHelper(
     airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId = destinationId)).destinationDefinitionId
 
   fun applyTransformationMappers(message: AirbyteRecord) {
-    val mappersForStream: List<ConfiguredMapper> =
+    val mappersForStream: List<MapperConfig> =
       mappersPerStreamDescriptor[message.streamDescriptor] ?: listOf()
 
     if (mappersForStream.isEmpty()) {

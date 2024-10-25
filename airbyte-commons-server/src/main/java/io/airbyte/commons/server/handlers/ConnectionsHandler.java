@@ -562,8 +562,8 @@ public class ConnectionsHandler {
             .error(mapperError.getValue().name())
             .mapper(
                 new ProblemMapperErrorDataMapper()
-                    .type(mapperError.getKey().getName())
-                    .mapperConfiguration(mapperError.getKey().getConfig()))))
+                    .type(mapperError.getKey().name())
+                    .mapperConfiguration(mapperError.getKey().config()))))
         .toList();
 
     if (!errors.isEmpty()) {

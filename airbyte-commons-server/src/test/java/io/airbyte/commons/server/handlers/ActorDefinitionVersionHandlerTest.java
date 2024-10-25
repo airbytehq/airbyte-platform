@@ -42,6 +42,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +67,7 @@ class ActorDefinitionVersionHandlerTest {
   private ActorDefinitionHandlerHelper mActorDefinitionHandlerHelper;
 
   private ActorDefinitionVersionHandler actorDefinitionVersionHandler;
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @BeforeEach
   void setUp() {

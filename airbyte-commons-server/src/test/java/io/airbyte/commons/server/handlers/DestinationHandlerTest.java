@@ -77,7 +77,7 @@ class DestinationHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   // needs to match name of file in src/test/resources/icons
 

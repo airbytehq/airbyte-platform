@@ -50,7 +50,7 @@ data class ConfiguredAirbyteStream
     var syncId: Long? = null,
     // TODO this should become required, for backwards compat, generate from stream?
     var fields: List<Field>? = null,
-    var mappers: List<ConfiguredMapper> = listOf(),
+    var mappers: List<MapperConfig> = listOf(),
   ) : Serializable {
     fun withStream(stream: AirbyteStream): ConfiguredAirbyteStream {
       this.stream = stream
@@ -114,7 +114,7 @@ data class ConfiguredAirbyteStream
       @JsonProperty("sync_id")
       var syncId: Long? = null,
       var fields: List<Field>? = null,
-      var mappers: List<ConfiguredMapper> = listOf(),
+      var mappers: List<MapperConfig> = listOf(),
     ) {
       fun stream(stream: AirbyteStream) = apply { this.stream = stream }
 
@@ -134,7 +134,7 @@ data class ConfiguredAirbyteStream
 
       fun fields(fields: List<Field>?) = apply { this.fields = fields }
 
-      fun mappers(mappers: List<ConfiguredMapper>) = apply { this.mappers = mappers }
+      fun mappers(mappers: List<MapperConfig>) = apply { this.mappers = mappers }
 
       fun build(): ConfiguredAirbyteStream =
         ConfiguredAirbyteStream(

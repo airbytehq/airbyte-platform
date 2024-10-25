@@ -11,16 +11,18 @@ import io.airbyte.api.client.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConfiguredMapper;
+import io.airbyte.config.MapperConfig;
 import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.mappers.transformations.Mapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,9 +37,11 @@ import java.util.stream.Collectors;
 public class CatalogClientConverters {
 
   private final FieldGenerator fieldGenerator;
+  private final Map<String, Mapper<? extends MapperConfig>> mappers;
 
-  public CatalogClientConverters(FieldGenerator fieldGenerator) {
+  public CatalogClientConverters(final FieldGenerator fieldGenerator, final List<Mapper<? extends MapperConfig>> mappers) {
     this.fieldGenerator = fieldGenerator;
+    this.mappers = mappers.stream().collect(Collectors.toMap(Mapper::getName, c -> c));
   }
 
   /**
@@ -204,12 +208,16 @@ public class CatalogClientConverters {
             .withIsResumable(stream.isResumable());
   }
 
-  private List<ConfiguredMapper> toConfiguredMappers(final @Nullable List<ConfiguredStreamMapper> mappers) {
-    if (mappers == null) {
+  private List<MapperConfig> toConfiguredMappers(final @Nullable List<ConfiguredStreamMapper> mapperConfigs) {
+    if (mapperConfigs == null) {
       return Collections.emptyList();
     }
-    return mappers.stream()
-        .map(mapper -> new ConfiguredMapper(mapper.getType().getValue(), Jsons.deserializeToStringMap(mapper.getMapperConfiguration())))
+    return mapperConfigs.stream()
+        .map(mapperConfig -> {
+          final String mapperName = mapperConfig.getType().toString();
+          final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
+          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration()));
+        })
         .collect(Collectors.toList());
   }
 

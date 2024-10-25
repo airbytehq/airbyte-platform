@@ -1,8 +1,9 @@
 package io.airbyte.mappers.helpers
 
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperOperationName
-import io.airbyte.mappers.transformations.HashingMapper
+import io.airbyte.config.mapper.configs.HashingConfig
+import io.airbyte.config.mapper.configs.HashingMapperConfig
+import io.airbyte.config.mapper.configs.HashingMethods
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -12,13 +13,13 @@ class MapperHelperTest {
     val fieldName = "my_field"
     val hashingMapper = createHashingMapper(fieldName)
     val expectedHashingMapper =
-      ConfiguredMapper(
+      HashingMapperConfig(
         name = MapperOperationName.HASHING,
         config =
-          mapOf(
-            "targetField" to fieldName,
-            "method" to "SHA-256",
-            "fieldNameSuffix" to "_hashed",
+          HashingConfig(
+            fieldName,
+            HashingMethods.SHA256,
+            "_hashed",
           ),
       )
     Assertions.assertEquals(expectedHashingMapper, hashingMapper)
@@ -28,13 +29,13 @@ class MapperHelperTest {
   fun testGetHashedFieldName() {
     val fieldName = "my_field"
     val hashingMapper =
-      ConfiguredMapper(
+      HashingMapperConfig(
         name = MapperOperationName.HASHING,
         config =
-          mapOf(
-            HashingMapper.TARGET_FIELD_CONFIG_KEY to fieldName,
-            HashingMapper.METHOD_CONFIG_KEY to "SHA-1",
-            HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
+          HashingConfig(
+            fieldName,
+            HashingMethods.fromValue("SHA-1")!!,
+            "_hashed",
           ),
       )
     Assertions.assertEquals(fieldName, getHashedFieldName(hashingMapper))

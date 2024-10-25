@@ -112,7 +112,7 @@ class SourceHandlerTest {
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private CatalogService catalogService;
-  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
   @SuppressWarnings("unchecked")

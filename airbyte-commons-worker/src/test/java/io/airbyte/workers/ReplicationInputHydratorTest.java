@@ -67,6 +67,7 @@ import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
@@ -208,7 +209,7 @@ class ReplicationInputHydratorTest {
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
     resumableFullRefreshStatsHelper = mock(ResumableFullRefreshStatsHelper.class);
-    catalogClientConverters = new CatalogClientConverters(new FieldGenerator());
+    catalogClientConverters = new CatalogClientConverters(new FieldGenerator(), Collections.emptyList());
     backfillHelper = new BackfillHelper(catalogClientConverters);
     when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);

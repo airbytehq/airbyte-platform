@@ -9,7 +9,10 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-
+  implementation(libs.micronaut.cache.caffeine)
+  implementation(libs.network.json.validator)
+  implementation(libs.victools.json.schema.generator)
+  implementation(libs.victools.json.schema.jackson.module)
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
@@ -22,4 +25,5 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.mockito.core)
   testImplementation(libs.mockk)
+  testImplementation(libs.bundles.micronaut.test)
 }

@@ -117,7 +117,7 @@ class WorkspacesHandlerTest {
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
   private TrackingClient trackingClient;
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach

@@ -1,0 +1,10 @@
+[
+  {
+    "name": "hashing",
+    "config": {
+      "targetField": "column_name",
+      "method": "MD5",
+      "fieldNameSuffix": "_suffix"
+    }
+  }
+]

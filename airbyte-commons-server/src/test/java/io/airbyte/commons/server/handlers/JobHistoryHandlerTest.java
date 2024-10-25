@@ -110,7 +110,7 @@ import org.mockito.Mockito;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class JobHistoryHandlerTest {
 
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator()));
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   private static final long JOB_ID = 100L;
   private static final String JOB_CONFIG_ID = "ef296385-6796-413f-ac1b-49c4caba3f2b";

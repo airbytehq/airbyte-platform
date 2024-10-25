@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.JsonsSchemaConstants.PROPERTIES
 import io.airbyte.config.JsonsSchemaConstants.TYPE
 import io.airbyte.config.JsonsSchemaConstants.TYPE_OBJECT
+import io.airbyte.config.MapperConfig
 import io.airbyte.config.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -18,13 +18,13 @@ val log = KotlinLogging.logger {}
 
 @Singleton
 class DestinationCatalogGenerator(
-  val mappers: List<Mapper>,
+  val mappers: List<Mapper<out MapperConfig>>,
 ) {
   private val mappersByName = mappers.associateBy { it.name }
 
   data class CatalogGenerationResult(
     val catalog: ConfiguredAirbyteCatalog,
-    val errors: Map<StreamDescriptor, Map<ConfiguredMapper, MapperError>>,
+    val errors: Map<StreamDescriptor, Map<MapperConfig, MapperError>>,
   )
 
   /**
@@ -40,7 +40,7 @@ class DestinationCatalogGenerator(
     }
   }
 
-  private fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<ConfiguredMapper, MapperError> {
+  private fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<MapperConfig, MapperError> {
     val (updateFields, _, errors) = applyMapperToFields(stream)
 
     val jsonSchema =
@@ -65,8 +65,8 @@ class DestinationCatalogGenerator(
 
   data class MapperToFieldAccumulator(
     val slimStream: SlimStream,
-    val validConfig: List<ConfiguredMapper>,
-    val errors: Map<ConfiguredMapper, MapperError>,
+    val validConfig: List<MapperConfig>,
+    val errors: Map<MapperConfig, MapperError>,
   )
 
   enum class MapperError {
@@ -78,7 +78,7 @@ class DestinationCatalogGenerator(
     val result =
       stream.mappers.map {
         Pair(
-          mappersByName[it.name],
+          mappersByName[it.name()],
           it,
         )
       }
@@ -95,22 +95,22 @@ class DestinationCatalogGenerator(
             mapOf(),
           ),
         ) {
-            mapperAcc, (mapperInstance, configuredMapper) ->
+            mapperAcc, (mapperInstance, mapperConfig) ->
           if (mapperInstance == null) {
-            log.warn { "Trying to use a mapper named ${configuredMapper.name} which doesn't have a known implementation. The mapper won't be apply" }
-            mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.MISSING_MAPPER))
+            log.warn { "Trying to use a mapper named ${mapperConfig.name()} which doesn't have a known implementation. The mapper won't be apply" }
+            mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError.MISSING_MAPPER))
           } else {
             try {
               mapperAcc.copy(
-                slimStream = mapperInstance.schema(configuredMapper, mapperAcc.slimStream),
-                validConfig = mapperAcc.validConfig + configuredMapper,
+                slimStream = (mapperInstance as Mapper<MapperConfig>).schema(mapperConfig, mapperAcc.slimStream),
+                validConfig = mapperAcc.validConfig + mapperConfig,
               )
             } catch (e: Exception) {
-              log.warn {
-                "Trying to use a mapper named ${configuredMapper.name} which failed to resolve its schema for the config:" +
-                  " ${configuredMapper.config}. The mapper won't be apply"
+              log.error(e) {
+                "Trying to use a mapper named ${mapperConfig.name()} which failed to resolve its schema for the config:" +
+                  " ${mapperConfig.config()}. The mapper won't be apply"
               }
-              mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.INVALID_MAPPER_CONFIG))
+              mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError.INVALID_MAPPER_CONFIG))
             }
           }
         }

@@ -170,7 +170,7 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
-  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator());
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 

@@ -31,6 +31,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -42,7 +43,7 @@ import org.junit.jupiter.api.Test;
 class AutoPropagateSchemaChangeHelperTest {
 
   private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper =
-      new AutoPropagateSchemaChangeHelper(new CatalogConverter(new FieldGenerator()));
+      new AutoPropagateSchemaChangeHelper(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   private static final String NAME1 = "name1";
   private static final String NAMESPACE1 = "namespace1";
