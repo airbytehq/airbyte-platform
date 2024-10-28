@@ -262,6 +262,11 @@ class RolloutActorFinderTest {
     } else {
       assertEquals(DESTINATION_ACTOR_IDS.toSet().size * TARGET_PERCENTAGE / 100, actorSelectionInfo.actorIdsToPin.size)
     }
+    assertEquals(8, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(2, actorSelectionInfo.nNewPinned)
+    assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
+    assertEquals(50, actorSelectionInfo.percentagePinned)
   }
 
   @ParameterizedTest
@@ -297,11 +302,83 @@ class RolloutActorFinderTest {
       jobPersistence.getLastSyncJobForConnections(any())
     }
 
+    assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
+    assertEquals(8, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(1, actorSelectionInfo.nNewPinned)
+    assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
+    assertEquals(25, actorSelectionInfo.percentagePinned)
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test getActorIdsToPin with previously pinned`(actorDefinitionId: UUID) {
     if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
-      assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
+      every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+      every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns
+        listOf(
+          ScopedConfiguration().apply {
+            id = UUID.randomUUID()
+            key = "key1"
+            value = RELEASE_CANDIDATE_VERSION_ID.toString()
+            resourceId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+            resourceType = ConfigResourceType.SOURCE
+            scopeId = UUID.randomUUID()
+            scopeType = ConfigScopeType.ACTOR
+            originType = ConfigOriginType.RELEASE_CANDIDATE
+          },
+        )
     } else {
-      assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
+      every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
+      every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+      every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns
+        listOf(
+          ScopedConfiguration().apply {
+            id = UUID.randomUUID()
+            key = "key1"
+            value = RELEASE_CANDIDATE_VERSION_ID.toString()
+            resourceId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+            resourceType = ConfigResourceType.DESTINATION
+            scopeId = UUID.randomUUID()
+            scopeType = ConfigScopeType.ACTOR
+            originType = ConfigOriginType.RELEASE_CANDIDATE
+          },
+        )
     }
+    every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
+    every {
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+    } returns CONFIG_SCOPE_MAP.map { it.key }.toSet() -
+      setOf(
+        ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE,
+        ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
+      )
+    every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { jobPersistence.getLastSyncJobForConnections(any()) } returns JOB_STATUS_SUMMARIES
+
+    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
+
+    verify {
+      if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+        sourceService.getStandardSourceDefinition(any())
+      } else {
+        destinationService.getStandardDestinationDefinition(any())
+      }
+      actorDefinitionVersionUpdater.getConfigScopeMaps(any())
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      jobPersistence.getLastSyncJobForConnections(any())
+    }
+
+    // We already exceed the target percentage so shouldn't pin something new
+    assertEquals(0, actorSelectionInfo.actorIdsToPin.size)
+    assertEquals(8, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(0, actorSelectionInfo.nNewPinned)
+    assertEquals(1, actorSelectionInfo.nPreviouslyPinned)
+    assertEquals(25, actorSelectionInfo.percentagePinned)
   }
 
   @ParameterizedTest

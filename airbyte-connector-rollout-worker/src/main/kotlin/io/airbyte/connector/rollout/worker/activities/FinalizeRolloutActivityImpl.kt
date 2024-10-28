@@ -34,8 +34,8 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
     val (state, errorMsg, failureReason) =
       when (input.result) {
         ConnectorRolloutFinalState.SUCCEEDED -> Triple(ConnectorRolloutStateTerminal.SUCCEEDED, null, null)
-        ConnectorRolloutFinalState.FAILED_ROLLED_BACK -> Triple(ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK, null, null)
-        ConnectorRolloutFinalState.CANCELED_ROLLED_BACK -> Triple(ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK, null, null)
+        ConnectorRolloutFinalState.FAILED_ROLLED_BACK -> Triple(ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK, null, input.failedReason)
+        ConnectorRolloutFinalState.CANCELED_ROLLED_BACK -> Triple(ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK, input.errorMsg, null)
         else -> throw RuntimeException("Unexpected termination state: ${input.result}")
       }
 

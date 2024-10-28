@@ -466,6 +466,7 @@ open class ConnectorRolloutHandler
               connectorRolloutUpdate.dockerImageTag,
               connectorRolloutUpdate.actorDefinitionId,
               connectorRolloutUpdate.id,
+              connectorRolloutUpdate.updatedBy,
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -481,6 +482,7 @@ open class ConnectorRolloutHandler
             connectorRolloutUpdate.id,
             connectorRolloutUpdate.actorIds,
             connectorRolloutUpdate.targetPercentage,
+            connectorRolloutUpdate.updatedBy,
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -502,6 +504,7 @@ open class ConnectorRolloutHandler
               connectorRolloutFinalize.dockerImageTag,
               connectorRolloutFinalize.actorDefinitionId,
               connectorRolloutFinalize.id,
+              connectorRolloutFinalize.updatedBy,
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -522,6 +525,9 @@ open class ConnectorRolloutHandler
             connectorRolloutFinalize.actorDefinitionId,
             connectorRolloutFinalize.id,
             ConnectorRolloutFinalState.fromValue(connectorRolloutFinalize.state.toString()),
+            connectorRolloutFinalize.errorMsg,
+            connectorRolloutFinalize.failedReason,
+            connectorRolloutFinalize.updatedBy,
           ),
         )
       } catch (e: WorkflowUpdateException) {

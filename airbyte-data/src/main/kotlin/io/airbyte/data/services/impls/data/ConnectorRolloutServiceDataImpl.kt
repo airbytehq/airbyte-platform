@@ -10,8 +10,11 @@ import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRolloutRepository) : ConnectorRolloutService {
@@ -55,10 +58,14 @@ open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRoll
   }
 
   override fun writeConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout {
+    val entity = connectorRollout.toEntity()
+
     if (repository.existsById(connectorRollout.id)) {
-      return repository.update(connectorRollout.toEntity()).toConfigModel()
+      logger.info { "Updating existing connector rollout: connectorRollout=$connectorRollout entity=$entity" }
+      return repository.update(entity).toConfigModel()
     }
-    return repository.save(connectorRollout.toEntity()).toConfigModel()
+    logger.info { "Creating new connector rollout: connectorRollout=$connectorRollout entity=$entity" }
+    return repository.save(entity).toConfigModel()
   }
 
   override fun listConnectorRollouts(): List<ConnectorRollout> {

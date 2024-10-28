@@ -68,14 +68,13 @@ class RolloutActorFinder(
     }
 
     val nPreviouslyPinned = getNPinnedToReleaseCandidate(connectorRollout)
-    val nEligibleOrAlreadyPinned = candidates.size + nPreviouslyPinned
-
-    logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
     logger.info { "Rollout ${connectorRollout.id}: $nPreviouslyPinned already pinned to the release candidate" }
 
     candidates = filterByAlreadyPinned(connectorRollout.actorDefinitionId, candidates)
+    val nEligibleOrAlreadyPinned = candidates.size + nPreviouslyPinned
 
-    logger.info { "Rollout ${connectorRollout.id}: ${candidates.size - nPreviouslyPinned} pinned to a non-RC" }
+    logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
+    logger.info { "Rollout ${connectorRollout.id}: ${nEligibleOrAlreadyPinned - candidates.size - nPreviouslyPinned} pinned to a non-RC" }
 
     // Calculate the number to pin based on the input percentage
     val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
@@ -95,12 +94,17 @@ class RolloutActorFinder(
     return ActorSelectionInfo(
       actorIdsToPin = actorIdsToPin,
       nActors = initialNCandidates,
-      nActorsEligibleOrAlreadyPinned = candidates.size,
+      nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
       nNewPinned = actorIdsToPin.size,
       nPreviouslyPinned = nPreviouslyPinned,
       // Total percentage pinned out of all eligible, including new and previously pinned
       // This could end up being >100% if the number of eligible actors changes between rollout increments.
-      percentagePinned = if (actorIdsToPin.isEmpty()) 0 else ((nPreviouslyPinned + actorIdsToPin.size) / nEligibleOrAlreadyPinned) * 100,
+      percentagePinned =
+        if (nEligibleOrAlreadyPinned == 0) {
+          0
+        } else {
+          ceil((nPreviouslyPinned + actorIdsToPin.size) * 100.0 / nEligibleOrAlreadyPinned).toInt()
+        },
     )
   }
 
