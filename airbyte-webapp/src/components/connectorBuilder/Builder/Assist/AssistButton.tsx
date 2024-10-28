@@ -24,6 +24,7 @@ import {
   BuilderAssistInputAllParams,
   BuilderAssistManifestResponse,
   useBuilderAssistFindAuth,
+  useBuilderAssistFindRequestOptions,
   useBuilderAssistFindUrlBase,
   useBuilderAssistFindStreamPaginator,
   useBuilderAssistStreamMetadata,
@@ -183,6 +184,11 @@ const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
     useHook: useBuilderAssistFindStreamPaginator,
     useHookParams: ["stream_name", "stream_response"],
     formPathToSet: (streamNum: number) => `streams.${streamNum}.paginator`,
+  },
+  request_options: {
+    useHook: useBuilderAssistFindRequestOptions,
+    useHookParams: ["stream_name", "stream_response"],
+    formPathToSet: (streamNum: number) => `streams.${streamNum}.requestOptions.requestHeaders`,
   },
 };
 

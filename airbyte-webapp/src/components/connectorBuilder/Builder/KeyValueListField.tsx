@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { useFieldArray } from "react-hook-form";
+import { FieldPath } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
@@ -10,6 +10,8 @@ import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { getLabelAndTooltip } from "./manifestHelpers";
+import { useBuilderWatchArrayWithPreview } from "../preview";
+import { BuilderState, concatPath } from "../types";
 
 interface KeyValueInputProps {
   path: string;
@@ -24,14 +26,14 @@ const KeyValueInput: React.FC<KeyValueInputProps> = ({ onRemove, path }) => {
         <BuilderFieldWithInputs
           label={formatMessage({ id: "connectorBuilder.key" })}
           type="string"
-          path={`${path}.0`}
+          path={concatPath(path, "0")}
         />
       </FlexItem>
       <FlexItem grow>
         <BuilderFieldWithInputs
           label={formatMessage({ id: "connectorBuilder.value" })}
           type="string"
-          path={`${path}.1`}
+          path={concatPath(path, "1")}
         />
       </FlexItem>
       <RemoveButton onClick={onRemove} />
@@ -40,7 +42,7 @@ const KeyValueInput: React.FC<KeyValueInputProps> = ({ onRemove, path }) => {
 };
 
 interface KeyValueListFieldProps {
-  path: string;
+  path: FieldPath<BuilderState>;
   label?: string;
   tooltip?: ReactNode;
   manifestPath?: string;
@@ -64,7 +66,7 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
     false,
     omitInterpolationContext
   );
-  const { fields: keyValueList, append, remove } = useFieldArray({ name: path });
+  const { fieldValue: fields, append, remove } = useBuilderWatchArrayWithPreview(path);
 
   return (
     <GroupControls
@@ -75,7 +77,7 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
         </Button>
       }
     >
-      {keyValueList.map((keyValue, keyValueIndex) => (
+      {fields.map((keyValue: { id: React.Key | null | undefined; 0: string; 1: string }, keyValueIndex: number) => (
         <KeyValueInput
           key={keyValue.id}
           path={`${path}.${keyValueIndex}`}

@@ -19,7 +19,7 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 import { convertToBuilderFormValuesSync } from "../../convertManifestToBuilderForm";
 import { BuilderFormValues, useBuilderWatch } from "../../types";
 
-export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator";
+export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
 
 export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
   const update = updates.manifest_update;
@@ -48,6 +48,7 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             authenticator: update?.auth ?? undefined,
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
+            request_headers: update?.request_headers ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
@@ -105,6 +106,7 @@ export interface ManifestUpdate {
   stream_http_method: HttpRequesterHttpMethod | null;
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
+  request_headers: Record<string, string> | null;
 }
 
 export interface BuilderAssistBaseResponse {
@@ -212,6 +214,13 @@ export const useBuilderAssistStreamMetadata = (input: BuilderAssistInputStreamPa
 export const useBuilderAssistStreamResponse = (input: BuilderAssistInputStreamParams) => {
   const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
   return useAssistProxyQuery<BuilderAssistManifestResponse>("find_response_structure", hasRequiredParams, params, [
+    "url_base",
+  ]);
+};
+
+export const useBuilderAssistFindRequestOptions = (input: BuilderAssistInputStreamParams) => {
+  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
+  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_request_parameters", hasRequiredParams, params, [
     "url_base",
   ]);
 };
