@@ -522,6 +522,152 @@ describe("Sync Modes", { testIsolation: false }, () => {
   });
 });
 
+describe("Diff styles", { testIsolation: false }, () => {
+  let postgresSource: SourceRead;
+  let postgresDestination: DestinationRead;
+  let connection: WebBackendConnectionRead;
+
+  before(() => {
+    setFeatureFlags({ "connection.syncCatalogV2": true });
+    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
+
+    cleanDBSource();
+    runDbQuery(createUsersTableQuery);
+    runDbQuery(createCitiesTableQuery);
+
+    createPostgresSourceViaApi()
+      .then((source) => {
+        postgresSource = source;
+      })
+      .then(() => createPostgresDestinationViaApi())
+      .then((destination) => {
+        postgresDestination = destination;
+      })
+      .then(() => createNewConnectionViaApi(postgresSource, postgresDestination))
+      .then((connectionResponse) => {
+        connection = connectionResponse;
+
+        visit(connection, "replication");
+      });
+  });
+
+  after(() => {
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
+
+    // cleanup
+    if (postgresSource) {
+      requestDeleteSource({ sourceId: postgresSource.sourceId });
+    }
+    if (postgresDestination) {
+      requestDeleteDestination({
+        destinationId: postgresDestination.destinationId,
+      });
+    }
+    if (connection) {
+      requestDeleteConnection({ connectionId: connection.connectionId });
+    }
+    cleanDBSource();
+  });
+
+  const citiesStreamRow = new StreamRowPageObjectV2("public", "cities");
+  const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+
+  describe("Stream", { testIsolation: false }, () => {
+    it("should prepare streams for tests", () => {
+      citiesStreamRow.toggleStreamSync(true);
+      usersStreamRow.toggleStreamSync(true);
+      streamsTableV2.clickSaveChangesButton();
+    });
+
+    it("should have `removed` style after changing state from `enabled` => `disabled`", () => {
+      visit(connection, "replication");
+      citiesStreamRow.toggleStreamSync(false);
+      citiesStreamRow.streamHasRemovedStyle(true);
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.fieldHasDisabledStyle("city", true);
+      citiesStreamRow.fieldHasDisabledStyle("city_code", true);
+      streamsTableV2.clickSaveChangesButton();
+      citiesStreamRow.streamHasRemovedStyle(false);
+    });
+
+    it("should have `disabled` style if stream is not enabled", () => {
+      visit(connection, "replication");
+      citiesStreamRow.isStreamSyncEnabled(false);
+      citiesStreamRow.streamHasDisabledStyle(true);
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.fieldHasDisabledStyle("city", true);
+      citiesStreamRow.fieldHasDisabledStyle("city_code", true);
+    });
+
+    it("should have `added` style after changing state from `disabled` => `enabled`", () => {
+      citiesStreamRow.toggleStreamSync(true);
+      citiesStreamRow.streamHasAddedStyle(true);
+      citiesStreamRow.fieldHasDisabledStyle("city", false);
+      citiesStreamRow.fieldHasDisabledStyle("city_code", false);
+      streamsTableV2.clickSaveChangesButton();
+      citiesStreamRow.streamHasAddedStyle(false);
+    });
+
+    it("should have `changed` style after changing the sync mode", () => {
+      visit(connection, "replication");
+      citiesStreamRow.isStreamSyncEnabled(true);
+      citiesStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+
+      citiesStreamRow.streamHasChangedStyle(true);
+      citiesStreamRow.selectPKs(["city_code"]);
+      citiesStreamRow.selectCursor("city");
+      streamsTableV2.clickSaveChangesButton();
+      confirmStreamConfigurationChangedPopup({ reset: false });
+      citiesStreamRow.streamHasChangedStyle(false);
+    });
+
+    it("should have `changed` style after changing the PK", () => {
+      citiesStreamRow.selectPKs(["city"]);
+      citiesStreamRow.streamHasChangedStyle(true);
+      streamsTableV2.clickDiscardChangesButton();
+      citiesStreamRow.streamHasChangedStyle(false);
+    });
+
+    it("should have `changed` style after changing the Cursor", () => {
+      citiesStreamRow.selectCursor("city_code");
+      citiesStreamRow.streamHasChangedStyle(true);
+      streamsTableV2.clickDiscardChangesButton();
+      citiesStreamRow.streamHasChangedStyle(false);
+    });
+  });
+
+  describe("Field", { testIsolation: false }, () => {
+    it("should prepare fields for tests", () => {
+      citiesStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
+      streamsTableV2.clickSaveChangesButton();
+    });
+
+    it("should have field with `removed` and stream with `changed` styles after disabling the field", () => {
+      visit(connection, "replication");
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.toggleFieldSync("city", false);
+
+      citiesStreamRow.streamHasChangedStyle(true);
+      citiesStreamRow.fieldHasRemovedStyle("city", true);
+      streamsTableV2.clickSaveChangesButton();
+      citiesStreamRow.streamHasChangedStyle(false);
+      citiesStreamRow.fieldHasRemovedStyle("city", false);
+    });
+    it("should have field with `added` and stream with `changed` styles after enabling the field", () => {
+      visit(connection, "replication");
+      citiesStreamRow.toggleExpandCollapseStream();
+      citiesStreamRow.toggleFieldSync("city", true);
+
+      citiesStreamRow.streamHasChangedStyle(true);
+      citiesStreamRow.fieldHasAddedStyle("city", true);
+      streamsTableV2.clickSaveChangesButton();
+      citiesStreamRow.streamHasChangedStyle(false);
+      citiesStreamRow.fieldHasRemovedStyle("city", false);
+    });
+  });
+});
+
 describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
