@@ -431,7 +431,9 @@ public class BufferedReplicationWorker {
           if (message == null) {
             continue;
           }
-
+          if (replicationInput.getUseFileTransfer()) {
+            LOGGER.info("writeToDestination: writing message to transfer file");
+          }
           try (final var t = writeToDestStopwatch.start()) {
             destination.accept(message);
           }
