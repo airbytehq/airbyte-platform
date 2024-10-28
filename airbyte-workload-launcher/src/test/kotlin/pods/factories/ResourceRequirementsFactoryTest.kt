@@ -3,6 +3,7 @@ package pods.factories
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.SyncResourceRequirements
+import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -126,7 +127,9 @@ class ResourceRequirementsFactoryTest {
 
     val result = factory.checkConnector(input)
 
-    Assertions.assertEquals(reqs, result)
+    val expected = ResourceRequirementsUtils.mergeResourceRequirements(reqs, defaultCheckConnectorReqs)
+
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
@@ -156,7 +159,9 @@ class ResourceRequirementsFactoryTest {
 
     val result = factory.discoverConnector(input)
 
-    Assertions.assertEquals(reqs, result)
+    val expected = ResourceRequirementsUtils.mergeResourceRequirements(reqs, defaultDiscoverConnectorReqs)
+
+    Assertions.assertEquals(expected, result)
   }
 
   @Test

@@ -234,7 +234,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION);
 
     return reportConnectionStatus(
         synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements));
@@ -264,7 +264,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION);
 
     return reportConnectionStatus(
         synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements));
@@ -301,7 +301,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(destinationDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+        getResourceRequirementsForJobType(destinationDef.getResourceRequirements(), JobType.CHECK_CONNECTION);
     return reportConnectionStatus(
         synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements));
   }
@@ -328,7 +328,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(destDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+        getResourceRequirementsForJobType(destDef.getResourceRequirements(), JobType.CHECK_CONNECTION);
 
     return reportConnectionStatus(
         synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements));
@@ -379,7 +379,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA).orElse(null);
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA);
 
     final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
         Charsets.UTF_8)).toString();
@@ -475,8 +475,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA)
-            .orElse(null);
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA);
 
     final SynchronousResponse<UUID> persistedCatalogId =
         synchronousSchedulerClient.createDiscoverSchemaJob(
@@ -543,7 +542,7 @@ public class SchedulerHandler {
     // have higher priority and overwrite
     // the default settings in WorkerConfig.
     final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA).orElse(null);
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA);
     // todo (cgardens) - narrow the struct passed to the client. we are not setting fields that are
     // technically declared as required.
     final SourceConnection source = new SourceConnection()

@@ -282,7 +282,7 @@ public class JobInputHandler {
               Collections.emptyMap());
 
       final ResourceRequirements sourceCheckResourceRequirements =
-          getResourceRequirementsForJobType(sourceDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+          getResourceRequirementsForJobType(sourceDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION);
 
       ActorContext sourceContext = contextBuilder.fromSource(source);
 
@@ -294,7 +294,7 @@ public class JobInputHandler {
           .withActorContext(sourceContext);
 
       final ResourceRequirements destinationCheckResourceRequirements =
-          getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+          getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION);
 
       ActorContext destinationContext = contextBuilder.fromDestination(destination);
 

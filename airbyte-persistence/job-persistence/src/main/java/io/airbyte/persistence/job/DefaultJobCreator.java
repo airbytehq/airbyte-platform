@@ -313,13 +313,13 @@ public class DefaultJobCreator implements JobCreator {
     final ResourceRequirements defaultOrchestratorRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType, variant);
 
-    final var mergedRrsReqs = ResourceRequirementsUtils.getResourceRequirements(
+    final var mergedRrsReqs = ResourceRequirementsUtils.mergeResourceRequirements(
         standardSync.getResourceRequirements(),
         defaultOrchestratorRssReqs);
 
     final var overrides = getOrchestratorResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRrsReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRrsReqs);
   }
 
   private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync,
@@ -337,7 +337,7 @@ public class DefaultJobCreator implements JobCreator {
 
     final var overrides = getSourceResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRssReqs);
   }
 
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
@@ -356,7 +356,7 @@ public class DefaultJobCreator implements JobCreator {
 
     final var overrides = getDestinationResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRssReqs);
   }
 
   private ResourceRequirements getDestinationResourceOverrides(final Context ffCtx) {

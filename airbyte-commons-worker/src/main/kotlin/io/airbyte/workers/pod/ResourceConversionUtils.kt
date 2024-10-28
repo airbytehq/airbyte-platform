@@ -12,7 +12,7 @@ import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirments
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 val logger = KotlinLogging.logger {}
 
@@ -22,7 +22,7 @@ val logger = KotlinLogging.logger {}
  * Convert to singleton as necessary.
  */
 object ResourceConversionUtils {
-  fun domainToApi(resourceRequirements: AirbyteResourceRequirments?): ResourceRequirements {
+  fun domainToApi(resourceRequirements: AirbyteResourceRequirements?): ResourceRequirements {
     if (resourceRequirements != null) {
       var cpuLimit: Quantity? = null
       var memoryLimit: Quantity? = null
@@ -77,10 +77,10 @@ object ResourceConversionUtils {
    * Creates a domain resource requirement out of two resource requirements, summing their values.
    */
   fun sumResourceRequirements(
-    reqs1: AirbyteResourceRequirments,
-    reqs2: AirbyteResourceRequirments,
-  ): AirbyteResourceRequirments {
-    return AirbyteResourceRequirments()
+    reqs1: AirbyteResourceRequirements,
+    reqs2: AirbyteResourceRequirements,
+  ): AirbyteResourceRequirements {
+    return AirbyteResourceRequirements()
       .withCpuRequest(sum(reqs1.cpuRequest, reqs2.cpuRequest))
       .withCpuLimit(sum(reqs1.cpuLimit, reqs2.cpuLimit))
       .withMemoryRequest(sum(reqs1.memoryRequest, reqs2.memoryRequest))

@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getDestinationResourceReqs
 import io.airbyte.workers.input.getOrchestratorResourceReqs
@@ -29,10 +30,9 @@ class ResourceRequirementsFactory(
   fun replSource(input: ReplicationInput): AirbyteResourceRequirements? {
     val sourceReqs =
       if (input.useFileTransfer) {
-        input.getSourceResourceReqs()
-          ?.withEphemeralStorageLimit(fileTransferReqs.ephemeralStorageLimit)
-          ?.withEphemeralStorageRequest(fileTransferReqs.ephemeralStorageRequest)
-          ?: fileTransferReqs
+        input.getSourceResourceReqs()?.let {
+          ResourceRequirementsUtils.mergeResourceRequirements(fileTransferReqs, it)
+        } ?: fileTransferReqs
       } else {
         input.getSourceResourceReqs()
       }
@@ -48,11 +48,15 @@ class ResourceRequirementsFactory(
   }
 
   fun checkConnector(input: CheckConnectionInput): AirbyteResourceRequirements {
-    return input.checkConnectionInput.resourceRequirements ?: checkConnectorReqs
+    return input.checkConnectionInput.resourceRequirements?.let {
+      ResourceRequirementsUtils.mergeResourceRequirements(it, checkConnectorReqs)
+    } ?: checkConnectorReqs
   }
 
   fun discoverConnector(input: DiscoverCatalogInput): AirbyteResourceRequirements {
-    return input.discoverCatalogInput.resourceRequirements ?: discoverConnectorReqs
+    return input.discoverCatalogInput.resourceRequirements?.let {
+      ResourceRequirementsUtils.mergeResourceRequirements(it, discoverConnectorReqs)
+    } ?: discoverConnectorReqs
   }
 
   fun specConnector(): AirbyteResourceRequirements {
