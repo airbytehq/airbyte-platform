@@ -116,6 +116,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
   private static final String CHECK_WORKSPACE_TOMBSTONE_TAG = "check_workspace_tombstone";
   private static final int CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION = 1;
+  private static final String PASS_DEST_REQS_TO_CHECK_TAG = "pass_dest_reqs_to_check";
+  private static final int PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION = 1;
 
   private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -592,13 +594,21 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       IntegrationLauncherConfig launcherConfig = checkInputs.getDestinationLauncherConfig()
           .withPriority(WorkloadPriority.DEFAULT);
       log.info("DESTINATION CHECK: Starting");
-      final ConnectorJobOutput destinationCheckResponse;
-      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, launcherConfig,
+      final var checkDestInput =
           new StandardCheckConnectionInput()
               .withActorType(ActorType.DESTINATION)
               .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
               .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration())
-              .withActorContext(ContextConversionHelper.buildDestinationContextFrom(jobInputs, checkInputs)));
+              .withActorContext(ContextConversionHelper.buildDestinationContextFrom(jobInputs, checkInputs));
+
+      final boolean shouldPassReqs =
+          Workflow.getVersion(PASS_DEST_REQS_TO_CHECK_TAG, Workflow.DEFAULT_VERSION,
+              PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION) >= PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION;
+      if (shouldPassReqs) {
+        checkDestInput.setResourceRequirements(checkInputs.getDestinationCheckConnectionInput().getResourceRequirements());
+      }
+
+      final ConnectorJobOutput destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, launcherConfig, checkDestInput);
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);
