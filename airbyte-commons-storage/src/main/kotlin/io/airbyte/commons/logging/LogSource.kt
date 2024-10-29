@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.logging
 
+import com.fasterxml.jackson.annotation.JsonValue
 import java.util.Locale
 
 private const val DESTINATION_DISPLAY_NAME = "destination"
@@ -12,7 +13,9 @@ private const val PLATFORM_DISPLAY_NAME = "platform"
 private const val REPLICATION_ORCHESTRATOR_DISPLAY_NAME = "replication-orchestrator"
 const val LOG_SOURCE_MDC_KEY = "log_source"
 
-enum class LogSource(val displayName: String) {
+enum class LogSource(
+  @JsonValue val displayName: String,
+) {
   DESTINATION(displayName = DESTINATION_DISPLAY_NAME),
   PLATFORM(displayName = PLATFORM_DISPLAY_NAME),
   REPLICATION_ORCHESTRATOR(displayName = REPLICATION_ORCHESTRATOR_DISPLAY_NAME),

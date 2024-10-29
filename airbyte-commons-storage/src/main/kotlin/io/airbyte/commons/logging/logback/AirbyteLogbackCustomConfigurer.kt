@@ -74,7 +74,6 @@ class AirbyteLogbackCustomConfigurer :
       createCloudAppender(
         context = context,
         discriminatorValue = discriminatorValue,
-        layout = AirbyteOperationsJobLogbackMessageLayout(),
         documentType = DocumentType.LOGS,
         appenderName = CLOUD_OPERATIONS_JOB_LOGGER_NAME,
       )
@@ -95,7 +94,6 @@ class AirbyteLogbackCustomConfigurer :
    * @param discriminatorValue The discriminator value used to select this appender.
    * @param documentType The remote storage [DocumentType].
    * @param appenderName The base appender name.
-   * @param layout The log message [Layout].
    * @return An [AirbyteCloudStorageAppender] used to store logs remotely.
    */
   internal fun createCloudAppender(
@@ -103,11 +101,9 @@ class AirbyteLogbackCustomConfigurer :
     discriminatorValue: String,
     documentType: DocumentType,
     appenderName: String,
-    layout: Layout<ILoggingEvent>,
   ): AirbyteCloudStorageAppender {
     val appender =
       AirbyteCloudStorageAppender(
-        encoder = createEncoder(context = context, layout = layout),
         baseStorageId = discriminatorValue,
         documentType = documentType,
       )
@@ -126,7 +122,7 @@ class AirbyteLogbackCustomConfigurer :
   internal fun createPlatformAppender(loggerContext: LoggerContext): ConsoleAppender<ILoggingEvent> =
     ConsoleAppender<ILoggingEvent>().apply {
       context = loggerContext
-      encoder = createEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
+      encoder = createUnstructuredEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
       name = PLATFORM_LOGGER_NAME
       start()
     }
@@ -148,13 +144,13 @@ class AirbyteLogbackCustomConfigurer :
     }
 
   /**
-   * Builds the [Encoder] used to format the logging event message.
+   * Builds the [Encoder] used to generated unstructured log events.
    *
    * @param context The logging [Context].
    * @param layout The logging message [Layout] to be applied to the message.
    * @return The [Encoder].
    */
-  private fun createEncoder(
+  private fun createUnstructuredEncoder(
     context: Context,
     layout: Layout<ILoggingEvent>,
   ): Encoder<ILoggingEvent> {

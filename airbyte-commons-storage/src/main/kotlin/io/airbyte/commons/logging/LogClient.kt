@@ -4,6 +4,10 @@
 
 package io.airbyte.commons.logging
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.readValue
+import io.airbyte.commons.logging.logback.STRUCTURED_LOG_FILE_EXTENSION
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.commons.storage.StorageType
@@ -62,9 +66,20 @@ private fun MeterRegistry?.createTimer(
 @Singleton
 class LogClient(
   storageClientFactory: StorageClientFactory,
+  val mapper: ObjectMapper,
+  private val logEventLayout: LogEventLayout,
   private val meterRegistry: MeterRegistry?,
 ) {
   private val client = storageClientFactory.get(DocumentType.LOGS)
+
+  // Copy the mapper to avoid changing deserialization for all usages in the containing application
+  private val objectMapper = mapper.copy()
+
+  init {
+    val structuredLogEventModule = SimpleModule()
+    structuredLogEventModule.addDeserializer(StackTraceElement::class.java, StackTraceElementDeserializer())
+    objectMapper.registerModule(structuredLogEventModule)
+  }
 
   fun deleteLogs(logPath: String) {
     logger.debug { "Deleting logs from path '$logPath' using ${client.storageType()} storage client..." }
@@ -103,8 +118,6 @@ class LogClient(
     files: List<String>,
     numLines: Int,
   ): List<String> {
-    val lines = mutableListOf<String>()
-
     val lineCounter =
       meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
@@ -116,10 +129,65 @@ class LogClient(
         logClientType = client.storageType(),
       )
 
+    val isStructured = files.all { it.endsWith(suffix = STRUCTURED_LOG_FILE_EXTENSION) }
+
+    /*
+     * This logic is here to handle logs created before the introduction of structured logs.  If any of the log files
+     * written for a job are unstructured, use the old logic.  Otherwise, use the new logic to treat the file contents
+     * as structured events.
+     */
+    return if (isStructured) {
+      handleStructuredLogs(files = files, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
+    } else {
+      handleUnstructuredLogs(files = files, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
+    }
+  }
+
+  private fun handleStructuredLogs(
+    files: List<String>,
+    numLines: Int,
+    lineCounter: Counter?,
+    byteCounter: Counter?,
+  ): List<String> {
+    var count = 0
+    val logLines =
+      files
+        .asSequence()
+        .map { file -> extractEvents(events = client.read(id = file)) }
+        .flatMap { it.events }
+        .takeWhile {
+          count++
+          lineCounter?.increment()
+          count <= numLines
+        }
+        .sortedBy { it.timestamp }
+        .map {
+          val line = logEventLayout.doLayout(logEvent = it)
+          byteCounter?.increment(line.length.toDouble())
+          line
+        }
+        .toList()
+    return logLines
+  }
+
+  private fun handleUnstructuredLogs(
+    files: List<String>,
+    numLines: Int,
+    lineCounter: Counter?,
+    byteCounter: Counter?,
+  ): List<String> {
+    val lines = mutableListOf<String>()
+
     // run is necessary to allow the forEach calls to return early
     run {
       files.forEach { file ->
-        val fileLines = extractLogLines(fileContents = client.read(id = file))
+        val fileLines =
+          if (file.endsWith(suffix = STRUCTURED_LOG_FILE_EXTENSION)) {
+            val logEvents = extractEvents(events = client.read(id = file))
+            logEvents.events.map(logEventLayout::doLayout)
+          } else {
+            extractLogLines(fileContents = client.read(id = file))
+          }
         fileLines.forEach { line ->
           lines.add(line)
           lineCounter?.increment()
@@ -133,6 +201,10 @@ class LogClient(
     }
 
     return orderLogLines(lines = lines)
+  }
+
+  private fun extractEvents(events: String?): LogEvents {
+    return events?.let { objectMapper.readValue(it) } ?: LogEvents(events = emptyList())
   }
 
   private fun extractLogLines(fileContents: String?): List<String> {

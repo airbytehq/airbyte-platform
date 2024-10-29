@@ -19,6 +19,7 @@ dependencies {
   api(libs.google.cloud.storage)
   api(libs.guava)
   api(libs.slf4j.api)
+  api(libs.jackson.kotlin)
 
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-metrics:metrics-lib"))
@@ -26,6 +27,8 @@ dependencies {
 
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)
+  implementation(libs.jackson.annotations)
+  implementation(libs.jackson.databind)
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

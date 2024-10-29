@@ -4,9 +4,10 @@
 
 package io.airbyte.commons.logging.logback
 
+import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.Context
-import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.status.Status
 import ch.qos.logback.core.status.StatusManager
 import io.airbyte.commons.envvar.EnvVar
@@ -157,19 +158,35 @@ private class AirbyteCloudStorageAppenderTest {
   fun testStorageUpload() {
     val baseStorageId = "/path/to/logs"
     val storageClient = mockk<StorageClient>()
-    val event = mockk<ILoggingEvent>()
+    val className = "io.airbyte.TestClass"
+    val context = emptyMap<String, String>()
+    val methodName = "testMethod"
+    val fileName = "TestClass.kt"
+    val lineNumber = 12345
+    val logLevel = Level.ERROR
+    val logMessage = "test message"
+    val logThreadName = "Test Thread"
+    val exception = RuntimeException("test", NullPointerException("root"))
+    val timestamp = 0L
+    val event =
+      mockk<ILoggingEvent> {
+        every { callerData } returns arrayOf(StackTraceElement(className, methodName, fileName, lineNumber))
+        every { formattedMessage } returns logMessage
+        every { level } returns logLevel
+        every { loggerName } returns PLATFORM_LOGGER_NAME
+        every { mdcPropertyMap } returns context
+        every { threadName } returns logThreadName
+        every { throwableProxy } returns ThrowableProxy(exception)
+        every { timeStamp } returns timestamp
+      }
     val period = 1L
     val statusManager =
       mockk<StatusManager> {
         every { add(any<Status>()) } returns Unit
       }
-    val context =
+    val loggingContext =
       mockk<Context> {
         every { getStatusManager() } returns statusManager
-      }
-    val encoder =
-      mockk<Encoder<ILoggingEvent>> {
-        every { encode(any()) } returns "some test log message".toByteArray(Charsets.UTF_8)
       }
 
     val appender =
@@ -177,11 +194,10 @@ private class AirbyteCloudStorageAppenderTest {
         documentType = DocumentType.LOGS,
         storageClient = storageClient,
         baseStorageId = baseStorageId,
-        encoder = encoder,
         period = period,
         unit = TimeUnit.SECONDS,
       )
-    appender.context = context
+    appender.context = loggingContext
     appender.start()
 
     appender.doAppend(event)
@@ -200,6 +216,6 @@ private class AirbyteCloudStorageAppenderTest {
 
     val id = createFileId(baseId = baseStorageId, timestamp = timestamp, hostname = hostname, uniqueIdentifier = uniqueId)
 
-    assertEquals("${baseStorageId.trim('/')}/${timestamp}_${hostname}_${uniqueId.replace("-","")}", id)
+    assertEquals("${baseStorageId.trim('/')}/${timestamp}_${hostname}_${uniqueId.replace("-","")}$STRUCTURED_LOG_FILE_EXTENSION", id)
   }
 }

@@ -6,9 +6,13 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
-import ch.qos.logback.core.encoder.Encoder
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.commons.jackson.MoreMappers
+import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.logging.StackTraceElementSerializer
+import io.airbyte.commons.logging.toLogEvent
 import io.airbyte.commons.storage.AzureStorageClient
 import io.airbyte.commons.storage.AzureStorageConfig
 import io.airbyte.commons.storage.DocumentType
@@ -29,6 +33,8 @@ import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+
+private val objectMapper = MoreMappers.initMapper()
 
 /**
  * Shared executor service used to reduce the number of threads created to handle
@@ -56,7 +62,7 @@ fun createFileId(
   uniqueIdentifier: String = UUID.randomUUID().toString(),
 ): String {
   // Remove the leading/trailing "/" from the base storage ID if present to avoid duplicates in the storage ID
-  return "${baseId.trim('/')}/${timestamp}_${hostname}_${uniqueIdentifier.replace("-", "")}"
+  return "${baseId.trim('/')}/${timestamp}_${hostname}_${uniqueIdentifier.replace("-", "")}$STRUCTURED_LOG_FILE_EXTENSION"
 }
 
 /**
@@ -74,20 +80,22 @@ fun stopAirbyteCloudStorageAppenderExecutorService() {
  * This is necessary because most cloud storage systems do not support an append mode.
  */
 class AirbyteCloudStorageAppender(
-  val encoder: Encoder<ILoggingEvent>,
   val baseStorageId: String,
   val documentType: DocumentType,
   val storageClient: StorageClient = buildStorageClient(storageConfig = buildStorageConfig(), documentType = documentType),
   val period: Long = 60L,
   val unit: TimeUnit = TimeUnit.SECONDS,
 ) : AppenderBase<ILoggingEvent>() {
-  private val buffer = LinkedBlockingQueue<String>()
+  private val buffer = LinkedBlockingQueue<ILoggingEvent>()
   private var currentStorageId: String = createFileId(baseId = baseStorageId)
   private val uploadLock = Any()
 
   override fun start() {
     super.start()
     executorService.scheduleAtFixedRate(this::upload, period, period, unit)
+    val structuredLogEventModule = SimpleModule()
+    structuredLogEventModule.addSerializer(StackTraceElement::class.java, StackTraceElementSerializer())
+    objectMapper.registerModule(structuredLogEventModule)
   }
 
   override fun stop() {
@@ -100,16 +108,17 @@ class AirbyteCloudStorageAppender(
   }
 
   override fun append(eventObject: ILoggingEvent) {
-    buffer.offer(encoder.encode(eventObject).decodeToString())
+    buffer.offer(eventObject)
   }
 
   private fun upload() {
     synchronized(uploadLock) {
-      val messages = mutableListOf<String>()
-      buffer.drainTo(messages)
+      val events = mutableListOf<ILoggingEvent>()
+      buffer.drainTo(events)
 
-      if (messages.isNotEmpty()) {
-        storageClient.write(id = currentStorageId, document = messages.joinToString(separator = ""))
+      if (events.isNotEmpty()) {
+        val document = objectMapper.writeValueAsString(LogEvents(events = events.map(ILoggingEvent::toLogEvent)))
+        storageClient.write(id = currentStorageId, document = document)
 
         // Move to next file to avoid overwriting in log storage that doesn't support append mode
         this.currentStorageId = createFileId(baseId = baseStorageId)
@@ -178,6 +187,7 @@ internal fun buildStorageClient(
   }
 }
 
+const val STRUCTURED_LOG_FILE_EXTENSION = ".json"
 private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
 
 internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucketConfig =

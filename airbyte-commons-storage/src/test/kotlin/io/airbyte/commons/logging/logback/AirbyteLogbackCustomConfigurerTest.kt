@@ -64,21 +64,18 @@ private class AirbyteLogbackCustomConfigurerTest {
     val appenderName = "test-appender"
     val discriminatorValue = "/workspace/1"
     val documentType = DocumentType.LOGS
-    val layout = AirbytePlatformLogbackMessageLayout()
     val appender =
       configurer.createCloudAppender(
         context = context,
         discriminatorValue = discriminatorValue,
         documentType = documentType,
         appenderName = appenderName,
-        layout = layout,
       )
 
     assertEquals(AirbyteCloudStorageAppender::class.java, appender.javaClass)
     assertEquals(context, appender.context)
     assertEquals("$appenderName-$discriminatorValue", appender.name)
     assertEquals(documentType, appender.documentType)
-    assertEquals(layout.javaClass, (appender.encoder as LayoutWrappingEncoder).layout.javaClass)
     assertEquals(discriminatorValue, appender.baseStorageId)
 
     assertTrue(appender.isStarted)
