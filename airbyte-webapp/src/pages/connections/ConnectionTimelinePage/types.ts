@@ -261,7 +261,7 @@ export const connectionSettingsUpdateEventSummarySchema = yup.object({
       const { originalValue } = testContext as unknown as { originalValue: Record<string, unknown> };
       return Object.keys(originalValue).some(
         // resourceRequirements is a valid patch, and we want to continue logging it, but we do not want to surface it in the UI at this time.
-        (key) => (patchFields as string[]).includes(key) || key === "resourceRequirements"
+        (key) => (patchFields as string[]).includes(key)
       );
     })
     .required(),
@@ -360,3 +360,24 @@ export const schemaUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
   summary: schemaUpdateSummarySchema.required(),
 });
+
+export interface ConnectionTimelineRunningEvent {
+  id: string;
+  eventType: string;
+  connectionId: string;
+  createdAt: number;
+  summary: {
+    streams: Array<{
+      streamName: string;
+      streamNamespace: string | undefined;
+      configType: JobConfigType;
+    }>;
+    configType: JobConfigType;
+    jobId: number;
+  };
+  user: {
+    email: string;
+    name: string;
+    id: string;
+  };
+}

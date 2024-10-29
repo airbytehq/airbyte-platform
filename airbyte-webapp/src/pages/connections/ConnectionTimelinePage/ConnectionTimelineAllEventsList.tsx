@@ -1,6 +1,7 @@
 import { HTMLAttributes, Ref, forwardRef, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
+import { InferType } from "yup";
 
 import { LoadingPage } from "components";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -11,10 +12,116 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
 import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { trackError } from "core/utils/datadog";
 
-import { EventLineItem } from "./components/EventLineItem";
+import { ClearEventItem } from "./components/ClearEventItem";
+import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
+import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
+import { ConnectionSettingsUpdateEventItem } from "./components/ConnectionSettingsUpdateEventItem";
+import { JobStartEventItem } from "./components/JobStartEventItem";
+import { RefreshEventItem } from "./components/RefreshEventItem";
+import { RunningJobItem } from "./components/RunningJobItem";
+import { SchemaUpdateEventItem } from "./components/SchemaUpdateEventItem";
+import { SyncEventItem } from "./components/SyncEventItem";
+import { SyncFailEventItem } from "./components/SyncFailEventItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
+import {
+  ConnectionTimelineRunningEvent,
+  clearEventSchema,
+  connectionDisabledEventSchema,
+  connectionEnabledEventSchema,
+  connectionSettingsUpdateEventSchema,
+  generalEventSchema,
+  jobRunningSchema,
+  jobStartedEventSchema,
+  refreshEventSchema,
+  schemaUpdateEventSchema,
+  syncEventSchema,
+  syncFailEventSchema,
+} from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
+
+export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineRunningEvent) => {
+  if (jobRunningSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <RunningJobItem jobRunningItem={event} />
+      </Box>
+    );
+  } else if (syncEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <SyncEventItem syncEvent={event} />
+      </Box>
+    );
+  } else if (syncFailEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <SyncFailEventItem syncEvent={event} />
+      </Box>
+    );
+  } else if (refreshEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <RefreshEventItem refreshEvent={event} />
+      </Box>
+    );
+  } else if (clearEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ClearEventItem clearEvent={event} />
+      </Box>
+    );
+  } else if (jobStartedEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <JobStartEventItem jobStartEvent={event} />
+      </Box>
+    );
+  } else if (connectionEnabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionEnabledEventItem event={event} />
+      </Box>
+    );
+  } else if (connectionDisabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionDisabledEventItem event={event} />
+      </Box>
+    );
+  } else if (connectionSettingsUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <ConnectionSettingsUpdateEventItem event={event} />
+      </Box>
+    );
+  } else if (schemaUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+    return (
+      <Box py="lg" key={event.id}>
+        <SchemaUpdateEventItem event={event} />
+      </Box>
+    );
+  }
+  /**
+   * known cases for excluding timeline events that we should not trigger error reporting for:
+   * - events with only resourceRequirement patches
+   * - events created prior to July 20 are not guaranteed to be valid
+   */
+  const isEventRecent = (createdAt: number | undefined): boolean => {
+    const threshold = 1721433600;
+    return !createdAt || createdAt > threshold;
+  };
+
+  const hasOnlyResourceRequirementPatches = (summary: InferType<typeof generalEventSchema>["summary"]): boolean => {
+    return summary.patches && Object.keys(summary.patches).length === 1 && summary.patches.resourceRequirements;
+  };
+
+  if (isEventRecent(event.createdAt) && !hasOnlyResourceRequirementPatches(event.summary)) {
+    trackError(new Error("Invalid connection timeline event"), { event });
+  }
+  return null;
+};
 
 // Virtuoso's `List` ref is an HTMLDivElement so we're coercing some types here
 const UlList = forwardRef<HTMLDivElement>((props, ref) => (
@@ -76,7 +183,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
 
   const showRunningJob = isRunning && !!syncProgressData && filtersShouldShowRunningJob;
 
-  const connectionEventsToShow = useMemo(() => {
+  const connectionEventsToShow: Array<ConnectionEvent | ConnectionTimelineRunningEvent> = useMemo(() => {
     const events = [
       ...(showRunningJob && !!syncProgressData.jobId && !!syncProgressData.syncStartedAt
         ? [
@@ -106,6 +213,10 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     return events;
   }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
 
+  const validatedEvents = connectionEventsToShow
+    .map((event) => validateAndMapEvent(event))
+    .filter((event) => event !== null);
+
   useEffect(() => {
     refetch();
   }, [isRunning, refetch]);
@@ -120,7 +231,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     return <LoadingPage />;
   }
 
-  if (connectionEventsToShow.length === 0) {
+  if (validatedEvents.length === 0) {
     return (
       <Box p="xl">
         <EmptyState text={<FormattedMessage id="connection.timeline.empty" />} />
@@ -131,7 +242,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
   return (
     <>
       <Virtuoso
-        data={connectionEventsToShow}
+        data={validatedEvents}
         customScrollParent={scrollElement ?? undefined}
         useWindowScroll
         endReached={handleEndReached}
@@ -144,7 +255,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
           Item: "li" as any,
         }}
         itemContent={(_index, event) => {
-          return <EventLineItem event={event} key={event.id} />;
+          return event;
         }}
       />
       {isFetchingNextPage && (

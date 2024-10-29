@@ -13,15 +13,19 @@ import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/ap
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useModalService } from "hooks/services/Modal";
 
-import { EventLineItem } from "./components/EventLineItem";
-import { ConnectionTimelineAllEventsList } from "./ConnectionTimelineAllEventsList";
+import { ConnectionTimelineAllEventsList, validateAndMapEvent } from "./ConnectionTimelineAllEventsList";
 import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";
 import { openJobLogsModal } from "./JobEventMenu";
 import { TimelineFilterValues } from "./utils";
 
 const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eventId, connectionId }) => {
   const { data: singleEventItem } = useGetConnectionEvent(eventId, connectionId);
-  return singleEventItem ? <EventLineItem event={singleEventItem} /> : null;
+
+  if (!singleEventItem) {
+    return null;
+  }
+
+  return validateAndMapEvent(singleEventItem);
 };
 
 export const ConnectionTimelinePage = () => {
