@@ -204,7 +204,10 @@ class ApplyDefinitionsHelper(
         when (rcDef) {
           is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toActorDefinitionVersion(rcDef)
           is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toActorDefinitionVersion(rcDef)
-          else -> throw IllegalArgumentException("Unsupported type: ${rcDef!!::class.java}")
+          else -> {
+            val rcClass = rcDef!!::class.java
+            throw IllegalArgumentException("Unsupported type: $rcClass")
+          }
         }
 
       val insertedAdv = actorDefinitionService.writeActorDefinitionVersion(rcAdv)

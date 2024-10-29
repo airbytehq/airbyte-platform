@@ -246,8 +246,8 @@ open class ConnectorRolloutHandler
           actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
             connectorRolloutRequest.actorIds.toSet(),
             connectorRollout.actorDefinitionId,
-            connectorRollout.initialVersionId,
             connectorRollout.releaseCandidateVersionId,
+            connectorRollout.id,
           )
         } catch (e: InvalidRequestException) {
           throw ConnectorRolloutInvalidRequestProblem(
@@ -285,8 +285,8 @@ open class ConnectorRolloutHandler
         actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
           actorSelectionInfo.actorIdsToPin.toSet(),
           connectorRollout.actorDefinitionId,
-          connectorRollout.initialVersionId,
           connectorRollout.releaseCandidateVersionId,
+          connectorRollout.id,
         )
       } catch (e: InvalidRequestException) {
         throw ConnectorRolloutInvalidRequestProblem(ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"))

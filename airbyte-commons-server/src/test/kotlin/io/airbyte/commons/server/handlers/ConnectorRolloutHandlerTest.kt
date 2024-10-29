@@ -140,7 +140,6 @@ internal class ConnectorRolloutHandlerTest {
     val rolloutId = UUID.randomUUID()
     val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
     val actorDefinitionId = UUID.randomUUID()
-    val initialVersionId = UUID.randomUUID()
     val releaseCandidateVersionId = UUID.randomUUID()
     val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
 
@@ -150,7 +149,6 @@ internal class ConnectorRolloutHandlerTest {
         actorDefinitionId = actorDefinitionId,
         releaseCandidateVersionId = releaseCandidateVersionId,
       ).apply {
-        this.initialVersionId = initialVersionId
         this.state = ConnectorEnumRolloutState.WORKFLOW_STARTED
       }
 

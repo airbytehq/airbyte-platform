@@ -693,7 +693,7 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigResourceType.ACTOR_DEFINITION,
         ACTOR_DEFINITION_ID,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(releaseCandidateVersionId.toString()),
       )
     } returns scopedConfigurationsToDelete
@@ -706,7 +706,7 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigResourceType.ACTOR_DEFINITION,
         ACTOR_DEFINITION_ID,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(releaseCandidateVersionId.toString()),
       )
 
@@ -837,7 +837,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       .withResourceId(ACTOR_DEFINITION_ID)
       .withScopeType(ConfigScopeType.ACTOR)
       .withScopeId(actorId)
-      .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
+      .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
       .withOrigin(defaultVersionId.toString())
 
   private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId =

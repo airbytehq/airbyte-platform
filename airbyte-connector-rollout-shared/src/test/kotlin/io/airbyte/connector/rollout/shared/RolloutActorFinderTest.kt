@@ -325,7 +325,7 @@ class RolloutActorFinderTest {
             resourceType = ConfigResourceType.SOURCE
             scopeId = UUID.randomUUID()
             scopeType = ConfigScopeType.ACTOR
-            originType = ConfigOriginType.RELEASE_CANDIDATE
+            originType = ConfigOriginType.CONNECTOR_ROLLOUT
           },
         )
     } else {
@@ -341,7 +341,7 @@ class RolloutActorFinderTest {
             resourceType = ConfigResourceType.DESTINATION
             scopeId = UUID.randomUUID()
             scopeType = ConfigScopeType.ACTOR
-            originType = ConfigOriginType.RELEASE_CANDIDATE
+            originType = ConfigOriginType.CONNECTOR_ROLLOUT
           },
         )
     }
@@ -456,7 +456,7 @@ class RolloutActorFinderTest {
           resourceType = ConfigResourceType.ACTOR_DEFINITION
           scopeId = UUID.randomUUID()
           scopeType = ConfigScopeType.ACTOR
-          originType = ConfigOriginType.RELEASE_CANDIDATE
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
         ScopedConfiguration().apply {
           id = UUID.randomUUID()
@@ -466,7 +466,7 @@ class RolloutActorFinderTest {
           resourceType = ConfigResourceType.ACTOR_DEFINITION
           scopeId = UUID.randomUUID()
           scopeType = ConfigScopeType.ACTOR
-          originType = ConfigOriginType.RELEASE_CANDIDATE
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
       )
 
@@ -489,7 +489,7 @@ class RolloutActorFinderTest {
           resourceType = ConfigResourceType.ACTOR_DEFINITION
           scopeId = UUID.randomUUID()
           scopeType = ConfigScopeType.ACTOR
-          originType = ConfigOriginType.RELEASE_CANDIDATE
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
         ScopedConfiguration().apply {
           id = UUID.randomUUID()
@@ -499,7 +499,7 @@ class RolloutActorFinderTest {
           resourceType = ConfigResourceType.ACTOR_DEFINITION
           scopeId = UUID.randomUUID()
           scopeType = ConfigScopeType.ACTOR
-          originType = ConfigOriginType.RELEASE_CANDIDATE
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
       )
 

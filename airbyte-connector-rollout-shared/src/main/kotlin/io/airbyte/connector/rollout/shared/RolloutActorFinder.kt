@@ -173,13 +173,13 @@ class RolloutActorFinder(
         ConfigResourceType.ACTOR_DEFINITION,
         connectorRollout.actorDefinitionId,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(connectorRollout.releaseCandidateVersionId.toString()),
       )
 
     return scopedConfigurations.filter {
       it.value == connectorRollout.releaseCandidateVersionId.toString() &&
-        it.originType == ConfigOriginType.RELEASE_CANDIDATE
+        it.originType == ConfigOriginType.CONNECTOR_ROLLOUT
     }.size
   }
 

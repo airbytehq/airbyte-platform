@@ -268,8 +268,8 @@ class ActorDefinitionVersionUpdater(
   fun createReleaseCandidatePinsForActors(
     actorIds: Set<UUID>,
     actorDefinitionId: UUID,
-    currentVersionId: UUID,
     releaseCandidateVersionId: UUID,
+    rolloutId: UUID,
   ) {
     val configScopeMaps = getConfigScopeMaps(actorDefinitionId)
     val allEligibleActorIds =
@@ -293,8 +293,8 @@ class ActorDefinitionVersionUpdater(
           .withResourceId(actorDefinitionId)
           .withScopeType(ConfigScopeType.ACTOR)
           .withScopeId(actorId)
-          .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
-          .withOrigin(currentVersionId.toString())
+          .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+          .withOrigin(rolloutId.toString())
       }.toList()
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
   }
@@ -310,7 +310,7 @@ class ActorDefinitionVersionUpdater(
         ConfigResourceType.ACTOR_DEFINITION,
         actorDefinitionId,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(releaseCandidateVersionId.toString()),
       )
 
