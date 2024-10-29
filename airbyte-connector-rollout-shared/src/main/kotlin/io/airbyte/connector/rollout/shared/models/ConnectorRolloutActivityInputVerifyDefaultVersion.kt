@@ -8,6 +8,7 @@ data class ConnectorRolloutActivityInputVerifyDefaultVersion(
   var dockerImageTag: String,
   var actorDefinitionId: UUID,
   var rolloutId: UUID,
+  var previousVersionDockerImageTag: String,
   var limit: Int = Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS,
   var timeBetweenPolls: Int = Constants.VERIFY_ACTIVITY_TIME_BETWEEN_POLLS_MILLIS,
 )

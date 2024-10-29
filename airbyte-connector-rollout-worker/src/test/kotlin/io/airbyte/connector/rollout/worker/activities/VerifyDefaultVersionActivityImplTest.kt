@@ -23,7 +23,8 @@ class VerifyDefaultVersionActivityImplTest {
 
   companion object {
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
-    private const val DOCKER_IMAGE_TAG = "0.1"
+    private const val PREVIOUS_VERSION_DOCKER_IMAGE_TAG = "0.1"
+    private const val DOCKER_IMAGE_TAG = "0.2"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
   }
@@ -48,8 +49,8 @@ class VerifyDefaultVersionActivityImplTest {
     } returnsMany
       listOf(
         ActorDefinitionVersionRead(
-          // Initial incorrect tag
-          dockerImageTag = "0.1",
+          // Initial matching tag
+          dockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
           dockerRepository = DOCKER_REPOSITORY,
           isVersionOverrideApplied = true,
           supportState = SupportState.SUPPORTED,
@@ -57,7 +58,7 @@ class VerifyDefaultVersionActivityImplTest {
           supportsFileTransfer = false,
         ),
         ActorDefinitionVersionRead(
-          // Correct tag for subsequent verification
+          // Different tag for subsequent verification
           dockerImageTag = DOCKER_IMAGE_TAG,
           dockerRepository = DOCKER_REPOSITORY,
           isVersionOverrideApplied = true,
@@ -74,6 +75,7 @@ class VerifyDefaultVersionActivityImplTest {
         dockerImageTag = DOCKER_IMAGE_TAG,
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
+        previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         // 1 second limit
         limit = 1000,
         // Poll every half second
@@ -91,11 +93,12 @@ class VerifyDefaultVersionActivityImplTest {
         dockerImageTag = "$DOCKER_IMAGE_TAG-rc.1",
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
+        previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
       )
 
     verifyDefaultVersionActivity.verifyDefaultVersion(inputWithRcSuffix)
 
-    verify(exactly = 2) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
+    verify(exactly = 3) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
   }
 
   @Test
@@ -105,8 +108,8 @@ class VerifyDefaultVersionActivityImplTest {
       actorDefinitionVersionApi.getActorDefinitionVersionDefault(any())
     } returns
       ActorDefinitionVersionRead(
-        // Different tag that will cause a timeout
-        dockerImageTag = "0.2",
+        // Same as previous version will cause a timeout
+        dockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         dockerRepository = DOCKER_REPOSITORY,
         isVersionOverrideApplied = true,
         supportState = SupportState.SUPPORTED,
@@ -120,6 +123,7 @@ class VerifyDefaultVersionActivityImplTest {
         dockerImageTag = DOCKER_IMAGE_TAG,
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
+        previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         // 1 second limit
         limit = 1000,
         // Poll every half second

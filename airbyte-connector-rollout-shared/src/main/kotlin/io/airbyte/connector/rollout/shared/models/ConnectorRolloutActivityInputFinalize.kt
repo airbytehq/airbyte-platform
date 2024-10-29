@@ -8,6 +8,7 @@ data class ConnectorRolloutActivityInputFinalize(
   var dockerImageTag: String,
   var actorDefinitionId: UUID,
   var rolloutId: UUID,
+  var previousVersionDockerImageTag: String,
   var result: ConnectorRolloutFinalState,
   var errorMsg: String? = null,
   var failedReason: String? = null,

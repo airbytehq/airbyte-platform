@@ -235,6 +235,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           dockerImageTag = input.dockerImageTag,
           actorDefinitionId = input.actorDefinitionId,
           rolloutId = input.rolloutId,
+          previousVersionDockerImageTag = input.previousVersionDockerImageTag,
         ),
       )
     }

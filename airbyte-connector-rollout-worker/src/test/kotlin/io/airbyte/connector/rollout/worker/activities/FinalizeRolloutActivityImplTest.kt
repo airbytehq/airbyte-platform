@@ -21,7 +21,8 @@ class FinalizeRolloutActivityImplTest {
 
   companion object {
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
-    private const val DOCKER_IMAGE_TAG = "0.1"
+    private const val DOCKER_IMAGE_TAG = "0.2"
+    private const val PREVIOUS_VERSION_DOCKER_IMAGE_TAG = "0.1"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
   }
@@ -44,6 +45,7 @@ class FinalizeRolloutActivityImplTest {
         dockerImageTag = DOCKER_IMAGE_TAG,
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
+        previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         result = ConnectorRolloutFinalState.SUCCEEDED,
       )
 

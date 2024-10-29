@@ -88,7 +88,8 @@ class ConnectorRolloutWorkflowImplTest {
   companion object {
     private const val TEST_TASK_QUEUE = "test_task_queue"
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
-    private const val DOCKER_IMAGE_TAG = "0.1"
+    private const val DOCKER_IMAGE_TAG = "0.2"
+    private const val PREVIOUS_VERSION_DOCKER_IMAGE_TAG = "0.1"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
     private const val WORKFLOW_ID = "WORKFLOW1"
@@ -185,6 +186,7 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         finalState,
       ),
     )
@@ -352,6 +354,7 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.SUCCEEDED,
       ),
     )
@@ -373,6 +376,7 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.FAILED_ROLLED_BACK,
       ),
     )
@@ -392,6 +396,7 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.CANCELED_ROLLED_BACK,
       ),
     )

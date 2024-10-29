@@ -524,6 +524,7 @@ open class ConnectorRolloutHandler
             connectorRolloutFinalize.dockerImageTag,
             connectorRolloutFinalize.actorDefinitionId,
             connectorRolloutFinalize.id,
+            actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
             ConnectorRolloutFinalState.fromValue(connectorRolloutFinalize.state.toString()),
             connectorRolloutFinalize.errorMsg,
             connectorRolloutFinalize.failedReason,

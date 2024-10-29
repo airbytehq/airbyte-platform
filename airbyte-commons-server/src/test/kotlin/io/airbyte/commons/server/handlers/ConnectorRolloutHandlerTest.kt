@@ -794,6 +794,7 @@ internal class ConnectorRolloutHandlerTest {
       }
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
       every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
     }
@@ -803,6 +804,7 @@ internal class ConnectorRolloutHandlerTest {
 
     verifyAll {
       connectorRolloutService.getConnectorRollout(any())
+      actorDefinitionService.getActorDefinitionVersion(any())
       if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
         connectorRolloutClient.startRollout(any())
       }

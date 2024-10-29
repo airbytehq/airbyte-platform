@@ -23,17 +23,23 @@ class VerifyDefaultVersionActivityImpl(private val airbyteApiClient: AirbyteApiC
     logger.info { "Verifying default version is ready ${input.dockerRepository}:${input.dockerImageTag}" }
     val client: ActorDefinitionVersionApi = airbyteApiClient.actorDefinitionVersionApi
     val body = GetActorDefinitionVersionDefaultRequestBody(input.actorDefinitionId)
-    val releaseCandidateTagPrefix = input.dockerImageTag.split("-")[0] // Extract the prefix before any "-rc"
+    val originalVersionTag = input.previousVersionDockerImageTag
 
     // retry until we hit the time limit
     val startTime = System.currentTimeMillis()
     while (System.currentTimeMillis() - startTime < input.limit) {
-      logger.info { "Trying to verify default version for ${input.dockerRepository}:${input.dockerImageTag}" }
+      logger.info {
+        "Trying to verify default version for ${input.dockerRepository}. " +
+          "releaseCandidateVersionTag=${input.dockerImageTag} originalVersionTag=$originalVersionTag"
+      }
       try {
         val response: ActorDefinitionVersionRead = client.getActorDefinitionVersionDefault(body)
         logger.info { "GetActorDefinitionVersionDefaultResponse = ${response.dockerImageTag}" }
-
-        if (response.dockerImageTag == releaseCandidateTagPrefix) {
+        if (response.dockerImageTag != originalVersionTag) {
+          logger.info {
+            "Found new default version for ${input.dockerRepository}. " +
+              "releaseCandidateVersionTag=${input.dockerImageTag} originalVersionTag=$originalVersionTag newVersionTag=${response.dockerImageTag}"
+          }
           return
         }
       } catch (e: IOException) {
