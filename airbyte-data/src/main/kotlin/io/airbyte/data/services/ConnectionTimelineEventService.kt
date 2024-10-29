@@ -1,5 +1,6 @@
 package io.airbyte.data.services
 
+import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.shared.ConnectionEvent
 import java.time.OffsetDateTime
@@ -31,4 +32,9 @@ interface ConnectionTimelineEventService {
     pageSize: Int,
     rowOffset: Int,
   ): List<ConnectionTimelineEvent>
+
+  fun findAssociatedUserForAJob(
+    job: JobRead,
+    eventType: ConnectionEvent.Type? = null,
+  ): UUID?
 }

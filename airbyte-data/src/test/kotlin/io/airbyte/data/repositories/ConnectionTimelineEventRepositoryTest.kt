@@ -20,10 +20,13 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
     @BeforeAll
     @JvmStatic
     fun setup() {
-      // so we don't have to deal with making users as well
+      // Temporarily remove foreign key constraints, so we don't have to deal with making connections and users as well
       jooqDslContext.alterTable(
         Tables.CONNECTION_TIMELINE_EVENT,
       ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_CONNECTION_ID_FKEY.constraint()).execute()
+      jooqDslContext.alterTable(
+        Tables.CONNECTION_TIMELINE_EVENT,
+      ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_USER_ID_FKEY.constraint()).execute()
     }
   }
 
@@ -230,6 +233,104 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         )
       assert(res.size == 2)
       assert(res[0].id == event2.id)
+    }
+  }
+
+  @Nested
+  inner class FindAssociatedUserForJobTest {
+    private val connectionId: UUID = UUID.randomUUID()
+    private val userId1: UUID = UUID.randomUUID()
+    private val userId2: UUID = UUID.randomUUID()
+    private val jobId = 6269L
+    private val event1 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.REFRESH_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 10, 1, 0, 0, 0, 1, ZoneOffset.UTC),
+        summary = """
+          {"jobId": 6269, "streams": [{"name": "users", "namespace": "public"}]}
+        """,
+        userId = userId1,
+      )
+
+    // In case we have duped events created in the DB (which we have seen this issue sometimes),
+    // I am mocking another duped event having the same connectionId, jobId and userId. The timestamp is a little bit later than event1.
+    // And we should expect to get the userId from the first event (event1) as the result.
+    private val event2 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.REFRESH_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        userId = userId2,
+        summary = """
+          {"jobId": 6269, "streams": [{"name": "users", "namespace": "public"}]}
+        """,
+      )
+    private val event3 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.REFRESH_CANCELLED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
+        summary = """
+          {"jobId": 6269, "streams": [{"name": "users", "namespace": "public"}], "bytesLoaded": 0, "attemptsCount": 1, "recordsLoaded": 0, "endTimeEpochSeconds": 1721362846}
+        """,
+        userId = null,
+      )
+    private val event4 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.SYNC_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
+      )
+
+    @BeforeEach
+    fun setup() {
+      // save some events
+      val allEvents = listOf(event1, event2, event3, event4)
+      allEvents.forEach { event -> connectionTimelineEventRepository.save(event) }
+    }
+
+    @AfterEach
+    fun reset() {
+      connectionTimelineEventRepository.deleteAll()
+    }
+
+    @Test
+    fun `should get the userId from the event`() {
+      val res =
+        connectionTimelineEventRepository.findAssociatedUserForAJob(
+          connectionId = connectionId,
+          eventType = ConnectionEvent.Type.REFRESH_STARTED,
+          createdAtStart = event3.createdAt,
+          jobId = jobId,
+        )
+      assert(res.size == 2)
+      assert(res[0] == userId2)
+    }
+
+    @Test
+    fun `should get null because there are no events`() {
+      val res =
+        connectionTimelineEventRepository.findAssociatedUserForAJob(
+          connectionId = connectionId,
+          eventType = ConnectionEvent.Type.SYNC_STARTED,
+          createdAtStart = event1.createdAt,
+          jobId = jobId,
+        )
+      assert(res.isEmpty())
+    }
+
+    @Test
+    fun `should get null because the user is null in the event`() {
+      val res =
+        connectionTimelineEventRepository.findAssociatedUserForAJob(
+          connectionId = connectionId,
+          eventType = ConnectionEvent.Type.REFRESH_CANCELLED,
+          createdAtStart = event3.createdAt,
+          jobId = jobId,
+        )
+      assert(res.size == 1)
+      assert(res[0] == null)
     }
   }
 }

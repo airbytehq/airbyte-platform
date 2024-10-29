@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionStatus;
@@ -32,6 +33,7 @@ import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ConnectionDisabledEvent;
 import io.airbyte.data.services.shared.ConnectionEnabledEvent;
+import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
@@ -92,14 +94,34 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  private boolean isUserInstanceAdmin(final User user) {
-    return permissionService.getPermissionsForUser(user.getUserId()).stream()
+  private boolean isUserInstanceAdmin(final UUID userId) {
+    return permissionService.getPermissionsForUser(userId).stream()
         .anyMatch(permission -> PermissionType.INSTANCE_ADMIN.equals(permission.getPermissionType()));
   }
 
   private boolean isUserEmailFromAirbyteSupport(final String email) {
     final String emailDomain = email.split("@")[1];
     return airbyteSupportEmailDomains.contains(emailDomain);
+  }
+
+  public boolean isAirbyteUser(final UUID userId) {
+    try {
+      if (userId == null) {
+        return false;
+      }
+      final Optional<User> res = userPersistence.getUser(userId);
+      return res.filter(this::isAirbyteUser).isPresent();
+    } catch (final Exception e) {
+      LOGGER.error("Error while retrieving user information.", e);
+      return false;
+    }
+  }
+
+  private boolean isAirbyteUser(final User user) {
+    // User is an Airbyte user if:
+    // 1. the user is an instance admin
+    // 2. user email is from Airbyte domain(s), e.g. "airbyte.io".
+    return isUserInstanceAdmin(user.getUserId()) && isUserEmailFromAirbyteSupport(user.getEmail());
   }
 
   public UserReadInConnectionEvent getUserReadInConnectionEvent(final UUID userId, final UUID connectionId) {
@@ -112,7 +134,7 @@ public class ConnectionTimelineEventHelper {
       }
       final User user = res.get();
       // Check if this event was triggered by an Airbyter Support.
-      if (isUserInstanceAdmin(user) && isUserEmailFromAirbyteSupport(user.getEmail())) {
+      if (isAirbyteUser(user)) {
         // Check if this connection is in external customers workspaces.
         // 1. get the associated organization
         final Organization organization = organizationPersistence.getOrganizationByConnectionId(connectionId).orElseThrow();
@@ -325,6 +347,13 @@ public class ConnectionTimelineEventHelper {
     } catch (final Exception e) {
       LOGGER.error("Failed to persist connection settings changed event for connection: {}", connectionId, e);
     }
+  }
+
+  public boolean jobAssociatedUserIsAirbyteSupport(final JobRead job, final ConnectionEvent.Type eventType) {
+    // 1. Find timeline event associated with the job, and then get the associated user_id
+    final UUID userId = connectionTimelineEventService.findAssociatedUserForAJob(job, eventType);
+    // 2. Check if the user is Airbyte user
+    return isAirbyteUser(userId);
   }
 
 }
