@@ -13,6 +13,8 @@ import io.airbyte.workers.context.ReplicationFeatureFlags
  * Track stats during a sync.
  */
 interface SyncStatsTracker {
+  fun updateFilteredOutRecordsStats(recordMessage: AirbyteRecordMessage)
+
   /**
    * Update the stats count with data from recordMessage.
    */
@@ -63,6 +65,10 @@ interface SyncStatsTracker {
    */
   fun getStreamToEmittedRecords(): Map<AirbyteStreamNameNamespacePair, Long>
 
+  fun getStreamToFilteredOutRecords(): Map<AirbyteStreamNameNamespacePair, Long>
+
+  fun getStreamToFilteredOutBytes(): Map<AirbyteStreamNameNamespacePair, Long>
+
   /**
    * Get the per-stream estimated record count provided by
    * [io.airbyte.protocol.models.AirbyteEstimateTraceMessage].
@@ -94,6 +100,10 @@ interface SyncStatsTracker {
    * @return returns the total count of emitted records across all streams.
    */
   fun getTotalRecordsEmitted(): Long
+
+  fun getTotalRecordsFilteredOut(): Long
+
+  fun getTotalBytesFilteredOut(): Long
 
   /**
    * Get the overall estimated record count.

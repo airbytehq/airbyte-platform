@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.LongAccumulator
  */
 data class StreamStatsCounters(
   val emittedRecordsCount: AtomicLong = AtomicLong(),
+  val filteredOutRecords: AtomicLong = AtomicLong(),
+  val filteredOutBytesCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
   val committedRecordsCount: AtomicLong = AtomicLong(),
   val committedBytesCount: AtomicLong = AtomicLong(),
@@ -63,6 +65,8 @@ data class StreamStatsCounters(
 data class EmittedStatsCounters(
   val remittedRecordsCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
+  val filteredOutRecords: AtomicLong = AtomicLong(),
+  val filteredOutBytesCount: AtomicLong = AtomicLong(),
 )
 
 /**
@@ -103,6 +107,19 @@ class StreamStatsTracker(
   private var emittedStats = EmittedStatsCounters()
   private var previousEmittedStats = EmittedStatsCounters()
   private var previousStateMessageReceivedAt: LocalDateTime? = null
+
+  fun updateFilteredOutRecordsStats(recordMessage: AirbyteRecordMessage) {
+    val emittedStatsToUpdate = emittedStats
+    val filteredOutByteSize = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+    with(emittedStatsToUpdate) {
+      filteredOutRecords.incrementAndGet()
+      filteredOutBytesCount.addAndGet(filteredOutByteSize)
+    }
+    with(streamStats) {
+      filteredOutRecords.incrementAndGet()
+      filteredOutBytesCount.addAndGet(filteredOutByteSize)
+    }
+  }
 
   /**
    * Bookkeeping for when a record message is read.
@@ -253,8 +270,12 @@ class StreamStatsTracker(
       stateIds.remove(stagedStats.stateId)
 
       // Increment committed stats as we are un-staging stats
-      streamStats.committedBytesCount.addAndGet(stagedStats.emittedStatsCounters.emittedBytesCount.get())
-      streamStats.committedRecordsCount.addAndGet(stagedStats.emittedStatsCounters.remittedRecordsCount.get())
+      streamStats.committedBytesCount.addAndGet(
+        stagedStats.emittedStatsCounters.emittedBytesCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+      )
+      streamStats.committedRecordsCount.addAndGet(
+        stagedStats.emittedStatsCounters.remittedRecordsCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+      )
 
       if (stagedStats.stateId == stateId) {
         break
@@ -287,13 +308,22 @@ class StreamStatsTracker(
     return previousEmittedStats.remittedRecordsCount.get()
   }
 
-  fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+  fun getTrackedEmittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
     val stateId = stateMessage.getStateIdForStatsTracking()
     val stagedStats: StagedStats? = stagedStatsList.find { it.stateId == stateId }
     if (stagedStats == null) {
       logger.warn { "Could not find the state message with id $stateId in the stagedStatsList" }
     }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
+  }
+
+  fun getTrackedFilteredOutRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+    val stateId = stateMessage.getStateIdForStatsTracking()
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateId == stateId }
+    if (stagedStats == null) {
+      logger.warn { "Could not find the state message with id $stateId in the stagedStatsList" }
+    }
+    return stagedStats?.emittedStatsCounters?.filteredOutRecords?.get() ?: 0
   }
 
   fun areStreamStatsReliable(): Boolean {

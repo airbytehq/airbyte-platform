@@ -256,6 +256,8 @@ class CustomerioNotificationClientTest {
         .finishedAt(finishedAt)
         .bytesEmitted(1000L)
         .bytesCommitted(9000L)
+        .recordsFilteredOut(0L)
+        .bytesFilteredOut(0L)
         .recordsEmitted(50)
         .recordsCommitted(48)
         .build();

@@ -1252,6 +1252,8 @@ class ParallelStreamStatsTrackerTest {
       .withRecordsEmitted(recordsEmitted)
       .withBytesEmitted(recordsEmitted * MESSAGE_SIZE)
       .withRecordsCommitted(recordsCommitted)
+      .withRecordsFilteredOut(0)
+      .withBytesFilteredOut(0)
       .withBytesCommitted(recordsCommitted * MESSAGE_SIZE)
   }
 

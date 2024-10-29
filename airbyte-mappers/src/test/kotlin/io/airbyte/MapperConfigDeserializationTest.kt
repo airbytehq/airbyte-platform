@@ -27,12 +27,18 @@ class MapperConfigDeserializationTest {
       javaClass.classLoader.getResource("HashingMapperConfigExamples.json")
         ?: throw IllegalArgumentException("File not found: HashingMapperConfigExamples.json")
 
+    val rowFilteringMapperExamples =
+      javaClass.classLoader.getResource("RowFilteringMapperConfigExamples.json")
+        ?: throw IllegalArgumentException("File not found: RowFilteringMapperConfigExamples.json")
+
     val fieldRenamingMapperConfigs = Jsons.deserialize(File(fieldRenamingMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
     val hashingMapperConfigs = Jsons.deserialize(File(hashingMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
+    val rowFilteringMapperConfigs = Jsons.deserialize(File(rowFilteringMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
 
     val mixedMappers = mutableListOf<ConfiguredMapper>()
     mixedMappers.addAll(fieldRenamingMapperConfigs)
     mixedMappers.addAll(hashingMapperConfigs)
+    mixedMappers.addAll(rowFilteringMapperConfigs)
 
     val mapperNames: Set<String> = mixedMappers.map { it.name }.toSet()
     mappers.map { (it) }.associateBy { it.name }.forEach {

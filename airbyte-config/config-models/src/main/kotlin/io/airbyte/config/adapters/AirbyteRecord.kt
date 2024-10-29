@@ -37,6 +37,10 @@ interface AirbyteRecord {
     change: Change,
     reason: Reason,
   )
+
+  fun setInclude(value: Boolean)
+
+  fun shouldInclude(): Boolean
 }
 
 interface Value {

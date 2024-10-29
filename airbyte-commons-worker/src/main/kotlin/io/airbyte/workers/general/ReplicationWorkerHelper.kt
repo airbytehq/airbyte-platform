@@ -387,7 +387,7 @@ class ReplicationWorkerHelper(
   }
 
   @VisibleForTesting
-  fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage {
+  fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
     val context = requireNotNull(ctx)
 
     fieldSelector.filterSelectedFields(sourceRawMessage)
@@ -413,7 +413,12 @@ class ReplicationWorkerHelper(
     }
 
     if (sourceRawMessage.type == Type.RECORD) {
-      applyTransformationMappers(AirbyteJsonRecordAdapter(sourceRawMessage))
+      val airbyteJsonRecordAdapter = AirbyteJsonRecordAdapter(sourceRawMessage)
+      applyTransformationMappers(airbyteJsonRecordAdapter)
+      if (!airbyteJsonRecordAdapter.shouldInclude()) {
+        messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
+        return null
+      }
     }
 
     return sourceRawMessage
@@ -458,8 +463,8 @@ class ReplicationWorkerHelper(
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
     return internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
-      .let { mapper.mapMessage(it) }
-      .let { Optional.ofNullable(it) }
+      ?.let { mapper.mapMessage(it) }
+      ?.let { Optional.ofNullable(it) } ?: Optional.empty()
   }
 
   fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID =

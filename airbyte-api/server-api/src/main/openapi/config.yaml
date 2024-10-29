@@ -11665,6 +11665,7 @@ components:
       enum:
         - hashing
         - field-renaming
+        - row-filtering
       x-sdk-component: true
     ConfiguredStreamMapper:
       type: object

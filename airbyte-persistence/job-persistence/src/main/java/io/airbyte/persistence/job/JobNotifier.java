@@ -283,10 +283,14 @@ public class JobNotifier {
       long bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;
       long bytesCommitted = syncStats.getBytesCommitted() != null ? syncStats.getBytesCommitted() : 0;
       long recordsEmitted = syncStats.getRecordsEmitted() != null ? syncStats.getRecordsEmitted() : 0;
+      long recordsFilteredOut = syncStats.getRecordsFilteredOut() != null ? syncStats.getRecordsFilteredOut() : 0;
+      long bytesFilteredOut = syncStats.getBytesFilteredOut() != null ? syncStats.getBytesFilteredOut() : 0;
       long recordsCommitted = syncStats.getRecordsCommitted() != null ? syncStats.getRecordsCommitted() : 0;
       summaryBuilder.bytesEmitted(bytesEmitted)
           .bytesCommitted(bytesCommitted)
           .recordsEmitted(recordsEmitted)
+          .recordsFilteredOut(recordsFilteredOut)
+          .bytesFilteredOut(bytesFilteredOut)
           .recordsCommitted(recordsCommitted);
     }
 

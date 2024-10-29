@@ -8,7 +8,9 @@ abstract class FilteredRecordsMapper<T : MapperConfig> : Mapper<T> {
     config: T,
     record: AirbyteRecord,
   ) {
-    // Check for discard attribute
+    if (!record.shouldInclude()) {
+      return
+    }
     mapForNonDiscardedRecords(config, record)
   }
 

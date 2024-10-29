@@ -191,6 +191,7 @@ class StateCheckSumCountEventHandler(
     checksumValidationEnabled: Boolean,
     includeStreamInLogs: Boolean = true,
     streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long> = emptyMap(),
+    filteredOutRecords: Double = 0.0,
   ) {
     if (!isStateTypeSupported(stateMessage)) {
       return
@@ -203,7 +204,12 @@ class StateCheckSumCountEventHandler(
           val sourceStats: AirbyteStateStats? = stateMessage.sourceStats
           if (sourceStats != null) {
             sourceStats.recordCount?.let { sourceRecordCount ->
-              if (sourceRecordCount != stateRecordCount || platformRecordCount != stateRecordCount) {
+              if ((
+                  sourceRecordCount.minus(
+                    filteredOutRecords,
+                  )
+                ) != stateRecordCount || (platformRecordCount.minus(filteredOutRecords)) != stateRecordCount
+              ) {
                 misMatchWhenAllThreeCountsArePresent(
                   origin,
                   sourceRecordCount,

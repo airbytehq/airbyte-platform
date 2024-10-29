@@ -12,6 +12,8 @@ class TestValueAdapter(private val value: Any) : Value {
 }
 
 class TestRecordAdapter(override val streamDescriptor: StreamDescriptor, data: Map<String, Any>) : AirbyteRecord {
+  private var shouldInclude = true
+
   data class Change(val fieldName: String, val change: AirbyteRecord.Change, val reason: AirbyteRecord.Reason)
 
   private val data: MutableMap<String, Any> = data.toMutableMap()
@@ -52,5 +54,13 @@ class TestRecordAdapter(override val streamDescriptor: StreamDescriptor, data: M
     reason: AirbyteRecord.Reason,
   ) {
     _changes.add(Change(fieldName, change, reason))
+  }
+
+  override fun setInclude(value: Boolean) {
+    shouldInclude = value
+  }
+
+  override fun shouldInclude(): Boolean {
+    return shouldInclude
   }
 }

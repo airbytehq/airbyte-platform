@@ -26,6 +26,7 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
       .withNamespace(message.record.namespace)
       .withName(message.record.stream)
   private val data: ObjectNode = message.record.data as ObjectNode
+  private var shouldInclude = true
 
   override fun has(fieldName: String): Boolean = data.has(fieldName)
 
@@ -67,6 +68,14 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
       val changes = meta.changes ?: mutableListOf<AirbyteRecordMessageMetaChange>().also { meta.withChanges(it) }
       changes.add(metaChange)
     }
+  }
+
+  override fun setInclude(value: Boolean) {
+    shouldInclude = value
+  }
+
+  override fun shouldInclude(): Boolean {
+    return shouldInclude
   }
 
   private fun <T : Any> createNode(value: T): JsonNode =

@@ -18,12 +18,14 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
       SyncStats()
         .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
         .withRecordsEmitted(records)
+        .withRecordsFilteredOut(tracker.getStreamToFilteredOutRecords()[stream])
+        .withBytesFilteredOut(tracker.getStreamToFilteredOutBytes()[stream])
         .withSourceStateMessagesEmitted(null)
         .withDestinationStateMessagesEmitted(null)
         .apply {
           if (hasReplicationCompleted) {
-            bytesCommitted = tracker.getStreamToEmittedBytes()[stream]
-            recordsCommitted = tracker.getStreamToEmittedRecords()[stream]
+            bytesCommitted = tracker.getStreamToEmittedBytes()[stream]?.minus(bytesFilteredOut)
+            recordsCommitted = tracker.getStreamToEmittedRecords()[stream]?.minus(recordsFilteredOut)
           } else {
             bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
             recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
@@ -44,7 +46,9 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
 fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats {
   return SyncStats()
     .withRecordsEmitted(getTotalRecordsEmitted())
+    .withRecordsFilteredOut(getTotalRecordsFilteredOut())
     .withBytesEmitted(getTotalBytesEmitted())
+    .withBytesFilteredOut(getTotalBytesFilteredOut())
     .withSourceStateMessagesEmitted(getTotalSourceStateMessagesEmitted())
     .withDestinationStateMessagesEmitted(getTotalDestinationStateMessagesEmitted())
     .withMaxSecondsBeforeSourceStateMessageEmitted(getMaxSecondsToReceiveSourceStateMessage())
@@ -53,8 +57,8 @@ fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats 
     .withMeanSecondsBetweenStateMessageEmittedandCommitted(getMeanSecondsBetweenStateMessageEmittedAndCommitted())
     .apply {
       if (hasReplicationCompleted) {
-        bytesCommitted = bytesEmitted
-        recordsCommitted = recordsEmitted
+        bytesCommitted = bytesEmitted.minus(bytesFilteredOut)
+        recordsCommitted = recordsEmitted.minus(recordsFilteredOut)
       } else {
         bytesCommitted = getTotalBytesCommitted()
         recordsCommitted = getTotalRecordsCommitted()
