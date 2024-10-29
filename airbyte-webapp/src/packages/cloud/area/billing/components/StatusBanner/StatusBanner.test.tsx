@@ -167,9 +167,7 @@ describe("StatusBanner", () => {
     mockOrgInfo({ paymentStatus: "uninitialized" });
     mockTrialStatus({
       trialStatus: "in_trial",
-      trialEndsAt: dayjs()
-        .add(5 * 24 + 1, "hours")
-        .toISOString(),
+      trialEndsAt: dayjs().add(5, "days").add(1, "hours").toISOString(),
     });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
     const wrapper = await render(<StatusBanner />);
@@ -181,9 +179,7 @@ describe("StatusBanner", () => {
     mockOrgInfo({ paymentStatus: "uninitialized" });
     mockTrialStatus({
       trialStatus: "in_trial",
-      trialEndsAt: dayjs()
-        .add(5 * 24 + 1, "hours")
-        .toISOString(),
+      trialEndsAt: dayjs().add(5, "days").add(1, "hours").toISOString(),
     });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
@@ -213,9 +209,7 @@ describe("StatusBanner", () => {
     mockOrgInfo({ paymentStatus: "okay" });
     mockTrialStatus({
       trialStatus: "in_trial",
-      trialEndsAt: dayjs()
-        .add(5 * 24 + 1, "hours")
-        .toISOString(),
+      trialEndsAt: dayjs().add(5, "days").add(1, "hours").toISOString(),
     });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
