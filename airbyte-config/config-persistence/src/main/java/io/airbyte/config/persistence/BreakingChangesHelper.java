@@ -29,8 +29,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import kotlin.Pair;
 
 /**
  * Helper class containing logic related to breaking changes.
@@ -43,6 +43,8 @@ public class BreakingChangesHelper {
   private final DestinationService destinationService;
   private final SourceService sourceService;
 
+  public record WorkspaceBreakingChangeInfo(UUID workspaceId, List<UUID> connectionId, List<ScopedConfiguration> scopedConfigurations) {}
+
   public BreakingChangesHelper(final ScopedConfigurationService scopedConfigurationService,
                                final WorkspaceService workspaceService,
                                final DestinationService destinationService,
@@ -54,17 +56,18 @@ public class BreakingChangesHelper {
   }
 
   /**
-   * Finds all active syncs on versions that are unsupported due to a breaking change. Results are
-   * given per workspace.
+   * Finds all breaking change pins on versions that are unsupported due to a breaking change. Results
+   * are given per workspace.
    *
    * @param actorType - type of actor
    * @param actorDefinitionId - actor definition id
    * @param unsupportedVersionIds - unsupported version ids
    * @return list of workspace ids with active syncs on unsupported versions, along with the sync ids
+   *         and the scopedConfigurations entries
    */
-  public List<Pair<UUID, List<UUID>>> getBreakingActiveSyncsPerWorkspace(final ActorType actorType,
-                                                                         final UUID actorDefinitionId,
-                                                                         final List<UUID> unsupportedVersionIds)
+  public List<WorkspaceBreakingChangeInfo> getBreakingActiveSyncsPerWorkspace(final ActorType actorType,
+                                                                              final UUID actorDefinitionId,
+                                                                              final List<UUID> unsupportedVersionIds)
       throws IOException {
     // get actors pinned to unsupported versions (due to a breaking change)
     final List<String> pinnedValues = unsupportedVersionIds.stream().map(UUID::toString).toList();
@@ -79,20 +82,24 @@ public class BreakingChangesHelper {
 
     // fetch actors and group by workspace
     final Map<UUID, List<UUID>> actorIdsByWorkspace = getActorIdsByWorkspace(actorType, breakingChangePins);
+    final Map<UUID, ScopedConfiguration> scopedConfigurationByActorId =
+        breakingChangePins.stream().collect(Collectors.toMap(ScopedConfiguration::getScopeId, Function.identity()));
 
     // get affected syncs for each workspace
-    final List<Pair<UUID, List<UUID>>> workspaceSyncIds = new ArrayList<>();
+    final List<WorkspaceBreakingChangeInfo> returnValue = new ArrayList<>();
     for (final Map.Entry<UUID, List<UUID>> entry : actorIdsByWorkspace.entrySet()) {
       final UUID workspaceId = entry.getKey();
       final List<UUID> actorIdsForWorkspace = entry.getValue();
       final StandardSyncQuery syncQuery = buildStandardSyncQuery(actorType, workspaceId, actorIdsForWorkspace);
       final List<UUID> activeSyncIds = workspaceService.listWorkspaceActiveSyncIds(syncQuery);
       if (!activeSyncIds.isEmpty()) {
-        workspaceSyncIds.add(new Pair<>(workspaceId, activeSyncIds));
+        final List<ScopedConfiguration> scopedConfigurationsForWorkspace =
+            actorIdsForWorkspace.stream().map(scopedConfigurationByActorId::get).toList();
+        returnValue.add(new WorkspaceBreakingChangeInfo(workspaceId, activeSyncIds, scopedConfigurationsForWorkspace));
       }
     }
 
-    return workspaceSyncIds;
+    return returnValue;
   }
 
   private Map<UUID, List<UUID>> getActorIdsByWorkspace(final ActorType actorType, final Collection<ScopedConfiguration> scopedConfigs)

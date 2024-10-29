@@ -235,7 +235,7 @@ class SupportStateUpdater(
         sourceDefinition.sourceDefinitionId,
         newlyDeprecatedVersionIds,
       )
-    val workspaceIds = workspaceSyncIds.map { (workspaceId, _) -> workspaceId }
+    val workspaceIds = workspaceSyncIds.map { it.workspaceId }
     return BreakingChangeNotificationData(
       ActorType.SOURCE,
       sourceDefinition.name,
@@ -259,7 +259,7 @@ class SupportStateUpdater(
         destinationDefinition.destinationDefinitionId,
         newlyDeprecatedVersionIds,
       )
-    val workspaceIds = workspaceSyncIds.map { it.first }
+    val workspaceIds = workspaceSyncIds.map { it.workspaceId }
     return BreakingChangeNotificationData(
       ActorType.DESTINATION,
       destinationDefinition.name,

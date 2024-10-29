@@ -33,7 +33,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-import kotlin.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -111,16 +110,21 @@ class BreakingChangesHelperTest {
     final List<UUID> workspace3ActiveSyncIds = List.of();
     when(mWorkspaceService.listWorkspaceActiveSyncIds(workspace3SyncQuery)).thenReturn(workspace3ActiveSyncIds);
 
-    final List<Pair<UUID, List<UUID>>> expectedResult = Stream.of(
-        new Pair<>(workspaceId1, workspace1ActiveSyncIds),
-        new Pair<>(workspaceId2, workspace2ActiveSyncIds)).sorted(Comparator.comparing(Pair::getFirst)).toList();
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> expectedResult = Stream.of(
+        new BreakingChangesHelper.WorkspaceBreakingChangeInfo(workspaceId1, workspace1ActiveSyncIds,
+            List.of(new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(source1.getSourceId()),
+                new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(source2.getSourceId()))),
+        new BreakingChangesHelper.WorkspaceBreakingChangeInfo(workspaceId2, workspace2ActiveSyncIds,
+            List.of(new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(source3.getSourceId()))))
+        .sorted(Comparator.comparing(BreakingChangesHelper.WorkspaceBreakingChangeInfo::workspaceId)).toList();
 
-    final List<Pair<UUID, List<UUID>>> result =
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> result =
         breakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.SOURCE, ACTOR_DEFINITION_ID, unsupportedVersionIds);
 
     assertEquals(2, result.size());
 
-    final List<Pair<UUID, List<UUID>>> sortedResult = result.stream().sorted(Comparator.comparing(Pair::getFirst)).toList();
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> sortedResult =
+        result.stream().sorted(Comparator.comparing(BreakingChangesHelper.WorkspaceBreakingChangeInfo::workspaceId)).toList();
     assertEquals(expectedResult, sortedResult);
 
     verify(mSourceService).listSourcesWithIds(sourceIds);
@@ -186,16 +190,21 @@ class BreakingChangesHelperTest {
     final List<UUID> workspace3ActiveSyncIds = List.of();
     when(mWorkspaceService.listWorkspaceActiveSyncIds(workspace3SyncQuery)).thenReturn(workspace3ActiveSyncIds);
 
-    final List<Pair<UUID, List<UUID>>> expectedResult = Stream.of(
-        new Pair<>(workspaceId1, workspace1ActiveSyncIds),
-        new Pair<>(workspaceId2, workspace2ActiveSyncIds)).sorted(Comparator.comparing(Pair::getFirst)).toList();
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> expectedResult = Stream.of(
+        new BreakingChangesHelper.WorkspaceBreakingChangeInfo(workspaceId1, workspace1ActiveSyncIds,
+            List.of(new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(destination1.getDestinationId()),
+                new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(destination2.getDestinationId()))),
+        new BreakingChangesHelper.WorkspaceBreakingChangeInfo(workspaceId2, workspace2ActiveSyncIds,
+            List.of(new ScopedConfiguration().withScopeType(ConfigScopeType.ACTOR).withScopeId(destination3.getDestinationId()))))
+        .sorted(Comparator.comparing(BreakingChangesHelper.WorkspaceBreakingChangeInfo::workspaceId)).toList();
 
-    final List<Pair<UUID, List<UUID>>> result =
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> result =
         breakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, ACTOR_DEFINITION_ID, unsupportedVersionIds);
 
     assertEquals(2, result.size());
 
-    final List<Pair<UUID, List<UUID>>> sortedResult = result.stream().sorted(Comparator.comparing(Pair::getFirst)).toList();
+    final List<BreakingChangesHelper.WorkspaceBreakingChangeInfo> sortedResult =
+        result.stream().sorted(Comparator.comparing(BreakingChangesHelper.WorkspaceBreakingChangeInfo::workspaceId)).toList();
     assertEquals(expectedResult, sortedResult);
 
     verify(mDestinationService).listDestinationsWithIds(destinationIds);
