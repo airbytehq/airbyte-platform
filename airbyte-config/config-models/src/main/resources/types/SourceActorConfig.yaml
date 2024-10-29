@@ -9,3 +9,9 @@ properties:
   use_file_transfer:
     type: boolean
     default: false
+  delivery_method:
+    type: object
+    properties:
+      delivery_type:
+        type: string
+        default: "record"

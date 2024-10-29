@@ -4,6 +4,7 @@
 
 package io.airbyte.workers;
 
+import static io.airbyte.workers.ReplicationInputHydrator.FILE_TRANSFER_DELIVERY_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,6 +51,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
+import io.airbyte.config.DeliveryMethod;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.State;
@@ -335,6 +337,10 @@ class ReplicationInputHydratorTest {
 
     final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
     replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(true)));
+    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
+
+    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(false)
+        .withDeliveryMethod(new DeliveryMethod().withDeliveryType(FILE_TRANSFER_DELIVERY_TYPE))));
     assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
   }
 

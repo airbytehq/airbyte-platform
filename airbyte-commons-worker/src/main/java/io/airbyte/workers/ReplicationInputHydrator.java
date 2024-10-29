@@ -75,6 +75,8 @@ public class ReplicationInputHydrator {
   private final BackfillHelper backfillHelper;
   private final CatalogClientConverters catalogClientConverters;
 
+  static final String FILE_TRANSFER_DELIVERY_TYPE = "use_file_transfer";
+
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
                                   final SecretsRepositoryReader secretsRepositoryReader,
@@ -142,7 +144,10 @@ public class ReplicationInputHydrator {
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
 
     final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    if (sourceActorConfig.getUseFileTransfer() && !resolvedDestinationVersion.getSupportFileTransfer()) {
+    final boolean useFileTransfer = sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
+        && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType()));
+
+    if (useFileTransfer && !resolvedDestinationVersion.getSupportFileTransfer()) {
       final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
           + resolvedDestinationVersion.getDockerImageTag();
       LOGGER.error(errorMessage);
