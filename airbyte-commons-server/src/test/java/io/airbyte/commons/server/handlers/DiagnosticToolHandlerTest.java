@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.DiagnosticToolHandlerKt.AIRBYTE_DEPLOYMENT_YAML;
+import static io.airbyte.commons.server.handlers.DiagnosticToolHandlerKt.AIRBYTE_INSTANCE_YAML;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -16,7 +18,6 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -45,7 +46,6 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -73,7 +73,7 @@ class DiagnosticToolHandlerTest {
   private KubernetesClient kubernetesClient;
 
   @BeforeEach
-  void beforeEach() throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void beforeEach() throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     workspaceService = mock(WorkspaceService.class);
     connectionService = mock(ConnectionService.class);
     sourceService = mock(SourceService.class);
@@ -88,7 +88,7 @@ class DiagnosticToolHandlerTest {
         destinationService,
         actorDefinitionVersionHelper,
         instanceConfigurationHandler,
-        Optional.of(kubernetesClient));
+        kubernetesClient);
 
     // Mock workspace API responses
     final var workspace = getStandardWorkspace();
@@ -103,6 +103,7 @@ class DiagnosticToolHandlerTest {
 
     // Mock license API responses
     when(instanceConfigurationHandler.licenseInfo()).thenReturn(new LicenseInfoResponse()
+        .edition("pro")
         .licenseStatus(LicenseStatus.PRO)
         .expirationDate(OffsetDateTime.now().plusDays(10).toEpochSecond())
         .usedNodes(2));
@@ -174,7 +175,7 @@ class DiagnosticToolHandlerTest {
 
       // Iterate through the entries in the zip
       while ((entry = zis.getNextEntry()) != null) {
-        if (entry.getName().equals(DiagnosticToolHandler.AIRBYTE_INSTANCE_YAML)) {
+        if (entry.getName().equals(AIRBYTE_INSTANCE_YAML)) {
           foundInstanceYaml = true;
 
           // Check the content of airbyte_instance.yaml
@@ -192,7 +193,7 @@ class DiagnosticToolHandlerTest {
           Assertions.assertTrue(content.toString().contains("license"));
           Assertions.assertTrue(content.toString().contains("expiryDate"));
           Assertions.assertTrue(content.toString().contains("usedNodes"));
-        } else if (entry.getName().equals(DiagnosticToolHandler.AIRBYTE_DEPLOYMENT_YAML)) {
+        } else if (entry.getName().equals(AIRBYTE_DEPLOYMENT_YAML)) {
           foundDeploymentYaml = true;
 
           // Check the content of airbyte_deployment.yaml
