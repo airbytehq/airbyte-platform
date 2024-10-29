@@ -184,7 +184,8 @@ public class ReplicationWorkerFactory {
         new MessageMetricsTracker(metricClient),
         messageWriterFactory,
         destinationTimeout,
-        ContainerIOHandle.dest());
+        ContainerIOHandle.dest(),
+        replicationInput.getUseFileTransfer());
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 

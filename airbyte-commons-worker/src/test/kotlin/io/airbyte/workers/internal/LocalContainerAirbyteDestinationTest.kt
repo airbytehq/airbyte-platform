@@ -11,6 +11,7 @@ import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_E
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -425,5 +426,36 @@ internal class LocalContainerAirbyteDestinationTest {
     val error = assertThrows(WorkerException::class.java, destination::cancel)
     assertEquals("Destination has not terminated.  This warning is normal if the job was cancelled.", error.message)
     verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+  }
+
+  @Test
+  fun testFlushAfterWrite() {
+    val writer = mockk<AirbyteMessageBufferedWriter>(relaxed = true)
+    every { messageWriterFactory.createWriter(any()) } returns writer
+
+    val localContainerAirbyteDestinationWithForcePush =
+      LocalContainerAirbyteDestination(
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        messageWriterFactory,
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+        true,
+      )
+
+    val message =
+      AirbyteMessage()
+        .withAdditionalProperty("test", "message")
+    val workerDestinationConfig =
+      WorkerDestinationConfig()
+        .withDestinationId(UUID.randomUUID())
+
+    localContainerAirbyteDestinationWithForcePush.start(workerDestinationConfig, mockk())
+    localContainerAirbyteDestinationWithForcePush.acceptWithNoTimeoutMonitor(message)
+
+    verifyOrder {
+      writer.write(message)
+      writer.flush()
+    }
   }
 }

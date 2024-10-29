@@ -33,6 +33,7 @@ class LocalContainerAirbyteDestination(
   private val messageWriterFactory: AirbyteMessageBufferedWriterFactory,
   private val destinationTimeoutMonitor: DestinationTimeoutMonitor,
   private val containerIOHandle: ContainerIOHandle,
+  private val flushImmediately: Boolean = false,
 ) : AirbyteDestination {
   private val inputHasEnded = AtomicBoolean(false)
   private lateinit var messageIterator: Iterator<AirbyteMessage>
@@ -128,11 +129,14 @@ class LocalContainerAirbyteDestination(
   }
 
   @Throws(IOException::class)
-  private fun acceptWithNoTimeoutMonitor(message: AirbyteMessage) {
+  fun acceptWithNoTimeoutMonitor(message: AirbyteMessage) {
     // TODO also check if stdout file exists? or check if some other startup file exists?
     check(!inputHasEnded.get())
 
     writer.write(message)
+    if (flushImmediately) {
+      writer.flush()
+    }
   }
 
   @Throws(IOException::class)
