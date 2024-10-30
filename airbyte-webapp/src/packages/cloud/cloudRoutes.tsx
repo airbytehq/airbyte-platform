@@ -15,7 +15,7 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -77,6 +77,7 @@ const MainRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showBillingPageV2 = useShowBillingPageV2();
+  const isBillingMigrationMaintenance = useExperiment("billing.migrationMaintenance");
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -144,7 +145,9 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
-        {!showBillingPageV2 && <Route path={CloudRoutes.Billing} element={<BillingPage />} />}
+        {!showBillingPageV2 && !isBillingMigrationMaintenance && (
+          <Route path={CloudRoutes.Billing} element={<BillingPage />} />
+        )}
         <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />

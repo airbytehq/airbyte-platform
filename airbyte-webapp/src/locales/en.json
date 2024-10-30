@@ -2114,6 +2114,7 @@
 
   "sidebar.credits": "Credits",
   "sidebar.billing": "Billing",
+  "sidebar.billingMigrationMaintenance": "Airbyte billing is currently undergoing maintenance. Please check our <statusPage>status page</statusPage> for more details.",
 
   "workspace.adminWorkspaceWarning": "Admin",
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",

@@ -15,6 +15,7 @@ interface NavItemBaseProps extends NavItemInnerProps {
   className?: string;
   activeClassName?: string;
   testId?: string;
+  disabled?: boolean;
 }
 
 interface LinkNavItemProps extends NavItemBaseProps {
@@ -62,15 +63,29 @@ const NavItemInner: React.FC<NavItemInnerProps> = ({ icon, label, withNotificati
 
 export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
   (
-    { label, icon, to, testId, as, className, activeClassName, onClick, withNotification = false, isActive, withBadge },
+    {
+      disabled,
+      label,
+      icon,
+      to,
+      testId,
+      as,
+      className,
+      activeClassName,
+      onClick,
+      withNotification = false,
+      isActive,
+      withBadge,
+    },
     ref
   ) => {
-    const menuItemStyle = (isActive?: boolean) => {
+    const menuItemStyle = (isActive?: boolean, disabled?: boolean) => {
       return classNames(
         styles.menuItem,
         className,
         {
           [styles.active]: isActive,
+          [styles.disabled]: disabled,
         },
         isActive && activeClassName
       );
@@ -80,6 +95,7 @@ export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
       return (
         <button
           type="button"
+          disabled={disabled}
           onClick={onClick}
           className={classNames(styles.menuItem, className, { [styles.active]: isActive })}
           data-testid={testId}
@@ -93,6 +109,14 @@ export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
             withBadge={withBadge}
           />
         </button>
+      );
+    }
+
+    if (disabled) {
+      return (
+        <div className={menuItemStyle(false, true)}>
+          <NavItemInner label={label} icon={icon} />
+        </div>
       );
     }
 

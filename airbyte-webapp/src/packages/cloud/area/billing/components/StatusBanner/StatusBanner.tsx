@@ -5,14 +5,18 @@ import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentOrganizationInfo } from "core/api";
 import { useGetCloudWorkspaceAsync } from "core/api/cloud";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { WorkspaceStatusBanner as LegacyWorkspaceStatusBanner } from "./LegacyStatusBanner/WorkspaceStatusBanner";
 import { useBillingStatusBanner } from "../../utils/useBillingStatusBanner";
 
 const LegacyStatusBanner: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
+  const isBillingMigrationMaintenance = useExperiment("billing.migrationMaintenance");
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspaceId);
-  return cloudWorkspace ? <LegacyWorkspaceStatusBanner cloudWorkspace={cloudWorkspace} /> : null;
+  return cloudWorkspace && !isBillingMigrationMaintenance ? (
+    <LegacyWorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />
+  ) : null;
 };
 
 const WorkspaceStatusBanner: React.FC = () => {

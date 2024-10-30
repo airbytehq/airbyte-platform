@@ -91,6 +91,8 @@ object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", de
 
 object BillingInArrearsForNewSignups : Temporary<Boolean>(key = "billing.inArrearsForNewSignups", default = false)
 
+object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
