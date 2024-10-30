@@ -9,6 +9,8 @@ val migrations: Configuration by configurations.creating {
   extendsFrom(configurations.getByName("implementation"))
 }
 
+val envVars = mapOf("VERSION" to "dev")
+
 configurations.all {
   exclude(group = "io.micronaut.flyway")
 }
@@ -72,6 +74,7 @@ tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "create")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
@@ -79,6 +82,7 @@ tasks.register<JavaExec>("runConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "migrate")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
@@ -86,6 +90,7 @@ tasks.register<JavaExec>("dumpConfigsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "dump_schema")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
@@ -93,6 +98,7 @@ tasks.register<JavaExec>("newJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "create")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
@@ -100,6 +106,7 @@ tasks.register<JavaExec>("runJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "migrate")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
@@ -107,6 +114,7 @@ tasks.register<JavaExec>("dumpJobsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "dump_schema")
+  environment = envVars
   dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
