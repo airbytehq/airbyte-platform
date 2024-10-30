@@ -52,9 +52,9 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     endpointPath: String?,
     httpOperation: String?,
     userId: UUID?,
-    workspaceId: UUID,
+    workspaceId: UUID?,
   ) {
-    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.of(workspaceId))
+    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.ofNullable(workspaceId))
   }
 
   /**

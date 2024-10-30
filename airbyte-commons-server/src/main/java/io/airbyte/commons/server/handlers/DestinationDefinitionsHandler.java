@@ -216,6 +216,12 @@ public class DestinationDefinitionsHandler {
     return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap);
   }
 
+  public DestinationDefinitionReadList listPublicDestinationDefinitions() throws IOException {
+    final List<StandardDestinationDefinition> standardDestinationDefinitions = configRepository.listPublicDestinationDefinitions(false);
+    final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions);
+    return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
+  }
+
   private PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
                                                                                       final List<Entry<StandardDestinationDefinition, Boolean>> defs,
                                                                                       final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {

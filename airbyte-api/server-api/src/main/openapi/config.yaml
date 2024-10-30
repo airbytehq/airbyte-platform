@@ -5965,6 +5965,43 @@ paths:
           type: integer
         in: path
         required: true
+
+  /public/v1/connector_definitions:
+    get:
+      tags:
+        - public_connector_definitions
+        - public
+        - ConnectorDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorDefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: listConnectorDefinitions
+      x-sdk-alias: listConnectorDefinitions
+      x-sdk-group: ConnectorDefinitions
+      summary: List connector definitions
+      parameters:
+        - name: type
+          description: The type of connector definition to list
+          schema:
+            $ref: "#/components/schemas/ConnectorType"
+          in: query
+          required: true
+        - name: workspaceId
+          description: The UUID of the workspace you wish to list connector definitions for. One of this or organizationId must be populated.
+          schema:
+            type: string
+            format: uuid
+          example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
+          in: query
+          required: false
   /public/v1/sources:
     get:
       tags:
@@ -14649,6 +14686,36 @@ components:
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
         definitionId: 321d9b60-11d1-44cb-8c92-c246d53bf98e
       x-sdk-component: true
+    ConnectorDefinitionResponse:
+      title: Root Type for ConnectorDefinitionResponse
+      description: Provides details of a single connector definition.
+      type: object
+      required:
+        - id
+        - connectorDefinitionType
+        - name
+        - version
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        connectorDefinitionType:
+          $ref: "#/components/schemas/ConnectorType"
+        version:
+          type: string
+      example:
+        id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Postgres
+        connectorDefinnitionType: source
+        version: 0.2.0
+      x-sdk-component: true
+    ConnectorType:
+      type: string
+      enum:
+        - source
+        - destination
     DestinationCreateRequest:
       required:
         - name
@@ -14987,6 +15054,18 @@ components:
           name: Analytics Team Postgres
           destinationType: postgres
           workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
+    ConnectorDefinitionsResponse:
+      title: Root Type for DefinitionsResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-sdk-component: true
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse

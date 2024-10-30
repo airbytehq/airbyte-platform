@@ -224,6 +224,12 @@ public class SourceDefinitionsHandler {
     return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap, sourceDefinitionVersionMap);
   }
 
+  public SourceDefinitionReadList listPublicSourceDefinitions() throws IOException {
+    final List<StandardSourceDefinition> standardSourceDefinitions = configRepository.listPublicSourceDefinitions(false);
+    final Map<UUID, ActorDefinitionVersion> sourceDefinitionVersionMap = getVersionsForSourceDefinitions(standardSourceDefinitions);
+    return toSourceDefinitionReadList(standardSourceDefinitions, sourceDefinitionVersionMap);
+  }
+
   private PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
                                                                             final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateSourceDefinitionRead> reads = defs.stream()
