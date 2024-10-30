@@ -104,14 +104,46 @@ const DangerousHTML = ({ html }: { html: string }) => {
   return <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />;
 };
 
-export const getMatchIndices = (text: string, searchTerm?: string) => {
-  const matchIndices: number[] = [];
+interface SearchMatchInLogLine {
+  precedingNewlines: number; // For multi-line logs, we need to know how far to offset the highlighter from the top
+  characterOffsetLeft: number;
+}
+/**
+ * Given a log line with newlines, we need to find both the top and left offset to correctly highlight it.
+ *
+ * For example, when searching for the character "e" in this log line:
+ * "some\n text"
+ *
+ * We split the lines into chunks and find matches at the following indices:
+ * ["some", "text"]
+ *      ^     ^
+ * Where the first match is: { precedingNewlines: 0, characterOffsetLeft: 3 }
+ * And the second match is:  { precedingNewlines: 1, characterOffsetLeft: 1 }
+ */
+export const getSearchMatchesInLine = (text: string, searchTerm?: string) => {
+  const matchIndices: SearchMatchInLogLine[] = [];
   if (searchTerm) {
     const escapedSearchTerm = escapeRegex(searchTerm);
     const regex = new RegExp(escapedSearchTerm, "gi");
     let match;
     while ((match = regex.exec(text)) !== null) {
-      matchIndices.push(match.index);
+      const chunksBetweenNewlines = text.slice(0, match.index).split("\n");
+      const targetIndex = match.index; // The search match index in the original string, including linebreak characters
+      let counter = 0;
+      let leftOffsetFromStartOfChunk = 0;
+      for (let i = 0; i < chunksBetweenNewlines.length; i++) {
+        const chunk = chunksBetweenNewlines[i];
+        if (counter + chunk.length >= targetIndex) {
+          leftOffsetFromStartOfChunk = targetIndex - counter;
+          break;
+        }
+        counter += chunk.length + 1; // +1 to account for the '\n' that gets stripped out from .split()
+      }
+
+      matchIndices.push({
+        precedingNewlines: text.slice(0, match.index).match(/\n/g)?.length ?? 0,
+        characterOffsetLeft: leftOffsetFromStartOfChunk,
+      });
     }
   }
   return matchIndices;
@@ -120,7 +152,7 @@ export const getMatchIndices = (text: string, searchTerm?: string) => {
 const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
   const rowIsHighlighted = context.highlightedRowIndex === index;
   const html = Anser.ansiToHtml(expandTabs(item.original), { use_classes: true });
-  const matchIndices = getMatchIndices(expandTabs(item.text), context.searchTerm);
+  const searchMatchesInLine = getSearchMatchesInLine(expandTabs(item.text), context.searchTerm);
 
   return (
     <div
@@ -130,12 +162,16 @@ const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, cont
     >
       <div className={styles.virtualLogs__lineNumber}>{item.lineNumber}</div>
       <div className={styles.virtualLogs__lineLogContent}>
-        {matchIndices.length > 0 &&
-          matchIndices.map((matchIndex) => (
+        {searchMatchesInLine.length > 0 &&
+          searchMatchesInLine.map(({ characterOffsetLeft: characterIndex, precedingNewlines }, matchIndex) => (
             <div
               className={styles.virtualLogs__searchMatch}
               key={matchIndex}
-              style={{ left: `${matchIndex}ch`, width: `${context.searchTerm?.length}ch` }}
+              style={{
+                left: `${characterIndex}ch`,
+                width: `${context.searchTerm?.length}ch`,
+                top: `${parseFloat(styles.logLineHeight) * precedingNewlines}em`,
+              }}
             />
           ))}
         <DangerousHTML html={html} />

@@ -1,4 +1,4 @@
-import { getMatchIndices, sanitizeHtml } from "./VirtualLogs";
+import { getSearchMatchesInLine, sanitizeHtml } from "./VirtualLogs";
 
 describe(`${sanitizeHtml.name}`, () => {
   it("should return a normal logLine as it is", () => {
@@ -12,16 +12,28 @@ describe(`${sanitizeHtml.name}`, () => {
   });
 });
 
-describe(`${getMatchIndices.name}`, () => {
+describe(`${getSearchMatchesInLine.name}`, () => {
   it("should return empty array if no match", () => {
-    expect(getMatchIndices("no match", "zzz")).toEqual([]);
+    expect(getSearchMatchesInLine("no match", "zzz")).toEqual([]);
   });
 
   it("should return an array with one match if there is a single match", () => {
-    expect(getMatchIndices("a b c d", "a")).toEqual([0]);
+    expect(getSearchMatchesInLine("a b c d", "a")).toEqual([{ precedingNewlines: 0, characterOffsetLeft: 0 }]);
   });
 
   it("should return an array with multiple matches if there are multiple matches", () => {
-    expect(getMatchIndices("a b c d a a", "a")).toEqual([0, 8, 10]);
+    expect(getSearchMatchesInLine("a b c d a a", "a")).toEqual([
+      { precedingNewlines: 0, characterOffsetLeft: 0 },
+      { precedingNewlines: 0, characterOffsetLeft: 8 },
+      { precedingNewlines: 0, characterOffsetLeft: 10 },
+    ]);
+  });
+
+  it("should calculate the correct preceding newlines", () => {
+    expect(getSearchMatchesInLine("a b c\na b a", "a")).toEqual([
+      { precedingNewlines: 0, characterOffsetLeft: 0 },
+      { precedingNewlines: 1, characterOffsetLeft: 0 },
+      { precedingNewlines: 1, characterOffsetLeft: 4 },
+    ]);
   });
 });

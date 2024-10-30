@@ -1,5 +1,11 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "sass:string";
+
+// We need this value in JS to dynamically calculate the vertical position of highlighted search matches
+:export {
+  logLineHeight: variables.$default-line-height;
+}
 
 .virtualLogs {
   flex-grow: 1;
@@ -7,6 +13,7 @@
   &__lineNumber {
     min-width: calc(calc(2 * variables.$spacing-md) + 3ch);
     text-align: right;
+    align-self: flex-start;
     color: colors.$grey-300;
     padding-inline: variables.$spacing-md;
     user-select: none;
@@ -29,7 +36,7 @@
   &__searchMatch {
     position: absolute;
     bottom: 0;
-    height: 100%;
+    height: variables.$default-line-height + string.unquote("em");
     background-color: colors.$yellow-200;
     mix-blend-mode: color;
     isolation: auto;
