@@ -32,8 +32,5 @@ const val CALLER_METHOD_NAME_PATTERN = "CALLER_METHOD_NAME"
  */
 const val CALLER_THREAD_NAME_PATTERN = "CALLER_THREAD_NAME"
 
-const val APPLICATION_LOGGER_NAME = "airbyte-application-logger"
-const val CLOUD_APPLICATION_LOGGER_NAME = "airbyte-cloud-application-logger"
 const val CLOUD_OPERATIONS_JOB_LOGGER_NAME = "airbyte-cloud-operations-job-logger"
-const val OPERATIONS_JOB_LOGGER_NAME = "airbyte-operations-job-logger"
 const val PLATFORM_LOGGER_NAME = "airbyte-platform-logger"
