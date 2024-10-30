@@ -225,7 +225,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionReadList listPublicSourceDefinitions() throws IOException {
-    final List<StandardSourceDefinition> standardSourceDefinitions = configRepository.listPublicSourceDefinitions(false);
+    final List<StandardSourceDefinition> standardSourceDefinitions = sourceService.listPublicSourceDefinitions(false);
     final Map<UUID, ActorDefinitionVersion> sourceDefinitionVersionMap = getVersionsForSourceDefinitions(standardSourceDefinitions);
     return toSourceDefinitionReadList(standardSourceDefinitions, sourceDefinitionVersionMap);
   }

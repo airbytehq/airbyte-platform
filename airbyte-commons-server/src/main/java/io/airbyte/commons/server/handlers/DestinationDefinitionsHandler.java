@@ -217,7 +217,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listPublicDestinationDefinitions() throws IOException {
-    final List<StandardDestinationDefinition> standardDestinationDefinitions = configRepository.listPublicDestinationDefinitions(false);
+    final List<StandardDestinationDefinition> standardDestinationDefinitions = destinationService.listPublicDestinationDefinitions(false);
     final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions);
     return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
   }
