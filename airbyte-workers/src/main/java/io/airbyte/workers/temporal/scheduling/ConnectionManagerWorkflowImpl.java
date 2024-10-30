@@ -342,7 +342,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           // Allows us to classify unhandled failures from the sync workflow.
           workflowInternalState.getFailures().add(FailureHelper.failureReasonFromWorkflowAndActivity(
               childWorkflowFailure.getWorkflowType(),
-              af.getActivityType(),
               af.getCause(),
               workflowInternalState.getJobId(),
               workflowInternalState.getAttemptNumber()));
