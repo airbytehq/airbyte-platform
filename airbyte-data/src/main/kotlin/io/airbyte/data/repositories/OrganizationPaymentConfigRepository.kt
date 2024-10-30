@@ -7,6 +7,4 @@ import io.micronaut.data.repository.PageableRepository
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface OrganizationPaymentConfigRepository : PageableRepository<OrganizationPaymentConfig, UUID> {
-  fun findByPaymentProviderId(paymentProviderId: String): OrganizationPaymentConfig?
-}
+interface OrganizationPaymentConfigRepository : PageableRepository<OrganizationPaymentConfig, UUID>

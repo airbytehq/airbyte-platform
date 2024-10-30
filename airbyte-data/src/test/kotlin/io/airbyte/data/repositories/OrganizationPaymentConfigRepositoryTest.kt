@@ -50,26 +50,4 @@ internal class OrganizationPaymentConfigRepositoryTest : AbstractConfigRepositor
     assertNotNull(persistedPaymentConfig.createdAt)
     assertNotNull(persistedPaymentConfig.updatedAt)
   }
-
-  @Test
-  fun `findByPaymentProviderId`() {
-    val organization =
-      Organization(
-        name = "Airbyte Inc.",
-        email = "contact@airbyte.io",
-      )
-    val persistedOrg = organizationRepository.save(organization)
-
-    val paymentConfig =
-      OrganizationPaymentConfig(
-        organizationId = persistedOrg.id!!,
-        paymentProviderId = "stripe123",
-      )
-
-    organizationPaymentConfigRepository.save(paymentConfig)
-
-    val foundPaymentConfig = organizationPaymentConfigRepository.findByPaymentProviderId("stripe123")
-    assertNotNull(foundPaymentConfig)
-    assertEquals(persistedOrg.id, foundPaymentConfig!!.organizationId)
-  }
 }

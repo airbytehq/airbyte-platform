@@ -19,7 +19,6 @@ import io.airbyte.api.client.generated.JobRetryStatesApi
 import io.airbyte.api.client.generated.JobsApi
 import io.airbyte.api.client.generated.OperationApi
 import io.airbyte.api.client.generated.OrganizationApi
-import io.airbyte.api.client.generated.OrganizationPaymentConfigApi
 import io.airbyte.api.client.generated.PermissionApi
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
 import io.airbyte.api.client.generated.SignalApi
@@ -81,7 +80,6 @@ class AirbyteApiClient(
   val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
   val operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
   val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
-  val organizationPaymentConfigApi = OrganizationPaymentConfigApi(basePath = basePath, client = httpClient, policy = policy)
   val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
   val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
   val signalApi = SignalApi(basePath = basePath, client = httpClient, policy = policy)

@@ -3,10 +3,8 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.OrganizationPaymentConfigApi
 import io.airbyte.api.model.generated.OrganizationPaymentConfigRead
 import io.airbyte.api.problems.ResourceType
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -41,11 +39,12 @@ open class OrganizationPaymentConfigController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationPaymentConfig(
     @PathVariable("organizationId") organizationId: UUID,
-  ): OrganizationPaymentConfigRead =
-    organizationPaymentConfigService.findByOrganizationId(organizationId)?.toApiModel()
+  ): OrganizationPaymentConfigRead {
+    return organizationPaymentConfigService.findByOrganizationId(organizationId)?.toApiModel()
       ?: throw ResourceNotFoundProblem(
         ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
       )
+  }
 
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Delete("/{organizationId}")
@@ -60,33 +59,6 @@ open class OrganizationPaymentConfigController(
       )
     }
     organizationPaymentConfigService.deletePaymentConfig(organizationId)
-  }
-
-  @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
-  @Post("/{organizationId}/end_grace_period")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun endGracePeriod(
-    @PathVariable("organizationId") organizationId: UUID,
-  ) {
-    val orgPaymentConfig =
-      organizationPaymentConfigService.findByOrganizationId(organizationId) ?: throw ResourceNotFoundProblem(
-        ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
-      )
-
-    if (orgPaymentConfig.paymentStatus != PaymentStatus.GRACE_PERIOD) {
-      throw StateConflictProblem(
-        ProblemMessageData().message(
-          "OrganizationPaymentConfig paymentStatus is ${orgPaymentConfig.paymentStatus}, but expected ${PaymentStatus.GRACE_PERIOD}",
-        ),
-      )
-    }
-
-    organizationPaymentConfigService.savePaymentConfig(
-      orgPaymentConfig.apply {
-        paymentStatus = PaymentStatus.DISABLED
-        gracePeriodEndAt = null
-      },
-    )
   }
 
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)

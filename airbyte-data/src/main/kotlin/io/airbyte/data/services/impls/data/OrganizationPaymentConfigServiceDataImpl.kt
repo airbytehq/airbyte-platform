@@ -15,11 +15,6 @@ class OrganizationPaymentConfigServiceDataImpl(
   override fun findByOrganizationId(organizationId: UUID): OrganizationPaymentConfig? =
     organizationPaymentConfigRepository.findById(organizationId).orElse(null)?.toConfigModel()
 
-  override fun findByPaymentProviderId(paymentProviderId: String): OrganizationPaymentConfig? {
-    val organizationPaymentConfigEntity = organizationPaymentConfigRepository.findByPaymentProviderId(paymentProviderId)
-    return organizationPaymentConfigEntity?.toConfigModel()
-  }
-
   override fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig) {
     if (organizationPaymentConfigRepository.existsById(organizationPaymentConfig.organizationId)) {
       organizationPaymentConfigRepository.update(organizationPaymentConfig.toEntity())

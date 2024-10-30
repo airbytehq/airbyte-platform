@@ -4771,29 +4771,7 @@ paths:
                 $ref: "#/components/schemas/OrganizationPaymentConfigRead"
         "404":
           description: Couldn't find the organization id
-  /v1/organization_payment_config/{organizationId}/end_grace_period:
-    post:
-      summary: End a grace period for an organization
-      tags:
-        - organization_payment_config
-        - billing
-        - cloud-only
-        - admin-api
-      operationId: endGracePeriod
-      parameters:
-        - in: path
-          name: organizationId
-          schema:
-            type: string
-            format: uuid
-          required: true
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Couldn't find the organization id
-        "409":
-          description: The organization is not in a valid state to end the grace period
+
   /v1/organizations/get:
     post:
       summary: Get an organization info

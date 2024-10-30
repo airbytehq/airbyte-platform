@@ -41,7 +41,6 @@ public class TemporalBeanFactory {
    * WorkflowClient shouldn't be used directly, use WorkflowClientWrapped instead.
    */
   @Singleton
-  @Named("commonsWorkflowClient")
   WorkflowClient workflowClient(
                                 final TemporalUtils temporalUtils,
                                 final WorkflowServiceStubs temporalService,
@@ -50,8 +49,7 @@ public class TemporalBeanFactory {
   }
 
   @Singleton
-  public WorkflowClientWrapped workflowClientWrapped(@Named("commonsWorkflowClient") final WorkflowClient workflowClient,
-                                                     final MetricClient metricClient) {
+  public WorkflowClientWrapped workflowClientWrapped(final WorkflowClient workflowClient, final MetricClient metricClient) {
     return new WorkflowClientWrapped(workflowClient, metricClient);
   }
 
