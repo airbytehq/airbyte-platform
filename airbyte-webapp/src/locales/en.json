@@ -1246,7 +1246,7 @@
   "settings.license.modalBody": "Please contact your account admin to renew your license.",
   "settings.license.modalBody.resolve": "Please contact your account admin to resolve this issue.",
   "settings.license.modalConfirm": "Ok",
-  "settings.license.editorsTooltip": "Editors are users that can create, edit, or delete connectors or connections.",
+  "settings.license.editorsTooltip": "Editors can create, edit, and delete connectors and connections, or can run syncs.",
   "settings.license.nodesTooltip": "A Node refers to a single instance within the Airbyte environment that is equipped with up to 16 virtual CPUs (vCPUs).  Instances with greater than 16 vCPUs will count as multiple nodes.",
 
   "connector.connectorCount": "{count, plural, one {# connector} other {# connectors}}",

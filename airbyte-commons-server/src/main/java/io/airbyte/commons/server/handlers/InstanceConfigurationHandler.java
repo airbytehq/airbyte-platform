@@ -56,7 +56,9 @@ public class InstanceConfigurationHandler {
 
   public static final Set<Permission.PermissionType> EDITOR_ROLES =
       Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
-          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN);
+          Permission.PermissionType.ORGANIZATION_RUNNER,
+          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
+          Permission.PermissionType.WORKSPACE_RUNNER);
   private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
