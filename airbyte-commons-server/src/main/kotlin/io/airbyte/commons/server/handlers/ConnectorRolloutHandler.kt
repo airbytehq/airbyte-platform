@@ -448,7 +448,7 @@ open class ConnectorRolloutHandler
           ),
         )
       } catch (e: WorkflowUpdateException) {
-        rollout.state = ConnectorEnumRolloutState.CANCELED_ROLLED_BACK
+        rollout.state = ConnectorEnumRolloutState.CANCELED
         connectorRolloutService.writeConnectorRollout(rollout)
         throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
       }

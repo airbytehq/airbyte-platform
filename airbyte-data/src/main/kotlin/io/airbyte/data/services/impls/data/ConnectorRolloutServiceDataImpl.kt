@@ -30,7 +30,7 @@ open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRoll
     repository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
       connectorRollout.actorDefinitionId,
       connectorRollout.releaseCandidateVersionId,
-    ).firstOrNull { it.state != ConnectorRolloutStateType.canceled_rolled_back }?.let {
+    ).firstOrNull { it.state != ConnectorRolloutStateType.canceled }?.let {
       throw RuntimeException(
         "A rollout in state ${it.state} already exists for actor definition id ${it.actorDefinitionId} " +
           "and version id ${it.releaseCandidateVersionId}",

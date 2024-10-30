@@ -117,7 +117,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     if (startRolloutFailed) {
       throw ApplicationFailure.newFailure(
         "Failure starting rollout for $workflowId",
-        ConnectorEnumRolloutState.CANCELED_ROLLED_BACK.value(),
+        ConnectorEnumRolloutState.CANCELED.value(),
       )
     }
     logger.info { "Rollout for $workflowId has reached a terminal state: $state" }
@@ -133,7 +133,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       state = output.state
       output
     } catch (e: Exception) {
-      val newState = ConnectorEnumRolloutState.CANCELED_ROLLED_BACK
+      val newState = ConnectorEnumRolloutState.CANCELED
       cleanupActivity.cleanup(
         ConnectorRolloutActivityInputCleanup(
           newState = newState,
@@ -229,15 +229,21 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     // Verify the release candidate is the default version
     if (input.result == ConnectorRolloutFinalState.SUCCEEDED) {
       logger.info { "finalizeRollout: calling verifyDefaultVersionActivity" }
-      verifyDefaultVersionActivity.verifyDefaultVersion(
-        ConnectorRolloutActivityInputVerifyDefaultVersion(
-          dockerRepository = input.dockerRepository,
-          dockerImageTag = input.dockerImageTag,
-          actorDefinitionId = input.actorDefinitionId,
-          rolloutId = input.rolloutId,
-          previousVersionDockerImageTag = input.previousVersionDockerImageTag,
-        ),
-      )
+      val defaultVersionOutput =
+        verifyDefaultVersionActivity.getAndVerifyDefaultVersion(
+          ConnectorRolloutActivityInputVerifyDefaultVersion(
+            dockerRepository = input.dockerRepository,
+            dockerImageTag = input.dockerImageTag,
+            actorDefinitionId = input.actorDefinitionId,
+            rolloutId = input.rolloutId,
+            previousVersionDockerImageTag = input.previousVersionDockerImageTag,
+          ),
+        )
+      if (!defaultVersionOutput.isReleased) {
+        // If the default version is not the release candidate, the rollout was superseded and we consider it canceled
+        input.result = ConnectorRolloutFinalState.CANCELED
+        input.errorMsg = "Default version is not the release candidate; rollout was superseded"
+      }
     }
 
     // Unpin all actors that were pinned to the release candidate

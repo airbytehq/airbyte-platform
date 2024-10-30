@@ -69,10 +69,10 @@ internal class ConnectorRolloutHandlerTest {
     val UPDATED_BY = UUID.randomUUID()
 
     @JvmStatic
-    fun validInsertStates() = listOf(ConnectorEnumRolloutState.CANCELED_ROLLED_BACK)
+    fun validInsertStates() = listOf(ConnectorEnumRolloutState.CANCELED)
 
     @JvmStatic
-    fun invalidInsertStates() = ConnectorEnumRolloutState.entries.filter { it != ConnectorEnumRolloutState.CANCELED_ROLLED_BACK }
+    fun invalidInsertStates() = ConnectorEnumRolloutState.entries.filter { it != ConnectorEnumRolloutState.CANCELED }
 
     @JvmStatic
     fun validStartStates() = listOf(ConnectorEnumRolloutState.INITIALIZED)

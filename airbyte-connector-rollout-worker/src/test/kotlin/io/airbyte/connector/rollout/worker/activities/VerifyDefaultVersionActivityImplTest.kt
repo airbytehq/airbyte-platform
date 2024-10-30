@@ -11,6 +11,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -24,6 +25,7 @@ class VerifyDefaultVersionActivityImplTest {
   companion object {
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
     private const val PREVIOUS_VERSION_DOCKER_IMAGE_TAG = "0.1"
+    private const val NEWER_VERSION_DOCKER_IMAGE_TAG = "0.3"
     private const val DOCKER_IMAGE_TAG = "0.2"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
@@ -82,7 +84,8 @@ class VerifyDefaultVersionActivityImplTest {
         timeBetweenPolls = 500,
       )
 
-    verifyDefaultVersionActivity.verifyDefaultVersion(input)
+    val output = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(input)
+    assertEquals(true, output.isReleased)
 
     verify { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
 
@@ -96,9 +99,40 @@ class VerifyDefaultVersionActivityImplTest {
         previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
       )
 
-    verifyDefaultVersionActivity.verifyDefaultVersion(inputWithRcSuffix)
+    val outputWithRcSuffix = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(inputWithRcSuffix)
+    assertEquals(true, outputWithRcSuffix.isReleased)
 
     verify(exactly = 3) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
+  }
+
+  @Test
+  fun `test verifyDefaultVersion rollout was superseded`() {
+    // Mock the ActorDefinitionVersionApi to return the response dynamically
+    every {
+      actorDefinitionVersionApi.getActorDefinitionVersionDefault(any())
+    } returns
+      ActorDefinitionVersionRead(
+        dockerImageTag = NEWER_VERSION_DOCKER_IMAGE_TAG,
+        dockerRepository = DOCKER_REPOSITORY,
+        isVersionOverrideApplied = true,
+        supportState = SupportState.SUPPORTED,
+        supportsRefreshes = true,
+        supportsFileTransfer = false,
+      )
+
+    val input =
+      ConnectorRolloutActivityInputVerifyDefaultVersion(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = "$DOCKER_IMAGE_TAG-rc.1",
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        rolloutId = ROLLOUT_ID,
+        previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
+      )
+
+    val output = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(input)
+    assertEquals(false, output.isReleased)
+
+    verify { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
   }
 
   @Test
@@ -133,7 +167,7 @@ class VerifyDefaultVersionActivityImplTest {
     // Use assertThrows to verify that the exception is thrown due to timeout
     val exception =
       assertThrows<IllegalStateException> {
-        verifyDefaultVersionActivity.verifyDefaultVersion(input)
+        verifyDefaultVersionActivity.getAndVerifyDefaultVersion(input)
       }
 
     verify(atLeast = 1) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }

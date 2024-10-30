@@ -7505,14 +7505,14 @@ components:
         - succeeded
         - errored
         - failed_rolled_back
-        - canceled_rolled_back
+        - canceled
 
     ConnectorRolloutStateTerminal:
       type: string
       enum:
         - succeeded
         - failed_rolled_back
-        - canceled_rolled_back
+        - canceled
 
     ConnectorRolloutStrategy:
       type: string

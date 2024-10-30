@@ -175,7 +175,7 @@ class ConnectorRolloutCLI : Runnable {
             actorDefinitionId,
             rolloutId!!,
             UUID(0, 0),
-            ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK,
+            ConnectorRolloutStateTerminal.CANCELED,
             null,
             null,
           )

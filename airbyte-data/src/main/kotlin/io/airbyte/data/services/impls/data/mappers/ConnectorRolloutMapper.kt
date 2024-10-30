@@ -22,7 +22,7 @@ fun EntityConnectorRolloutStateType.toConfigModel(): ModelConnectorRolloutStateT
     EntityConnectorRolloutStateType.succeeded -> ModelConnectorRolloutStateType.SUCCEEDED
     EntityConnectorRolloutStateType.errored -> ModelConnectorRolloutStateType.ERRORED
     EntityConnectorRolloutStateType.failed_rolled_back -> ModelConnectorRolloutStateType.FAILED_ROLLED_BACK
-    EntityConnectorRolloutStateType.canceled_rolled_back -> ModelConnectorRolloutStateType.CANCELED_ROLLED_BACK
+    EntityConnectorRolloutStateType.canceled -> ModelConnectorRolloutStateType.CANCELED
   }
 }
 
@@ -36,7 +36,7 @@ fun ModelConnectorRolloutStateType.toEntity(): EntityConnectorRolloutStateType {
     ModelConnectorRolloutStateType.SUCCEEDED -> EntityConnectorRolloutStateType.succeeded
     ModelConnectorRolloutStateType.ERRORED -> EntityConnectorRolloutStateType.errored
     ModelConnectorRolloutStateType.FAILED_ROLLED_BACK -> EntityConnectorRolloutStateType.failed_rolled_back
-    ModelConnectorRolloutStateType.CANCELED_ROLLED_BACK -> EntityConnectorRolloutStateType.canceled_rolled_back
+    ModelConnectorRolloutStateType.CANCELED -> EntityConnectorRolloutStateType.canceled
   }
 }
 

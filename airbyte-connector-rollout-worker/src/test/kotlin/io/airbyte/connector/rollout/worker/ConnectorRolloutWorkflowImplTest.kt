@@ -8,6 +8,7 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputF
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityOutputVerifyDefaultVersion
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.worker.activities.CleanupActivity
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
@@ -162,10 +163,12 @@ class ConnectorRolloutWorkflowImplTest {
   fun `test ConnectorRolloutWorkflow state`(finalState: ConnectorRolloutFinalState) {
     `when`(startRolloutActivity.startRollout(Mockito.anyString(), MockitoHelper.anyObject()))
       .thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
-    if (finalState != ConnectorRolloutFinalState.CANCELED_ROLLED_BACK) {
+    if (finalState != ConnectorRolloutFinalState.CANCELED) {
       `when`(
         promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()),
       ).thenReturn(ConnectorRolloutOutput(state = ConnectorEnumRolloutState.FINALIZING))
+      `when`(verifyDefaultVersionActivity.getAndVerifyDefaultVersion(MockitoHelper.anyObject()))
+        .thenReturn(ConnectorRolloutActivityOutputVerifyDefaultVersion(true))
     }
     `when`(
       finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()),
@@ -197,7 +200,7 @@ class ConnectorRolloutWorkflowImplTest {
     assertEquals(finalState.toString(), result)
 
     verify(startRolloutActivity).startRollout(Mockito.anyString(), MockitoHelper.anyObject())
-    if (finalState != ConnectorRolloutFinalState.CANCELED_ROLLED_BACK) {
+    if (finalState != ConnectorRolloutFinalState.CANCELED) {
       verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
     }
     verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
@@ -345,6 +348,8 @@ class ConnectorRolloutWorkflowImplTest {
   fun `test finalizeRollout update handler calls promote and verify and finalize on SUCCEEDED`() {
     `when`(promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()))
       .thenReturn(getMockOutput(ConnectorEnumRolloutState.FINALIZING))
+    `when`(verifyDefaultVersionActivity.getAndVerifyDefaultVersion(MockitoHelper.anyObject()))
+      .thenReturn(ConnectorRolloutActivityOutputVerifyDefaultVersion(true))
     `when`(finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()))
       .thenReturn(getMockOutput(ConnectorEnumRolloutState.SUCCEEDED))
 
@@ -359,7 +364,7 @@ class ConnectorRolloutWorkflowImplTest {
       ),
     )
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
-    verify(verifyDefaultVersionActivity).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
@@ -381,14 +386,14 @@ class ConnectorRolloutWorkflowImplTest {
       ),
     )
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
-    verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
   @Test
-  fun `test finalizeRollout update handler only calls finalize on CANCELED_ROLLED_BACK`() {
+  fun `test finalizeRollout update handler only calls finalize on CANCELED`() {
     `when`(finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()))
-      .thenReturn(getMockOutput(ConnectorEnumRolloutState.CANCELED_ROLLED_BACK))
+      .thenReturn(getMockOutput(ConnectorEnumRolloutState.CANCELED))
 
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
@@ -397,11 +402,11 @@ class ConnectorRolloutWorkflowImplTest {
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
         PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
-        ConnectorRolloutFinalState.CANCELED_ROLLED_BACK,
+        ConnectorRolloutFinalState.CANCELED,
       ),
     )
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
-    verify(verifyDefaultVersionActivity, Mockito.never()).verifyDefaultVersion(MockitoHelper.anyObject())
+    verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
   }
 
