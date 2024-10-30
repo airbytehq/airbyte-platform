@@ -17,6 +17,7 @@ import { useCurrentConnection, useDestinationDefinitionVersion, useSourceDefinit
 import {
   ActorDefinitionVersionRead,
   ConnectionSyncStatus,
+  DeadlineAction,
   FailureOrigin,
   StreamStatusRead,
 } from "core/api/types/AirbyteClient";
@@ -52,7 +53,7 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
  * @returns An array containing id of the message to display and the type of error
  */
 export const getBreakingChangeErrorMessage = (
-  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState">,
+  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState" | "breakingChanges">,
   connectorBreakingChangeDeadlinesEnabled: boolean
 ): {
   errorMessageId: string;
@@ -63,9 +64,18 @@ export const getBreakingChangeErrorMessage = (
     return { errorMessageId: "connectionForm.breakingChange.deprecatedNoDeadline.message", errorType: "warning" };
   }
 
+  const isAutoUpgrade = actorDefinitionVersion.breakingChanges?.deadlineAction === DeadlineAction.auto_upgrade;
+
+  const unsupportedMessageId = isAutoUpgrade
+    ? "connectionForm.breakingChange.autoupgrade.unsupported.message"
+    : "connectionForm.breakingChange.unsupported.message";
+  const deprectatedMessageId = isAutoUpgrade
+    ? "connectionForm.breakingChange.autoupgrade.deprecated.message"
+    : "connectionForm.breakingChange.deprecated.message";
+
   return actorDefinitionVersion.supportState === "unsupported"
-    ? { errorMessageId: "connectionForm.breakingChange.unsupported.message", errorType: "error" }
-    : { errorMessageId: "connectionForm.breakingChange.deprecated.message", errorType: "warning" };
+    ? { errorMessageId: unsupportedMessageId, errorType: "error" }
+    : { errorMessageId: deprectatedMessageId, errorType: "warning" };
 };
 
 export const ConnectionStatusMessages: React.FC = () => {

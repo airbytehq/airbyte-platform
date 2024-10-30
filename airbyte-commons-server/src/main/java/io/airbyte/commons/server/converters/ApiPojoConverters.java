@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionStatus;
+import io.airbyte.api.model.generated.DeadlineAction;
 import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobType;
 import io.airbyte.api.model.generated.JobTypeResourceLimit;
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -263,11 +265,15 @@ public class ApiPojoConverters {
     if (breakingChange == null) {
       return null;
     }
+    final DeadlineAction deadlineAction =
+        Objects.equals(breakingChange.getDeadlineAction(), DeadlineAction.AUTO_UPGRADE.toString()) ? DeadlineAction.AUTO_UPGRADE
+            : DeadlineAction.DISABLE;
     return new ActorDefinitionBreakingChange()
         .version(breakingChange.getVersion().serialize())
         .message(breakingChange.getMessage())
         .migrationDocumentationUrl(breakingChange.getMigrationDocumentationUrl())
-        .upgradeDeadline(this.toLocalDate(breakingChange.getUpgradeDeadline()));
+        .upgradeDeadline(this.toLocalDate(breakingChange.getUpgradeDeadline()))
+        .deadlineAction(deadlineAction);
   }
 
   public LocalDate toLocalDate(final String date) {

@@ -9763,6 +9763,8 @@ components:
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
         migrationDocumentationUrl:
           type: string
+        deadlineAction:
+          $ref: "#/components/schemas/DeadlineAction"
     ActorDefinitionVersionBreakingChanges:
       type: object
       required:
@@ -9777,6 +9779,8 @@ components:
           type: string
           format: date
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+        deadlineAction:
+          $ref: "#/components/schemas/DeadlineAction"
     SupportState:
       type: string
       enum:
@@ -9797,6 +9801,11 @@ components:
         - certified
         - archived
         - none
+    DeadlineAction:
+      type: string
+      enum:
+        - auto_upgrade
+        - disable
     # CONNECTION
     ConnectionId:
       type: string

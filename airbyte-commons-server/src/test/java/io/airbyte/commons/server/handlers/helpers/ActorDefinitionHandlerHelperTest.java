@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.DeadlineAction;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
@@ -363,7 +364,8 @@ class ActorDefinitionHandlerHelperTest {
               .withMigrationDocumentationUrl("https://docs.airbyte.io/2")
               .withVersion(new Version("2.0.0"))
               .withUpgradeDeadline("2023-01-01")
-              .withMessage("This is a breaking change"),
+              .withMessage("This is a breaking change")
+              .withDeadlineAction("auto_upgrade"),
           new ActorDefinitionBreakingChange()
               .withActorDefinitionId(ACTOR_DEFINITION_ID)
               .withMigrationDocumentationUrl("https://docs.airbyte.io/3")
@@ -375,17 +377,20 @@ class ActorDefinitionHandlerHelperTest {
 
       final ActorDefinitionVersionBreakingChanges expected = new ActorDefinitionVersionBreakingChanges()
           .minUpgradeDeadline(LocalDate.parse("2023-01-01"))
+          .deadlineAction(DeadlineAction.AUTO_UPGRADE)
           .upcomingBreakingChanges(List.of(
               new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
                   .migrationDocumentationUrl("https://docs.airbyte.io/2")
                   .version("2.0.0")
                   .upgradeDeadline(LocalDate.parse(("2023-01-01")))
-                  .message("This is a breaking change"),
+                  .message("This is a breaking change")
+                  .deadlineAction(DeadlineAction.AUTO_UPGRADE),
               new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
                   .migrationDocumentationUrl("https://docs.airbyte.io/3")
                   .version("3.0.0")
                   .upgradeDeadline(LocalDate.parse("2023-05-01"))
-                  .message("This is another breaking change")));
+                  .message("This is another breaking change")
+                  .deadlineAction(DeadlineAction.DISABLE)));
 
       final Optional<ActorDefinitionVersionBreakingChanges> actual = actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
       assertEquals(expected, actual.orElseThrow());
