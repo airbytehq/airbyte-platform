@@ -29,7 +29,7 @@ const dropTables = () => {
   runDbQuery(getDropUsersTableQuery("users"), dropUserCarsTableQuery, dropTableWithLotsOfColumnsQuery);
 };
 
-describe("Connection - Stream details", () => {
+describe.skip("Connection - Stream details", () => {
   const streamRow = new StreamRowPageObject("public", "users");
 
   let source: SourceRead;

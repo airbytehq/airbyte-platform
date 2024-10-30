@@ -23,10 +23,10 @@ import {
 } from "@cy/commands/interceptors";
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { getSyncEnabledSwitch, visit } from "@cy/pages/connection/connectionPageObject";
-import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import * as connectionSettings from "@cy/pages/connection/connectionSettingsPageObject";
 import * as statusPage from "@cy/pages/connection/statusPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
+import { streamsTableV2 } from "@cy/pages/connection/StreamsTablePageObjectV2";
 import { getTestId } from "@cy/utils/selectors";
 import {
   AirbyteStreamAndConfiguration,
@@ -455,7 +455,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     });
 
     // TODO: the whole "Replication tab" test suite can be safely removed as it's covered by the connection/syncCatalog.cy.ts
-    describe("Replication tab", () => {
+    describe.skip("Replication tab", () => {
       it("Cannot enable/disable streams", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
@@ -562,7 +562,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
       interceptUpdateConnectionRequest();
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
-        cy.get(replicationPage.refreshSourceSchemaBtn).should("not.be.disabled");
+        streamsTableV2.isRefreshSourceSchemaBtnEnabled(true);
 
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Settings}`);
         connectionForm.selectScheduleType("Scheduled");

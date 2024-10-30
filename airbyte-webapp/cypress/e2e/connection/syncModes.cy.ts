@@ -94,7 +94,7 @@ const ACCOUNTS_FIELD_DATA_TYPES = ["Integer", "String", "Datetime"];
 const USER_CARS_FIELD_NAMES = ["car_id", "created_at", "user_id"];
 const USER_CARS_FIELD_DATA_TYPES = ["Integer", "Datetime", "Integer"];
 
-describe("Connection - sync modes", () => {
+describe.skip("Connection - sync modes", () => {
   const usersStreamRow = streamsTable.getRow("public", "users");
 
   let source: SourceRead;

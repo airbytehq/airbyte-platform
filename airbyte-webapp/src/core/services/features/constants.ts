@@ -5,6 +5,7 @@ export const defaultOssFeatures = [
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.AllowSyncSubOneHourCronExpressions,
+  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultEnterpriseFeatures = [
@@ -19,7 +20,6 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
-  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultCloudFeatures = [

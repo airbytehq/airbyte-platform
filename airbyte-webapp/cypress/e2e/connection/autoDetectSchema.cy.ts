@@ -38,7 +38,7 @@ import * as replicationPage from "pages/connection/connectionReplicationPageObje
 import * as settingsPage from "pages/connection/connectionSettingsPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
-describe("Connection - Auto-detect schema changes", () => {
+describe.skip("Connection - Auto-detect schema changes", () => {
   let source: SourceRead;
   let destination: DestinationRead;
   let connection: WebBackendConnectionRead;

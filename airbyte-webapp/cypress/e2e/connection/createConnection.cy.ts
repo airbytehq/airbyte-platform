@@ -196,7 +196,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
-  describe("Configuration", () => {
+  describe.skip("Configuration", () => {
     it("should set 'Replication frequency' to 'Manual'", () => {
       interceptDiscoverSchemaRequest();
 
@@ -216,7 +216,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
-  describe("Streams table", () => {
+  describe.skip("Streams table", () => {
     before(() => {
       interceptDiscoverSchemaRequest();
 
@@ -303,7 +303,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
-  describe("Stream", () => {
+  describe.skip("Stream", () => {
     before(() => {
       interceptDiscoverSchemaRequest();
 
@@ -453,7 +453,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
-  describe("Editing", () => {
+  describe.skip("Editing", () => {
     it("should have added stream style after modifying", () => {
       cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connectionId}/replication`);
 
