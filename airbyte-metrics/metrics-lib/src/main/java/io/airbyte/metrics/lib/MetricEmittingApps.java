@@ -33,6 +33,7 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   SIDECAR_ORCHESTRATOR("sidecar-orchestrator"),
   WORKER("worker"),
   WORKLOAD_API("workload-api"),
+  WORKLOAD_INIT("workload-init"),
   WORKLOAD_LAUNCHER("workload-launcher");
 
   private final String applicationName;

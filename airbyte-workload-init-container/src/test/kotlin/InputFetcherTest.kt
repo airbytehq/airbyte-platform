@@ -4,6 +4,7 @@ import io.airbyte.initContainer.InputFetcherTest.Fixtures.WORKLOAD_ID
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
@@ -11,7 +12,6 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
-import org.apache.commons.lang3.time.StopWatch
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -28,7 +28,8 @@ class InputFetcherTest {
   @MockK
   lateinit var systemClient: SystemClient
 
-  val stopWatch = StopWatch()
+  @MockK(relaxed = true)
+  lateinit var metricClient: MetricClient
 
   private lateinit var fetcher: InputFetcher
 
@@ -39,6 +40,7 @@ class InputFetcherTest {
         workloadApiClient,
         inputProcessor,
         systemClient,
+        metricClient,
         WORKLOAD_ID,
       )
   }

@@ -511,7 +511,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   CONNECTION_STAGING_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
       "connection_staging_storage_usage_mb",
-      "Staging storage in mb used by a connection.");
+      "Staging storage in mb used by a connection."),
+
+  SECRETS_HYDRATION_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "secrets_hydration_failure",
+      "Count of secrets hydration failures."),
+
+  WORKLOAD_HYDRATION_FETCH_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "workload_hydration_fetch_failure",
+      "Count of failures fetching workload during hydration step."),
+
+  INIT_FILE_CLIENT_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "init_file_client_failure",
+      "Count of failures prepping files during hydration step.");
 
   private final MetricEmittingApp application;
   private final String metricName;

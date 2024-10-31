@@ -3,6 +3,7 @@ package io.airbyte.initContainer.input
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.initContainer.system.FileClient
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -35,6 +36,9 @@ class DiscoverHydrationProcessorTest {
   @MockK
   lateinit var fileClient: FileClient
 
+  @MockK(relaxed = true)
+  lateinit var metricClient: MetricClient
+
   private lateinit var processor: DiscoverHydrationProcessor
 
   @BeforeEach
@@ -45,6 +49,7 @@ class DiscoverHydrationProcessorTest {
         deserializer,
         serializer,
         fileClient,
+        metricClient,
       )
   }
 

@@ -59,6 +59,7 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
@@ -198,6 +199,7 @@ class ReplicationInputHydratorTest {
   private ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
   private BackfillHelper backfillHelper;
   private CatalogClientConverters catalogClientConverters;
+  private MetricClient metricClient;
 
   @BeforeEach
   void setup() throws IOException {
@@ -213,6 +215,7 @@ class ReplicationInputHydratorTest {
     resumableFullRefreshStatsHelper = mock(ResumableFullRefreshStatsHelper.class);
     catalogClientConverters = new CatalogClientConverters(new FieldGenerator(), Collections.emptyList());
     backfillHelper = new BackfillHelper(catalogClientConverters);
+    metricClient = mock(MetricClient.class);
     when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
@@ -234,6 +237,7 @@ class ReplicationInputHydratorTest {
         backfillHelper,
         catalogClientConverters,
         new ReplicationInputMapper(),
+        metricClient,
         useRuntimePersistence);
   }
 

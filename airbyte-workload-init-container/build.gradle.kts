@@ -30,7 +30,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
-  implementation(libs.bundles.apache)
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)

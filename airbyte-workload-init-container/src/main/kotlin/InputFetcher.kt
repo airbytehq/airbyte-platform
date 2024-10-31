@@ -3,6 +3,8 @@ package io.airbyte.initContainer
 import io.airbyte.config.FailureReason.FailureOrigin
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -17,6 +19,7 @@ class InputFetcher(
   private val workloadApiClient: WorkloadApiClient,
   private val hydrationProcessor: InputHydrationProcessor,
   private val systemClient: SystemClient,
+  private val metricClient: MetricClient,
   @Value("\${airbyte.workload-id}") private val workloadId: String,
 ) {
   @PostConstruct
@@ -27,6 +30,7 @@ class InputFetcher(
       try {
         workloadApiClient.workloadApi.workloadGet(workloadId)
       } catch (e: Exception) {
+        metricClient.count(OssMetricsRegistry.WORKLOAD_HYDRATION_FETCH_FAILURE, 1)
         return failWorkloadAndExit(workloadId, "fetching workload", e)
       }
 

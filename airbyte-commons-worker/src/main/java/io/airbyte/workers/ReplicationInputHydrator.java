@@ -4,6 +4,10 @@
 
 package io.airbyte.workers;
 
+import static io.airbyte.metrics.lib.MetricTags.CONNECTION_ID;
+import static io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE;
+import static io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import dev.failsafe.Failsafe;
@@ -43,6 +47,9 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
@@ -61,6 +68,7 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import secrets.persistence.SecretCoordinateException;
 
 public class ReplicationInputHydrator {
 
@@ -74,6 +82,7 @@ public class ReplicationInputHydrator {
 
   private final BackfillHelper backfillHelper;
   private final CatalogClientConverters catalogClientConverters;
+  private final MetricClient metricClient;
 
   static final String FILE_TRANSFER_DELIVERY_TYPE = "use_file_transfer";
 
@@ -83,6 +92,7 @@ public class ReplicationInputHydrator {
                                   final BackfillHelper backfillHelper,
                                   final CatalogClientConverters catalogClientConverters,
                                   final ReplicationInputMapper mapper,
+                                  final MetricClient metricClient,
                                   final Boolean useRuntimeSecretPersistence) {
     this.airbyteApiClient = airbyteApiClient;
     this.backfillHelper = backfillHelper;
@@ -90,6 +100,7 @@ public class ReplicationInputHydrator {
     this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.mapper = mapper;
+    this.metricClient = metricClient;
     this.useRuntimeSecretPersistence = useRuntimeSecretPersistence;
   }
 
@@ -208,10 +219,29 @@ public class ReplicationInputHydrator {
         throw new RuntimeException(e);
       }
     } else { // use default configured persistence
-      fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
-      fullDestinationConfig =
-          secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
+      try {
+        fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
+      } catch (final SecretCoordinateException e) {
+        metricClient.count(
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
+            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getSourceLauncherConfig().getDockerImage()),
+            new MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
+            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getSourceLauncherConfig().getConnectionId().toString()));
+        throw e;
+      }
+      try {
+        fullDestinationConfig =
+            secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
+      } catch (final SecretCoordinateException e) {
+        metricClient.count(
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
+            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getDestinationLauncherConfig().getDockerImage()),
+            new MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
+            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getDestinationLauncherConfig().getConnectionId().toString()));
+        throw e;
+      }
     }
+
     return mapper.toReplicationInput(replicationActivityInput)
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)

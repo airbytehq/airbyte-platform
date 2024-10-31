@@ -17,6 +17,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
+import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -269,9 +270,9 @@ object SecretsHelpers {
    * @param secretPersistence storage layer for secrets
    * @param coordinate reference to a secret in the persistence
    * @return a json string containing the secret value or a JSON
-   * @throws RuntimeException when a secret at that coordinate is not available in the persistence
+   * @throws SecretCoordinateException when a secret at that coordinate is not available in the persistence
    */
-  @Throws(RuntimeException::class)
+  @Throws(SecretCoordinateException::class)
   private fun getOrThrowSecretValue(
     secretPersistence: ReadOnlySecretPersistence,
     coordinate: SecretCoordinate,
@@ -280,7 +281,7 @@ object SecretsHelpers {
     if (secret.isNotBlank()) {
       return secret
     } else {
-      throw RuntimeException(
+      throw SecretCoordinateException(
         String.format(
           "That secret was not found in the store! Coordinate: %s",
           coordinate.fullCoordinate,
