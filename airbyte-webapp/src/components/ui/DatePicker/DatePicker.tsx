@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import en from "date-fns/locale/en-US";
 import dayjs from "dayjs";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import ReactDatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useIntl } from "react-intl";
@@ -59,6 +59,10 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
 });
 DatepickerButton.displayName = "DatepickerButton";
 
+// Additional locales can be registered here as necessary
+registerLocale("en-US", en);
+registerLocale("en", en);
+
 export const DatePicker: React.FC<DatePickerProps> = ({
   className,
   disabled,
@@ -80,15 +84,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
-
-  // Additional locales can be registered here as necessary
-  useEffect(() => {
-    switch (locale) {
-      case "en":
-        registerLocale(locale, en);
-        break;
-    }
-  }, [locale]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
