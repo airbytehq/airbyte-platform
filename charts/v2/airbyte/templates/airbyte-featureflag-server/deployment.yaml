@@ -1,0 +1,177 @@
+{{- if and (.Values.featureflagServer.enabled) (eq .Values.global.edition "community") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airbyte-featureflag-server
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  minReadySeconds: 30
+  replicas: {{ .Values.featureflagServer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.featureflagServer.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.featureflagServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.featureflagServer.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.featureflagServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.featureflagServer.podLabels}}
+          {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.featureflagServer.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.featureflagServer.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.featureflagServer.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.featureflagServer.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.featureflagServer.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.featureflagServer.extraInitContainers | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-featureflag-server-container
+        image: {{ include "imageUrl" (list .Values.featureflagServer.image $) }}
+        imagePullPolicy: "{{ .Values.featureflagServer.image.pullPolic }}"
+        env:
+        {{- if .Values.featureflagServer.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.featureflagServer.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end }}
+        {{- if eq .Values.global.deploymentMode "oss" }}
+        - name: AIRBYTE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_VERSION
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
+
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.featureflagServer.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.featureflagServer.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.featureflagServer.extraEnv }}
+        {{- toYaml .Values.featureflagServer.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.featureflagServer.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.featureflagServer.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.featureflagServer.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.featureflagServer.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.featureflagServer.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.featureflagServer.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.featureflagServer.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.featureflagServer.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.featureflagServer.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.featureflagServer.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.featureflagServer.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.featureflagServer.readinessProbe.failureThreshold }}
+        {{- end }}
+
+        ports:
+        - name: http
+          containerPort: 8007
+          protocol: TCP
+        {{- if .Values.featureflagServer.debug.enabled }}
+        - name: debug 
+          containerPort: {{ .Values.featureflagServer.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.featureflagServer.resources }}
+        resources: {{- toYaml .Values.featureflagServer.resources | nindent 8 }}
+        {{- end }}
+        {{- if .Values.featureflagServer.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.featureflagServer.containerSecurityContext | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+        - name: gcs-log-creds-volume
+          mountPath: /secrets/gcs-log-creds
+          readOnly: true
+        {{- end }}
+        {{- if .Values.featureflagServer.extraVolumeMount }}
+{{- toYaml .Values.featureflagServer.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+{{- toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.featureflagServer.extraContainers }}
+      {{ toYaml .Values.featureflagServer.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.featureflagServer.podSecurityContext | nindent 6 }}
+      volumes:
+      {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+      {{- end }}
+      {{- if .Values.featureflagServer.extraVolumes }}
+      {{- toYaml .Values.featureflagServer.extraVolumes | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraVolumes }}
+      {{- toYaml .Values.global.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- end }}

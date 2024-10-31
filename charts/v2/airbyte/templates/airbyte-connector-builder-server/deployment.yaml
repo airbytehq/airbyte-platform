@@ -1,0 +1,179 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-connector-builder-server
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.connectorBuilderServer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.connectorBuilderServer.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.connectorBuilderServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: {{ .Values.connectorBuilderServer.deploymentStrategyType }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.connectorBuilderServer.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.connectorBuilderServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.connectorBuilderServer.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.connectorBuilderServer.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.connectorBuilderServer.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorBuilderServer.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorBuilderServer.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorBuilderServer.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.connectorBuilderServer.extraInitContainers | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-connector-builder-server
+        image: {{ include "imageUrl" (list .Values.connectorBuilderServer.image $) }}
+        imagePullPolicy: "{{ .Values.connectorBuilderServer.image.pullPolicy }}"
+        env:
+        {{- if .Values.connectorBuilderServer.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorBuilderServer.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
+        {{- if eq .Values.global.deploymentMode "oss" }}
+        - name: AIRBYTE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_VERSION
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
+        {{- end }}
+
+        # Values from secret
+        {{- if .Values.connectorBuilderServer.secrets }}
+        {{- range $k, $v := .Values.connectorBuilderServer.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: server-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.connectorBuilderServer.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.connectorBuilderServer.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.connectorBuilderServer.extraEnv }}
+        {{- toYaml .Values.connectorBuilderServer.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.connectorBuilderServer.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.connectorBuilderServer.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.connectorBuilderServer.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.connectorBuilderServer.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.connectorBuilderServer.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.connectorBuilderServer.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.connectorBuilderServer.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.connectorBuilderServer.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.connectorBuilderServer.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.connectorBuilderServer.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.connectorBuilderServer.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.connectorBuilderServer.readinessProbe.failureThreshold }}
+        {{- end }}
+
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        {{- if .Values.connectorBuilderServer.debug.enabled }}
+        - name: debug 
+          containerPort: {{ .Values.connectorBuilderServer.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        {{- if .Values.connectorBuilderServer.resources }}
+        resources: {{- toYaml .Values.connectorBuilderServer.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.connectorBuilderServer.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.connectorBuilderServer.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.connectorBuilderServer.extraVolumeMounts }}
+          {{ toYaml .Values.connectorBuilderServer.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+          {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.connectorBuilderServer.extraContainers }}
+        {{ toYaml .Values.connectorBuilderServer.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.connectorBuilderServer.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if .Values.connectorBuilderServer.extraVolumes }}
+{{ toYaml .Values.connectorBuilderServer.extraVolumes | nindent 6 }}
+      {{- end }}
