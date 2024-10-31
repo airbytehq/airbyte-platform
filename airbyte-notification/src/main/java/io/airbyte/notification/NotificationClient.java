@@ -29,13 +29,13 @@ public abstract class NotificationClient {
   public abstract boolean notifyConnectionDisableWarning(final SyncSummary summary,
                                                          final String receiverEmail);
 
-  public abstract boolean notifyBreakingChangeWarning(List<String> receiverEmails,
-                                                      String connectorName,
-                                                      ActorType actorType,
-                                                      ActorDefinitionBreakingChange breakingChange);
+  public abstract boolean notifyBreakingChangeWarning(final List<String> receiverEmails,
+                                                      final String connectorName,
+                                                      final ActorType actorType,
+                                                      final ActorDefinitionBreakingChange breakingChange);
 
-  public abstract boolean notifyBreakingChangeSyncsDisabled(List<String> receiverEmails,
-                                                            String connectorName,
+  public abstract boolean notifyBreakingChangeSyncsDisabled(final List<String> receiverEmails,
+                                                            final String connectorName,
                                                             final ActorType actorType,
                                                             final ActorDefinitionBreakingChange breakingChange);
 

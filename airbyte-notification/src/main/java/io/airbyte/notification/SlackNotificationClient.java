@@ -36,14 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Notification client that uses Slack API for Incoming Webhook to send messages.
- *
- * This class also reads a resource YAML file that defines the template message to send.
- *
- * It is stored as a YAML so that we can easily change the structure of the JSON data expected by
- * the API that we are posting to (and we can write multi-line strings more easily).
- *
- * For example, slack API expects some text message in the { "text" : "Hello World" } field...
+ * Notification client that uses Slack API for Incoming Webhook to send messages. This class also
+ * reads a resource YAML file that defines the template message to send. It is stored as a YAML so
+ * that we can easily change the structure of the JSON data expected by the API that we are posting
+ * to (and we can write multi-line strings more easily). For example, slack API expects some text
+ * message in the { "text" : "Hello World" } field...
  */
 @SuppressWarnings("PMD.ConfusingArgumentToVarargsMethod")
 public class SlackNotificationClient extends NotificationClient {
@@ -74,11 +71,11 @@ public class SlackNotificationClient extends NotificationClient {
     } catch (IOException e) {
       return false;
     }
-    Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
+    final Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
     notification.setData(summary);
     try {
       return notifyJson(notification.toJsonNode());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -96,14 +93,14 @@ public class SlackNotificationClient extends NotificationClient {
           summary.getErrorMessage(),
           summary.getConnection().getUrl(),
           String.valueOf(summary.getJobId()));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
-    Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
+    final Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
     notification.setData(summary);
     try {
       return notifyJson(notification.toJsonNode());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -183,7 +180,7 @@ public class SlackNotificationClient extends NotificationClient {
           summary.getErrorMessage(),
           summary.getWorkspace().getId().toString(),
           summary.getConnection().getId().toString());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
     final String message = """
@@ -191,7 +188,7 @@ public class SlackNotificationClient extends NotificationClient {
                            """;
     try {
       return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -208,7 +205,7 @@ public class SlackNotificationClient extends NotificationClient {
           summary.getErrorMessage(),
           summary.getWorkspace().getId().toString(),
           summary.getConnection().getId().toString());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
     final String message = """
@@ -217,7 +214,7 @@ public class SlackNotificationClient extends NotificationClient {
     try {
       return notifyJson(
           buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -255,7 +252,7 @@ public class SlackNotificationClient extends NotificationClient {
     if (!StringUtils.isEmpty(webhookUrl)) {
       try {
         return notifyJson(slackNotification.toJsonNode());
-      } catch (IOException e) {
+      } catch (final IOException e) {
         return false;
       }
     }
@@ -383,7 +380,7 @@ public class SlackNotificationClient extends NotificationClient {
     final HttpResponse<String> response;
     try {
       response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       return false;
     }
     if (isSuccessfulHttpResponse(response.statusCode())) {

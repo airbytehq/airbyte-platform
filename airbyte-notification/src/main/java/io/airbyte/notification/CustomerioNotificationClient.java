@@ -141,7 +141,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -153,7 +153,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -168,7 +168,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -180,7 +180,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -198,7 +198,7 @@ public class CustomerioNotificationClient extends NotificationClient {
           "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
           "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
           "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -215,7 +215,7 @@ public class CustomerioNotificationClient extends NotificationClient {
           "connector_version_new", breakingChange.getVersion().serialize(),
           "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
           "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
@@ -231,7 +231,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return false;
     }
   }
