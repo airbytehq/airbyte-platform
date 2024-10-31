@@ -2,6 +2,10 @@ package io.airbyte.config.mapper.configs
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
+annotation class AirbyteSecret
+
+@Target(AnnotationTarget.FIELD)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class SchemaDescription(val description: String)
 
 @Target(AnnotationTarget.FIELD)

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.net.URL
 
 @MicronautTest
 class MapperConfigDeserializationTest {
@@ -19,23 +20,21 @@ class MapperConfigDeserializationTest {
 
   @Test
   fun `mapper config examples should be correctly deserialized `() {
-    val fieldRenamingMapperExamples =
-      javaClass.classLoader.getResource("FieldRenamingMapperConfigExamples.json")
-        ?: throw IllegalArgumentException("File not found: FieldRenamingMapperConfigExamples.json")
+    val encryptionMapperExamples = loadResource("EncryptionMapperConfigExamples.json")
 
-    val hashingMapperExamples =
-      javaClass.classLoader.getResource("HashingMapperConfigExamples.json")
-        ?: throw IllegalArgumentException("File not found: HashingMapperConfigExamples.json")
+    val fieldRenamingMapperExamples = loadResource("FieldRenamingMapperConfigExamples.json")
 
-    val rowFilteringMapperExamples =
-      javaClass.classLoader.getResource("RowFilteringMapperConfigExamples.json")
-        ?: throw IllegalArgumentException("File not found: RowFilteringMapperConfigExamples.json")
+    val hashingMapperExamples = loadResource("HashingMapperConfigExamples.json")
 
-    val fieldRenamingMapperConfigs = Jsons.deserialize(File(fieldRenamingMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
-    val hashingMapperConfigs = Jsons.deserialize(File(hashingMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
-    val rowFilteringMapperConfigs = Jsons.deserialize(File(rowFilteringMapperExamples.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
+    val rowFilteringMapperExamples = loadResource("RowFilteringMapperConfigExamples.json")
+
+    val encryptionMapperConfigs = encryptionMapperExamples.toConfig()
+    val fieldRenamingMapperConfigs = fieldRenamingMapperExamples.toConfig()
+    val hashingMapperConfigs = hashingMapperExamples.toConfig()
+    val rowFilteringMapperConfigs = rowFilteringMapperExamples.toConfig()
 
     val mixedMappers = mutableListOf<ConfiguredMapper>()
+    mixedMappers.addAll(encryptionMapperConfigs)
     mixedMappers.addAll(fieldRenamingMapperConfigs)
     mixedMappers.addAll(hashingMapperConfigs)
     mixedMappers.addAll(rowFilteringMapperConfigs)
@@ -52,7 +51,7 @@ class MapperConfigDeserializationTest {
 
     val listMapperConfig =
       Jsons.deserialize(
-        Jsons.serialize(mapOf("mappers" to Jsons.jsonNode(mixedMappers))),
+        Jsons.serialize(mapOf("mappers" to mixedMappers)),
         TestListMapperConfig::class.java,
       )
 
@@ -64,6 +63,12 @@ class MapperConfigDeserializationTest {
       assertEquals(mixedMappers[i].config, Jsons.jsonNode(listMapperConfig.mappers[i].config()), "The mapper config at index $i are not equal.")
     }
   }
+
+  private fun loadResource(resourceName: String): URL =
+    javaClass.classLoader.getResource(resourceName)
+      ?: throw IllegalArgumentException("File not found: $resourceName")
+
+  private fun URL.toConfig() = Jsons.deserialize(File(this.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
 
   data class TestListMapperConfig(
     var mappers: List<MapperConfig> = listOf(),

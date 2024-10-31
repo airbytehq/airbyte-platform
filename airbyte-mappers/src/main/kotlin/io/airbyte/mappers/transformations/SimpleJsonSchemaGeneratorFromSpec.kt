@@ -1,5 +1,6 @@
 package io.airbyte.mappers.transformations
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
@@ -12,6 +13,10 @@ import com.github.victools.jsonschema.generator.SchemaGenerationContext
 import com.github.victools.jsonschema.generator.SchemaGenerator
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder
 import com.github.victools.jsonschema.generator.SchemaVersion
+import com.github.victools.jsonschema.generator.TypeAttributeOverrideV2
+import com.github.victools.jsonschema.generator.TypeScope
+import io.airbyte.config.JsonsSchemaConstants
+import io.airbyte.config.mapper.configs.AirbyteSecret
 import io.airbyte.config.mapper.configs.NotNull
 import io.airbyte.config.mapper.configs.SchemaConstant
 import io.airbyte.config.mapper.configs.SchemaDefault
@@ -36,8 +41,29 @@ class SimpleJsonSchemaGeneratorFromSpec {
       }
       .withCustomDefinitionProvider(SimplePropertyDefProvider())
 
+    configBuilder.forTypesInGeneral()
+      .withTypeAttributeOverride(JsonSubTypesOverride())
+
     val generator = SchemaGenerator(configBuilder.build())
     return generator.generateSchema(classType)
+  }
+}
+
+class JsonSubTypesOverride : TypeAttributeOverrideV2 {
+  override fun overrideTypeAttributes(
+    node: ObjectNode,
+    typeScope: TypeScope,
+    schemaGenerationContext: SchemaGenerationContext,
+  ) {
+    val jsonSubTypesAnnotation = typeScope.type.erasedType.getAnnotation(JsonSubTypes::class.java)
+    if (jsonSubTypesAnnotation != null) {
+      val generator = SchemaGenerator(schemaGenerationContext.generatorConfig, schemaGenerationContext.typeContext)
+      val subTypeSchemas = jsonSubTypesAnnotation.value.map { generator.generateSchema(it.value.java) }
+      node.apply {
+        removeAll()
+        set<JsonNode>(JsonsSchemaConstants.TYPE_ONE_OF, schemaGenerationContext.generatorConfig.objectMapper.createArrayNode().addAll(subTypeSchemas))
+      }
+    }
   }
 }
 
@@ -66,7 +92,17 @@ class SimplePropertyDefProvider : CustomPropertyDefinitionProvider<FieldScope> {
     setDefault(fieldScope, node)
     setFormat(fieldScope, node)
     setExamples(fieldScope, objectMapper, node)
+    setAirbyteSecret(fieldScope, node)
     return CustomPropertyDefinition(node)
+  }
+
+  private fun setAirbyteSecret(
+    fieldScope: FieldScope,
+    objectNode: ObjectNode,
+  ) {
+    fieldScope.getAnnotation(AirbyteSecret::class.java)?.apply {
+      objectNode.put("airbyte_secret", true)
+    }
   }
 
   private fun setFormat(
