@@ -153,6 +153,8 @@ airbyte:
             secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
           staging:
             mount-path: ${AIRBYTE_STAGING_PATH:/staging/files}
+          local:
+            enabled: ${JOB_KUBE_LOCAL_VOLUME_ENABLED:false}
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
@@ -234,8 +236,6 @@ airbyte:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      local:
-        root: ${LOCAL_ROOT:}
       minio:
         access-key: ${AWS_ACCESS_KEY_ID:}
         endpoint: ${MINIO_ENDPOINT:}

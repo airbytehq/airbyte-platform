@@ -115,11 +115,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKSPACE_ROOT
-        - name: LOCAL_ROOT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOCAL_ROOT
         - name: WEBAPP_URL
           valueFrom:
             configMapKeyRef:
@@ -464,6 +459,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
         {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
@@ -483,6 +482,11 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:

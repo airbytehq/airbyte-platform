@@ -123,7 +123,6 @@ manifest should match snapshot:
       JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.29.15.001
       KEYCLOAK_INTERNAL_HOST: RELEASE-NAME-airbyte-keycloak-svc:9000
       KEYCLOAK_PORT: "9000"
-      LOCAL_ROOT: /tmp/airbyte_local
       MAX_NOTIFY_WORKERS: "5"
       METRIC_CLIENT: ""
       OTEL_COLLECTOR_ENDPOINT: ""

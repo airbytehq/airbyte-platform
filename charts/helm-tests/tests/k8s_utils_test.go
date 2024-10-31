@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"log"
 	"strings"
 	"testing"
 
@@ -25,16 +26,31 @@ func decodeK8sResources(renderedYaml string) []runtime.Object {
 	out := []runtime.Object{}
 	chunks := strings.Split(renderedYaml, "---")
 	for _, chunk := range chunks {
+		chunk = dropYamlComments(chunk)
 		if len(chunk) == 0 {
 			continue
 		}
+
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(chunk), nil, nil)
 		if err != nil {
+			log.Printf("error decoding k8s object: %s\n", err)
 			continue
 		}
 		out = append(out, obj)
 	}
 	return out
+}
+
+func dropYamlComments(src string) string {
+	lines := strings.Split(src, "\n")
+	filtered := []string{}
+	for _, l := range lines {
+		if strings.HasPrefix(l, "# ") {
+			continue
+		}
+		filtered = append(filtered, l)
+	}
+	return strings.TrimSpace(strings.Join(filtered, "\n"))
 }
 
 func getK8sObjName(obj runtime.Object) string {

@@ -95,6 +95,8 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
+
+
   storage:
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
@@ -153,6 +155,10 @@ global:
       ##    memory: 1Gi
       # -- Job resource limits
       limits: {}
+
+    local:
+      volume:
+        enabled: false
 
     kube:
       ## JOB_KUBE_ANNOTATIONS

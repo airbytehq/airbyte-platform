@@ -24,12 +24,6 @@ import jakarta.inject.Singleton;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
 
-  // @Singleton
-  // @Named("logStorageConfigs")
-  // public StorageConfig logStorageConfigs(final StorageConfig storageConfig) {
-  // return storageConfig;
-  // }
-
   @Singleton
   @Named("logDocumentStore")
   public StorageClient logStorageClient(final StorageClientFactory factory) {

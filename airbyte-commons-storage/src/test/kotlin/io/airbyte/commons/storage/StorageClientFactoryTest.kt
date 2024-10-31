@@ -51,13 +51,13 @@ class LocalStorageClientFactoryTest {
   @Test
   fun `get returns correct class`() {
     val state: LocalStorageClient = factory.get(DocumentType.STATE) as LocalStorageClient
-    assertEquals("/tmp/test/state", state.root.toString())
+    assertEquals("/tmp/test/state/foo", state.toPath("foo").toString())
 
     val workload: LocalStorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT) as LocalStorageClient
-    assertEquals("/tmp/test/workload/output", workload.root.toString())
+    assertEquals("/tmp/test/workload/output/foo", workload.toPath("foo").toString())
 
     val log: LocalStorageClient = factory.get(DocumentType.LOGS) as LocalStorageClient
-    assertEquals("/tmp/test/job-logging", log.root.toString())
+    assertEquals("/tmp/test/job-logging/foo", log.toPath("foo").toString())
   }
 }
 

@@ -68,7 +68,6 @@ object OrchestratorConstants {
           EnvVar.JOB_MAIN_CONTAINER_MEMORY_REQUEST,
           EnvVar.LAUNCHDARKLY_KEY,
           EnvVar.LOCAL_DOCKER_MOUNT,
-          EnvVar.LOCAL_ROOT,
           EnvVar.METRIC_CLIENT,
           EnvVar.MINIO_ENDPOINT,
           EnvVar.OTEL_COLLECTOR_ENDPOINT,

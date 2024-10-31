@@ -105,7 +105,9 @@ data:
   JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ $.Values.global.jobs.kube.main_container_image_pull_secret }}
   {{- end }}
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
-  LOCAL_ROOT: /tmp/airbyte_local
+
+  JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ .Values.global.jobs.local.volume.enabled | quote }}
+
   LOG_LEVEL: {{ default "INFO" (((.Values.global).logging).level) }}
   MICROMETER_METRICS_ENABLED: "false"
   MICROMETER_METRICS_STATSD_FLAVOR: "datadog"

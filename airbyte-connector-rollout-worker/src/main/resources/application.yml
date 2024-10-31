@@ -42,9 +42,6 @@ airbyte:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   role: ${AIRBYTE_ROLE:}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}

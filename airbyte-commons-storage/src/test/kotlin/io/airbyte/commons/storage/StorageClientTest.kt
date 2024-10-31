@@ -15,6 +15,7 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
+import io.airbyte.commons.envvar.EnvVar
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -44,9 +45,11 @@ import software.amazon.awssdk.services.s3.model.S3Object
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files.createDirectory
 import java.nio.file.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createTempFile
+import kotlin.io.path.exists
 import kotlin.io.path.pathString
 import com.google.cloud.storage.Bucket as GcsBucket
 
@@ -378,14 +381,65 @@ internal class LocalStorageClientTest {
     val root = createTempDirectory(prefix = "local-test")
     // Create subdirectory to ensure it is not included in list results
     createTempDirectory(directory = root, prefix = "subdir-test")
-    val file = createTempFile(directory = root, prefix = "logs", suffix = ".log")
+    val stateDir = Path.of(root.pathString, "state")
+    createDirectory(stateDir)
+    val file = createTempFile(directory = stateDir, suffix = ".log")
     file.toFile().writeText(text = "log line")
 
     val config = LocalStorageConfig(buckets = buckets, root = root.pathString)
     val client = LocalStorageClient(config = config, type = DocumentType.STATE)
 
-    val result = client.list(id = root.pathString)
+    val result = client.list("/")
     assertEquals(listOf(file.fileName.toString()), result)
+  }
+
+  @Test
+  fun `it can write and read state files correctly`() {
+    val root = createTempDirectory(prefix = "local-test")
+    val config = LocalStorageConfig(buckets = buckets, root = root.pathString)
+    val client = LocalStorageClient(config = config, type = DocumentType.STATE)
+
+    client.write("foo", "foodoc")
+    client.write("bar/baz", "barbaz")
+    client.write("job/0/log1", "log1")
+    client.write("job/0/log2", "log2")
+    client.write("job/0/sub/log3", "log3")
+
+    assertEquals("foodoc", client.read("foo"))
+    assertEquals("barbaz", client.read("bar/baz"))
+    assertEquals("log1", client.read("job/0/log1"))
+
+    // note that list() does NOT recurse into subdirectories
+    assertEquals(listOf("job/0/log1", "job/0/log2"), client.list("job/0"))
+
+    // if the ID looks like an absolute path, it still writes to the local storage dir
+    val now = System.currentTimeMillis()
+    client.write("/boo-$now", "boo")
+    assertTrue(Path.of(root.pathString, "state/boo-$now").exists())
+  }
+
+  @Test
+  internal fun testToEnvVarMap() {
+    val root = "/root/path"
+    val bucketConfig =
+      StorageBucketConfig(
+        state = "state",
+        workloadOutput = "workload-output",
+        log = "log",
+        activityPayload = "activity-payload",
+      )
+    val localStorageConfig =
+      LocalStorageConfig(
+        buckets = bucketConfig,
+        root = root,
+      )
+    val envVarMap = localStorageConfig.toEnvVarMap()
+    assertEquals(5, envVarMap.size)
+    assertEquals(bucketConfig.log, envVarMap[EnvVar.STORAGE_BUCKET_LOG.name])
+    assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
+    assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
+    assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
+    assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
   }
 }
 

@@ -15,6 +15,9 @@ global:
     secretName: ""
     secretValue: ""
 
+  storage:
+    type: minio
+
   # Docker image config that will apply to all images.
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/

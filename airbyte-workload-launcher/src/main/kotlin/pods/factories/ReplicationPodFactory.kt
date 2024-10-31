@@ -17,7 +17,7 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class ReplicationPodFactory(
+data class ReplicationPodFactory(
   private val featureFlagClient: FeatureFlagClient,
   private val initContainerFactory: InitContainerFactory,
   private val replContainerFactory: ReplicationContainerFactory,

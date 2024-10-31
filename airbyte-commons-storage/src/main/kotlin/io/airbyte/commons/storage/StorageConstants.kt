@@ -13,9 +13,6 @@ internal const val STORAGE_AZURE = "$STORAGE_ROOT.azure"
 /** Specific settings for Google Cloud Storage are found here. Only used if `[STORAGE_ROOT].type` is `gcs`. */
 internal const val STORAGE_GCS = "$STORAGE_ROOT.gcs"
 
-/** Specific settings for local storage are found here. Only used if `[STORAGE_ROOT].type` is `local`. */
-internal const val STORAGE_LOCAL = "$STORAGE_ROOT.local"
-
 /** Specific settings for MinIO are found here. Only used if `[STORAGE_ROOT].type` is `minio`. */
 internal const val STORAGE_MINIO = "$STORAGE_ROOT.minio"
 
@@ -27,3 +24,12 @@ internal const val STORAGE_BUCKET = "$STORAGE_ROOT.bucket"
 
 /** The setting that contains what storage type the client represents. */
 const val STORAGE_TYPE = "$STORAGE_ROOT.type"
+
+/** The mount point used for local storage. */
+const val STORAGE_MOUNT = "/storage"
+
+/** The name of the volume used for local storage. */
+const val STORAGE_VOLUME_NAME = "airbyte-storage"
+
+/** The name of the persistent volume claim (PVC) used for local storage. */
+const val STORAGE_CLAIM_NAME = "airbyte-storage-pvc"

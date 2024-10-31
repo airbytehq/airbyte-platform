@@ -58,8 +58,6 @@ airbyte:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      local:
-        root: ${LOCAL_ROOT:}
       minio:
         access-key: ${AWS_ACCESS_KEY_ID:}
         endpoint: ${MINIO_ENDPOINT:}
@@ -115,9 +113,6 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}

@@ -43,6 +43,8 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.pathString
+import kotlin.io.path.relativeTo
 
 fun prependIfMissing(
   prefix: String,
@@ -90,7 +92,7 @@ enum class DocumentType(
   // that GCS/Azure can find these files in blob storage.  Both of those
   // cloud providers treat the leading slash as a directory.  Currently, logs
   // are retrieved by the LogClient, which uses a path set on the attempt that
-  // does NOT contain a leading slash.  Therefor, these paths need to match that logic.
+  // does NOT contain a leading slash.  Therefore, these paths need to match that logic.
   LOGS(prefix = Path.of("job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
@@ -307,43 +309,48 @@ class GcsStorageClient(
  */
 @Prototype
 class LocalStorageClient(
-  config: LocalStorageConfig,
+  private val config: LocalStorageConfig,
   @Parameter private val type: DocumentType,
 ) : StorageClient {
-  // internal for testing
-  internal val root: Path = Path.of(config.root, type.prefix.toString())
-
-  override fun list(id: String): List<String> =
-    root
-      .resolve(id)
-      .listDirectoryEntries()
-      .filter { !it.isDirectory() }
-      .map { it.toFile().name }
+  override fun list(id: String): List<String> {
+    val res =
+      toPath(id)
+        .takeIf { it.exists() }
+        ?.listDirectoryEntries()
+        ?.filter { !it.isDirectory() }
+        ?.map { toId(it) }
+        ?: emptyList()
+    return res.sorted()
+  }
 
   override fun write(
     id: String,
     document: String,
   ) {
     val path =
-      path(id).also { it.createParentDirectories() }
+      toPath(id).also { it.createParentDirectories() }
     IOs.writeFile(path, document)
   }
 
-  override fun read(id: String): String? =
-    path(id)
+  override fun read(id: String): String? {
+    return toPath(id)
       .takeIf { it.exists() }
       ?.let { IOs.readFile(it) }
+  }
 
   override fun delete(id: String): Boolean =
-    path(id)
+    toPath(id)
       .deleteIfExists()
 
   override fun documentType(): DocumentType = type
 
   override fun storageType(): StorageType = StorageType.LOCAL
 
-  /** Converts [String] to a [Path] relative to the [root]. */
-  private fun path(id: String): Path = root.resolve(id)
+  /** Converts an ID [String] to an absolute [Path]. */
+  internal fun toPath(id: String): Path = Path.of(config.root, type.prefix.toString(), id)
+
+  /** Converts an absolute [Path] to an ID [String]. */
+  internal fun toId(abspath: Path): String = abspath.relativeTo(Path.of(config.root, type.prefix.toString())).pathString
 }
 
 /**

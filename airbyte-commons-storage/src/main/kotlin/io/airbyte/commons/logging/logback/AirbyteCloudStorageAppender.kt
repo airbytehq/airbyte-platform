@@ -180,7 +180,6 @@ internal fun buildStorageClient(
         config =
           LocalStorageConfig(
             buckets = bucketConfig,
-            root = "/tmp/local-storage",
           ),
         type = documentType,
       )

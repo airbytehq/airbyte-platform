@@ -18,11 +18,10 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.Toleration
-import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
 import java.util.UUID
 
-class ConnectorPodFactory(
+data class ConnectorPodFactory(
   private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
   private val tolerations: List<Toleration>,
@@ -47,32 +46,11 @@ class ConnectorPodFactory(
     runtimeEnvVars: List<EnvVar>,
     workspaceId: UUID,
   ): Pod {
-    val volumes: MutableList<Volume> = ArrayList()
-    val volumeMounts: MutableList<VolumeMount> = ArrayList()
-    val secretVolumeMounts: MutableList<VolumeMount> = ArrayList()
+    val volumeMountPairs = volumeFactory.connector()
 
-    val config = volumeFactory.config()
-    volumes.add(config.volume)
-    volumeMounts.add(config.mount)
-
-    val secrets = volumeFactory.secret()
-    if (secrets != null) {
-      volumes.add(secrets.volume)
-      secretVolumeMounts.add(secrets.mount)
-    }
-
-    val dataPlaneCreds = volumeFactory.dataplaneCreds()
-    if (dataPlaneCreds != null) {
-      volumes.add(dataPlaneCreds.volume)
-      secretVolumeMounts.add(dataPlaneCreds.mount)
-    }
-
-    val internalVolumeMounts = volumeMounts + secretVolumeMounts
-
-    val init: Container = initContainerFactory.create(initContainerReqs, internalVolumeMounts, runtimeEnvVars, workspaceId)
-
-    val main: Container = buildMainContainer(connectorContainerReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
-    val sidecar: Container = buildSidecarContainer(internalVolumeMounts)
+    val init: Container = initContainerFactory.create(initContainerReqs, volumeMountPairs.initMounts, runtimeEnvVars, workspaceId)
+    val main: Container = buildMainContainer(connectorContainerReqs, volumeMountPairs.mainMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
+    val sidecar: Container = buildSidecarContainer(volumeMountPairs.sidecarMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -91,7 +69,7 @@ class ConnectorPodFactory(
       .withRestartPolicy("Never")
       .withContainers(sidecar, main)
       .withInitContainers(init)
-      .withVolumes(volumes)
+      .withVolumes(volumeMountPairs.volumes)
       .withNodeSelector<String, String>(nodeSelectors)
       .withTolerations(tolerations)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.

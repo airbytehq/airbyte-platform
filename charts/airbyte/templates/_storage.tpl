@@ -208,14 +208,6 @@ Returns storage config environment variables.
 {{- include "airbyte.storage.azure.envs" . }}
 {{- end }}
 
-{{/* LOCAl */}}
-{{- if eq $storageProvider "local" }}
-- name: LOCAL_ROOT
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: LOCAL_ROOT
-{{- end }}
 {{- end }}
 
 {{/*

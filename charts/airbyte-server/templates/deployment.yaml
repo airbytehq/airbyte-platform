@@ -397,6 +397,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
       {{- if eq .Values.global.deploymentMode "oss" }}
         {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
         - name: gcs-log-creds-volume
@@ -425,6 +429,12 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
+
     {{- if eq .Values.global.deploymentMode "oss" }}
       {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
       - name: gcs-log-creds-volume

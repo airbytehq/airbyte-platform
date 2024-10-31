@@ -13,6 +13,9 @@ global:
     secretName: ""
     secretValue: ""
 
+  storage:
+    type: minio
+
   # Docker image config that will apply to all images.
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
@@ -269,8 +272,6 @@ secrets: {}
 #   # Workspace storage for running jobs (logs, etc)
 #   WORKSPACE_ROOT: /workspace
 #   WORKSPACE_DOCKER_MOUNT: airbyte_workspace
-
-#   LOCAL_ROOT: /tmp/airbyte_local
 
 #   # Miscellaneous
 #   TRACKING_STRATEGY: segment

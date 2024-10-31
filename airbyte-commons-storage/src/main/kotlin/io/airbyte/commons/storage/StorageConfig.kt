@@ -5,6 +5,7 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
+import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -153,7 +154,7 @@ data class MinioStorageConfig(
 @Requires(property = STORAGE_TYPE, pattern = "(?i)^local$")
 class LocalStorageConfig(
   override val buckets: StorageBucketConfig,
-  @Value("\${$STORAGE_LOCAL.root:/tmp/local-storage}") val root: String,
+  @Parameter val root: String = STORAGE_MOUNT,
 ) : StorageConfig {
   override fun toEnvVarMap(): Map<String, String> =
     buildMap {
@@ -162,7 +163,6 @@ class LocalStorageConfig(
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       put(EnvVar.STORAGE_TYPE, StorageType.LOCAL.name)
-      put(EnvVar.LOCAL_ROOT, root)
     }.mapKeys { it.key.name }
 }
 

@@ -46,9 +46,6 @@ airbyte:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
