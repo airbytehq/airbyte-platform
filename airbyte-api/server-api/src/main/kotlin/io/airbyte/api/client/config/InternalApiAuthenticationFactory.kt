@@ -39,6 +39,7 @@ class InternalApiAuthenticationFactory {
   @Singleton
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [CONTROL_PLANE])
+  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
