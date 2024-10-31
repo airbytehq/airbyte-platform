@@ -31,7 +31,7 @@ fun ILoggingEvent.toLogEvent(): LogEvent {
     timestamp = this.timeStamp,
     message = maskedDataConverter.convert(this),
     level = this.level.toString(),
-    logSource = LogSource.find(this.mdcPropertyMap.getOrDefault(LOG_SOURCE_MDC_KEY, LogSource.PLATFORM.displayName)),
+    logSource = LogSource.find(this.mdcPropertyMap.getOrDefault(LOG_SOURCE_MDC_KEY, LogSource.PLATFORM.displayName)) ?: LogSource.PLATFORM,
     caller = caller,
     throwable = throwable,
   )
@@ -64,7 +64,7 @@ data class LogEvent(
   val timestamp: Long,
   val message: String,
   val level: String,
-  val logSource: LogSource? = LogSource.PLATFORM,
+  val logSource: LogSource = LogSource.PLATFORM,
   val caller: LogCaller? = null,
   val throwable: Throwable? = null,
 )

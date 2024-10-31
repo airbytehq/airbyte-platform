@@ -5,12 +5,7 @@
 package io.airbyte.commons.logging
 
 import ch.qos.logback.classic.pattern.ThrowableProxyConverter
-import ch.qos.logback.classic.spi.IThrowableProxy
-import ch.qos.logback.classic.spi.LoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
-import jakarta.annotation.PostConstruct
-import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.ZoneId
@@ -21,19 +16,7 @@ import java.time.format.DateTimeFormatter
  * that can be displayed.  It is analogous to a Logback [ch.qos.logback.core.Layout].
  */
 @Singleton
-class LogEventLayout {
-  private val throwableConverter = ThrowableProxyConverter()
-
-  @PostConstruct
-  fun init() {
-    throwableConverter.start()
-  }
-
-  @PreDestroy
-  fun close() {
-    throwableConverter.stop()
-  }
-
+class LogEventLayout(val logUtils: LogUtils) {
   /**
    * Converts the provided structured [LogEvent] into a string representation of the
    * data contained in the structured event.
@@ -64,14 +47,8 @@ class LogEventLayout {
    * @return A string representation of a stack trace derived from the provided throwable
    * @see [ThrowableProxyConverter.convert]
    */
-  fun generateStackTrace(throwable: Throwable): String {
-    val loggingEvent =
-      object : LoggingEvent() {
-        override fun getThrowableProxy(): IThrowableProxy {
-          return ThrowableProxy(throwable)
-        }
-      }
-    return throwableConverter.convert(loggingEvent)
+  fun generateStackTrace(throwable: Throwable): String? {
+    return logUtils.convertThrowableToStackTrace(throwable = throwable)
   }
 
   /**

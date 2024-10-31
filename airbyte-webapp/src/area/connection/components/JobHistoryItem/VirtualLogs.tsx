@@ -5,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { Virtuoso, ItemContent, VirtuosoHandle } from "react-virtuoso";
 import sanitize from "sanitize-html";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { CleanedLogLines } from "./useCleanLogs";
@@ -16,6 +17,7 @@ interface VirtualLogsProps {
   scrollTo?: number;
   selectedAttempt?: number;
   hasFailure: boolean;
+  attemptHasStructuredLogs: boolean;
 }
 
 function escapeRegex(string: string) {
@@ -56,6 +58,7 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
   scrollTo,
   selectedAttempt,
   hasFailure,
+  attemptHasStructuredLogs,
 }) => {
   const listRef = useRef<VirtuosoHandle | null>(null);
   const highlightedRowIndex = scrollTo;
@@ -72,6 +75,16 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
         <Text>
           <FormattedMessage id="jobHistory.logs.noLogs" />
         </Text>
+      )}
+
+      {/**
+       * Structured logs are currently not supported in the UI
+       * https://github.com/airbytehq/airbyte-internal-issues/issues/10476
+       */}
+      {attemptHasStructuredLogs && (
+        <FlexContainer justifyContent="center">
+          <Text>Structured logs are currently not supported in the UI. Download the logs to view them.</Text>
+        </FlexContainer>
       )}
       {logLines && (
         <Virtuoso<CleanedLogLines[number], RowContext>
@@ -187,5 +200,6 @@ export const VirtualLogs = React.memo(
     prevProps.logLines.length === nextProps.logLines.length &&
     prevProps.searchTerm === nextProps.searchTerm &&
     prevProps.scrollTo === nextProps.scrollTo &&
-    prevProps.selectedAttempt === nextProps.selectedAttempt
+    prevProps.selectedAttempt === nextProps.selectedAttempt &&
+    prevProps.attemptHasStructuredLogs === nextProps.attemptHasStructuredLogs
 );

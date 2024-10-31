@@ -8,7 +8,7 @@ import {
   getJobInfoWithoutLogs,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AttemptStats } from "../types/AirbyteClient";
+import { AttemptInfoRead, AttemptStats, LogEvents, LogRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -52,11 +52,23 @@ export const useJobInfoWithoutLogs = (id: number) => {
   );
 };
 
+type AttemptInfoReadWithFormattedLogs = AttemptInfoRead & { logType: "formatted"; logs: LogRead };
+type AttemptInfoReadWithStructuredLogs = AttemptInfoRead & { logType: "structured"; logs: LogEvents };
+type AttemptInfoReadWithLogs = AttemptInfoReadWithFormattedLogs | AttemptInfoReadWithStructuredLogs;
+
+export function attemptHasFormattedLogs(attempt: AttemptInfoRead): attempt is AttemptInfoReadWithFormattedLogs {
+  return attempt.logType === "formatted";
+}
+
+export function attemptHasStructuredLogs(attempt: AttemptInfoRead): attempt is AttemptInfoReadWithStructuredLogs {
+  return attempt.logType === "structured";
+}
+
 export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(
     [SCOPE_WORKSPACE, "jobs", "attemptForJob", jobId, attemptNumber],
-    () => getAttemptForJob({ jobId, attemptNumber }, requestOptions),
+    () => getAttemptForJob({ jobId, attemptNumber }, requestOptions) as Promise<AttemptInfoReadWithLogs>,
     {
       refetchInterval: (data) => {
         // keep refetching data while the job is still running or hasn't ended too long ago.

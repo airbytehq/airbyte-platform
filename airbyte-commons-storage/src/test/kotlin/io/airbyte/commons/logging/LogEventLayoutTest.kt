@@ -13,17 +13,19 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class LogEventLayoutTest {
+  private lateinit var logUtils: LogUtils
   private lateinit var layout: LogEventLayout
 
   @BeforeEach
   fun setup() {
-    layout = LogEventLayout()
-    layout.init()
+    logUtils = LogUtils()
+    logUtils.init()
+    layout = LogEventLayout(logUtils = logUtils)
   }
 
   @AfterEach
   fun teardown() {
-    layout.close()
+    logUtils.close()
   }
 
   @Test

@@ -187,3 +187,5 @@ object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-t
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
+
+object StructuredLogs : Temporary<Boolean>(key = "platform.structured-logs", default = false)

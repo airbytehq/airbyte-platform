@@ -4,16 +4,18 @@
 
 package io.airbyte.commons.logging
 
+import ch.qos.logback.classic.Level
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 
 internal class LogClientManagerTest {
   @Test
-  internal fun testGetJobLog() {
+  fun testGetJobLog() {
     val logLines = listOf("log line 1", "log line 2", "log line 3", "log line 4", "log line 5")
     val logClient =
       mockk<LogClient> {
@@ -31,7 +33,7 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testGetJobLogNullPath() {
+  fun testGetJobLogNullPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
     val logClientManager =
@@ -45,7 +47,7 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testGetJobLogEmptyPath() {
+  fun testGetJobLogEmptyPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
     val logClientManager =
@@ -59,7 +61,67 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testDeleteLogs() {
+  fun testGetStructuredLogs() {
+    val logTailSize = 100
+    val events =
+      (1..logTailSize).map {
+        LogEvent(
+          timestamp = (it * 1000).toLong(),
+          message = "log line $it",
+          logSource = LogSource.PLATFORM,
+          level = Level.INFO.toString(),
+        )
+      }
+    val logEvents = LogEvents(events = events)
+    val logClient =
+      mockk<LogClient> {
+        every { getLogs(any(), any()) } returns logEvents
+      }
+    val logMdcHelper = mockk<LogMdcHelper> {}
+    val logClientManager =
+      LogClientManager(
+        logClient = logClient,
+        logMdcHelper = logMdcHelper,
+        logTailSize = logTailSize,
+      )
+    val result = logClientManager.getLogs(logPath = Path.of("log-path"))
+    assertEquals(logEvents, result)
+  }
+
+  @Test
+  fun testGetStructuredLogsNullPath() {
+    val logClient = mockk<LogClient> {}
+    val logMdcHelper = mockk<LogMdcHelper> {}
+    val logClientManager =
+      LogClientManager(
+        logClient = logClient,
+        logMdcHelper = logMdcHelper,
+        logTailSize = 100,
+      )
+    val logEvents = logClientManager.getLogs(logPath = null)
+    assertNotNull(logEvents)
+    assertNotNull(logEvents.events)
+    assertEquals(0, logEvents.events.size)
+  }
+
+  @Test
+  fun testGetStructuredLogsEmptyPath() {
+    val logClient = mockk<LogClient> {}
+    val logMdcHelper = mockk<LogMdcHelper> {}
+    val logClientManager =
+      LogClientManager(
+        logClient = logClient,
+        logMdcHelper = logMdcHelper,
+        logTailSize = 100,
+      )
+    val logEvents = logClientManager.getLogs(logPath = Path.of(""))
+    assertNotNull(logEvents)
+    assertNotNull(logEvents.events)
+    assertEquals(0, logEvents.events.size)
+  }
+
+  @Test
+  fun testDeleteLogs() {
     val logPath = "/some/path"
     val logClient =
       mockk<LogClient> {
@@ -77,7 +139,7 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testDeleteLogsEmptyPath() {
+  fun testDeleteLogsEmptyPath() {
     val logPath = ""
     val logClient =
       mockk<LogClient> {
@@ -95,7 +157,7 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testSettingJobMdc() {
+  fun testSettingJobMdc() {
     val logPath = Path.of("/some/path")
     val logClient = mockk<LogClient> {}
     val logMdcHelper =
@@ -113,7 +175,7 @@ internal class LogClientManagerTest {
   }
 
   @Test
-  internal fun testGettingFullPath() {
+  fun testGettingFullPath() {
     val logPath = Path.of("/some/path")
     val logFilename = DEFAULT_LOG_FILENAME
     val logClient = mockk<LogClient> {}

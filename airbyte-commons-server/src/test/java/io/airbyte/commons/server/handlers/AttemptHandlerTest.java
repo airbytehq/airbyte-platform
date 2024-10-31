@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.AttemptInfoRead;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -29,7 +30,6 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GlobalState;
 import io.airbyte.api.model.generated.InternalOperationResult;
-import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.model.generated.StreamAttemptMetadata;
@@ -508,7 +508,7 @@ class AttemptHandlerTest {
         Instant.now().getEpochSecond(),
         Instant.now().getEpochSecond());
 
-    final var logs = new LogRead();
+    final var logs = new AttemptInfoReadLogs();
     logs.addLogLinesItem("log line 1");
     logs.addLogLinesItem("log line 2");
     final var infoRead = new AttemptInfoRead();

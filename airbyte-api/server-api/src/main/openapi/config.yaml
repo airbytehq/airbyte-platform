@@ -12258,12 +12258,65 @@ components:
       type: object
       required:
         - attempt
+        - logType
         - logs
       properties:
         attempt:
           $ref: "#/components/schemas/AttemptRead"
+        logType:
+          $ref: "#/components/schemas/LogFormatType"
         logs:
-          $ref: "#/components/schemas/LogRead"
+          oneOf:
+            - $ref: "#/components/schemas/LogEvents"
+            - $ref: "#/components/schemas/LogRead"
+    LogFormatType:
+      type: string
+      enum:
+        - formatted
+        - structured
+    LogCaller:
+      type: object
+      properties:
+        className:
+          type: string
+        methodName:
+          type: string
+        lineNumber:
+          type: integer
+        threadName:
+          type: string
+    LogEvents:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEvent"
+        version:
+          type: string
+    LogEvent:
+      type: object
+      required:
+        - timestamp
+        - message
+        - level
+        - logSource
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        message:
+          type: string
+        level:
+          type: string
+        logSource:
+          type: string
+        caller:
+          $ref: "#/components/schemas/LogCaller"
+        strackTrace:
+          type: string
     LogRead:
       type: object
       required:
@@ -12301,8 +12354,12 @@ components:
         connectorConfigurationUpdated:
           type: boolean
           default: false
+        logType:
+          $ref: "#/components/schemas/LogFormatType"
         logs:
-          $ref: "#/components/schemas/LogRead"
+          oneOf:
+            - $ref: "#/components/schemas/LogEvents"
+            - $ref: "#/components/schemas/LogRead"
         failureReason:
           $ref: "#/components/schemas/FailureReason"
     Pagination:

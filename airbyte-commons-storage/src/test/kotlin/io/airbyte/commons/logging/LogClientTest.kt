@@ -30,13 +30,15 @@ import kotlin.io.path.createTempFile
 import kotlin.io.path.pathString
 
 internal class LogClientTest {
+  private lateinit var logUtils: LogUtils
   private lateinit var logEventLayout: LogEventLayout
   private lateinit var objectMapper: ObjectMapper
 
   @BeforeEach
   fun setup() {
-    logEventLayout = LogEventLayout()
-    logEventLayout.init()
+    logUtils = LogUtils()
+    logUtils.init()
+    logEventLayout = LogEventLayout(logUtils = logUtils)
     objectMapper = MoreMappers.initMapper()
     val module = SimpleModule()
     module.addDeserializer(StackTraceElement::class.java, StackTraceElementDeserializer())
@@ -46,7 +48,7 @@ internal class LogClientTest {
 
   @AfterEach
   fun teardown() {
-    logEventLayout.close()
+    logUtils.close()
   }
 
   @Test
@@ -71,6 +73,45 @@ internal class LogClientTest {
     logClient.deleteLogs(logPath = logPath)
 
     verify(exactly = 1) { storageClient.delete(logPath) }
+  }
+
+  @Test
+  fun testGetStructuredLogs() {
+    val logFile = createTempFile(prefix = "log", suffix = STRUCTURED_LOG_FILE_EXTENSION)
+    val logPath = logFile.pathString
+    val numLines = 100
+
+    val logEvents = buildLogEvents(numLines = (numLines * 2), startingTimestamp = 0L)
+
+    logFile.toFile().writeText(
+      text = objectMapper.writeValueAsString(logEvents),
+    )
+
+    val storageClient =
+      mockk<StorageClient> {
+        every { list(any()) } returns listOf(logPath)
+        every { read(any()) } returns logFile.toFile().readText()
+        every { storageType() } returns StorageType.LOCAL
+      }
+    val storageClientFactory =
+      mockk<StorageClientFactory> {
+        every { get(DocumentType.LOGS) } returns storageClient
+      }
+    val logClient =
+      LogClient(
+        storageClientFactory = storageClientFactory,
+        mapper = objectMapper,
+        logEventLayout = logEventLayout,
+        meterRegistry = null,
+      )
+
+    val result = logClient.getLogs(logPath = logPath, numLines = numLines)
+    assertEquals(numLines, result.events.size)
+    assertEquals("log line 1", result.events.first().message)
+    assertEquals(1000L, result.events.first().timestamp)
+    assertEquals("log line $numLines", result.events.last().message)
+    assertEquals((numLines * 1000).toLong(), result.events.last().timestamp)
+    verify(exactly = 1) { storageClient.list(logPath) }
   }
 
   @Test

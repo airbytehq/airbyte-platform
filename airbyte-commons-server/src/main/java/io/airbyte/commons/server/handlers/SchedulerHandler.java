@@ -12,6 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
@@ -27,7 +28,7 @@ import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
-import io.airbyte.api.model.generated.LogRead;
+import io.airbyte.api.model.generated.LogFormatType;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
@@ -412,7 +413,8 @@ public class SchedulerHandler {
         .id(UUID.randomUUID())
         .createdAt(0L)
         .endedAt(0L)
-        .logs(new LogRead().logLines(new ArrayList<>()))
+        .logType(LogFormatType.FORMATTED)
+        .logs(new AttemptInfoReadLogs().logLines(List.of()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
         .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
@@ -456,7 +458,8 @@ public class SchedulerHandler {
         .id(UUID.randomUUID())
         .createdAt(0L)
         .endedAt(0L)
-        .logs(new LogRead().logLines(new ArrayList<>()))
+        .logType(LogFormatType.FORMATTED)
+        .logs(new AttemptInfoReadLogs().logLines(List.of()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
         .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))

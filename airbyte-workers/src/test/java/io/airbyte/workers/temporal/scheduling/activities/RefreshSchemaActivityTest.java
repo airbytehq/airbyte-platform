@@ -114,6 +114,7 @@ class RefreshSchemaActivityTest {
 
                         false,
                         null,
+                        null,
                         null),
                     CATALOG,
                     CATALOG_ID,

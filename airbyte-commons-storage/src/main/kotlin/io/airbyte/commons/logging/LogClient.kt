@@ -87,6 +87,47 @@ class LogClient(
     logger.debug { "Log delete request complete." }
   }
 
+  fun getLogs(
+    logPath: String,
+    numLines: Int,
+  ): LogEvents {
+    logger.debug { "Tailing $numLines line(s) from logs from path '$logPath' using ${client.storageType()} storage client..." }
+    val files = client.list(id = logPath).filter { it.endsWith(STRUCTURED_LOG_FILE_EXTENSION) }
+    logger.debug { "Found ${files.size} files from path '$logPath' using ${client.storageType()} storage client." }
+
+    val instrumentedFiles =
+      meterRegistry.createGauge(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
+        logClientType = client.storageType(),
+        stateObject = files,
+      )
+    val timer =
+      meterRegistry.createTimer(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
+        logClientType = client.storageType(),
+      )
+    val lineCounter =
+      meterRegistry.createCounter(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
+        logClientType = client.storageType(),
+      )
+    val byteCounter =
+      meterRegistry.createCounter(
+        metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
+        logClientType = client.storageType(),
+      )
+
+    val events =
+      if (timer != null) {
+        timer.recordCallable {
+          readStructuredLogs(files = instrumentedFiles, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
+        } ?: emptyList()
+      } else {
+        readStructuredLogs(files = instrumentedFiles, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
+      }
+    return LogEvents(events = events)
+  }
+
   fun tailCloudLogs(
     logPath: String,
     numLines: Int,
@@ -137,23 +178,31 @@ class LogClient(
      * as structured events.
      */
     return if (isStructured) {
-      handleStructuredLogs(files = files, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
+      formatStructuredLogs(events = readStructuredLogs(files = files, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter))
     } else {
       handleUnstructuredLogs(files = files, numLines = numLines, lineCounter = lineCounter, byteCounter = byteCounter)
     }
   }
 
-  private fun handleStructuredLogs(
+  private fun formatStructuredLogs(events: List<LogEvent>): List<String> {
+    return events.map { logEventLayout.doLayout(logEvent = it) }
+  }
+
+  private fun readStructuredLogs(
     files: List<String>,
     numLines: Int,
     lineCounter: Counter?,
     byteCounter: Counter?,
-  ): List<String> {
+  ): List<LogEvent> {
     var count = 0
     val logLines =
       files
         .asSequence()
-        .map { file -> extractEvents(events = client.read(id = file)) }
+        .map { file ->
+          val events = client.read(id = file)
+          byteCounter?.increment(events?.length?.toDouble() ?: 0.0)
+          extractEvents(events = events)
+        }
         .flatMap { it.events }
         .takeWhile {
           count++
@@ -161,11 +210,6 @@ class LogClient(
           count <= numLines
         }
         .sortedBy { it.timestamp }
-        .map {
-          val line = logEventLayout.doLayout(logEvent = it)
-          byteCounter?.increment(line.length.toDouble())
-          line
-        }
         .toList()
     return logLines
   }

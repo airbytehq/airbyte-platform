@@ -7,12 +7,13 @@ package io.airbyte.commons.server.converters;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.AttemptFailureSummary;
 import io.airbyte.api.model.generated.AttemptInfoRead;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStreamStats;
@@ -24,7 +25,7 @@ import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
-import io.airbyte.api.model.generated.LogRead;
+import io.airbyte.api.model.generated.LogFormatType;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -32,6 +33,10 @@ import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogEvent;
+import io.airbyte.commons.logging.LogEvents;
+import io.airbyte.commons.logging.LogSource;
+import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AirbyteStream;
@@ -59,6 +64,13 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.StructuredLogs;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.persistence.job.WorkspaceHelper;
+import io.airbyte.validation.json.JsonValidationException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,7 +88,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class JobConverterTest {
 
+  private FeatureFlagClient featureFlagClient;
   private JobConverter jobConverter;
+  private LogClientManager logClientManager;
+  private LogUtils logUtils;
+  private WorkspaceHelper workspaceHelper;
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;
   private static final Path LOG_PATH = Path.of("log_path");
   private static final String FAILURE_EXTERNAL_MESSAGE = "something went wrong";
@@ -97,7 +113,6 @@ class JobConverterTest {
     assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
     assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
     assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
-
   }
 
   private static Stream<Arguments> getExtractRefreshScenarios() {
@@ -162,7 +177,7 @@ class JobConverterTest {
                     .withBytesEmitted(BYTES_EMITTED)
                     .withSourceStateMessagesEmitted(STATE_MESSAGES_EMITTED)
                     .withRecordsCommitted(RECORDS_COMMITTED))
-                .withStreamStats(Lists.newArrayList(new StreamSyncStats()
+                .withStreamStats(List.of(new StreamSyncStats()
                     .withStreamName(STREAM_NAME)
                     .withStats(new SyncStats()
                         .withRecordsEmitted(RECORDS_EMITTED)
@@ -172,7 +187,7 @@ class JobConverterTest {
 
     private Job job;
 
-    private static final JobInfoRead JOB_INFO =
+    private static final JobInfoRead JOB_INFO_UNSTRUCTURED_LOGS =
         new JobInfoRead()
             .job(new JobRead()
                 .id(JOB_ID)
@@ -182,7 +197,7 @@ class JobConverterTest {
                 .enabledStreams(List.of(new StreamDescriptor().name(USERS), new StreamDescriptor().name(ACCOUNTS)))
                 .createdAt(CREATED_AT)
                 .updatedAt(CREATED_AT))
-            .attempts(Lists.newArrayList(new AttemptInfoRead()
+            .attempts(List.of(new AttemptInfoRead()
                 .attempt(new AttemptRead()
                     .id((long) ATTEMPT_NUMBER)
                     .status(io.airbyte.api.model.generated.AttemptStatus.RUNNING)
@@ -193,7 +208,7 @@ class JobConverterTest {
                         .bytesEmitted(BYTES_EMITTED)
                         .stateMessagesEmitted(STATE_MESSAGES_EMITTED)
                         .recordsCommitted(RECORDS_COMMITTED))
-                    .streamStats(Lists.newArrayList(new AttemptStreamStats()
+                    .streamStats(List.of(new AttemptStreamStats()
                         .streamName(STREAM_NAME)
                         .stats(new AttemptStats()
                             .recordsEmitted(RECORDS_EMITTED)
@@ -204,14 +219,15 @@ class JobConverterTest {
                     .createdAt(CREATED_AT)
                     .endedAt(CREATED_AT)
                     .failureSummary(new AttemptFailureSummary()
-                        .failures(Lists.newArrayList(new io.airbyte.api.model.generated.FailureReason()
+                        .failures(List.of(new io.airbyte.api.model.generated.FailureReason()
                             .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
                             .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
                             .externalMessage(FAILURE_EXTERNAL_MESSAGE)
                             .stacktrace(FAILURE_STACKTRACE)
                             .timestamp(FAILURE_TIMESTAMP)))
                         .partialSuccess(PARTIAL_SUCCESS)))
-                .logs(new LogRead().logLines(new ArrayList<>()))));
+                .logType(LogFormatType.FORMATTED)
+                .logs(new AttemptInfoReadLogs().logLines(List.of()))));
 
     private static final String version = "0.33.4";
     private static final AirbyteVersion airbyteVersion = new AirbyteVersion(version);
@@ -229,17 +245,21 @@ class JobConverterTest {
             .sourceDefinition(sourceDefinitionRead)
             .destinationDefinition(destinationDefinitionRead);
 
-    private static final JobWithAttemptsRead JOB_WITH_ATTEMPTS_READ = new JobWithAttemptsRead()
-        .job(JOB_INFO.getJob())
-        .attempts(JOB_INFO.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
+    private static final JobWithAttemptsRead JOB_WITH_ATTEMPTS_READ_UNSTRUCTURED_LOGS = new JobWithAttemptsRead()
+        .job(JOB_INFO_UNSTRUCTURED_LOGS.getJob())
+        .attempts(JOB_INFO_UNSTRUCTURED_LOGS.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
 
     private static final io.airbyte.config.AttemptFailureSummary FAILURE_SUMMARY = new io.airbyte.config.AttemptFailureSummary()
-        .withFailures(Lists.newArrayList(FAILURE_REASON))
+        .withFailures(List.of(FAILURE_REASON))
         .withPartialSuccess(PARTIAL_SUCCESS);
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(mock(LogClientManager.class));
+      featureFlagClient = mock(TestClient.class);
+      logClientManager = mock(LogClientManager.class);
+      logUtils = mock(LogUtils.class);
+      workspaceHelper = mock(WorkspaceHelper.class);
+      jobConverter = new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper);
       job = mock(Job.class);
       final Attempt attempt = mock(Attempt.class);
       when(job.getId()).thenReturn(JOB_ID);
@@ -249,7 +269,7 @@ class JobConverterTest {
       when(job.getStatus()).thenReturn(JOB_STATUS);
       when(job.getCreatedAtInSecond()).thenReturn(CREATED_AT);
       when(job.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
-      when(job.getAttempts()).thenReturn(Lists.newArrayList(attempt));
+      when(job.getAttempts()).thenReturn(List.of(attempt));
       when(attempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
       when(attempt.getStatus()).thenReturn(ATTEMPT_STATUS);
       when(attempt.getOutput()).thenReturn(Optional.of(JOB_OUTPUT));
@@ -258,28 +278,42 @@ class JobConverterTest {
       when(attempt.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
       when(attempt.getEndedAtInSecond()).thenReturn(Optional.of(CREATED_AT));
       when(attempt.getFailureSummary()).thenReturn(Optional.of(FAILURE_SUMMARY));
-
     }
 
     @Test
     void testGetJobInfoRead() {
-      assertEquals(JOB_INFO, jobConverter.getJobInfoRead(job));
+      assertEquals(JOB_INFO_UNSTRUCTURED_LOGS, jobConverter.getJobInfoRead(job));
     }
 
     @Test
     void testGetJobInfoLightRead() {
-      final JobInfoLightRead expected = new JobInfoLightRead().job(JOB_INFO.getJob());
+      final JobInfoLightRead expected = new JobInfoLightRead().job(JOB_INFO_UNSTRUCTURED_LOGS.getJob());
       assertEquals(expected, jobConverter.getJobInfoLightRead(job));
     }
 
     @Test
     void testGetDebugJobInfoRead() {
-      assertEquals(JOB_DEBUG_INFO, JobConverter.getDebugJobInfoRead(JOB_INFO, sourceDefinitionRead, destinationDefinitionRead, airbyteVersion));
+      assertEquals(JOB_DEBUG_INFO,
+          JobConverter.getDebugJobInfoRead(JOB_INFO_UNSTRUCTURED_LOGS, sourceDefinitionRead, destinationDefinitionRead, airbyteVersion));
     }
 
     @Test
     void testGetJobWithAttemptsRead() {
-      assertEquals(JOB_WITH_ATTEMPTS_READ, JobConverter.getJobWithAttemptsRead(job));
+      assertEquals(JOB_WITH_ATTEMPTS_READ_UNSTRUCTURED_LOGS, JobConverter.getJobWithAttemptsRead(job));
+    }
+
+    @Test
+    void testGetJobWithAttemptsReadStructuredLogs() throws JsonValidationException, ConfigNotFoundException {
+      final String logEventVersion = "1";
+      final UUID workspaceId = UUID.randomUUID();
+      when(featureFlagClient.boolVariation(StructuredLogs.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
+      when(logClientManager.getLogs(any())).thenReturn(
+          new LogEvents(List.of(new LogEvent(System.currentTimeMillis(), "message", "INFO", LogSource.PLATFORM, null, null)), logEventVersion));
+      when(workspaceHelper.getWorkspaceForJobId(any())).thenReturn(workspaceId);
+      final JobInfoRead jobInfoRead = jobConverter.getJobInfoRead(job);
+      assertEquals(LogFormatType.STRUCTURED, jobInfoRead.getAttempts().getFirst().getLogType());
+      assertEquals(logEventVersion, jobInfoRead.getAttempts().getFirst().getLogs().getVersion());
+      assertEquals(1, jobInfoRead.getAttempts().getFirst().getLogs().getEvents().size());
     }
 
     // this test intentionally only looks at the reset config as the rest is the same here.
@@ -337,7 +371,7 @@ class JobConverterTest {
     private static final Optional<UUID> CONFIG_ID = Optional.empty();
     private static final boolean JOB_SUCCEEDED = false;
     private static final boolean CONNECTOR_CONFIG_UPDATED = false;
-    private static final SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
+    private static final SynchronousJobRead SYNCHRONOUS_JOB_INFO_UNSTRUCTURED_LOGS = new SynchronousJobRead()
         .id(JOB_ID)
         .configType(JobConfigType.DISCOVER_SCHEMA)
         .configId(String.valueOf(CONFIG_ID))
@@ -345,7 +379,8 @@ class JobConverterTest {
         .endedAt(CREATED_AT)
         .succeeded(JOB_SUCCEEDED)
         .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
-        .logs(new LogRead().logLines(new ArrayList<>()))
+        .logType(LogFormatType.FORMATTED)
+        .logs(new AttemptInfoReadLogs().logLines(new ArrayList<>()))
         .failureReason(new io.airbyte.api.model.generated.FailureReason()
             .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
             .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
@@ -355,7 +390,9 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(mock(LogClientManager.class));
+      featureFlagClient = mock(TestClient.class);
+      workspaceHelper = mock(WorkspaceHelper.class);
+      jobConverter = new JobConverter(featureFlagClient, mock(LogClientManager.class), mock(LogUtils.class), workspaceHelper);
       metadata = mock(SynchronousJobMetadata.class);
       when(metadata.getId()).thenReturn(JOB_ID);
       when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);
@@ -370,7 +407,7 @@ class JobConverterTest {
 
     @Test
     void testSynchronousJobRead() {
-      assertEquals(SYNCHRONOUS_JOB_INFO, jobConverter.getSynchronousJobRead(metadata));
+      assertEquals(SYNCHRONOUS_JOB_INFO_UNSTRUCTURED_LOGS, jobConverter.getSynchronousJobRead(metadata));
     }
 
   }

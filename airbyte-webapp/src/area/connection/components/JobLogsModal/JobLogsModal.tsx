@@ -14,7 +14,12 @@ import { LogSearchInput } from "area/connection/components/JobHistoryItem/LogSea
 import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
-import { useAttemptCombinedStatsForJob, useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
+import {
+  attemptHasStructuredLogs,
+  useAttemptCombinedStatsForJob,
+  useAttemptForJob,
+  useJobInfoWithoutLogs,
+} from "core/api";
 import { trackError } from "core/utils/datadog";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
@@ -282,6 +287,7 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}
         hasFailure={!!jobAttempt.attempt.failureSummary}
+        attemptHasStructuredLogs={attemptHasStructuredLogs(jobAttempt)}
       />
     </FlexContainer>
   );

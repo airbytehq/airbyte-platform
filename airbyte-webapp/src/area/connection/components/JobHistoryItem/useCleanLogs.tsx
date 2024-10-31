@@ -1,6 +1,7 @@
 import Anser from "anser";
 import { useMemo } from "react";
 
+import { attemptHasFormattedLogs } from "core/api";
 import { AttemptInfoRead } from "core/api/types/AirbyteClient";
 
 export interface CleanedLogs {
@@ -44,25 +45,35 @@ export const useCleanLogs = (attempt: AttemptInfoRead): CleanedLogs => {
     const origins: JobLogOrigins[] = [];
     // Some logs are multi-line, so we want to associate those lines (which might not have the correct prefix) with the last domain that was detected
     let lastDomain: JobLogOrigins | undefined;
-    const logLines = attempt.logs.logLines.map((line, index) => {
-      const text = Anser.ansiToText(line);
-      const domain = KNOWN_LOG_ORIGINS.find((domain) => domain.regex.test(text))?.key;
-      if (domain) {
-        lastDomain = domain;
-        if (!origins.includes(domain)) {
-          origins.push(domain);
+
+    if (attemptHasFormattedLogs(attempt)) {
+      const logLines = attempt.logs.logLines.map((line, index) => {
+        const text = Anser.ansiToText(line);
+        const domain = KNOWN_LOG_ORIGINS.find((domain) => domain.regex.test(text))?.key;
+        if (domain) {
+          lastDomain = domain;
+          if (!origins.includes(domain)) {
+            origins.push(domain);
+          }
         }
-      }
+        return {
+          lineNumber: index + 1,
+          original: line,
+          text,
+          domain: domain ?? lastDomain,
+        };
+      });
       return {
-        lineNumber: index + 1,
-        original: line,
-        text,
-        domain: domain ?? lastDomain,
+        origins,
+        logLines,
       };
-    });
+    }
+
+    // Structured logs are currently not supported in the UI:
+    // https://github.com/airbytehq/airbyte-internal-issues/issues/10476
     return {
       origins,
-      logLines,
+      logLines: [],
     };
   }, [attempt]);
 };

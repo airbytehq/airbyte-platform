@@ -8,6 +8,7 @@ import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { jobHasFormattedLogs } from "area/connection/utils/jobs";
 import { JobConfigType, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { downloadFile } from "core/utils/file";
 
@@ -148,7 +149,7 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
               {isStacktraceExpanded && <Logs follow logsArray={failureReason.stacktrace.split("\n")} />}
             </FlexItem>
           )}
-          {job.logs?.logLines && job.logs.logLines.length > 0 && (
+          {jobHasFormattedLogs(job) && job.logs?.logLines && job.logs.logLines.length > 0 && (
             <FlexItem>
               <DisclosureHeader
                 toggle={toggleLogs}

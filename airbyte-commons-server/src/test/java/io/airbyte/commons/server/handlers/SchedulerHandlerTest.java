@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -49,7 +50,7 @@ import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobRead;
-import io.airbyte.api.model.generated.LogRead;
+import io.airbyte.api.model.generated.LogFormatType;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
@@ -66,6 +67,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -127,6 +129,7 @@ import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -145,6 +148,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -272,6 +276,7 @@ class SchedulerHandlerTest {
   private StreamRefreshesHandler streamRefreshesHandler;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private LogClientManager logClientManager;
+  private LogUtils logUtils;
   private CatalogService catalogService;
   private SourceService sourceService;
   private DestinationService destinationService;
@@ -279,9 +284,11 @@ class SchedulerHandlerTest {
   private OperationService operationService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private WorkspaceHelper workspaceHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
+    featureFlagClient = new TestClient(Map.of());
     job = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -321,8 +328,10 @@ class SchedulerHandlerTest {
     jobTracker = mock(JobTracker.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     logClientManager = mock(LogClientManager.class);
+    logUtils = mock(LogUtils.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
 
-    jobConverter = spy(new JobConverter(logClientManager));
+    jobConverter = spy(new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper));
 
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);
@@ -670,7 +679,8 @@ class SchedulerHandlerTest {
         .createdAt(CREATED_AT)
         .endedAt(CREATED_AT)
         .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
-        .logs(new LogRead().logLines(new ArrayList<>()));
+        .logType(LogFormatType.FORMATTED)
+        .logs(new AttemptInfoReadLogs().logLines(List.of()));
   }
 
   private static final FailureReason mockFailureReasonFromTrace = new FailureReason()

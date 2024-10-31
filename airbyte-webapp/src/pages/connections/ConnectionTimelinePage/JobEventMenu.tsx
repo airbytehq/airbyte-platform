@@ -7,7 +7,13 @@ import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
-import { useCurrentConnection, useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import {
+  attemptHasFormattedLogs,
+  attemptHasStructuredLogs,
+  useCurrentConnection,
+  useCurrentWorkspace,
+  useGetDebugInfoJobManual,
+} from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
 import { trackError } from "core/utils/datadog";
@@ -144,7 +150,8 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
                   data.attempts
                     .flatMap((info, index) => [
                       `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
-                      ...info.logs.logLines,
+                      ...(attemptHasFormattedLogs(info) ? info.logs.logLines : []),
+                      ...(attemptHasStructuredLogs(info) ? info.logs.events.map((event) => JSON.stringify(event)) : []),
                       `\n\n\n`,
                     ])
                     .join("\n"),

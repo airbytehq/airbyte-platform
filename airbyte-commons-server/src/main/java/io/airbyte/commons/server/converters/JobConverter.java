@@ -6,6 +6,7 @@ package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.AttemptFailureSummary;
 import io.airbyte.api.model.generated.AttemptInfoRead;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStatus;
@@ -23,6 +24,9 @@ import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
+import io.airbyte.api.model.generated.LogCaller;
+import io.airbyte.api.model.generated.LogEvent;
+import io.airbyte.api.model.generated.LogFormatType;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
@@ -31,6 +35,8 @@ import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogEvents;
+import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -44,6 +50,11 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.StructuredLogs;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.persistence.job.WorkspaceHelper;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -51,9 +62,12 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert between API and internal versions of job models.
@@ -61,10 +75,24 @@ import java.util.stream.Stream;
 @Singleton
 public class JobConverter {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(JobConverter.class);
+
+  private final FeatureFlagClient featureFlagClient;
+
   private final LogClientManager logClientManager;
 
-  public JobConverter(final LogClientManager logClientManager) {
+  private final LogUtils logUtils;
+
+  private final WorkspaceHelper workspaceHelper;
+
+  public JobConverter(final FeatureFlagClient featureFlagClient,
+                      final LogClientManager logClientManager,
+                      final LogUtils logUtils,
+                      final WorkspaceHelper workspaceHelper) {
+    this.featureFlagClient = featureFlagClient;
     this.logClientManager = logClientManager;
+    this.logUtils = logUtils;
+    this.workspaceHelper = workspaceHelper;
   }
 
   public JobInfoRead getJobInfoRead(final Job job) {
@@ -193,9 +221,11 @@ public class JobConverter {
   }
 
   public AttemptInfoRead getAttemptInfoRead(final Attempt attempt) {
+    final AttemptInfoReadLogs attemptInfoReadLogs = getAttemptLogs(attempt.getLogPath(), attempt.getJobId());
     return new AttemptInfoRead()
         .attempt(getAttemptRead(attempt))
-        .logs(getLogRead(attempt.getLogPath()));
+        .logType(CollectionUtils.isNotEmpty(attemptInfoReadLogs.getEvents()) ? LogFormatType.STRUCTURED : LogFormatType.FORMATTED)
+        .logs(attemptInfoReadLogs);
   }
 
   public static AttemptInfoRead getAttemptInfoWithoutLogsRead(final Attempt attempt) {
@@ -286,6 +316,16 @@ public class JobConverter {
     }
   }
 
+  public AttemptInfoReadLogs getAttemptLogs(final Path logPath, final Long jobId) {
+    if (featureFlagClient.boolVariation(StructuredLogs.INSTANCE, new Workspace(getWorkspaceId(jobId)))) {
+      final LogEvents logEvents = logClientManager.getLogs(logPath);
+      if (CollectionUtils.isNotEmpty(logEvents.getEvents())) {
+        return new AttemptInfoReadLogs().events(toModelLogEvents(logEvents.getEvents(), logUtils)).version(logEvents.getVersion());
+      }
+    }
+    return new AttemptInfoReadLogs().logLines(getLogRead(logPath).getLogLines());
+  }
+
   private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason, final long defaultTimestamp) {
     if (failureReason == null) {
       return null;
@@ -306,6 +346,7 @@ public class JobConverter {
 
   public SynchronousJobRead getSynchronousJobRead(final SynchronousJobMetadata metadata) {
     final JobConfigType configType = Enums.convertTo(metadata.getConfigType(), JobConfigType.class);
+    final AttemptInfoReadLogs attemptInfoReadLogs = getAttemptLogs(metadata.getLogPath(), null);
 
     return new SynchronousJobRead()
         .id(metadata.getId())
@@ -315,7 +356,8 @@ public class JobConverter {
         .endedAt(metadata.getEndedAt())
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
-        .logs(getLogRead(metadata.getLogPath()))
+        .logType(CollectionUtils.isNotEmpty(attemptInfoReadLogs.getEvents()) ? LogFormatType.STRUCTURED : LogFormatType.FORMATTED)
+        .logs(attemptInfoReadLogs)
         .failureReason(getFailureReason(metadata.getFailureReason(), TimeUnit.SECONDS.toMillis(metadata.getEndedAt())));
   }
 
@@ -325,6 +367,44 @@ public class JobConverter {
         ? configuredCatalog.getStreams().stream()
             .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
         : List.of();
+  }
+
+  private static List<LogEvent> toModelLogEvents(final List<io.airbyte.commons.logging.LogEvent> logEvents, final LogUtils logUtils) {
+    return logEvents.stream().map(e -> {
+      final LogEvent logEvent = new LogEvent();
+      logEvent.setLogSource(e.getLogSource().getDisplayName());
+      logEvent.setLevel(e.getLevel());
+      logEvent.setMessage(e.getMessage());
+      logEvent.setTimestamp(e.getTimestamp());
+      logEvent.setStrackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));
+      logEvent.setCaller(toModelLogCaller(e.getCaller()));
+      return logEvent;
+    }).toList();
+  }
+
+  private static LogCaller toModelLogCaller(final io.airbyte.commons.logging.LogCaller logCaller) {
+    if (logCaller != null) {
+      final LogCaller modelLogCaller = new LogCaller();
+      modelLogCaller.setClassName(logCaller.getClassName());
+      modelLogCaller.setMethodName(logCaller.getMethodName());
+      modelLogCaller.setLineNumber(logCaller.getLineNumber());
+      modelLogCaller.setThreadName(logCaller.getThreadName());
+      return modelLogCaller;
+    } else {
+      return null;
+    }
+  }
+
+  private UUID getWorkspaceId(final Long jobId) {
+    UUID workspaceId = null;
+    try {
+      workspaceId = workspaceHelper.getWorkspaceForJobId(jobId);
+    } catch (final Exception e) {
+      LOGGER.warn("Unable to retrieve workspace ID for job {}.", jobId, e);
+    }
+
+    // Avoid a null be returning a default workspace UUID.
+    return workspaceId != null ? workspaceId : UUID.fromString("00000000-0000-0000-0000-000000000000");
   }
 
 }
