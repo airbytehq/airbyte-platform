@@ -14,12 +14,10 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder
 import com.github.victools.jsonschema.generator.SchemaVersion
 import com.github.victools.jsonschema.generator.TypeAttributeOverrideV2
 import com.github.victools.jsonschema.generator.TypeScope
-import io.airbyte.config.mapper.configs.AndOperation
 import io.airbyte.config.mapper.configs.EqualOperation
 import io.airbyte.config.mapper.configs.NotNull
 import io.airbyte.config.mapper.configs.NotOperation
 import io.airbyte.config.mapper.configs.Operation
-import io.airbyte.config.mapper.configs.OrOperation
 import io.airbyte.config.mapper.configs.SchemaConstant
 import io.airbyte.config.mapper.configs.SchemaDefault
 import io.airbyte.config.mapper.configs.SchemaDescription
@@ -109,8 +107,9 @@ class RowFilterMapperConfigSpecGenerator {
       if (erasedType == Operation::class.java) {
         val subTypes =
           listOf(
-            generateSchemaForClass(AndOperation::class.java),
-            generateSchemaForClass(OrOperation::class.java),
+//            We want to hide the AND/OR operation from the end user for the first iteration, uncomment this when we want to expose them
+//            generateSchemaForClass(AndOperation::class.java),
+//            generateSchemaForClass(OrOperation::class.java),
             generateSchemaForClass(EqualOperation::class.java),
             generateSchemaForClass(NotOperation::class.java),
           )

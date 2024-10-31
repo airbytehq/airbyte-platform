@@ -12,6 +12,7 @@ import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -23,7 +24,6 @@ class RowFilteringMapperTest {
   lateinit var mapper: RowFilteringMapper
 
   companion object {
-    private const val FILTER_ACTION = "filterAction"
     private const val CONDITIONS = "conditions"
     private const val NAMESPACE = "NAMESPACE"
     private const val STREAM = "STREAM"
@@ -149,6 +149,7 @@ class RowFilteringMapperTest {
   }
 
   @Test
+  @Disabled("Disabled cause we are not exposing AND/OR operator to the end user for now, re-enable when making that change")
   fun `should handle logical condition with multiple comparisons`() {
     val jsonString = """
             {
@@ -211,6 +212,7 @@ class RowFilteringMapperTest {
   }
 
   @Test
+  @Disabled("Disabled cause we are not exposing AND/OR operator to the end user for now, re-enable when making that change")
   fun `should handle nested logical conditions`() {
     val jsonString = """
     {
@@ -355,9 +357,7 @@ class RowFilteringMapperTest {
 
       Assertions.assertEquals(
         "Mapper Config not valid: \$.config.conditions: must be valid to one and only one schema, " +
-          "but 0 are valid,\$.config.conditions: required property 'conditions' not found,\$.config.conditions: required property " +
-          "'type' not found,\$.config.conditions: required property 'conditions' not found,\$.config.conditions: required property 'type' " +
-          "not found,\$.config.conditions: required property 'type' not found,\$.config.conditions: required property 'conditions' " +
+          "but 0 are valid,\$.config.conditions: required property 'type' not found,\$.config.conditions: required property 'conditions' " +
           "not found,\$.config.conditions: required property 'type' not found",
         exception.message,
       )
