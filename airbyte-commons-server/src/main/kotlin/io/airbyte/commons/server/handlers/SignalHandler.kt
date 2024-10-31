@@ -3,11 +3,12 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
 import io.airbyte.config.SignalInput
 import io.temporal.client.WorkflowClient
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
 class SignalHandler(
-  private val workflowClient: WorkflowClient,
+  @Named("workerWorkflowClient") private val workflowClient: WorkflowClient,
 ) {
   fun signal(signalInput: SignalInput) {
     if (signalInput.workflowType == SignalInput.SYNC_WORKFLOW) {
@@ -23,7 +24,5 @@ class SignalHandler(
   fun <T> getWorkflowStub(
     workflowId: String,
     workflowType: Class<T>,
-  ): T {
-    return workflowClient.newWorkflowStub(workflowType, workflowId)
-  }
+  ): T = workflowClient.newWorkflowStub(workflowType, workflowId)
 }
