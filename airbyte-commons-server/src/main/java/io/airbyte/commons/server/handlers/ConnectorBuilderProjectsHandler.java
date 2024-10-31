@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner;
@@ -496,7 +497,11 @@ public class ConnectorBuilderProjectsHandler {
 
   private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
-        .logs(streamRead.getLogs())
+        .logs(streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
+            .message(log.getMessage())
+            .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
+            .internalMessage(log.getInternalMessage())
+            .stacktrace(log.getStacktrace())).toList())
         .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
             .sliceDescriptor(slice.getSliceDescriptor())
             .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())

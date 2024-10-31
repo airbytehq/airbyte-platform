@@ -33,7 +33,7 @@ const Log: React.FC<{
 };
 
 export const LogsDisplay: React.FC<LogsDisplayProps> = ({ logs, error }) => {
-  const finalLogs = [...(error ? [{ level: "ERROR", message: error }] : []), ...logs];
+  const finalLogs = [...(error ? [{ level: "ERROR" as const, message: error }] : []), ...logs];
 
   return (
     <FlexContainer className={styles.container} direction="column">

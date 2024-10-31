@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
+import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -30,7 +31,8 @@ class StreamHandlerTest {
   private static final String jsonLogs = """
                                          [
                                            {
-                                             "message":"slice:{}"
+                                             "message":"slice:{}",
+                                             "level":"INFO"
                                            }
                                          ]""";
   private static final String jsonSlice = """
@@ -45,7 +47,7 @@ class StreamHandlerTest {
                                           ]
                                           """;
   final ObjectMapper objectMapper = new ObjectMapper();
-  List<Object> logs = objectMapper.readValue(jsonLogs, new TypeReference<List<Object>>() {});
+  List<StreamReadLogsInner> logs = objectMapper.readValue(jsonLogs, new TypeReference<List<StreamReadLogsInner>>() {});
   List<StreamReadSlicesInner> slices = objectMapper.readValue(jsonSlice, new TypeReference<List<StreamReadSlicesInner>>() {});
 
   private final StreamRead streamRead = new StreamRead().logs(logs).slices(slices);
