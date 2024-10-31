@@ -2375,4 +2375,11 @@ testWebapp:
   image:
     repository: busybox
     tag: latest
+
+env:
+  JOB_MAIN_CONTAINER_CPU_REQUEST: "0.3"
+  JOB_MAIN_CONTAINER_CPU_LIMIT: "0.3"
+  JOB_MAIN_CONTAINER_MEMORY_REQUEST: "500Mi"
+  JOB_MAIN_CONTAINER_MEMORY_LIMIT: "750Mi"
+
       
