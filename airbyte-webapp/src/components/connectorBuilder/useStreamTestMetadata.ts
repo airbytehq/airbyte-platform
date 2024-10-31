@@ -21,7 +21,7 @@ type StreamTestMetadataStatus = {
   isStale: boolean;
 } & Omit<StreamTestResults, "streamHash">;
 
-interface TestWarning {
+export interface TestWarning {
   message: string;
   priority: "primary" | "secondary";
 }

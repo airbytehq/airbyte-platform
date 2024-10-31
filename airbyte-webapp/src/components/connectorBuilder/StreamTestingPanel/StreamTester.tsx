@@ -1,12 +1,10 @@
-import classNames from "classnames";
-import partition from "lodash/partition";
 import { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon, IconColor, IconType } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
-import { NumberBadge } from "components/ui/NumberBadge";
 import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Text } from "components/ui/Text";
@@ -67,12 +65,34 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const [errorLogs, nonErrorLogs] = useMemo(
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+
+  const logNumByType = useMemo(
     () =>
-      streamReadData
-        ? partition(streamReadData.logs, (log) => log.level === "ERROR" || log.level === "FATAL")
-        : [[], []],
-    [streamReadData]
+      (streamReadData?.logs ?? []).reduce(
+        (acc, log) => {
+          switch (log.level) {
+            case "ERROR":
+            case "FATAL":
+              acc.error += 1;
+              break;
+            case "WARN":
+              acc.warning += 1;
+              break;
+            default:
+              acc.info += 1;
+              break;
+          }
+          return acc;
+        },
+        {
+          info: 0,
+          warning: streamTestWarnings.length,
+          error: 0,
+        }
+      ),
+    [streamReadData?.logs, streamTestWarnings.length]
   );
 
   const hasAuxiliaryRequests = auxiliaryRequests && auxiliaryRequests.length > 0;
@@ -80,7 +100,7 @@ export const StreamTester: React.FC<{
     streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
 
   const SECONDARY_PANEL_SIZE = 0.5;
-  const logsFlex = isError || errorLogs.length > 0 ? SECONDARY_PANEL_SIZE : 0;
+  const logsFlex = logNumByType.error > 0 || logNumByType.warning > 0 ? SECONDARY_PANEL_SIZE : 0;
   const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
@@ -101,9 +121,6 @@ export const StreamTester: React.FC<{
       }
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
-
-  const { getStreamTestWarnings } = useStreamTestMetadata();
-  const testDataWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
 
   return (
     <div className={styles.container}>
@@ -180,14 +197,6 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
-      {testDataWarnings.map((warning, index) => (
-        <Message
-          className={classNames({ [styles.secondaryWarning]: warning.priority === "secondary" })}
-          type="warning"
-          text={warning.message}
-          key={index}
-        />
-      ))}
       {(streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels
           className={styles.resizablePanelsContainer}
@@ -206,14 +215,21 @@ export const StreamTester: React.FC<{
             ...(errorMessage || (streamReadData?.logs && streamReadData.logs.length > 0)
               ? [
                   {
-                    children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
+                    children: (
+                      <LogsDisplay
+                        logs={streamReadData?.logs ?? []}
+                        error={errorMessage}
+                        testWarnings={streamTestWarnings}
+                      />
+                    ),
                     minWidth: 0,
                     flex: logsFlex,
                     splitter: (
                       <Splitter
                         label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
-                        num={nonErrorLogs.length}
-                        errorNum={errorLogs.length}
+                        infoNum={logNumByType.info}
+                        warningNum={logNumByType.warning}
+                        errorNum={logNumByType.error}
                       />
                     ),
                     className: styles.secondaryPanel,
@@ -232,8 +248,10 @@ export const StreamTester: React.FC<{
                     flex: auxiliaryRequestsFlex,
                     splitter: (
                       <Splitter
-                        label={formatMessage({ id: "connectorBuilder.auxiliaryRequests" })}
-                        num={auxiliaryRequests.length}
+                        label={formatMessage(
+                          { id: "connectorBuilder.auxiliaryRequests" },
+                          { count: auxiliaryRequests.length }
+                        )}
                       />
                     ),
                     className: styles.secondaryPanel,
@@ -247,17 +265,37 @@ export const StreamTester: React.FC<{
   );
 };
 
-const Splitter = ({ label, num, errorNum }: { label: string; num?: number; errorNum?: number }) => (
+const Splitter = ({
+  label,
+  infoNum,
+  warningNum,
+  errorNum,
+}: {
+  label: string;
+  infoNum?: number;
+  warningNum?: number;
+  errorNum?: number;
+}) => (
   <FlexContainer alignItems="center" justifyContent="space-between" className={styles.splitterContainer}>
     <Text size="sm" bold>
       {label}
     </Text>
-    <FlexContainer gap="sm">
-      {num !== undefined && num > 0 && <NumberBadge value={num} />}
-      {errorNum !== undefined && errorNum > 0 && <NumberBadge value={errorNum} color="red" />}
+    <FlexContainer gap="md">
+      {!!infoNum && <IconCount icon="infoFilled" count={infoNum} color="primary" />}
+      {!!errorNum && <IconCount icon="errorFilled" count={errorNum} color="error" />}
+      {!!warningNum && <IconCount icon="warningFilled" count={warningNum} color="warning" />}
     </FlexContainer>
     <FlexContainer className={styles.splitterHandleWrapper} justifyContent="center">
       <div className={styles.splitterHandle} />
     </FlexContainer>
+  </FlexContainer>
+);
+
+const IconCount = ({ icon, count, color }: { icon: IconType; count: number; color: IconColor }) => (
+  <FlexContainer gap="xs" alignItems="center">
+    <Icon type={icon} color={color} />
+    <Text size="sm" bold>
+      {count}
+    </Text>
   </FlexContainer>
 );
