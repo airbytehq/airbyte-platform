@@ -2,6 +2,7 @@ package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.storage.StorageConfig
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.model.toRefEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -37,6 +38,7 @@ class OrchestratorEnvVarFactory(
     envMap[AbEnvVar.LAUNCHDARKLY_KEY.name] = AbEnvVar.LAUNCHDARKLY_KEY.fetch() ?: ""
     envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = AbEnvVar.OTEL_COLLECTOR_ENDPOINT.fetch() ?: ""
     envMap[AbEnvVar.CLOUD_STORAGE_APPENDER_THREADS.name] = "1"
+    envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
 
     // secret name used by orchestrator for assumed role look-ups
     envMap[AbEnvVar.AWS_ASSUME_ROLE_SECRET_NAME.name] = awsAssumedRoleSecretName

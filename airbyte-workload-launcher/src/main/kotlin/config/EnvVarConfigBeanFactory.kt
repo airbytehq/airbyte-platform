@@ -48,6 +48,7 @@ class EnvVarConfigBeanFactory {
     @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
+    @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -68,6 +69,10 @@ class EnvVarConfigBeanFactory {
 
     // Add db env vars for local deployments if applicable
     envMap.putAll(dbEnvMap)
+
+    // Metrics configuration
+    envMap.putAll(metricsEnvMap)
+    envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-workload-init-container"
 
     val envVars = envMap.toEnvVarList()
 
@@ -363,7 +368,6 @@ class EnvVarConfigBeanFactory {
     val envMap: MutableMap<String, String> = HashMap()
     envMap[EnvVarConstants.METRIC_CLIENT_ENV_VAR] = metricClient
     envMap[EnvVarConstants.DD_AGENT_HOST_ENV_VAR] = dataDogAgentHost
-    envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
     envMap[EnvVarConstants.DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
     envMap[EnvVarConstants.PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
     envMap[EnvVarConstants.OTEL_COLLECTOR_ENDPOINT_ENV_VAR] = otelCollectorEndPoint
