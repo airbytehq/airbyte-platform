@@ -313,16 +313,16 @@ components:
           items:
             type: "string"
       x-speakeasy-component: true
-    ConfiguredStreamMapper:
+    StreamMapperType:
+      type: "string"
+      enum:
+        - "hashing"
+        - "field-renaming"
+        - "row-filtering"
+      x-speakeasy-component: true
+    MapperConfiguration:
       type: "object"
-      required:
-        - "type"
-        - "mapperConfiguration"
-      properties:
-        type:
-          $ref: "#/components/schemas/StreamMapperType"
-        mapperConfiguration:
-          $ref: "#/components/schemas/MapperConfiguration"
+      description: "The values required to configure the mapper."
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -823,6 +823,7 @@ components:
         - "destinationId"
         - "name"
         - "destinationType"
+        - "definitionId"
         - "workspaceId"
         - "configuration"
       properties:
@@ -832,6 +833,9 @@ components:
         name:
           type: "string"
         destinationType:
+          type: "string"
+        definitionId:
+          format: "UUID"
           type: "string"
         workspaceId:
           format: "UUID"
@@ -843,6 +847,7 @@ components:
         name: "Analytics Team Postgres"
         destinationType: "postgres"
         workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+        definitionId: "321d9b60-11d1-44cb-8c92-c246d53bf98e"
       x-speakeasy-component: true
     SourceResponse:
       title: "Root Type for SourceResponse"
@@ -854,6 +859,7 @@ components:
         - "sourceType"
         - "workspaceId"
         - "configuration"
+        - "definitionId"
       properties:
         sourceId:
           format: "UUID"
@@ -861,6 +867,9 @@ components:
         name:
           type: "string"
         sourceType:
+          type: "string"
+        definitionId:
+          format: "UUID"
           type: "string"
         workspaceId:
           format: "UUID"
@@ -872,6 +881,38 @@ components:
         name: "Analytics Team Postgres"
         sourceType: "postgres"
         workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+        definitionId: "321d9b60-11d1-44cb-8c92-c246d53bf98e"
+      x-speakeasy-component: true
+    ConnectorDefinitionResponse:
+      title: "Root Type for ConnectorDefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      required:
+        - "id"
+        - "connectorDefinitionType"
+        - "name"
+        - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        connectorDefinitionType:
+          $ref: "#/components/schemas/ConnectorType"
+        version:
+          type: "string"
+      example:
+        id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+        name: "Postgres"
+        connectorDefinnitionType: "source"
+        version: "0.2.0"
+      x-speakeasy-component: true
+    ConnectorType:
+      type: "string"
+      enum:
+        - "source"
+        - "destination"
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
@@ -1205,6 +1246,18 @@ components:
           destinationType: "postgres"
           workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
       x-speakeasy-component: true
+    ConnectorDefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      required:
+        - "data"
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConnectorDefinitionResponse"
+      x-speakeasy-component: true
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
       description: ""
@@ -1326,6 +1379,334 @@ components:
         - "source"
         - "destination"
       x-speakeasy-component: true
+    shopify:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description: "The Client ID of the Shopify developer application."
+              airbyte_secret: true
+              order: 1
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description: "The Client Secret of the Shopify developer application."
+              airbyte_secret: true
+              order: 2
+      title: "Shopify Source CDK Specifications"
+    azure-blob-storage:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+      title: "SourceAzureBlobStorageSpec"
+    drift:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description: "The Client ID of your Drift developer application."
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description: "The Client Secret of your Drift developer application."
+              airbyte_secret: true
+      title: null
+    gitlab:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              description: "The API ID of the Gitlab developer application."
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              description: "The API Secret the Gitlab developer application."
+              airbyte_secret: true
+      title: "Source Gitlab Spec"
+    microsoft-sharepoint:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+      title: "Microsoft SharePoint Source Spec"
+    notion:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              type: "string"
+              description:
+                "The Client ID of your Notion integration. See our <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
+                \ for more information."
+              airbyte_secret: true
+            client_secret:
+              title: "Client Secret"
+              type: "string"
+              description:
+                "The Client Secret of your Notion integration. See our\
+                \ <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
+                \ for more information."
+              airbyte_secret: true
+      title: "Notion Source Spec"
+    youtube-analytics:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              type: "string"
+              description: "The Client ID of your developer application"
+              airbyte_secret: true
+            client_secret:
+              title: "Client Secret"
+              type: "string"
+              description: "The client secret of your developer application"
+              airbyte_secret: true
+      title: "YouTube Analytics Spec"
+    zendesk-talk:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description: "Client ID"
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description: "Client Secret"
+              airbyte_secret: true
+      title: "Source Zendesk Talk Spec"
+    linkedin-ads:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description:
+                "The client ID of your developer application. Refer to\
+                \ our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
+                \ for more information."
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description:
+                "The client secret of your developer application. Refer\
+                \ to our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
+                \ for more information."
+              airbyte_secret: true
+      title: "Linkedin Ads Spec"
+    microsoft-onedrive:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+      title: "Microsoft OneDrive Source Spec"
+    tiktok-marketing:
+      properties:
+        credentials:
+          properties:
+            app_id:
+              title: "App ID"
+              description: "The Developer Application App ID."
+              airbyte_secret: true
+              type: "string"
+            secret:
+              title: "Secret"
+              description: "The Developer Application Secret."
+              airbyte_secret: true
+              type: "string"
+      title: "TikTok Marketing Source Spec"
+    hubspot:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description:
+                "The Client ID of your HubSpot developer application. See\
+                \ the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
+                >Hubspot docs</a> if you need help finding this ID."
+              type: "string"
+              examples:
+                - "123456789000"
+            client_secret:
+              title: "Client Secret"
+              description:
+                "The client secret for your HubSpot developer application.\
+                \ See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
+                >Hubspot docs</a> if you need help finding this secret."
+              type: "string"
+              examples:
+                - "secret"
+              airbyte_secret: true
+      title: "HubSpot Source Spec"
+    typeform:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              description: "The Client ID of the Typeform developer application."
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              description: "The Client Secret the Typeform developer application."
+              airbyte_secret: true
+      title: null
+    surveymonkey:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client ID"
+              description: "The Client ID of the SurveyMonkey developer application."
+              airbyte_secret: true
+              order: 1
+            client_secret:
+              type: "string"
+              title: "Client Secret"
+              description: "The Client Secret of the SurveyMonkey developer application."
+              airbyte_secret: true
+              order: 2
+      title: null
+    amazon-ads:
+      properties:
+        client_id:
+          title: "Client ID"
+          description:
+            "The client ID of your Amazon Ads developer application. See\
+            \ the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
+            >docs</a> for more information."
+          order: 1
+          type: "string"
+          airbyte_secret: true
+        client_secret:
+          title: "Client Secret"
+          description:
+            "The client secret of your Amazon Ads developer application.\
+            \ See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
+            >docs</a> for more information."
+          airbyte_secret: true
+          order: 2
+          type: "string"
+      title: "Amazon Ads Spec"
+    github:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              type: "string"
+              title: "Client Id"
+              description: "OAuth Client Id"
+              airbyte_secret: true
+            client_secret:
+              type: "string"
+              title: "Client secret"
+              description: "OAuth Client secret"
+              airbyte_secret: true
+      title: "GitHub Source Spec"
+    salesforce:
+      properties:
+        client_id:
+          title: "Client ID"
+          description:
+            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client ID</a>"
+          type: "string"
+          order: 2
+        client_secret:
+          title: "Client Secret"
+          description:
+            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client secret</a>"
+          type: "string"
+          airbyte_secret: true
+          order: 3
+      title: "Salesforce Source Spec"
+    lever-hiring:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              type: "string"
+              description: "The Client ID of your Lever Hiring developer application."
+            client_secret:
+              title: "Client Secret"
+              type: "string"
+              description: "The Client Secret of your Lever Hiring developer application."
+              airbyte_secret: true
+      title: "Lever Hiring Source Spec"
+    google-drive:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID for the Google Drive API"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret for the Google Drive API"
+              airbyte_secret: true
+              type: "string"
+      title: "Google Drive Source Spec"
+    gcs:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret"
+              airbyte_secret: true
+              type: "string"
+      title: "Config"
     trello:
       title: null
     zendesk-chat:
@@ -1398,23 +1779,6 @@ components:
                 >here</a>."
               airbyte_secret: true
       title: "Google Search Console Spec"
-    shopify:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of the Shopify developer application."
-              airbyte_secret: true
-              order: 1
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of the Shopify developer application."
-              airbyte_secret: true
-              order: 2
-      title: "Shopify Source CDK Specifications"
     retently:
       properties:
         credentials:
@@ -1444,21 +1808,6 @@ components:
           airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
-    azure-blob-storage:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              description: "Client ID of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-            client_secret:
-              title: "Client Secret"
-              description: "Client Secret of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-      title: "SourceAzureBlobStorageSpec"
     zendesk-sunshine:
       properties:
         credentials:
@@ -1474,34 +1823,6 @@ components:
               description: "The Client Secret of your OAuth application."
               airbyte_secret: true
       title: null
-    drift:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of your Drift developer application."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of your Drift developer application."
-              airbyte_secret: true
-      title: null
-    gitlab:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              description: "The API ID of the Gitlab developer application."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              description: "The API Secret the Gitlab developer application."
-              airbyte_secret: true
-      title: "Source Gitlab Spec"
     snowflake:
       properties:
         credentials:
@@ -1519,21 +1840,6 @@ components:
               airbyte_secret: true
               order: 2
       title: "Snowflake Source Spec"
-    microsoft-sharepoint:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              description: "Client ID of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-            client_secret:
-              title: "Client Secret"
-              description: "Client Secret of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-      title: "Microsoft SharePoint Source Spec"
     smartsheets:
       properties:
         credentials:
@@ -1547,26 +1853,6 @@ components:
               description: "The API Secret the SmartSheets developer application."
               airbyte_secret: true
       title: "Smartsheets Source Spec"
-    notion:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description:
-                "The Client ID of your Notion integration. See our <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
-                \ for more information."
-              airbyte_secret: true
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description:
-                "The Client Secret of your Notion integration. See our\
-                \ <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
-                \ for more information."
-              airbyte_secret: true
-      title: "Notion Source Spec"
     slack:
       properties:
         credentials:
@@ -1585,21 +1871,6 @@ components:
                 >docs</a> if you need help finding this secret."
               airbyte_secret: true
       title: "Slack Spec"
-    youtube-analytics:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your developer application"
-              airbyte_secret: true
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The client secret of your developer application"
-              airbyte_secret: true
-      title: "YouTube Analytics Spec"
     google-sheets:
       properties:
         credentials:
@@ -1620,21 +1891,6 @@ components:
                 \ documentation</a> for more information."
               airbyte_secret: true
       title: "Google Sheets Source Spec"
-    zendesk-talk:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "Client ID"
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "Client Secret"
-              airbyte_secret: true
-      title: "Source Zendesk Talk Spec"
     asana:
       properties:
         credentials:
@@ -1679,27 +1935,6 @@ components:
           order: 5
           type: "string"
       title: "Amazon Seller Partner Spec"
-    linkedin-ads:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description:
-                "The client ID of your developer application. Refer to\
-                \ our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
-                \ for more information."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description:
-                "The client secret of your developer application. Refer\
-                \ to our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
-                \ for more information."
-              airbyte_secret: true
-      title: "Linkedin Ads Spec"
     pinterest:
       properties:
         credentials:
@@ -1749,60 +1984,6 @@ components:
                 >this guide</a> for more information."
               airbyte_secret: true
       title: "Source Zendesk Support Spec"
-    microsoft-onedrive:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              description: "Client ID of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-            client_secret:
-              title: "Client Secret"
-              description: "Client Secret of your Microsoft developer application"
-              airbyte_secret: true
-              type: "string"
-      title: "Microsoft OneDrive Source Spec"
-    tiktok-marketing:
-      properties:
-        credentials:
-          properties:
-            app_id:
-              title: "App ID"
-              description: "The Developer Application App ID."
-              airbyte_secret: true
-              type: "string"
-            secret:
-              title: "Secret"
-              description: "The Developer Application Secret."
-              airbyte_secret: true
-              type: "string"
-      title: "TikTok Marketing Source Spec"
-    hubspot:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              description:
-                "The Client ID of your HubSpot developer application. See\
-                \ the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
-                >Hubspot docs</a> if you need help finding this ID."
-              type: "string"
-              examples:
-                - "123456789000"
-            client_secret:
-              title: "Client Secret"
-              description:
-                "The client secret for your HubSpot developer application.\
-                \ See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
-                >Hubspot docs</a> if you need help finding this secret."
-              type: "string"
-              examples:
-                - "secret"
-              airbyte_secret: true
-      title: "HubSpot Source Spec"
     google-analytics-data-api:
       properties:
         credentials:
@@ -1834,19 +2015,6 @@ components:
           airbyte_secret: true
           order: 2
       title: "Source Intercom Spec"
-    typeform:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              description: "The Client ID of the Typeform developer application."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              description: "The Client Secret the Typeform developer application."
-              airbyte_secret: true
-      title: null
     facebook-marketing:
       properties:
         credentials:
@@ -1864,23 +2032,6 @@ components:
               airbyte_hidden: true
               type: "string"
       title: "Source Facebook Marketing"
-    surveymonkey:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of the SurveyMonkey developer application."
-              airbyte_secret: true
-              order: 1
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of the SurveyMonkey developer application."
-              airbyte_secret: true
-              order: 2
-      title: null
     bing-ads:
       properties:
         client_id:
@@ -1914,42 +2065,6 @@ components:
               description: "The Client Secret of your OAuth application."
               airbyte_secret: true
       title: "Monday Spec"
-    amazon-ads:
-      properties:
-        client_id:
-          title: "Client ID"
-          description:
-            "The client ID of your Amazon Ads developer application. See\
-            \ the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
-            >docs</a> for more information."
-          order: 1
-          type: "string"
-          airbyte_secret: true
-        client_secret:
-          title: "Client Secret"
-          description:
-            "The client secret of your Amazon Ads developer application.\
-            \ See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
-            >docs</a> for more information."
-          airbyte_secret: true
-          order: 2
-          type: "string"
-      title: "Amazon Ads Spec"
-    github:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client Id"
-              description: "OAuth Client Id"
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client secret"
-              description: "OAuth Client secret"
-              airbyte_secret: true
-      title: "GitHub Source Spec"
     mailchimp:
       properties:
         credentials:
@@ -1980,53 +2095,6 @@ components:
               description: "The client secret the Airtable developer application."
               airbyte_secret: true
       title: "Airtable Source Spec"
-    salesforce:
-      properties:
-        client_id:
-          title: "Client ID"
-          description:
-            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client ID</a>"
-          type: "string"
-          order: 2
-        client_secret:
-          title: "Client Secret"
-          description:
-            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client secret</a>"
-          type: "string"
-          airbyte_secret: true
-          order: 3
-      title: "Salesforce Source Spec"
-    lever-hiring:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your Lever Hiring developer application."
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The Client Secret of your Lever Hiring developer application."
-              airbyte_secret: true
-      title: "Lever Hiring Source Spec"
-    google-drive:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              description: "Client ID for the Google Drive API"
-              airbyte_secret: true
-              type: "string"
-            client_secret:
-              title: "Client Secret"
-              description: "Client Secret for the Google Drive API"
-              airbyte_secret: true
-              type: "string"
-      title: "Google Drive Source Spec"
     OAuthCredentialsConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
@@ -2047,6 +2115,8 @@ components:
           $ref: "#/components/schemas/drift"
         - title: facebook-marketing
           $ref: "#/components/schemas/facebook-marketing"
+        - title: gcs
+          $ref: "#/components/schemas/gcs"
         - title: github
           $ref: "#/components/schemas/github"
         - title: gitlab
@@ -2175,6 +2245,7 @@ components:
         - bing-ads
         - drift
         - facebook-marketing
+        - gcs
         - github
         - gitlab
         - google-ads

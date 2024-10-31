@@ -14795,6 +14795,7 @@ components:
       enum:
         - source
         - destination
+      x-sdk-component: true
     DestinationCreateRequest:
       required:
         - name

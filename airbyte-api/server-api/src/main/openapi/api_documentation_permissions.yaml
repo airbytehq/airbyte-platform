@@ -252,16 +252,16 @@ components:
           items:
             type: "string"
       x-speakeasy-component: true
-    ConfiguredStreamMapper:
+    StreamMapperType:
+      type: "string"
+      enum:
+        - "hashing"
+        - "field-renaming"
+        - "row-filtering"
+      x-speakeasy-component: true
+    MapperConfiguration:
       type: "object"
-      required:
-        - "type"
-        - "mapperConfiguration"
-      properties:
-        type:
-          $ref: "#/components/schemas/StreamMapperType"
-        mapperConfiguration:
-          $ref: "#/components/schemas/MapperConfiguration"
+      description: "The values required to configure the mapper."
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -762,6 +762,7 @@ components:
         - "destinationId"
         - "name"
         - "destinationType"
+        - "definitionId"
         - "workspaceId"
         - "configuration"
       properties:
@@ -771,6 +772,9 @@ components:
         name:
           type: "string"
         destinationType:
+          type: "string"
+        definitionId:
+          format: "UUID"
           type: "string"
         workspaceId:
           format: "UUID"
@@ -782,6 +786,7 @@ components:
         name: "Analytics Team Postgres"
         destinationType: "postgres"
         workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+        definitionId: "321d9b60-11d1-44cb-8c92-c246d53bf98e"
       x-speakeasy-component: true
     SourceResponse:
       title: "Root Type for SourceResponse"
@@ -793,6 +798,7 @@ components:
         - "sourceType"
         - "workspaceId"
         - "configuration"
+        - "definitionId"
       properties:
         sourceId:
           format: "UUID"
@@ -800,6 +806,9 @@ components:
         name:
           type: "string"
         sourceType:
+          type: "string"
+        definitionId:
+          format: "UUID"
           type: "string"
         workspaceId:
           format: "UUID"
@@ -811,6 +820,38 @@ components:
         name: "Analytics Team Postgres"
         sourceType: "postgres"
         workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+        definitionId: "321d9b60-11d1-44cb-8c92-c246d53bf98e"
+      x-speakeasy-component: true
+    ConnectorDefinitionResponse:
+      title: "Root Type for ConnectorDefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      required:
+        - "id"
+        - "connectorDefinitionType"
+        - "name"
+        - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        connectorDefinitionType:
+          $ref: "#/components/schemas/ConnectorType"
+        version:
+          type: "string"
+      example:
+        id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+        name: "Postgres"
+        connectorDefinnitionType: "source"
+        version: "0.2.0"
+      x-speakeasy-component: true
+    ConnectorType:
+      type: "string"
+      enum:
+        - "source"
+        - "destination"
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
@@ -1143,6 +1184,18 @@ components:
           name: "Analytics Team Postgres"
           destinationType: "postgres"
           workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+      x-speakeasy-component: true
+    ConnectorDefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      required:
+        - "data"
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-speakeasy-component: true
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
