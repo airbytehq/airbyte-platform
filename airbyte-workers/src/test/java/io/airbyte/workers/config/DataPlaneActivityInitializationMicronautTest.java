@@ -7,7 +7,7 @@ package io.airbyte.workers.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
@@ -25,7 +25,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest(environments = {WorkerMode.DATA_PLANE, Environment.KUBERNETES})
+@MicronautTest(environments = {EnvConstants.DATA_PLANE, Environment.KUBERNETES})
 @Property(name = "airbyte.internal-api.base-path",
           value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",

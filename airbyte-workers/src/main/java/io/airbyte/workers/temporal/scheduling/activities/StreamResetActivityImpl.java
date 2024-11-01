@@ -11,7 +11,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
@@ -27,7 +27,7 @@ import org.openapitools.client.infrastructure.ClientException;
  */
 @Slf4j
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 public class StreamResetActivityImpl implements StreamResetActivity {
 
   private final AirbyteApiClient airbyteApiClient;

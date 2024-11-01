@@ -1,7 +1,5 @@
 package io.airbyte.workload.launcher.constants
 
-import io.airbyte.workers.workload.WorkloadConstants
-
 /**
  * Env var names and other string constants used to set env vars for the containers we launch.
  *
@@ -26,9 +24,6 @@ object EnvVarConstants {
   const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
   const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
   const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
-  const val WORKER_V2_MICRONAUT_ENV = WorkloadConstants.WORKER_V2_MICRONAUT_ENV
-  const val LOCAL_SECRETS_MICRONAUT_ENV = "local-secrets"
-  const val CLOUD_MICRONAUT_ENV = "cloud"
   const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
   const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"
   const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"

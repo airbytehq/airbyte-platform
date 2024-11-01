@@ -4,7 +4,7 @@
 
 package io.airbyte.cron.config;
 
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.data.services.shared.DataSourceUnwrapper;
 import io.airbyte.db.Database;
@@ -45,7 +45,7 @@ public class DatabaseBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("jobsDatabase")
   public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(DataSourceUnwrapper.unwrapContext(dslContext));
@@ -100,19 +100,19 @@ public class DatabaseBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   public StreamResetPersistence streamResetPersistence(@Named("configDatabase") final Database configDatabase) {
     return new StreamResetPersistence(configDatabase);
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   public JobPersistence jobPersistence(@Named("jobsDatabase") final Database jobDatabase) {
     return new DefaultJobPersistence(jobDatabase);
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   public MetadataPersistence metadataPersistence(@Named("jobsDatabase") final Database jobDatabase) {
     return new DefaultMetadataPersistence(jobDatabase);
   }

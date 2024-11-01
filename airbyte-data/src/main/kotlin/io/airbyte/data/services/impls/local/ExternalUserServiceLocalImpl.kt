@@ -1,5 +1,6 @@
 package io.airbyte.data.services.impls.local
 
+import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.data.services.ExternalUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Primary
@@ -10,7 +11,7 @@ private val logger = KotlinLogging.logger { }
 
 @Singleton
 @Primary
-@Requires(env = ["local-test"])
+@Requires(env = [EnvConstants.LOCAL_TEST])
 class ExternalUserServiceLocalImpl : ExternalUserService {
   override fun deleteUserByExternalId(
     authUserId: String,

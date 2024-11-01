@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.config;
 
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.TemporalConstants;
-import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
@@ -59,7 +59,7 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("connectionManagerActivities")
   public List<Object> connectionManagerActivities(
                                                   final GenerateInputActivity generateInputActivity,
@@ -104,7 +104,7 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("specActivities")
   public List<Object> specActivities(
                                      final SpecActivity specActivity) {
@@ -217,7 +217,7 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("specActivityOptions")
   public ActivityOptions specActivityOptions() {
     return ActivityOptions.newBuilder()

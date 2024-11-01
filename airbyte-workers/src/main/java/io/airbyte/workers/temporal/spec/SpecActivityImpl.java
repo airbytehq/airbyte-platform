@@ -11,7 +11,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 public class SpecActivityImpl implements SpecActivity {
 
   private final FeatureFlagClient featureFlagClient;
