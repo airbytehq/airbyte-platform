@@ -9,6 +9,7 @@ import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.storage.StorageConfig
 import io.airbyte.config.Configs
+import io.airbyte.config.Configs.DeploymentMode
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.constants.EnvVarConstants
@@ -334,6 +335,7 @@ class EnvVarConfigBeanFactory {
   @Named("micronautEnvMap")
   fun micronautEnvMap(
     @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
+    deploymentMode: DeploymentMode,
   ): Map<String, String> {
     val envs = mutableListOf(EnvVarConstants.WORKER_V2_MICRONAUT_ENV)
 
@@ -345,6 +347,10 @@ class EnvVarConfigBeanFactory {
     // add this conditionally to trigger datasource bean creation via application.yaml
     if (secretPersistenceType == Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE.toString()) {
       envs.add(LOCAL_SECRETS_MICRONAUT_ENV)
+    }
+
+    if (deploymentMode == DeploymentMode.CLOUD) {
+      envs.add(EnvVarConstants.CLOUD_MICRONAUT_ENV)
     }
 
     val commaSeparatedEnvString = envs.joinToString(separator = ",")
