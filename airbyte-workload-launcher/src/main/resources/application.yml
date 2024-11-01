@@ -3,6 +3,7 @@ micronaut:
     name: airbyte-workload-launcher
   env:
     cloud-deduction: true
+    additional-envs: ${MICRONAUT_ENVIRONMENTS:}
   server:
     port: 8016
     netty:
@@ -53,6 +54,9 @@ airbyte:
         delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
+  logging:
+    log-level: ${LOG_LEVEL:}
+    s3-path-style-access: ${S3_PATH_STYLE_ACCESS:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -252,6 +256,8 @@ datadog:
     host: ${DD_AGENT_HOST:}
     port: ${DD_DOGSTATSD_PORT:}
   orchestrator.disabled.integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
+  env: ${DD_ENV:}
+  version: ${DD_VERSION:}
 google.application.credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
 endpoints:

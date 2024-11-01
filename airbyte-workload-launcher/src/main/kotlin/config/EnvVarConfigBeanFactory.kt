@@ -41,7 +41,7 @@ class EnvVarConfigBeanFactory {
   @Named("initEnvVars")
   fun initEnvVars(
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
-    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+    @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("secretPersistenceSecretsEnvMap") secretPersistenceSecretsEnvMap: Map<String, EnvVarSource>,
     @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
@@ -121,8 +121,8 @@ class EnvVarConfigBeanFactory {
   }
 
   @Singleton
-  @Named("featureFlagEnvVars")
-  fun featureFlagEnvVars(
+  @Named("featureFlagEnvMap")
+  fun featureFlagEnvMap(
     @Value("\${airbyte.feature-flag.client}") client: String,
     @Value("\${airbyte.feature-flag.path}") path: String,
     @Value("\${airbyte.feature-flag.api-key}") apiKey: String,
@@ -139,11 +139,14 @@ class EnvVarConfigBeanFactory {
 
   @Singleton
   @Named("loggingEnvVars")
-  fun loggingEnvVars(): Map<String, String> {
+  fun loggingEnvVars(
+    @Value("\${airbyte.logging.log-level}") logLevel: String,
+    @Value("\${airbyte.logging.s3-path-style-access}") s3PathStyleAccess: String,
+  ): Map<String, String> {
     return mapOf(
       CLOUD_STORAGE_APPENDER_THREADS.name to "1",
-      LOG_LEVEL.name to LOG_LEVEL.fetch("")!!,
-      S3_PATH_STYLE_ACCESS.name to S3_PATH_STYLE_ACCESS.fetch("")!!,
+      LOG_LEVEL.name to logLevel,
+      S3_PATH_STYLE_ACCESS.name to s3PathStyleAccess,
     )
   }
 
@@ -187,7 +190,7 @@ class EnvVarConfigBeanFactory {
   @Named("readEnvVars")
   fun readEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
-    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+    @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
   ): List<EnvVar> {
     return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
   }
@@ -199,7 +202,7 @@ class EnvVarConfigBeanFactory {
   @Named("writeEnvVars")
   fun writeEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
-    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+    @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
   ): List<EnvVar> {
     return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
   }
@@ -335,13 +338,14 @@ class EnvVarConfigBeanFactory {
   @Named("micronautEnvMap")
   fun micronautEnvMap(
     @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
+    @Value("\${micronaut.env.additional-envs}") additionalMicronautEnv: String,
     deploymentMode: DeploymentMode,
   ): Map<String, String> {
     val envs = mutableListOf(EnvVarConstants.WORKER_V2_MICRONAUT_ENV)
 
     // inherit from the parent env
-    System.getenv(Environment.ENVIRONMENTS_ENV)?.let {
-      envs.add(it)
+    if (additionalMicronautEnv.isNotBlank()) {
+      envs.add(additionalMicronautEnv)
     }
 
     // add this conditionally to trigger datasource bean creation via application.yaml
@@ -370,6 +374,8 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.metric.should-publish}") shouldPublishMetrics: String,
     @Value("\${airbyte.metric.otel-collector-endpoint}") otelCollectorEndPoint: String,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
+    @Value("\${datadog.env}") ddEnv: String,
+    @Value("\${datadog.version}") ddVersion: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
     envMap[EnvVarConstants.METRIC_CLIENT_ENV_VAR] = metricClient
@@ -377,11 +383,11 @@ class EnvVarConfigBeanFactory {
     envMap[EnvVarConstants.DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
     envMap[EnvVarConstants.PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
     envMap[EnvVarConstants.OTEL_COLLECTOR_ENDPOINT_ENV_VAR] = otelCollectorEndPoint
-    if (System.getenv(EnvVarConstants.DD_ENV_ENV_VAR) != null) {
-      envMap[EnvVarConstants.DD_ENV_ENV_VAR] = System.getenv(EnvVarConstants.DD_ENV_ENV_VAR)
+    if (ddEnv.isNotBlank()) {
+      envMap[EnvVarConstants.DD_ENV_ENV_VAR] = ddEnv
     }
-    if (System.getenv(EnvVarConstants.DD_VERSION_ENV_VAR) != null) {
-      envMap[EnvVarConstants.DD_VERSION_ENV_VAR] = System.getenv(EnvVarConstants.DD_VERSION_ENV_VAR)
+    if (ddVersion.isNotBlank()) {
+      envMap[EnvVarConstants.DD_VERSION_ENV_VAR] = ddVersion
     }
 
     // Disable DD agent integrations based on the configuration

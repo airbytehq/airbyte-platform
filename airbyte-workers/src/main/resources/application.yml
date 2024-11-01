@@ -72,17 +72,6 @@ airbyte:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
-  container:
-    orchestrator:
-      enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
-      image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
-      java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
-      secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
-      secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
-      data-plane-creds:
-        secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
-        secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
-    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}

@@ -227,21 +227,11 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(property = "airbyte.container.orchestrator.enabled",
-            value = "true")
   @Named("longRunActivityRetryOptions")
   public RetryOptions containerOrchestratorRetryOptions() {
     return RetryOptions.newBuilder()
         .setDoNotRetry(RuntimeException.class.getName(), WorkerException.class.getName())
         .build();
-  }
-
-  @Singleton
-  @Requires(property = "airbyte.container.orchestrator.enabled",
-            notEquals = "true")
-  @Named("longRunActivityRetryOptions")
-  public RetryOptions noRetryOptions() {
-    return TemporalConstants.NO_RETRY;
   }
 
   @Singleton

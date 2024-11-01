@@ -117,6 +117,7 @@ enum class EnvVar {
    *
    * @param default value to return if this environment variable is null or empty
    */
+  @Deprecated("Inject your env vars with Micronaut. System.getenv is a last resort.")
   @JvmOverloads
   fun fetch(default: String? = null): String? = System.getenv(this.name).takeUnless { it.isNullOrBlank() } ?: default
 

@@ -23,6 +23,7 @@ class OrchestratorEnvVarFactory(
   @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") private val awsAssumedRoleSecretName: String,
   @Named("orchestratorSecretsEnvMap") private val secretsEnvMap: Map<String, EnvVarSource>,
   @Named("airbyteMetadataEnvMap") private val airbyteMetadataEnvMap: Map<String, String>,
+  @Named("featureFlagEnvMap") private val ffEnvVars: Map<String, String>,
 ) {
   /**
    * The list of environment variables to be passed to the orchestrator.
@@ -34,9 +35,7 @@ class OrchestratorEnvVarFactory(
   fun orchestratorEnvVars(): List<EnvVar> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = AbEnvVar.FEATURE_FLAG_CLIENT.fetch() ?: ""
-    envMap[AbEnvVar.LAUNCHDARKLY_KEY.name] = AbEnvVar.LAUNCHDARKLY_KEY.fetch() ?: ""
-    envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = AbEnvVar.OTEL_COLLECTOR_ENDPOINT.fetch() ?: ""
+
     envMap[AbEnvVar.CLOUD_STORAGE_APPENDER_THREADS.name] = "1"
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
 
@@ -51,6 +50,9 @@ class OrchestratorEnvVarFactory(
 
     // Api client configuration
     envMap.putAll(apiClientEnvMap)
+
+    // FF client configuration
+    envMap.putAll(ffEnvVars)
 
     // Metrics configuration
     envMap.putAll(metricsEnvMap)
