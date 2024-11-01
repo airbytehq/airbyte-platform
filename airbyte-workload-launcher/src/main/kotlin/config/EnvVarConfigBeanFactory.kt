@@ -43,6 +43,7 @@ class EnvVarConfigBeanFactory {
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
+    @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
     @Named("secretPersistenceSecretsEnvMap") secretPersistenceSecretsEnvMap: Map<String, EnvVarSource>,
     @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
@@ -52,6 +53,8 @@ class EnvVarConfigBeanFactory {
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
+
+    envMap.putAll(loggingEnvMap)
 
     // Workload Api configuration
     envMap.putAll(workloadApiEnvMap)
