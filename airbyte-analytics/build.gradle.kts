@@ -16,6 +16,7 @@ dependencies {
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-config:config-models"))
   api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-data"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

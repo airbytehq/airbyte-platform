@@ -44,6 +44,7 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Organization;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -436,7 +437,7 @@ public class WorkspacesHandler {
     }
 
     // after updating email or tracking info, we need to re-identify the instance.
-    trackingClient.identify(workspaceId);
+    trackingClient.identify(workspaceId, ScopeType.WORKSPACE);
 
     return buildWorkspaceReadFromId(workspaceId);
   }

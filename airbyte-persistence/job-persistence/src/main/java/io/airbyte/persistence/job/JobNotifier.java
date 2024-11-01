@@ -20,6 +20,7 @@ import io.airbyte.config.JobStatus;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -153,6 +154,7 @@ public class JobNotifier {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
         trackingClient.track(
             workspace.getWorkspaceId(),
+            ScopeType.WORKSPACE,
             action,
             MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata));
       }

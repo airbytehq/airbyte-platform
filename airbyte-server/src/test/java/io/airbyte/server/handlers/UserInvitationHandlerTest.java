@@ -236,6 +236,7 @@ class UserInvitationHandlerTest {
         // verify we sent an invitation tracking event
         verify(trackingClient, times(1)).track(
             eq(WORKSPACE_ID),
+            eq(ScopeType.WORKSPACE),
             eq(USER_INVITED),
             anyMap());
       }

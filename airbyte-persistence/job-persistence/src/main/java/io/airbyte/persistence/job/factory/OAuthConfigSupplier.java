@@ -14,6 +14,7 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -148,7 +149,7 @@ public class OAuthConfigSupplier {
             if (injectOAuthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceOAuthParameter.getConfiguration(),
                 sourceConnectorConfig)) {
               final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
-              Exceptions.swallow(() -> trackingClient.track(workspaceId, "OAuth Injection - Backend", metadata));
+              Exceptions.swallow(() -> trackingClient.track(workspaceId, ScopeType.WORKSPACE, "OAuth Injection - Backend", metadata));
             }
           });
       return sourceConnectorConfig;
@@ -181,7 +182,7 @@ public class OAuthConfigSupplier {
             if (injectOAuthParameters(destinationDefinition.getName(), destinationVersion.getSpec(), destinationOAuthParameter.getConfiguration(),
                 destinationConnectorConfig)) {
               final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
-              Exceptions.swallow(() -> trackingClient.track(workspaceId, "OAuth Injection - Backend", metadata));
+              Exceptions.swallow(() -> trackingClient.track(workspaceId, ScopeType.WORKSPACE, "OAuth Injection - Backend", metadata));
             }
           });
       return destinationConnectorConfig;

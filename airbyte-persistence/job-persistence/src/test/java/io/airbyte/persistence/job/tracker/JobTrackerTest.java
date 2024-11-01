@@ -40,6 +40,7 @@ import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -424,7 +425,7 @@ class JobTrackerTest {
     metadata.put("source_id", SOURCE_ID);
     metadata.put("destination_id", DESTINATION_ID);
 
-    verify(trackingClient).track(WORKSPACE_ID, JobTracker.INTERNAL_FAILURE_SYNC_EVENT, metadata);
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, JobTracker.INTERNAL_FAILURE_SYNC_EVENT, metadata);
   }
 
   @Test
@@ -917,15 +918,15 @@ class JobTrackerTest {
   }
 
   private void assertCorrectMessageForStartedState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private void assertCorrectMessageForSucceededState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private void assertCorrectMessageForFailedState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private Map<String, Object> mockWorkspaceInfo() {

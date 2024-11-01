@@ -4,6 +4,7 @@ import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
+import io.airbyte.config.Organization
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -34,9 +35,8 @@ class AnalyticsTrackingBeanFactory {
 
   @Singleton
   @Named("workspaceFetcher")
-  fun workspaceFetcher(): Function<UUID, WorkspaceRead> {
-    return Function {
-        workspaceId: UUID ->
+  fun workspaceFetcher(): Function<UUID, WorkspaceRead> =
+    Function { workspaceId: UUID ->
       WorkspaceRead(
         workspaceId = workspaceId,
         customerId = workspaceId,
@@ -46,7 +46,13 @@ class AnalyticsTrackingBeanFactory {
         organizationId = workspaceId,
       )
     }
-  }
+
+  @Singleton
+  @Named("organizationFetcher")
+  fun organizationFetcher(): Function<UUID, Organization> =
+    Function { organizationId: UUID ->
+      Organization().withOrganizationId(organizationId).withName("").withEmail("")
+    }
 
   @Singleton
   @Requires(missingBeans = [AirbyteVersion::class])

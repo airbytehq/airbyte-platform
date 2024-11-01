@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -430,11 +431,11 @@ class OAuthConfigSupplierTest {
   }
 
   private void assertNoTracking() {
-    verify(trackingClient, times(0)).track(any(), anyString(), anyMap());
+    verify(trackingClient, times(0)).track(any(), any(), anyString(), anyMap());
   }
 
   private void assertTracking(final UUID workspaceId) {
-    verify(trackingClient, times(1)).track(workspaceId, "OAuth Injection - Backend", Map.of(
+    verify(trackingClient, times(1)).track(workspaceId, ScopeType.WORKSPACE, "OAuth Injection - Backend", Map.of(
         "connector_source", "test",
         "connector_source_definition_id", sourceDefinitionId,
         "connector_source_docker_repository", "test/test",

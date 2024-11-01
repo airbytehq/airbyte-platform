@@ -7,12 +7,16 @@ package io.airbyte.server.config;
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.problems.model.generated.ProblemResourceData;
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
+import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Factory;
@@ -86,6 +90,26 @@ public class AnalyticsTrackingBeanFactory {
             null,
             null);
       }
+    };
+  }
+
+  @Singleton
+  @Named("organizationFetcher")
+  @Replaces(named = "organizationFetcher")
+  public Function<UUID, Organization> organizationFetcher(final OrganizationService organizationService) {
+    return (final UUID organizationId) -> {
+
+      final Organization organization;
+      try {
+        organization = organizationService.getOrganization(organizationId).orElseThrow(
+            () -> new ResourceNotFoundProblem(new ProblemResourceData()
+                .resourceId(organizationId.toString())
+                .resourceType("Organization")));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      return organization;
     };
   }
 

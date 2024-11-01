@@ -23,6 +23,7 @@ import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -150,7 +151,7 @@ class JobNotifierTest {
     metadata.put("connector_destination_version", TEST_DOCKER_TAG);
     metadata.put("connector_destination_docker_repository", actorDefinitionVersion.getDockerRepository());
     metadata.put("notification_type", List.of(NotificationType.SLACK.toString()));
-    verify(trackingClient).track(WORKSPACE_ID, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
   }
 
   @Test

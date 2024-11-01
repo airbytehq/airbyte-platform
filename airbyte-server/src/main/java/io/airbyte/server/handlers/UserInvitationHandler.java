@@ -161,6 +161,7 @@ public class UserInvitationHandler {
                                            final String workspaceName,
                                            final PermissionType permissionType) {
     trackingClient.track(workspaceId,
+        ScopeType.WORKSPACE,
         USER_INVITED,
         ImmutableMap.<String, Object>builder()
             .put("email", email)

@@ -104,6 +104,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.JobWithStatusAndTimestamp;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -710,7 +711,7 @@ public class ConnectionsHandler {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(standardSync.getConnectionId());
       final Builder<String, Object> metadataBuilder = generateMetadata(standardSync);
-      trackingClient.track(workspaceId, "New Connection - Backend", metadataBuilder.build());
+      trackingClient.track(workspaceId, ScopeType.WORKSPACE, "New Connection - Backend", metadataBuilder.build());
     } catch (final Exception e) {
       LOGGER.error("failed while reporting usage.", e);
     }
@@ -720,7 +721,7 @@ public class ConnectionsHandler {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(standardSync.getConnectionId());
       final Builder<String, Object> metadataBuilder = generateMetadata(standardSync);
-      trackingClient.track(workspaceId, "Updated Connection - Backend", metadataBuilder.build());
+      trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Updated Connection - Backend", metadataBuilder.build());
     } catch (final Exception e) {
       LOGGER.error("failed while reporting usage.", e);
     }
@@ -1589,7 +1590,7 @@ public class ConnectionsHandler {
         if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
           payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
         }
-        trackingClient.track(workspaceId, "Schema Changes", payload);
+        trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Schema Changes", payload);
       }
     } catch (final Exception e) {
       LOGGER.error("Error while sending tracking event for schema change", e);

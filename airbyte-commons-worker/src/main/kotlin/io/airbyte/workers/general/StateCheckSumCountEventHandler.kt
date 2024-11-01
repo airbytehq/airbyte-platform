@@ -10,6 +10,7 @@ import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ScopeType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
@@ -72,7 +73,7 @@ class StateCheckSumCountEventHandler(
 
   private val deployment: Deployment by lazy { retry { deploymentFetcher.get() } }
 
-  private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId) } }
+  private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId, ScopeType.WORKSPACE) } }
 
   private fun shouldEmitStateStatsToSegment(): Boolean = emitStatsCounterFlag
 
@@ -208,7 +209,8 @@ class StateCheckSumCountEventHandler(
                   sourceRecordCount.minus(
                     filteredOutRecords,
                   )
-                ) != stateRecordCount || (platformRecordCount.minus(filteredOutRecords)) != stateRecordCount
+                ) != stateRecordCount ||
+                (platformRecordCount.minus(filteredOutRecords)) != stateRecordCount
               ) {
                 misMatchWhenAllThreeCountsArePresent(
                   origin,
@@ -448,8 +450,8 @@ class StateCheckSumCountEventHandler(
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
       streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
-    ): String {
-      return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
+    ): String =
+      "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
         "record count $stateRecordCount does not equal platform tracked record count $platformRecordCount" +
         if (includeStreamInLogs) {
           " for stream ${getNameNamespacePair(stateMessage)}."
@@ -469,7 +471,6 @@ class StateCheckSumCountEventHandler(
         } else {
           ""
         }
-    }
 
     private fun misMatchMessageWhenAllCountsThreeArePresent(
       origin: AirbyteMessageOrigin,
@@ -479,8 +480,8 @@ class StateCheckSumCountEventHandler(
       includeStreamInLogs: Boolean,
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
-    ): String {
-      return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
+    ): String =
+      "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
         "source record count $sourceRecordCount , destination record count " +
         "$destinationRecordCount and platform record count $platformRecordCount does not equal each other" +
         if (includeStreamInLogs) {
@@ -493,7 +494,6 @@ class StateCheckSumCountEventHandler(
         } else {
           " Hash collisions were observed so count comparison result may be wrong."
         }
-    }
 
     private fun checksumIsValid(
       origin: AirbyteMessageOrigin,
@@ -540,20 +540,19 @@ class StateCheckSumCountEventHandler(
             AirbyteStreamState()
               .withStreamState(Jsons.jsonNode(mapOf("cursor" to "value")))
               .withStreamDescriptor(StreamDescriptor().withNamespace("dummy-namespace").withName("dummy-name")),
-          )
-          .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
+          ).withSourceStats(AirbyteStateStats().withRecordCount(1.0))
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0)),
       )
 
-    private fun <T> retry(supplier: CheckedSupplier<T>): T {
-      return Failsafe.with(
-        RetryPolicy.builder<T>()
-          .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
-          .withMaxRetries(5)
-          .build(),
-      )
-        .get(supplier)
-    }
+    private fun <T> retry(supplier: CheckedSupplier<T>): T =
+      Failsafe
+        .with(
+          RetryPolicy
+            .builder<T>()
+            .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
+            .withMaxRetries(5)
+            .build(),
+        ).get(supplier)
   }
 
   enum class EventType {

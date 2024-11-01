@@ -31,6 +31,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.RefreshStream;
 import io.airbyte.config.RefreshStream.RefreshType;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -601,7 +602,7 @@ public class JobTracker {
             "workspace_id", workspaceId,
             "workspace_name", standardWorkspace.getName());
 
-        trackingClient.track(workspaceId, action, MoreMaps.merge(metadata, standardTrackingMetadata));
+        trackingClient.track(workspaceId, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, standardTrackingMetadata));
       }
     }
   }

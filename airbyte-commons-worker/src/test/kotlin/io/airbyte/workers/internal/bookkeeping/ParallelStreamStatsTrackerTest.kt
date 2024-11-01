@@ -85,7 +85,7 @@ class ParallelStreamStatsTrackerTest {
     every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
-    every { trackingIdentityFetcher.apply(any()) }.returns(trackingIdentity)
+    every { trackingIdentityFetcher.apply(any(), any()) }.returns(trackingIdentity)
     metricClient = Mockito.mock(MetricClient::class.java)
     featureFlagClient = TestClient(mapOf(EmitStateStatsToSegment.key to true, LogStateMsgs.key to false))
     checkSumCountEventHandler =
@@ -595,8 +595,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
       )
@@ -608,8 +607,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
       )
@@ -644,8 +642,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -658,8 +655,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble() - 2))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble() - 2))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -698,8 +694,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -712,8 +707,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -752,8 +746,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -766,8 +759,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -803,8 +795,7 @@ class ParallelStreamStatsTrackerTest {
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
                 .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
         ),
@@ -840,8 +831,7 @@ class ParallelStreamStatsTrackerTest {
           AirbyteStreamState()
             .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
             .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
     val copyOfStateMessage1 =
@@ -850,17 +840,17 @@ class ParallelStreamStatsTrackerTest {
           AirbyteStreamState()
             .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
             .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        ).withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     assertEquals(stateMessage1, copyOfStateMessage1)
     val state = StateWithId.attachIdToStateMessageFromSource(AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(stateMessage1)).state
     val state2 =
-      StateWithId.attachIdToStateMessageFromSource(
-        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(copyOfStateMessage1),
-      ).state
+      StateWithId
+        .attachIdToStateMessageFromSource(
+          AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(copyOfStateMessage1),
+        ).state
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -906,8 +896,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -929,8 +918,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -981,8 +969,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -1004,8 +991,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -1057,8 +1043,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -1112,8 +1097,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -1135,8 +1119,7 @@ class ParallelStreamStatsTrackerTest {
                       .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
                   ),
                 ),
-            )
-            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            ).withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
             .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
         ),
@@ -1216,13 +1199,12 @@ class ParallelStreamStatsTrackerTest {
     assertFalse(isDifferent)
   }
 
-  private fun keepCoreStats(syncStats: SyncStats): SyncStats {
-    return SyncStats()
+  private fun keepCoreStats(syncStats: SyncStats): SyncStats =
+    SyncStats()
       .withBytesCommitted(syncStats.bytesCommitted)
       .withBytesEmitted(syncStats.bytesEmitted)
       .withRecordsCommitted(syncStats.recordsCommitted)
       .withRecordsEmitted(syncStats.recordsEmitted)
-  }
 
   private fun extractCoreStats(streamSyncStatsList: List<StreamSyncStats>): Map<AirbyteStreamNameNamespacePair, SyncStats> {
     val filterStats: MutableMap<AirbyteStreamNameNamespacePair, SyncStats> = HashMap()
@@ -1247,59 +1229,56 @@ class ParallelStreamStatsTrackerTest {
   private fun buildSyncStats(
     recordsEmitted: Long,
     recordsCommitted: Long,
-  ): SyncStats {
-    return SyncStats()
+  ): SyncStats =
+    SyncStats()
       .withRecordsEmitted(recordsEmitted)
       .withBytesEmitted(recordsEmitted * MESSAGE_SIZE)
       .withRecordsCommitted(recordsCommitted)
       .withRecordsFilteredOut(0)
       .withBytesFilteredOut(0)
       .withBytesCommitted(recordsCommitted * MESSAGE_SIZE)
-  }
 
   private fun createEstimate(
     streamName: String,
     byteEstimate: Long,
     rowEstimate: Long,
-  ): AirbyteEstimateTraceMessage {
-    return AirbyteMessageUtils.createStreamEstimateMessage(
-      streamName,
-      null,
-      byteEstimate,
-      rowEstimate,
-    ).trace.estimate
-  }
+  ): AirbyteEstimateTraceMessage =
+    AirbyteMessageUtils
+      .createStreamEstimateMessage(
+        streamName,
+        null,
+        byteEstimate,
+        rowEstimate,
+      ).trace.estimate
 
   private fun createSyncEstimate(
     byteEstimate: Long,
     rowEstimate: Long,
-  ): AirbyteEstimateTraceMessage {
-    return AirbyteMessageUtils.createEstimateMessage(
-      AirbyteEstimateTraceMessage.Type.SYNC,
-      null,
-      null,
-      byteEstimate,
-      rowEstimate,
-    ).trace.estimate
-  }
+  ): AirbyteEstimateTraceMessage =
+    AirbyteMessageUtils
+      .createEstimateMessage(
+        AirbyteEstimateTraceMessage.Type.SYNC,
+        null,
+        null,
+        byteEstimate,
+        rowEstimate,
+      ).trace.estimate
 
   private fun createRecord(
     streamName: String,
     value: String,
-  ): AirbyteRecordMessage {
-    return AirbyteMessageUtils.createRecordMessage(streamName, FIELD_NAME, value).record
-  }
+  ): AirbyteRecordMessage = AirbyteMessageUtils.createRecordMessage(streamName, FIELD_NAME, value).record
 
   private fun createStreamState(
     streamName: String,
     value: Int,
-  ): AirbyteStateMessage {
-    return StateWithId.attachIdToStateMessageFromSource(
-      AirbyteMessage()
-        .withType(AirbyteMessage.Type.STATE)
-        .withState(AirbyteMessageUtils.createStreamStateMessage(streamName, value)),
-    ).state
-  }
+  ): AirbyteStateMessage =
+    StateWithId
+      .attachIdToStateMessageFromSource(
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.STATE)
+          .withState(AirbyteMessageUtils.createStreamStateMessage(streamName, value)),
+      ).state
 
   private fun createGlobalState(
     value: Int,
@@ -1309,17 +1288,19 @@ class ParallelStreamStatsTrackerTest {
     for (streamName in streamNames) {
       streamStates.add(AirbyteMessageUtils.createStreamState(streamName).withStreamState(Jsons.jsonNode(value)))
     }
-    return StateWithId.attachIdToStateMessageFromSource(
-      AirbyteMessage()
-        .withType(AirbyteMessage.Type.STATE)
-        .withState(
-          AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-            .withGlobal(
-              AirbyteGlobalState()
-                .withStreamStates(streamStates),
-            ),
-        ),
-    ).state
+    return StateWithId
+      .attachIdToStateMessageFromSource(
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.STATE)
+          .withState(
+            AirbyteStateMessage()
+              .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+              .withGlobal(
+                AirbyteGlobalState()
+                  .withStreamStates(streamStates),
+              ),
+          ),
+      ).state
   }
 
   private fun trackRecords(
