@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import okhttp3.Call;
@@ -83,7 +84,7 @@ class KeycloakTokenValidatorTest {
     when(keycloakConfiguration.getInternalRealm()).thenReturn(INTERNAL_REALM_NAME);
     tokenRoleResolver = mock(TokenRoleResolver.class);
 
-    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, tokenRoleResolver);
+    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, tokenRoleResolver, Optional.empty());
   }
 
   @Test

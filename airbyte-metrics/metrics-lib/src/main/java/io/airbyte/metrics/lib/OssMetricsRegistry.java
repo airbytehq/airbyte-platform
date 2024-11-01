@@ -108,6 +108,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.SERVER,
       "authentication_request",
       "increments when an authentication request is attempted."),
+
+  KEYCLOAK_TOKEN_VALIDATION(
+      MetricEmittingApps.SERVER,
+      "keycloak_token_validation",
+      "increments when a keycloak auth token validation occurs"),
+
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
       "a breaking schema change has been detected"),
