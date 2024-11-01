@@ -64,7 +64,7 @@ class SlimStream(
     newName: String,
     newType: FieldType? = null,
   ) {
-    if (_fields.any { it.name == newName }) {
+    if (oldName != newName && _fields.any { it.name == newName }) {
       throw IllegalStateException("Field $newName already exists in stream fields")
     }
 

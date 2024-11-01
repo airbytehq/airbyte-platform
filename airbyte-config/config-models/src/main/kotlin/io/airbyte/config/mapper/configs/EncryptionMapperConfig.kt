@@ -50,6 +50,20 @@ sealed class EncryptionConfig {
   abstract val fieldNameSuffix: String?
 }
 
+enum class AesMode {
+  CBC,
+  CFB,
+  OFB,
+  CTR,
+  GCM,
+  ECB,
+}
+
+enum class AesPadding {
+  NoPadding,
+  PKCS5Padding,
+}
+
 data class AesEncryptionConfig(
   @JsonProperty("algorithm")
   @field:NotNull
@@ -62,10 +76,10 @@ data class AesEncryptionConfig(
   override val fieldNameSuffix: String? = null,
   @JsonProperty("mode")
   @field:NotNull
-  val mode: String,
+  val mode: AesMode,
   @JsonProperty("padding")
   @field:NotNull
-  val padding: String,
+  val padding: AesPadding,
   @JsonProperty("key")
   @field:NotNull
   val key: AirbyteSecret,

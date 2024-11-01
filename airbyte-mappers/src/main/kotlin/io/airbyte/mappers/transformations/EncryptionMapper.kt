@@ -19,6 +19,8 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+class EncryptionConfigException(msg: String, cause: Throwable) : RuntimeException(msg, cause)
+
 @Singleton
 class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
   class EncryptionMapperSpec : ConfigValidatingSpec<EncryptionMapperConfig>() {
@@ -39,6 +41,9 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     config: EncryptionMapperConfig,
     slimStream: SlimStream,
   ): SlimStream {
+    // Making sure we can instantiate cipher for the given config.
+    getCipher(config.config)
+
     return slimStream
       .deepCopy()
       .apply { redefineField(config.config.targetField, getOutputFieldName(config), FieldType.STRING) }
@@ -79,14 +84,25 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     }
   }
 
+  private fun getCipher(config: EncryptionConfig): Cipher {
+    return when (config) {
+      is AesEncryptionConfig ->
+        try {
+          Cipher.getInstance("${config.algorithm}/${config.mode}/${config.padding}")
+        } catch (e: Exception) {
+          throw EncryptionConfigException("Mode ${config.mode} and padding ${config.padding} are incompatible for AES Encryption", e)
+        }
+      is RsaEncryptionConfig -> Cipher.getInstance(config.algorithm)
+    }
+  }
+
   @OptIn(ExperimentalStdlibApi::class)
   private fun encryptAES(
     data: ByteArray,
     config: AesEncryptionConfig,
   ): String {
     val key = config.key as? AirbyteSecret.Hydrated ?: throw IllegalArgumentException("key hasn't been hydrated")
-    val cipherName = "${config.algorithm}/${config.mode}/${config.padding}"
-    val cipher = Cipher.getInstance(cipherName)
+    val cipher = getCipher(config)
     val iv = ByteArray(16)
     SecureRandom().nextBytes(iv)
     cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key.value.hexToByteArray(), config.algorithm), IvParameterSpec(iv))
@@ -99,8 +115,8 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     data: ByteArray,
     config: RsaEncryptionConfig,
   ): String {
-    val cipher = Cipher.getInstance(config.algorithm)
-    val keyFactory = KeyFactory.getInstance("RSA")
+    val cipher = getCipher(config)
+    val keyFactory = KeyFactory.getInstance(config.algorithm)
     val keySpec = X509EncodedKeySpec(config.publicKey.hexToByteArray())
     cipher.init(Cipher.ENCRYPT_MODE, keyFactory.generatePublic(keySpec))
     return cipher.doFinal(data).toHexString()

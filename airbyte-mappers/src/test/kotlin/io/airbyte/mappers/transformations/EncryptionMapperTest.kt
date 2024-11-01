@@ -3,10 +3,15 @@ package io.airbyte.mappers.transformations
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.ConfiguredMapper
+import io.airbyte.config.Field
+import io.airbyte.config.FieldType
+import io.airbyte.config.MapperOperationName.ENCRYPTION
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.config.mapper.configs.AesEncryptionConfig
+import io.airbyte.config.mapper.configs.AesMode
+import io.airbyte.config.mapper.configs.AesPadding
 import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
@@ -17,6 +22,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import javax.crypto.Cipher
@@ -75,8 +82,8 @@ class EncryptionMapperTest {
       AesEncryptionConfig(
         algorithm = EncryptionConfig.ALGO_AES,
         targetField = "target",
-        mode = "mode",
-        padding = "padding",
+        mode = AesMode.CBC,
+        padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Hydrated("hydrated secret"),
       )
     val serializedConfig = Jsons.serialize(config)
@@ -91,8 +98,8 @@ class EncryptionMapperTest {
       AesEncryptionConfig(
         algorithm = EncryptionConfig.ALGO_AES,
         targetField = "target",
-        mode = "mode",
-        padding = "padding",
+        mode = AesMode.CBC,
+        padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Reference("non-hydrated secret"),
       )
     val serializedConfig = Jsons.serialize(config)
@@ -109,8 +116,8 @@ class EncryptionMapperTest {
         "algorithm": "AES",
         "targetField": "column_name",
         "fieldNameSuffix": "_suffix",
-        "mode": "some public key",
-        "padding": "some padding",
+        "mode": "CFB",
+        "padding": "PKCS5Padding",
         "key": "hydrated key"
       }
       """.trimIndent()
@@ -126,8 +133,8 @@ class EncryptionMapperTest {
         "algorithm": "AES",
         "targetField": "column_name",
         "fieldNameSuffix": "_suffix",
-        "mode": "some public key",
-        "padding": "some padding",
+        "mode": "OFB",
+        "padding": "NoPadding",
         "key": {"_secret": "my secret reference"}
       }
       """.trimIndent()
@@ -145,8 +152,8 @@ class EncryptionMapperTest {
             algorithm = "something that will fail",
             targetField = nullTestFieldName,
             fieldNameSuffix = null,
-            mode = "boom",
-            padding = "none",
+            mode = AesMode.CBC,
+            padding = AesPadding.NoPadding,
             key = AirbyteSecret.Hydrated("magic"),
           ),
       )
@@ -168,6 +175,47 @@ class EncryptionMapperTest {
   }
 
   @Test
+  fun `testing aes options`() {
+    AesMode.entries.forEach { mode ->
+      val validConfigCount: Int =
+        AesPadding.entries.map { padding ->
+          // verify that if schema rejects config for which we cannot instantiate a Cipher
+          try {
+            Cipher.getInstance("AES/$mode/$padding")
+            assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
+            return@map 1
+          } catch (e: Exception) {
+            assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
+            return@map 0
+          }
+        }.sum()
+
+      // Making sure that each mode has at least one valid config
+      assertTrue(validConfigCount > 0, "No valid config found for $mode")
+    }
+  }
+
+  private fun runTestSchemaForAES(
+    mode: AesMode,
+    padding: AesPadding,
+  ) {
+    encryptionMapper.schema(
+      EncryptionMapperConfig(
+        name = ENCRYPTION,
+        config =
+          AesEncryptionConfig(
+            algorithm = EncryptionConfig.ALGO_AES,
+            targetField = "field",
+            mode = mode,
+            padding = padding,
+            key = AirbyteSecret.Reference("some ref"),
+          ),
+      ),
+      SlimStream(listOf(Field("field", FieldType.STRING))),
+    )
+  }
+
+  @Test
   fun `testing aes encryption`() {
     val keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
     val key = keyFactory.generateSecret(PBEKeySpec("my secret".toCharArray(), "salt".toByteArray(), 65536, 256))
@@ -176,8 +224,8 @@ class EncryptionMapperTest {
         algorithm = "AES",
         targetField = "testField",
         fieldNameSuffix = "_encrypted",
-        mode = "CBC",
-        padding = "PKCS5Padding",
+        mode = AesMode.CBC,
+        padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Hydrated(key.encoded.toHexString()),
       )
     val config =
@@ -206,8 +254,8 @@ class EncryptionMapperTest {
         algorithm = "AES",
         targetField = "testInPlace",
         fieldNameSuffix = null,
-        mode = "CBC",
-        padding = "PKCS5Padding",
+        mode = AesMode.CBC,
+        padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Hydrated(key.encoded.toHexString()),
       )
     val config =

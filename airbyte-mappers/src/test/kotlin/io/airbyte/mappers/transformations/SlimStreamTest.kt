@@ -61,6 +61,12 @@ class SlimStreamTest {
   }
 
   @Test
+  fun `renaming a field should allow no-op rename since the type may change`() {
+    slimStream.redefineField(FIELD1_NAME, FIELD1_NAME)
+    assertEquals(1, slimStream.fields.count { it.name == FIELD1_NAME })
+  }
+
+  @Test
   fun `renaming a field fails if the field doesn't exist`() {
     assertThrows<IllegalStateException> {
       slimStream.redefineField("does not exist", "anything")
