@@ -175,7 +175,7 @@ internal class ApplyDefinitionsHelperTest {
     ConfigNotFoundException::class,
     io.airbyte.data.exceptions.ConfigNotFoundException::class,
   )
-  fun `a connector with release candidate should always write RC ADVS and ConnectorRollout`(
+  fun `a connector with release candidate should write RC ADVS and ConnectorRollout`(
     updateAll: Boolean,
     reImport: Boolean,
   ) {
@@ -206,6 +206,7 @@ internal class ApplyDefinitionsHelperTest {
     every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns emptyList()
 
     applyDefinitionsHelper.apply(updateAll, reImport)
 
@@ -220,6 +221,141 @@ internal class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC),
       )
     }
+    verify { connectorRolloutService.listConnectorRollouts(any(), any()) }
+    val capturedArguments = mutableListOf<ConnectorRollout>()
+
+    verify {
+      connectorRolloutService.insertConnectorRollout(capture(capturedArguments))
+    }
+
+    assertEquals(2, capturedArguments.size)
+
+    val sourceRollout = capturedArguments[0]
+    val destinationRollout = capturedArguments[1]
+
+    assertEquals(ConnectorEnumRolloutState.INITIALIZED, sourceRollout.state)
+    assertEquals(ConnectorEnumRolloutState.INITIALIZED, destinationRollout.state)
+
+    assertEquals(insertedAdvSource.versionId, sourceRollout.releaseCandidateVersionId)
+    assertEquals(insertedAdvDestination.versionId, destinationRollout.releaseCandidateVersionId)
+
+    assertEquals(insertedAdvSource.actorDefinitionId, sourceRollout.actorDefinitionId)
+    assertEquals(insertedAdvDestination.actorDefinitionId, destinationRollout.actorDefinitionId)
+
+    // The destination has no rollout config, we test that the defaults are used
+    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.maxPercentage, sourceRollout.finalTargetRolloutPct)
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.maxPercentage, destinationRollout.finalTargetRolloutPct)
+    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.initialPercentage, sourceRollout.initialRolloutPct)
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.initialPercentage, destinationRollout.initialRolloutPct)
+    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.advanceDelayMinutes, sourceRollout.maxStepWaitTimeMins)
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.advanceDelayMinutes, destinationRollout.maxStepWaitTimeMins)
+
+    assertEquals(false, sourceRollout.hasBreakingChanges)
+    assertEquals(false, destinationRollout.hasBreakingChanges)
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidInsertStates")
+  @Throws(
+    IOException::class,
+    JsonValidationException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `applyReleaseCandidates should not write ConnectorRollout if a rollout exists in a non-canceled state`(state: ConnectorEnumRolloutState) {
+    mockSeedInitialDefinitions()
+    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
+    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
+
+    val fakeAdvId = UUID.randomUUID()
+    val fakeInitialAdvId = UUID.randomUUID()
+    val insertedAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeInitialAdvId)
+    val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeInitialAdvId)
+
+    every {
+      actorDefinitionService.writeActorDefinitionVersion(any())
+    } returns
+      insertedAdvSource andThen insertedAdvDestination
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(ConnectorRollout().withState(state))
+
+    val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
+    val rcDestinationDefinitions = listOf(DESTINATION_S3_RC)
+
+    applyDefinitionsHelper.applyReleaseCandidates(rcSourceDefinitions)
+    applyDefinitionsHelper.applyReleaseCandidates(rcDestinationDefinitions)
+
+    verify {
+      actorDefinitionService.writeActorDefinitionVersion(
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC),
+      )
+    }
+
+    verify {
+      actorDefinitionService.writeActorDefinitionVersion(
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC),
+      )
+    }
+
+    verify { connectorRolloutService.listConnectorRollouts(any(), any()) }
+
+    verify(exactly = 0) {
+      connectorRolloutService.insertConnectorRollout(any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("validInsertStates")
+  @Throws(
+    IOException::class,
+    JsonValidationException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `applyReleaseCandidates should write ConnectorRollout if a rollout exists in canceled state`(state: ConnectorEnumRolloutState) {
+    mockSeedInitialDefinitions()
+
+    val fakeAdvId = UUID.randomUUID()
+    val fakeInitialAdvId = UUID.randomUUID()
+    val insertedAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeInitialAdvId)
+    val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeInitialAdvId)
+
+    every {
+      actorDefinitionService.writeActorDefinitionVersion(any())
+    } returns
+      insertedAdvSource andThen insertedAdvDestination
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(ConnectorRollout().withState(state))
+    every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout().withState(state)
+
+    val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
+    val rcDestinationDefinitions = listOf(DESTINATION_S3_RC)
+
+    applyDefinitionsHelper.applyReleaseCandidates(rcSourceDefinitions)
+    applyDefinitionsHelper.applyReleaseCandidates(rcDestinationDefinitions)
+
+    verify {
+      actorDefinitionService.writeActorDefinitionVersion(
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC),
+      )
+    }
+
+    verify {
+      actorDefinitionService.writeActorDefinitionVersion(
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC),
+      )
+    }
+
+    verify { connectorRolloutService.listConnectorRollouts(any(), any()) }
+
     val capturedArguments = mutableListOf<ConnectorRollout>()
 
     verify {
@@ -861,5 +997,11 @@ internal class ApplyDefinitionsHelperTest {
         Arguments.of(false, false),
         Arguments.of(false, true),
       )
+
+    @JvmStatic
+    fun validInsertStates() = listOf(ConnectorEnumRolloutState.CANCELED)
+
+    @JvmStatic
+    fun invalidInsertStates() = ConnectorEnumRolloutState.entries.filter { it != ConnectorEnumRolloutState.CANCELED }
   }
 }

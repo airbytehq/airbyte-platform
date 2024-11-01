@@ -3,11 +3,13 @@
  */
 package io.airbyte.config.init
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
+import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.StandardDestinationDefinition
@@ -198,7 +200,8 @@ class ApplyDefinitionsHelper(
     applyReleaseCandidates(rcDefinitions)
   }
 
-  private fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
+  @VisibleForTesting
+  fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
     for (rcDef in rcDefinitions) {
       val rcAdv =
         when (rcDef) {
@@ -224,6 +227,15 @@ class ApplyDefinitionsHelper(
             is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.getOrNull())
             else -> throw IllegalArgumentException("Unsupported type: ${rcDef!!::class.java}")
           }
+        val existingRollout =
+          connectorRolloutService.listConnectorRollouts(
+            connectorRollout.actorDefinitionId,
+            connectorRollout.releaseCandidateVersionId,
+          )
+        if (existingRollout.isNotEmpty() && existingRollout.any { it.state != ConnectorEnumRolloutState.CANCELED }) {
+          log.info("Release candidate rollout configuration already exists for {}:{}", insertedAdv.dockerRepository, insertedAdv.dockerImageTag)
+          continue
+        }
         connectorRolloutService.insertConnectorRollout(connectorRollout)
         log.info(
           "Inserted release candidate rollout configuration for {}:{}; rcActorDefinitionVersion={} defaultActorDefinitionVersion={}",
