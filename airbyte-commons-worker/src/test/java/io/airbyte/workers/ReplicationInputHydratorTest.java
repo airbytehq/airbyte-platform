@@ -181,6 +181,7 @@ class ReplicationInputHydratorTest {
       Jsons.emptyObject(),
       "name",
       "destinationName",
+      1L,
       "icon",
       false,
       null,

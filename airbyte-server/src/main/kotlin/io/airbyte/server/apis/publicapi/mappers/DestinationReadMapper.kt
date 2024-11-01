@@ -25,6 +25,7 @@ object DestinationReadMapper {
       workspaceId = destinationRead.workspaceId.toString(),
       configuration = destinationRead.connectionConfiguration,
       definitionId = destinationRead.destinationDefinitionId.toString(),
+      createdAt = destinationRead.createdAt,
     )
   }
 }

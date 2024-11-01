@@ -222,7 +222,8 @@ public class DbConverter {
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
-        .withName(record.get(ACTOR.NAME));
+        .withName(record.get(ACTOR.NAME))
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
   }
 
   /**
@@ -238,7 +239,8 @@ public class DbConverter {
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
-        .withName(record.get(ACTOR.NAME));
+        .withName(record.get(ACTOR.NAME))
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
   }
 
   /**

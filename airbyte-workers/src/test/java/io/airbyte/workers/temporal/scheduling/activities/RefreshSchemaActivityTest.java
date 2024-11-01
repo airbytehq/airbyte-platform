@@ -99,7 +99,8 @@ class RefreshSchemaActivityTest {
         .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
             null, null, null, null, null, null));
     when(mSourceApi.getSource(new SourceIdRequestBody(SOURCE_ID))).thenReturn(
-        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mSourceApi.discoverSchemaForSource(
         new SourceDiscoverSchemaRequestBody(SOURCE_ID, CONNECTION_ID, true, true, WorkloadPriority.DEFAULT)))
             .thenReturn(
@@ -139,7 +140,8 @@ class RefreshSchemaActivityTest {
 
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
     when(mSourceApi.getSource(any())).thenReturn(
-        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
 
     Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
@@ -151,7 +153,8 @@ class RefreshSchemaActivityTest {
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt(twelveHoursAgo, null);
 
     when(mSourceApi.getSource(any())).thenReturn(
-        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
 
@@ -164,7 +167,8 @@ class RefreshSchemaActivityTest {
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt(twelveHoursAgo, null);
 
     when(mSourceApi.getSource(any())).thenReturn(
-        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(10);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
 
@@ -194,7 +198,8 @@ class RefreshSchemaActivityTest {
     final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
 
     when(mSourceApi.getSource(new SourceIdRequestBody(sourceId))).thenReturn(
-        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(false);
 
     refreshSchemaActivity.refreshSchema(sourceId, connectionId);
@@ -212,7 +217,8 @@ class RefreshSchemaActivityTest {
     final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
 
     when(mSourceApi.getSource(new SourceIdRequestBody(sourceId))).thenReturn(
-        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", null, null, null, null, null));
+        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
+            null));
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
         .thenReturn(new WorkspaceRead(workspaceId, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,

@@ -17,6 +17,7 @@ class SourceReadMapperTest {
         this.sourceDefinitionId = UUID.randomUUID()
         this.workspaceId = UUID.randomUUID()
         this.connectionConfiguration = Jsons.deserialize("{}")
+        this.createdAt = 1L
       }
 
     // When
@@ -28,5 +29,7 @@ class SourceReadMapperTest {
     assertEquals(DEFINITION_ID_TO_SOURCE_NAME.getOrDefault(sourceRead.sourceDefinitionId, ""), sourceResponse.sourceType)
     assertEquals(sourceRead.workspaceId.toString(), sourceResponse.workspaceId)
     assertEquals(sourceRead.connectionConfiguration, sourceResponse.configuration)
+    assertEquals(sourceRead.sourceDefinitionId.toString(), sourceResponse.definitionId)
+    assertEquals(sourceRead.createdAt, sourceResponse.createdAt)
   }
 }

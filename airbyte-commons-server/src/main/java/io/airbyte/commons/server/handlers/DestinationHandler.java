@@ -433,7 +433,8 @@ public class DestinationHandler {
         .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
+        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
+        .createdAt(destinationConnection.getCreatedAt());
   }
 
   protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,

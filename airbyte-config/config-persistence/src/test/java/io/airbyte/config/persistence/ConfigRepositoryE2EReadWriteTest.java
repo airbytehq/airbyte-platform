@@ -224,11 +224,18 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<SourceConnection> sourceConnections = sourceService.listSourcesForDefinition(
         sourceDefinitionId);
 
-    assertThat(destinationConnections)
+    final List<DestinationConnection> nullCreatedAtDestinationConnections = destinationConnections.stream()
+        .map(destinationConnection -> destinationConnection.withCreatedAt(null)).toList();
+
+    final List<SourceConnection> nullCreatedAtSourceConnections = sourceConnections.stream()
+        .map(sourceConnection -> sourceConnection.withCreatedAt(null)).toList();
+
+    assertThat(nullCreatedAtDestinationConnections)
         .containsExactlyElementsOf(MockData.destinationConnections().stream().filter(d -> d.getDestinationDefinitionId().equals(
             destinationDefinitionId) && !d.getTombstone()).collect(Collectors.toList()));
-    assertThat(sourceConnections).containsExactlyElementsOf(MockData.sourceConnections().stream().filter(d -> d.getSourceDefinitionId().equals(
-        sourceDefinitionId) && !d.getTombstone()).collect(Collectors.toList()));
+    assertThat(nullCreatedAtSourceConnections)
+        .containsExactlyElementsOf(MockData.sourceConnections().stream().filter(d -> d.getSourceDefinitionId().equals(
+            sourceDefinitionId) && !d.getTombstone()).collect(Collectors.toList()));
   }
 
   @Test
@@ -553,7 +560,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<SourceConnection> expectedSources = MockData.sourceConnections().stream()
         .filter(source -> source.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
     final List<SourceConnection> sources = sourceService.listWorkspaceSourceConnection(workspaceId);
-    assertThat(sources).hasSameElementsAs(expectedSources);
+    final List<SourceConnection> nullCreatedAtSources = sources.stream().map(sourceConnection -> sourceConnection.withCreatedAt(null)).toList();
+    assertThat(nullCreatedAtSources).hasSameElementsAs(expectedSources);
   }
 
   @Test
@@ -562,7 +570,9 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<DestinationConnection> expectedDestinations = MockData.destinationConnections().stream()
         .filter(destination -> destination.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
     final List<DestinationConnection> destinations = destinationService.listWorkspaceDestinationConnection(workspaceId);
-    assertThat(destinations).hasSameElementsAs(expectedDestinations);
+    final List<DestinationConnection> nullCreatedAtDestinations =
+        destinations.stream().map(destinationConnection -> destinationConnection.withCreatedAt(null)).toList();
+    assertThat(nullCreatedAtDestinations).hasSameElementsAs(expectedDestinations);
   }
 
   @Test
@@ -771,19 +781,33 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         new SourceAndDefinition(MockData.sourceConnections().get(1), MockData.standardSourceDefinitions().get(1)));
 
     final List<SourceAndDefinition> actual = sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds);
-    assertThat(actual).hasSameElementsAs(expected);
+    final List<SourceAndDefinition> result = actual.stream().map(sourceAndDefinition -> {
+      final SourceAndDefinition copy = new SourceAndDefinition(sourceAndDefinition.source(), sourceAndDefinition.definition());
+      copy.source().setCreatedAt(null);
+      return copy;
+    }).toList();
+
+    assertThat(result).hasSameElementsAs(expected);
   }
 
   @Test
   void testGetDestinationAndDefinitionsFromDestinationIds() throws IOException {
     final List<UUID> destinationIds = MockData.destinationConnections().subList(0, 2).stream().map(DestinationConnection::getDestinationId).toList();
 
+    final List<DestinationAndDefinition> actual = destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds);
+
     final List<DestinationAndDefinition> expected = List.of(
         new DestinationAndDefinition(MockData.destinationConnections().get(0), MockData.standardDestinationDefinitions().get(0)),
         new DestinationAndDefinition(MockData.destinationConnections().get(1), MockData.standardDestinationDefinitions().get(1)));
 
-    final List<DestinationAndDefinition> actual = destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds);
-    assertThat(actual).hasSameElementsAs(expected);
+    final List<DestinationAndDefinition> result = actual.stream().map(destinationAndDefinition -> {
+      final DestinationAndDefinition copy =
+          new DestinationAndDefinition(destinationAndDefinition.destination(), destinationAndDefinition.definition());
+      copy.destination().setCreatedAt(null);
+      return copy;
+    }).toList();
+
+    assertThat(result).hasSameElementsAs(expected);
   }
 
   @Test

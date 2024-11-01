@@ -94,6 +94,7 @@ object ConnectionReadMapper {
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,
+      createdAt = connectionRead.createdAt,
     )
   }
 

@@ -525,7 +525,8 @@ public class SourceHandler {
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
+        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
+        .createdAt(sourceConnection.getCreatedAt());
   }
 
   protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {

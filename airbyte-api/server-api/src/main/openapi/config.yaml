@@ -9262,6 +9262,7 @@ components:
         - connectionConfiguration
         - name
         - sourceName
+        - createdAt
       properties:
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
@@ -9285,6 +9286,9 @@ components:
           $ref: "#/components/schemas/SupportState"
         status: # This is an optional field that could be used in the UI to either show status or filter actors by status.
           $ref: "#/components/schemas/ActorStatus"
+        createdAt:
+          type: integer
+          format: int64
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string
@@ -9656,6 +9660,7 @@ components:
         - connectionConfiguration
         - name
         - destinationName
+        - createdAt
       properties:
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
@@ -9679,6 +9684,9 @@ components:
           $ref: "#/components/schemas/SupportState"
         status: # This is an optional field that could be used (e.g. "listing destinations" endpoint) to support FE UI showing/filtering the destinations with status.
           $ref: "#/components/schemas/ActorStatus"
+        createdAt:
+          type: integer
+          format: int64
     DestinationSnippetRead:
       type: object
       required:
@@ -14615,6 +14623,7 @@ components:
         - schedule
         - dataResidency
         - configurations
+        - createdAt
       properties:
         connectionId:
           format: UUID
@@ -14646,6 +14655,9 @@ components:
           type: string
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+        createdAt:
+          format: int64
+          type: integer
       x-sdk-entity: Connection
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -14755,6 +14767,7 @@ components:
         - definitionId
         - workspaceId
         - configuration
+        - createdAt
       properties:
         destinationId:
           format: UUID
@@ -14771,6 +14784,9 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        createdAt:
+          format: int64
+          type: integer
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -14789,6 +14805,7 @@ components:
         - workspaceId
         - configuration
         - definitionId
+        - createdAt
       properties:
         sourceId:
           format: UUID
@@ -14805,6 +14822,9 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        createdAt:
+          format: int64
+          type: integer
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
