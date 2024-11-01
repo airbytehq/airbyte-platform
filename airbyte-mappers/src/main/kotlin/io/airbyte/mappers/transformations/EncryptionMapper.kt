@@ -2,6 +2,7 @@ package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName
@@ -83,11 +84,12 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     data: ByteArray,
     config: AesEncryptionConfig,
   ): String {
+    val key = config.key as? AirbyteSecret.Hydrated ?: throw IllegalArgumentException("key hasn't been hydrated")
     val cipherName = "${config.algorithm}/${config.mode}/${config.padding}"
     val cipher = Cipher.getInstance(cipherName)
     val iv = ByteArray(16)
     SecureRandom().nextBytes(iv)
-    cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(config.key.hexToByteArray(), config.algorithm), IvParameterSpec(iv))
+    cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key.value.hexToByteArray(), config.algorithm), IvParameterSpec(iv))
     val encryptedData = cipher.doFinal(data)
     return (iv + encryptedData).toHexString()
   }

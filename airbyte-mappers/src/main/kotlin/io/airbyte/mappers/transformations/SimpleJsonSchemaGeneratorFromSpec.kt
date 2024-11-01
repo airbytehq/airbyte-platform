@@ -15,8 +15,8 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder
 import com.github.victools.jsonschema.generator.SchemaVersion
 import com.github.victools.jsonschema.generator.TypeAttributeOverrideV2
 import com.github.victools.jsonschema.generator.TypeScope
+import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.JsonsSchemaConstants
-import io.airbyte.config.mapper.configs.AirbyteSecret
 import io.airbyte.config.mapper.configs.NotNull
 import io.airbyte.config.mapper.configs.SchemaConstant
 import io.airbyte.config.mapper.configs.SchemaDefault
@@ -55,6 +55,14 @@ class JsonSubTypesOverride : TypeAttributeOverrideV2 {
     typeScope: TypeScope,
     schemaGenerationContext: SchemaGenerationContext,
   ) {
+    if (typeScope.type.erasedType == AirbyteSecret::class.java) {
+      node.apply {
+        removeAll()
+        set<JsonNode>("airbyte_secret", schemaGenerationContext.generatorConfig.objectMapper.convertValue(true, JsonNode::class.java))
+      }
+      return
+    }
+
     val jsonSubTypesAnnotation = typeScope.type.erasedType.getAnnotation(JsonSubTypes::class.java)
     if (jsonSubTypesAnnotation != null) {
       val generator = SchemaGenerator(schemaGenerationContext.generatorConfig, schemaGenerationContext.typeContext)
@@ -92,17 +100,7 @@ class SimplePropertyDefProvider : CustomPropertyDefinitionProvider<FieldScope> {
     setDefault(fieldScope, node)
     setFormat(fieldScope, node)
     setExamples(fieldScope, objectMapper, node)
-    setAirbyteSecret(fieldScope, node)
     return CustomPropertyDefinition(node)
-  }
-
-  private fun setAirbyteSecret(
-    fieldScope: FieldScope,
-    objectNode: ObjectNode,
-  ) {
-    fieldScope.getAnnotation(AirbyteSecret::class.java)?.apply {
-      objectNode.put("airbyte_secret", true)
-    }
   }
 
   private fun setFormat(

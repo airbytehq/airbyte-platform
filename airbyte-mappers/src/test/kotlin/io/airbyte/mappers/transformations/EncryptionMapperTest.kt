@@ -1,13 +1,17 @@
 package io.airbyte.mappers.transformations
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteSecret
+import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.config.mapper.configs.AesEncryptionConfig
+import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
 import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -21,6 +25,8 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+
+private val logger = KotlinLogging.logger {}
 
 @OptIn(ExperimentalStdlibApi::class)
 class EncryptionMapperTest {
@@ -40,6 +46,7 @@ class EncryptionMapperTest {
   fun `test spec`() {
     val jsonString = Jsons.toPrettyString(encryptionMapper.spec().jsonSchema())
     // spot checking some values
+    logger.info { jsonString }
 
     // making sure required fields are defined
     assertTrue(jsonString.contains("oneOf"))
@@ -50,6 +57,82 @@ class EncryptionMapperTest {
     // some algo names that should appear as constants
     assertTrue(jsonString.contains("AES"))
     assertTrue(jsonString.contains("RSA"))
+  }
+
+  @Test
+  fun `test spec secret definition`() {
+    val jsonSchema = encryptionMapper.spec().jsonSchema()
+    assertTrue(
+      jsonSchema["properties"]["config"]["oneOf"].any {
+        it["properties"]["key"]["airbyte_secret"].asText() == "true"
+      },
+    )
+  }
+
+  @Test
+  fun `test hydrated secret serde`() {
+    val config =
+      AesEncryptionConfig(
+        algorithm = EncryptionConfig.ALGO_AES,
+        targetField = "target",
+        mode = "mode",
+        padding = "padding",
+        key = AirbyteSecret.Hydrated("hydrated secret"),
+      )
+    val serializedConfig = Jsons.serialize(config)
+    logger.info { serializedConfig }
+    val result = Jsons.deserialize(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
+    assertEquals(AirbyteSecret.Hydrated("hydrated secret"), result.key)
+  }
+
+  @Test
+  fun `test non-hydrated secret serde`() {
+    val config =
+      AesEncryptionConfig(
+        algorithm = EncryptionConfig.ALGO_AES,
+        targetField = "target",
+        mode = "mode",
+        padding = "padding",
+        key = AirbyteSecret.Reference("non-hydrated secret"),
+      )
+    val serializedConfig = Jsons.serialize(config)
+    logger.info { serializedConfig }
+    val result = Jsons.deserialize(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
+    assertEquals(AirbyteSecret.Reference("non-hydrated secret"), result.key)
+  }
+
+  @Test
+  fun `test hydrated secret deserialization`() {
+    val config =
+      """
+      {
+        "algorithm": "AES",
+        "targetField": "column_name",
+        "fieldNameSuffix": "_suffix",
+        "mode": "some public key",
+        "padding": "some padding",
+        "key": "hydrated key"
+      }
+      """.trimIndent()
+    val encryptionConfig = encryptionMapper.spec().deserialize(configuredMapper = ConfiguredMapper("encryption", Jsons.deserialize(config)))
+    assertEquals("hydrated key", ((encryptionConfig.config as AesEncryptionConfig).key as AirbyteSecret.Hydrated).value)
+  }
+
+  @Test
+  fun `test non-hydrated secret deserialization`() {
+    val config =
+      """
+      {
+        "algorithm": "AES",
+        "targetField": "column_name",
+        "fieldNameSuffix": "_suffix",
+        "mode": "some public key",
+        "padding": "some padding",
+        "key": {"_secret": "my secret reference"}
+      }
+      """.trimIndent()
+    val encryptionConfig = encryptionMapper.spec().deserialize(configuredMapper = ConfiguredMapper("encryption", Jsons.deserialize(config)))
+    assertEquals("my secret reference", ((encryptionConfig.config as AesEncryptionConfig).key as AirbyteSecret.Reference).reference)
   }
 
   @Test
@@ -64,7 +147,7 @@ class EncryptionMapperTest {
             fieldNameSuffix = null,
             mode = "boom",
             padding = "none",
-            key = "magic",
+            key = AirbyteSecret.Hydrated("magic"),
           ),
       )
 
@@ -95,7 +178,7 @@ class EncryptionMapperTest {
         fieldNameSuffix = "_encrypted",
         mode = "CBC",
         padding = "PKCS5Padding",
-        key = key.encoded.toHexString(),
+        key = AirbyteSecret.Hydrated(key.encoded.toHexString()),
       )
     val config =
       EncryptionMapperConfig(
@@ -125,7 +208,7 @@ class EncryptionMapperTest {
         fieldNameSuffix = null,
         mode = "CBC",
         padding = "PKCS5Padding",
-        key = key.encoded.toHexString(),
+        key = AirbyteSecret.Hydrated(key.encoded.toHexString()),
       )
     val config =
       EncryptionMapperConfig(

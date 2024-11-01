@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
 
@@ -58,7 +59,7 @@ data class AesEncryptionConfig(
   @field:NotNull
   override val targetField: String,
   @JsonProperty("fieldNameSuffix")
-  override val fieldNameSuffix: String?,
+  override val fieldNameSuffix: String? = null,
   @JsonProperty("mode")
   @field:NotNull
   val mode: String,
@@ -67,8 +68,7 @@ data class AesEncryptionConfig(
   val padding: String,
   @JsonProperty("key")
   @field:NotNull
-  @field:AirbyteSecret
-  val key: String,
+  val key: AirbyteSecret,
 ) : EncryptionConfig()
 
 data class RsaEncryptionConfig(
