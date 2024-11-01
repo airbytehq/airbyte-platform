@@ -80,11 +80,11 @@ class KubePodLauncher(
           kubernetesClient
             .resource(pod)
             .waitUntilCondition(
-              { p: Pod ->
-                (
+              { p: Pod? ->
+                p?.let {
                   p.status.initContainerStatuses.isNotEmpty() &&
                     p.status.initContainerStatuses[0].state.terminated != null
-                )
+                } ?: false
               },
               waitDuration.toMinutes(),
               TimeUnit.MINUTES,
