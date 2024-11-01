@@ -4,6 +4,7 @@
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.string.Strings
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -28,6 +29,7 @@ import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
+import kotlin.jvm.optionals.getOrDefault
 
 /**
  * Updates the support state of actor definition versions according to breaking changes.
@@ -113,6 +115,12 @@ class SupportStateUpdater(
       applicableBreakingChanges.stream()
         .filter { breakingChange: ActorDefinitionBreakingChange -> LocalDate.parse(breakingChange.upgradeDeadline).isAfter(referenceDate) }
         .max(Comparator.comparing { obj: ActorDefinitionBreakingChange -> obj.upgradeDeadline })
+    log.info(
+      "CurrentDefaultVersion: {}, LatestStableBreakingChange: {}, LatestFutureBreakingChange: {}",
+      currentDefaultVersion?.toString(),
+      latestStaleBreakingChange.map { it.version }.getOrDefault("<None>"),
+      latestFutureBreakingChange.map { it.version }.getOrDefault("<None>"),
+    )
 
     val versionIdsToUpdateByState =
       mapOf(
@@ -160,6 +168,7 @@ class SupportStateUpdater(
     val notificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
 
     for (sourceDefinition in sourceDefinitions) {
+      log.info("Processing source definition {} {}", sourceDefinition.sourceDefinitionId, sourceDefinition.name)
       val actorDefinitionVersions =
         actorDefinitionService.listActorDefinitionVersionsForDefinition(sourceDefinition.sourceDefinitionId)
       val currentDefaultVersion = getVersionTag(actorDefinitionVersions, sourceDefinition.defaultVersionId)
@@ -168,6 +177,24 @@ class SupportStateUpdater(
         getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions)
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate)
 
+      log.info(
+        "Supported versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.supportedVersionIds, ","),
+      )
+      log.info(
+        "Deprecated versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.deprecatedVersionIds, ","),
+      )
+      log.info(
+        "Unsupported versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.unsupportedVersionIds, ","),
+      )
       if (shouldNotifyBreakingChanges() && supportStateUpdate.deprecatedVersionIds.isNotEmpty()) {
         val latestBreakingChange =
           BreakingChangesHelper.getLastApplicableBreakingChange(
