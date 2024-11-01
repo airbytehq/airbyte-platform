@@ -272,6 +272,13 @@ data class UserAgent(override val key: String) : Context {
   override val kind: String = "user-agent"
 }
 
+data class RequestId(override val key: String) : Context {
+  override val kind: String = "request-id"
+
+  // secondary constructor
+  constructor(key: UUID) : this(key = key.toString())
+}
+
 // This is aimed to be used with the EnvFeatureFlag
 data object Empty : Context {
   override val kind: String = "empty"
