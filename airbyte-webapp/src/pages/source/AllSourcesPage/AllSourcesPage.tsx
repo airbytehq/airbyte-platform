@@ -5,14 +5,15 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { ImplementationTable } from "components/EntityTable";
 import { filterBySearchEntityTableData, getEntityTableData, statusFilterOptions } from "components/EntityTable/utils";
 import { HeadTitle } from "components/HeadTitle";
-import { MainPageWithScroll } from "components/MainPageWithScroll";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ListBox } from "components/ui/ListBox";
+import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
+import { ScrollParent } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
@@ -46,11 +47,11 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
   );
 
   return sources.length ? (
-    <MainPageWithScroll
-      softScrollEdge={false}
-      headTitle={<HeadTitle titles={[{ id: "admin.sources" }]} />}
-      pageTitle={
+    <>
+      <HeadTitle titles={[{ id: "admin.sources" }]} />
+      <PageGridContainer>
         <PageHeader
+          className={styles.pageHeader}
           leftComponent={
             <Heading as="h1" size="lg">
               <FormattedMessage id="sidebar.sources" />
@@ -62,36 +63,47 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
             </Button>
           }
         />
-      }
-    >
-      <Card noPadding className={styles.card}>
-        <Box p="lg">
-          <FlexContainer justifyContent="flex-start" direction="column">
-            <FlexItem grow>
-              <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
-            </FlexItem>
-            <FlexContainer gap="sm" alignItems="center">
-              <FlexItem>
-                <ListBox
-                  optionTextAs="span"
-                  options={statusFilterOptions}
-                  selectedValue={status}
-                  onSelect={(value) => setFilterValue("status", value)}
+        <ScrollParent props={{ className: styles.pageBody }}>
+          <Box m="xl" mt="none">
+            <Card noPadding className={styles.card}>
+              <div className={styles.filters}>
+                <Box p="lg">
+                  <FlexContainer justifyContent="flex-start" direction="column">
+                    <FlexItem grow>
+                      <SearchInput
+                        value={search}
+                        onChange={({ target: { value } }) => setFilterValue("search", value)}
+                      />
+                    </FlexItem>
+                    <FlexContainer gap="sm" alignItems="center">
+                      <FlexItem>
+                        <ListBox
+                          optionTextAs="span"
+                          options={statusFilterOptions}
+                          selectedValue={status}
+                          onSelect={(value) => setFilterValue("status", value)}
+                        />
+                      </FlexItem>
+                    </FlexContainer>
+                  </FlexContainer>
+                </Box>
+              </div>
+              <div className={styles.table}>
+                <ImplementationTable
+                  data={filteredSources}
+                  entity="source"
+                  emptyPlaceholder={
+                    <Text bold color="grey" align="center">
+                      <FormattedMessage id="tables.sources.filters.empty" />
+                    </Text>
+                  }
                 />
-              </FlexItem>
-            </FlexContainer>
-          </FlexContainer>
-        </Box>
-        <ImplementationTable data={filteredSources} entity="source" />
-        {filteredSources.length === 0 && (
-          <Box pt="xl" pb="lg">
-            <Text bold color="grey" align="center">
-              <FormattedMessage id="tables.sources.filters.empty" />
-            </Text>
+              </div>
+            </Card>
           </Box>
-        )}
-      </Card>
-    </MainPageWithScroll>
+        </ScrollParent>
+      </PageGridContainer>
+    </>
   ) : (
     <Navigate to={SourcePaths.SelectSourceNew} />
   );

@@ -1,15 +1,8 @@
-.container {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
-  height: 100%;
-  grid-template-areas:
-    "page-header"
-    "page-content";
-}
+@use "scss/variables";
 
 .pageHeader {
   grid-area: page-header;
+  padding-bottom: variables.$spacing-lg;
 }
 
 .pageBody {

@@ -9,6 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 
@@ -38,7 +39,7 @@ export const AllConnectionsPage: React.FC = () => {
       <>
         <HeadTitle titles={[{ id: "sidebar.connections" }]} />
         {hasConnections ? (
-          <div className={styles.container}>
+          <PageGridContainer>
             <PageHeader
               className={styles.pageHeader}
               leftComponent={
@@ -71,11 +72,11 @@ export const AllConnectionsPage: React.FC = () => {
               }
             />
             <ScrollParent props={{ className: styles.pageBody }}>
-              <Box m="xl">
+              <Box m="xl" mt="none">
                 <ConnectionsListCard />
               </Box>
             </ScrollParent>
-          </div>
+          </PageGridContainer>
         ) : (
           <ConnectionOnboarding onCreate={onCreateClick} />
         )}

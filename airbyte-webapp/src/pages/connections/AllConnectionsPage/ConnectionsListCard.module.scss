@@ -16,6 +16,9 @@ $filters-fixed-height: 108px;
   z-index: z-indices.$tableStickyHeader;
   background-color: colors.$foreground;
   height: $filters-fixed-height;
+  min-width: variables.$min-width-wide-table-container;
+  border-top-left-radius: variables.$border-radius-lg;
+  border-top-right-radius: variables.$border-radius-lg;
 }
 
 .table {

@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import React from "react";
+import React, { useContext } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Icon } from "components/ui/Icon";
@@ -18,13 +18,15 @@ import { EntityNameCell } from "./components/EntityNameCell";
 import { LastSync } from "./components/LastSync";
 import styles from "./ImplementationTable.module.scss";
 import { EntityTableDataItem } from "./types";
+import { ScrollParentContext } from "../ui/ScrollParent";
 
 interface ImplementationTableProps {
   data: EntityTableDataItem[];
   entity: "source" | "destination";
+  emptyPlaceholder?: React.ReactElement;
 }
 
-const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity }) => {
+const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity, emptyPlaceholder }) => {
   const columnHelper = createColumnHelper<EntityTableDataItem>();
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
@@ -147,6 +149,8 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
     [columnHelper, entity, connectorBreakingChangeDeadlinesEnabled]
   );
 
+  const customScrollParent = useContext(ScrollParentContext);
+
   return (
     <Table
       rowId="entityId"
@@ -155,6 +159,11 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
       testId={`${entity}sTable`}
       initialSortBy={[{ id: "connectorName", desc: false }]}
       variant="white"
+      customEmptyPlaceholder={emptyPlaceholder}
+      virtualized={!!customScrollParent}
+      virtualizedProps={{
+        customScrollParent: customScrollParent ?? undefined,
+      }}
     />
   );
 };
