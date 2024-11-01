@@ -47,6 +47,11 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
+  useDescribeCronExpressionFetchQuery: () => async () => ({
+    isValid: true,
+    cronDescription: "every hour",
+    nextExecutions: [],
+  }),
 }));
 
 jest.mock("core/utils/rbac", () => ({

@@ -108,7 +108,6 @@ public class ConnectionScheduleHelper {
           parsedCronExpression.setTimeZone(timeZone);
         } catch (final ParseException e) {
           throw new CronValidationInvalidExpressionProblem(new ProblemCronExpressionData()
-              .connectionId(connectionId)
               .cronExpression(cronExpression));
         } catch (final IllegalArgumentException e) {
           throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()

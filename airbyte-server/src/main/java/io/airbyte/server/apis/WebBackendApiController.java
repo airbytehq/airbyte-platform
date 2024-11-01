@@ -21,6 +21,8 @@ import io.airbyte.api.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
+import io.airbyte.api.model.generated.WebBackendCronExpressionDescription;
+import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
@@ -32,6 +34,7 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.metrics.lib.TracingHelper;
+import io.airbyte.server.handlers.WebBackendCronExpressionHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -47,15 +50,18 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendConnectionsHandler webBackendConnectionsHandler;
   private final WebBackendGeographiesHandler webBackendGeographiesHandler;
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
+  private final WebBackendCronExpressionHandler webBackendCronExpressionHandler;
   private final ApiAuthorizationHelper apiAuthorizationHelper;
 
   public WebBackendApiController(final WebBackendConnectionsHandler webBackendConnectionsHandler,
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
                                  final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
+                                 final WebBackendCronExpressionHandler webBackendCronExpressionHandler,
                                  final ApiAuthorizationHelper apiAuthorizationHelper) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
+    this.webBackendCronExpressionHandler = webBackendCronExpressionHandler;
     this.apiAuthorizationHelper = apiAuthorizationHelper;
   }
 
@@ -148,6 +154,14 @@ public class WebBackendApiController implements WebBackendApi {
       TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());
       return webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate);
     });
+  }
+
+  @Post("/describe_cron_expression")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WebBackendCronExpressionDescription webBackendDescribeCronExpression(@Body final WebBackendDescribeCronExpressionRequestBody body) {
+    return ApiHelper.execute(() -> webBackendCronExpressionHandler.describeCronExpression(body));
   }
 
 }

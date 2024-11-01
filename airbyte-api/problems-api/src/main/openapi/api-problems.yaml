@@ -692,12 +692,11 @@ components:
     ProblemCronExpressionData:
       type: object
       required:
-        - connectionId
         - cronExpression
       properties:
-        connectionId:
-          type: string
         cronExpression:
+          type: string
+        validationErrorMessage:
           type: string
     ProblemCronTimezoneData:
       type: object

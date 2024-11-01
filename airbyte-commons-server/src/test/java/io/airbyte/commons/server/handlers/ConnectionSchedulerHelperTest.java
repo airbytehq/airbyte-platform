@@ -106,9 +106,8 @@ class ConnectionSchedulerHelperTest {
     /*
      * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of
      * supported timezones is copied from
-     * oss/airbyte-webapp/src/components/connection/ConnectionForm/ScheduleFormField/
-     * availableCronTimeZones.json. If this test fails, then THAT file must be updated with the new
-     * timezones.
+     * oss/airbyte-webapp/src/core/utils/cron/availableCronTimeZones.json If this test fails, then THAT
+     * file must be updated with the new timezones.
      */
     final String[] timezoneStrings = {
       "Africa/Abidjan",

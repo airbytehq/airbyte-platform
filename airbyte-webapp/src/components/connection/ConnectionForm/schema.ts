@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
+import { useDescribeCronExpressionFetchQuery } from "core/api";
 import {
   AirbyteStreamAndConfiguration,
   AirbyteStream,
@@ -9,62 +10,96 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   DestinationSyncMode,
-  Geography,
   NamespaceDefinitionType,
-  NonBreakingChangesPreference,
   SyncMode,
-  SchemaChangeBackfillPreference,
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog";
+import { FeatureItem, useFeature } from "core/services/features";
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+
+export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
+
+function nextExecutionsMoreFrequentThanOncePerHour(nextExecutions: number[]): boolean {
+  if (nextExecutions.length > 1) {
+    const [firstExecution, secondExecution] = nextExecutions;
+    return secondExecution - firstExecution < 3600;
+  }
+  return false;
+}
 
 /**
  * yup schema for the schedule data
  */
-const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
-  yup.mixed().when("scheduleType", (scheduleType) => {
-    if (scheduleType === ConnectionScheduleType.manual) {
-      return yup.mixed<ConnectionScheduleData>().notRequired();
-    }
+export const useGetScheduleDataSchema = () => {
+  const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
+  const validateCronExpression = useDescribeCronExpressionFetchQuery();
 
-    if (scheduleType === ConnectionScheduleType.basic) {
+  return useMemo(() => {
+    return yup.mixed().when("scheduleType", (scheduleType) => {
+      if (scheduleType === ConnectionScheduleType.manual) {
+        return yup.mixed<ConnectionScheduleData>().notRequired();
+      }
+
+      if (scheduleType === ConnectionScheduleType.basic) {
+        return yup.object({
+          basicSchedule: yup
+            .object({
+              units: yup.number().required("form.empty.error"),
+              timeUnit: yup.string().required("form.empty.error"),
+            })
+            .defined("form.empty.error"),
+        });
+      }
+
       return yup.object({
-        basicSchedule: yup
+        cron: yup
           .object({
-            units: yup.number().required("form.empty.error"),
-            timeUnit: yup.string().required("form.empty.error"),
+            cronExpression: yup
+              .string()
+              .trim()
+              .required("form.empty.error")
+              .test("validCron", async (value, { createError, path }) => {
+                if (!value) {
+                  return createError({
+                    path,
+                    message: "form.empty.error",
+                  });
+                }
+                try {
+                  const response = await validateCronExpression(value);
+                  if (!response.isValid) {
+                    return createError({
+                      path,
+                      message: response.validationErrorMessage,
+                      type: NON_I18N_ERROR_TYPE,
+                    });
+                  }
+                  if (
+                    !allowSubOneHourCronExpressions &&
+                    nextExecutionsMoreFrequentThanOncePerHour(response.nextExecutions)
+                  ) {
+                    return createError({
+                      path,
+                      message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
+                    });
+                  }
+                } catch (error) {
+                  return createError({
+                    path,
+                    message: error.message,
+                    type: NON_I18N_ERROR_TYPE,
+                  });
+                }
+                return true;
+              }),
+            cronTimeZone: yup.string().required("form.empty.error"),
           })
           .defined("form.empty.error"),
       });
-    }
-
-    return yup.object({
-      cron: yup
-        .object({
-          cronExpression: yup
-            .string()
-            .trim()
-            .required("form.empty.error")
-            .test("validCron", (value, { createError, path }) => {
-              const validation = validateCronExpression(value);
-              return (
-                validation.isValid ||
-                createError({
-                  path,
-                  message: "form.cronExpression.invalid",
-                })
-              );
-            })
-            .test(
-              "validCronFrequency",
-              "form.cronExpression.underOneHourNotAllowed",
-              (expression) => allowSubOneHourCronExpressions || validateCronFrequencyOneHourOrMore(expression)
-            ),
-          cronTimeZone: yup.string().required("form.empty.error"),
-        })
-        .defined("form.empty.error"),
     });
-  });
+  }, [validateCronExpression, allowSubOneHourCronExpressions]);
+};
 
 /**
  * yup schema for the stream
@@ -173,7 +208,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
 /**
  * yup schema for the sync catalog
  */
-const syncCatalogSchema = yup.object({
+export const syncCatalogSchema = yup.object({
   streams: yup
     .array()
     .of(streamAndConfigurationSchema)
@@ -270,29 +305,3 @@ export const namespaceFormatSchema = yup.string().when("namespaceDefinition", {
   is: NamespaceDefinitionType.customformat,
   then: yup.string().trim().required("form.empty.error"),
 });
-
-/**
- * generate yup schema for the create connection form
- */
-export const createConnectionValidationSchema = (
-  allowSubOneHourCronExpressions: boolean,
-  allowAutoDetectSchema: boolean
-) =>
-  yup
-    .object({
-      name: yup.string().required("form.empty.error"),
-      // scheduleType can't be 'undefined', make it required()
-      scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
-      scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
-      namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
-      namespaceFormat: namespaceFormatSchema,
-      prefix: yup.string().default(""),
-      nonBreakingChangesPreference: allowAutoDetectSchema
-        ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
-        : yup.mixed().notRequired(),
-      geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
-      syncCatalog: syncCatalogSchema,
-      notifySchemaChanges: yup.boolean().optional(),
-      backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
-    })
-    .noUnknown();

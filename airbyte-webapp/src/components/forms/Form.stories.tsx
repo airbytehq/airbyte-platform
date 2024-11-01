@@ -18,14 +18,14 @@ interface MyFormValues {
 }
 
 const schema: SchemaOf<MyFormValues> = yup.object({
-  some_input: yup.string().required("This is a required field."),
-  some_textarea: yup.string().required("This is a required field."),
+  some_input: yup.string().required("form.empty.error"),
+  some_textarea: yup.string().required("form.empty.error"),
   some_password: yup
     .string()
     .min(5, "The password needs to be at least 5 characters long.")
-    .required("This is a required field."),
-  some_date: yup.string().required("This is a required field."),
-  some_select: yup.string().required("This is a required field."),
+    .required("form.empty.error"),
+  some_date: yup.string().required("form.empty.error"),
+  some_select: yup.string().required("form.empty.error"),
 });
 
 export default {

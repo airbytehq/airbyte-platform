@@ -896,6 +896,7 @@
   "form.frequency.subtitle": "How often your data will sync to your destination",
   "form.cronExpression": "Cron expression",
   "form.cronExpression.placeholder": "Cron expression",
+  "form.cronExpression.validating": "Validating cron expression...",
   "form.cronExpression.invalid": "Invalid cron expression. Check the <lnk>Quartz cron expression docs</lnk> to make sure your syntax is correct.",
   "form.cronExpression.underOneHourNotAllowed": "Interested in syncing more frequently than once an hour? <lnk>Contact us</lnk> to unlock this feature.",
   "form.cronExpression.message": "Enter a <lnk>Quartz cron expression</lnk> for when syncs should run (ex. \"0 0 12 * * ?\" => Will sync at 12:00 PM every day)",

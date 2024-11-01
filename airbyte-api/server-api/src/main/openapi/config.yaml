@@ -3302,6 +3302,28 @@ paths:
                 $ref: "#/components/schemas/WebBackendConnectionRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/describe_cron_expression:
+    post:
+      tags:
+        - web_backend
+      summary: Returns a human-readable description of a CronTrigger expression
+      description: Pass a Quartz CronTrigger expression to be validated and turned into a human-readable description.
+      operationId: webBackendDescribeCronExpression
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebBackendDescribeCronExpressionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebBackendCronExpressionDescription"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/state/get_type:
     post:
       tags:
@@ -13261,6 +13283,31 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+    WebBackendDescribeCronExpressionRequestBody:
+      type: object
+      required:
+        - cronExpression
+      properties:
+        cronExpression:
+          type: string
+    WebBackendCronExpressionDescription:
+      type: object
+      required:
+        - cronExpression
+        - description
+        - nextExecutions
+      properties:
+        cronExpression:
+          type: string
+        description:
+          type: string
+        nextExecutions:
+          type: array
+          description: Array of Unix timestamps for the next execution times
+          items:
+            type: integer
+            format: int64
+            description: Unix timestamp of a scheduled execution
     NonBreakingChangesPreference:
       enum:
         - ignore # do nothing if we detect a schema change
