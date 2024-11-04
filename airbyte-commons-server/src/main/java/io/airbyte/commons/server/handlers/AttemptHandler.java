@@ -147,25 +147,24 @@ public class AttemptHandler {
     return new CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber);
   }
 
-  private void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
-    // Update done for every attempt
+  @VisibleForTesting
+  void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
     // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
     // databases.
-    final var removeFullRefreshStreamState =
-        job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
-    if (removeFullRefreshStreamState && supportRefreshes) {
-      boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
-      final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
-          job.getId(),
-          enableResumableFullRefresh);
-      if (!stateToClear.isEmpty()) {
-        generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
-        statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
-      }
+    final boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
+    final boolean evaluateResumableFlag = enableResumableFullRefresh && supportRefreshes;
+    final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
+        job.getId(),
+        evaluateResumableFlag);
+
+    generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
+    if (!stateToClear.isEmpty()) {
+      statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
     }
   }
 
-  private void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
+  @VisibleForTesting
+  void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
     if (job.getConfigType() == JobConfig.ConfigType.REFRESH) {
       if (!supportRefreshes) {
         throw new IllegalStateException("Trying to create a refresh attempt for a destination which doesn't support refreshes");

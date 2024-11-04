@@ -86,12 +86,14 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Nested;
@@ -627,6 +629,60 @@ class AttemptHandlerTest {
         .attemptNumber(attemptNumber)
         .streamMetadata(List.of(new StreamAttemptMetadata().streamName("s").wasBackfilled(false).wasResumed(false))));
     assertEquals(new InternalOperationResult().succeeded(false), result);
+  }
+
+  private static final String STREAM_INCREMENTAL = "incremental";
+  private static final String STREAM_INCREMENTAL_NOT_RESUMABLE = "incremental not resumable";
+  private static final String STREAM_FULL_REFRESH_RESUMABLE = "full refresh resumable";
+  private static final String STREAM_FULL_REFRESH_NOT_RESUMABLE = "full refresh not resumable";
+
+  private static Stream<Arguments> testStateClearingLogic() {
+    return Stream.of(
+        // streams are STREAM_INCREMENTAL, STREAM_INCREMENTAL_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE,
+        // STREAM_FULL_REFRESH_NOT_RESUMABLE
+        // AttemptNumber, SupportsRefresh, streams to clear
+        Arguments.of(0, false, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(0, true, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(1, false, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(1, true, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE)));
+  }
+
+  @ParameterizedTest
+  @MethodSource
+  void testStateClearingLogic(final int attemptNumber, final boolean supportsRefresh, final Set<StreamDescriptor> expectedStreamsToClear)
+      throws Exception {
+    when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(true);
+    var configuredCatalog = new ConfiguredAirbyteCatalog(
+        List.of(
+            buildStreamForClearStateTest(STREAM_INCREMENTAL_NOT_RESUMABLE, SyncMode.INCREMENTAL, false),
+            buildStreamForClearStateTest(STREAM_INCREMENTAL, SyncMode.INCREMENTAL, true),
+            buildStreamForClearStateTest(STREAM_FULL_REFRESH_NOT_RESUMABLE, SyncMode.FULL_REFRESH, false),
+            buildStreamForClearStateTest(STREAM_FULL_REFRESH_RESUMABLE, SyncMode.FULL_REFRESH, true)));
+
+    final long jobId = 123L;
+    final UUID connectionId = UUID.randomUUID();
+    var job = mock(Job.class);
+    when(job.getId()).thenReturn(jobId);
+    when(job.getScope()).thenReturn(connectionId.toString());
+    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
+    when(job.getConfig())
+        .thenReturn(new JobConfig().withConfigType(ConfigType.SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(configuredCatalog)));
+
+    if (attemptNumber == 0) {
+      handler.updateGenerationAndStateForFirstAttempt(job, connectionId, supportsRefresh);
+    } else {
+      handler.updateGenerationAndStateForSubsequentAttempts(job, supportsRefresh);
+    }
+    verify(statePersistence).bulkDelete(connectionId, expectedStreamsToClear);
+  }
+
+  private static ConfiguredAirbyteStream buildStreamForClearStateTest(final String streamName, final SyncMode syncMode, final boolean isResumable) {
+    return new ConfiguredAirbyteStream(new AirbyteStream(streamName, Jsons.emptyObject(), List.of(syncMode)).withIsResumable(isResumable))
+        .withSyncMode(syncMode);
+  }
+
+  private static Set<StreamDescriptor> streamDescriptorsFromNames(final String... streamNames) {
+    return Arrays.stream(streamNames).map(n -> new StreamDescriptor().withName(n)).collect(Collectors.toSet());
   }
 
   private static Stream<Arguments> randomObjects() {
