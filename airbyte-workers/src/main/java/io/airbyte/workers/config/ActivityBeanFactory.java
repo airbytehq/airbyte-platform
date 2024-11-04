@@ -21,7 +21,6 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
@@ -70,7 +69,6 @@ public class ActivityBeanFactory {
                                                   final StreamResetActivity streamResetActivity,
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
-                                                  final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
                                                   final CheckRunProgressActivity checkRunProgressActivity,
                                                   final RetryStatePersistenceActivity retryStatePersistenceActivity,
@@ -83,7 +81,6 @@ public class ActivityBeanFactory {
         streamResetActivity,
         recordMetricActivity,
         workflowConfigActivity,
-        routeToTaskQueueActivity,
         featureFlagFetchActivity,
         checkRunProgressActivity,
         retryStatePersistenceActivity,
@@ -118,13 +115,12 @@ public class ActivityBeanFactory {
                                      final RefreshSchemaActivity refreshSchemaActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
-                                     final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
                                      final InvokeOperationsActivity invokeOperationsActivity,
                                      final AsyncReplicationActivity asyncReplicationActivity,
                                      final WorkloadStatusCheckActivity workloadStatusCheckActivity) {
     return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
         reportRunTimeActivity, syncFeatureFlagFetcherActivity,
-        routeToSyncTaskQueueActivity, invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity);
+        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity);
   }
 
   @Singleton

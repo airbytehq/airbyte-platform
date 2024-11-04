@@ -20,6 +20,8 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.temporal.TemporalJobType;
+import io.airbyte.commons.temporal.TemporalTaskQueueUtils;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWorkflow;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
@@ -43,7 +45,6 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.workflow.CancellationScope;
@@ -78,8 +79,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private ReportRunTimeActivity reportRunTimeActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private InvokeOperationsActivity invokeOperationsActivity;
   @TemporalActivityStub(activityOptionsBeanName = "asyncActivityOptions")
@@ -126,8 +125,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       try {
         if (shouldRunAsChildWorkflow) {
           final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
-          final String discoverTaskQueue = routeToSyncTaskQueueActivity.routeToDiscoverCatalog(
-              new RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueInput(connectionId)).getTaskQueue();
+          final String discoverTaskQueue = TemporalTaskQueueUtils.getTaskQueue(TemporalJobType.DISCOVER_SCHEMA);
           refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig, discoverTaskQueue);
         } else if (shouldRefreshSchema) {
           refreshSchemaOutput =
@@ -142,12 +140,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final long discoverSchemaEndTime = Workflow.currentTimeMillis();
 
     final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
-    if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
+    if (status.isPresent() && ConnectionStatus.INACTIVE == status.get()) {
       LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
-      final StandardSyncOutput output =
-          new StandardSyncOutput()
-              .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
-      return output;
+      return new StandardSyncOutput()
+          .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
     }
 
     final ReplicationActivityInput replicationActivityInput =

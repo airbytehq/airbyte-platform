@@ -9,14 +9,9 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
-import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.JobInfoRead;
-import io.airbyte.commons.server.errors.BadRequestException;
-import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.temporal.TemporalJobType;
-import io.airbyte.commons.temporal.scheduling.RouterService;
-import io.airbyte.config.ConfigSchema;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.annotation.MockBean;
@@ -30,9 +25,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Micronaut-based test suite for the {@link ConnectionApiController} class.
@@ -45,9 +38,6 @@ class ConnectionApiControllerTest {
 
   @Inject
   SchedulerHandler schedulerHandler;
-
-  @Inject
-  RouterService routerService;
 
   @Test
   void testConnectionStreamReset() throws IOException, ConfigNotFoundException {
@@ -68,48 +58,6 @@ class ConnectionApiControllerTest {
     Assertions.assertEquals(expectedJobInfoRead, jobInfoRead);
   }
 
-  @ParameterizedTest
-  @MethodSource("uuidJobTypesMatrix")
-  void getTaskQueueNameSuccess(final UUID connectionId, final TemporalJobType jobType)
-      throws IOException, ConfigNotFoundException {
-    final var expected = "queue name";
-    when(routerService.getTaskQueue(connectionId, jobType)).thenReturn(expected);
-
-    final var result = connectionApiController.getTaskQueueName(
-        new GetTaskQueueNameRequest()
-            .connectionId(connectionId)
-            .temporalJobType(jobType.toString()));
-
-    Assertions.assertEquals(expected, result.getTaskQueueName());
-  }
-
-  @Test
-  void getTaskQueueNameNotFound() throws IOException, ConfigNotFoundException {
-    final UUID connectionId = UUID.randomUUID();
-    final TemporalJobType type = TemporalJobType.SYNC;
-
-    when(routerService.getTaskQueue(connectionId, type))
-        .thenThrow(new io.airbyte.data.exceptions.ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, "Nope."));
-
-    final var req = new GetTaskQueueNameRequest()
-        .connectionId(connectionId)
-        .temporalJobType(type.toString());
-
-    Assertions.assertThrows(IdNotFoundKnownException.class, () -> connectionApiController.getTaskQueueName(req));
-  }
-
-  @Test
-  void getTaskQueueNameCannotParseJobType() {
-    final UUID connectionId = UUID.randomUUID();
-    final String type = TemporalJobType.SYNC + "bang";
-
-    final var req = new GetTaskQueueNameRequest()
-        .connectionId(connectionId)
-        .temporalJobType(type);
-
-    Assertions.assertThrows(BadRequestException.class, () -> connectionApiController.getTaskQueueName(req));
-  }
-
   static Stream<Arguments> uuidJobTypesMatrix() {
     return Arrays.stream(TemporalJobType.values()).map(v -> Arguments.of(UUID.randomUUID(), v));
   }
@@ -122,11 +70,6 @@ class ConnectionApiControllerTest {
   @MockBean(WorkflowClient.class)
   WorkflowClient workflowClient() {
     return mock(WorkflowClient.class);
-  }
-
-  @MockBean(RouterService.class)
-  RouterService routerService() {
-    return mock(RouterService.class);
   }
 
 }

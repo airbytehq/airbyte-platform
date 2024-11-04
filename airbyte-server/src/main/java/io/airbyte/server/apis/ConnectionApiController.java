@@ -38,7 +38,6 @@ import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUpdateWithReason;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
-import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobRead;
@@ -47,11 +46,9 @@ import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
-import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.generated.Intent;
 import io.airbyte.commons.auth.permissions.RequiresIntent;
-import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
@@ -59,8 +56,6 @@ import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
-import io.airbyte.commons.temporal.TemporalJobType;
-import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
@@ -86,7 +81,6 @@ public class ConnectionApiController implements ConnectionApi {
   private final ConnectionsHandler connectionsHandler;
   private final OperationsHandler operationsHandler;
   private final SchedulerHandler schedulerHandler;
-  private final RouterService routerService;
   private final StreamStatusesHandler streamStatusesHandler;
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
@@ -95,7 +89,6 @@ public class ConnectionApiController implements ConnectionApi {
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
-                                 final RouterService routerService,
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
                                  final StreamRefreshesHandler streamRefreshesHandler,
@@ -103,7 +96,6 @@ public class ConnectionApiController implements ConnectionApi {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
-    this.routerService = routerService;
     this.streamStatusesHandler = streamStatusesHandler;
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
@@ -357,24 +349,6 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalogForConnection(@Body final PostprocessDiscoveredCatalogRequestBody req) {
     return ApiHelper.execute(() -> connectionsHandler.postprocessDiscoveredCatalog(req.getConnectionId(), req.getCatalogId()));
-  }
-
-  @Override
-  @Post(uri = "/get_task_queue_name")
-  @Secured({ADMIN})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  public TaskQueueNameRead getTaskQueueName(@Body final GetTaskQueueNameRequest request) {
-    final TemporalJobType jobType;
-    try {
-      jobType = TemporalJobType.valueOf(request.getTemporalJobType());
-    } catch (final IllegalArgumentException e) {
-      throw new BadRequestException("Unrecognized temporalJobType", e);
-    }
-
-    return ApiHelper.execute(() -> {
-      final var string = routerService.getTaskQueue(request.getConnectionId(), jobType);
-      return new TaskQueueNameRead().taskQueueName(string);
-    });
   }
 
 }

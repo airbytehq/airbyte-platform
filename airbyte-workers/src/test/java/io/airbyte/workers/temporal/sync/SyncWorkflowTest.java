@@ -43,8 +43,6 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivityImpl;
 import io.airbyte.workers.temporal.workflow.MockDiscoverCatalogAndAutoPropagateWorkflow;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
@@ -87,7 +85,6 @@ class SyncWorkflowTest {
   private ConfigFetchActivityImpl configFetchActivity;
   private ReportRunTimeActivity reportRunTimeActivity;
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
-  private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
 
   // AIRBYTE CONFIGURATION
   private static final long JOB_ID = 11L;
@@ -153,14 +150,11 @@ class SyncWorkflowTest {
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
     syncFeatureFlagFetcherActivity = mock(SyncFeatureFlagFetcherActivityImpl.class);
-    routeToSyncTaskQueueActivity = mock(RouteToSyncTaskQueueActivityImpl.class);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
     when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
     when(configFetchActivity.getStatus(sync.getConnectionId())).thenReturn(Optional.of(ConnectionStatus.ACTIVE));
     when(configFetchActivity.getSourceConfig(SOURCE_ID)).thenReturn(Jsons.emptyObject());
-    when(routeToSyncTaskQueueActivity.routeToDiscoverCatalog(any())).thenReturn(
-        new RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput(TemporalJobType.DISCOVER_SCHEMA.name()));
 
     longActivityOptions = ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofDays(3))
@@ -250,8 +244,7 @@ class SyncWorkflowTest {
         refreshSchemaActivity,
         configFetchActivity,
         reportRunTimeActivity,
-        syncFeatureFlagFetcherActivity,
-        routeToSyncTaskQueueActivity);
+        syncFeatureFlagFetcherActivity);
     testEnv.start();
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());

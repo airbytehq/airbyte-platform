@@ -27,10 +27,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
 
-object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
-
-object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
-
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
 /**
@@ -181,8 +177,6 @@ object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
 object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
-
-object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
