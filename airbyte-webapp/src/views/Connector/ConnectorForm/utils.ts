@@ -88,6 +88,9 @@ export function getPatternDescriptor(schema: { pattern?: string; pattern_descrip
   if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6}Z$")) {
     return "YYYY-MM-DDTHH:mm:ss.SSSSSSZ";
   }
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}$")) {
+    return "YYYY-MM";
+  }
   return undefined;
 }
 

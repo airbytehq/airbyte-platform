@@ -14,6 +14,7 @@ import {
   ISO8601_WITH_MILLISECONDS,
   toEquivalentLocalTime,
   YEAR_MONTH_DAY_FORMAT,
+  YEAR_MONTH_FORMAT,
 } from "./utils";
 import { Button } from "../Button";
 import { Input } from "../Input";
@@ -36,6 +37,7 @@ export interface DatePickerProps {
   value: string;
   withPrecision?: "milliseconds" | "microseconds";
   withTime?: boolean;
+  yearMonth?: boolean;
 }
 
 interface DatePickerButtonTriggerProps {
@@ -81,6 +83,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   value = "",
   withPrecision,
   withTime = false,
+  yearMonth,
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
@@ -108,11 +111,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       }
       const formattedDate = withTime
         ? date.utcOffset(0, true).format(datetimeFormat)
+        : yearMonth
+        ? date.format(YEAR_MONTH_FORMAT)
         : date.format(YEAR_MONTH_DAY_FORMAT);
       onChange(formattedDate);
       inputRef.current?.focus();
     },
-    [onChange, withTime, datetimeFormat]
+    [withTime, datetimeFormat, yearMonth, onChange]
   );
 
   const handleInputChange = useCallback(
@@ -172,6 +177,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           showTimeSelect={withTime}
           startDate={startDate}
           timeCaption={formatMessage({ id: "form.datepickerTimeCaption" })}
+          showMonthYearPicker={yearMonth}
         />
       </div>
     </div>

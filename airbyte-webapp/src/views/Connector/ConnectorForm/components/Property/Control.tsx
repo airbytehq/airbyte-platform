@@ -91,6 +91,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         readOnly={property.readOnly}
         onFocus={() => setFocusedField?.(name)}
         onBlur={() => field.onBlur()}
+        yearMonth={property.pattern === "^[0-9]{4}-[0-9]{2}$"}
       />
     );
   }
