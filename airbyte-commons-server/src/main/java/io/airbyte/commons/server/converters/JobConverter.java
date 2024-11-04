@@ -27,7 +27,9 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogCaller;
 import io.airbyte.api.model.generated.LogEvent;
 import io.airbyte.api.model.generated.LogFormatType;
+import io.airbyte.api.model.generated.LogLevel;
 import io.airbyte.api.model.generated.LogRead;
+import io.airbyte.api.model.generated.LogSource;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -61,6 +63,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -372,8 +375,8 @@ public class JobConverter {
   private static List<LogEvent> toModelLogEvents(final List<io.airbyte.commons.logging.LogEvent> logEvents, final LogUtils logUtils) {
     return logEvents.stream().map(e -> {
       final LogEvent logEvent = new LogEvent();
-      logEvent.setLogSource(e.getLogSource().getDisplayName());
-      logEvent.setLevel(e.getLevel());
+      logEvent.setLogSource(LogSource.fromString(e.getLogSource().getDisplayName().toLowerCase(Locale.ROOT)));
+      logEvent.setLevel(LogLevel.fromString(e.getLevel().toLowerCase(Locale.ROOT)));
       logEvent.setMessage(e.getMessage());
       logEvent.setTimestamp(e.getTimestamp());
       logEvent.setStrackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));

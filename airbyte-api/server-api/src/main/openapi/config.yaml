@@ -12350,6 +12350,21 @@ components:
           type: integer
         threadName:
           type: string
+    LogLevel:
+      type: string
+      enum:
+        - debug
+        - error
+        - info
+        - trace
+        - warn
+    LogSource:
+      type: string
+      enum:
+        - destination
+        - source
+        - platform
+        - replication-orchestrator
     LogEvents:
       type: object
       required:
@@ -12375,9 +12390,9 @@ components:
         message:
           type: string
         level:
-          type: string
+          $ref: "#/components/schemas/LogLevel"
         logSource:
-          type: string
+          $ref: "#/components/schemas/LogSource"
         caller:
           $ref: "#/components/schemas/LogCaller"
         strackTrace:
