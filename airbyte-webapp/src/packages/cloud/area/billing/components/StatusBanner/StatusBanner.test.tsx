@@ -155,6 +155,14 @@ describe("StatusBanner", () => {
     expect(wrapper.container.textContent).toContain("once your first sync has succeeded");
   });
 
+  it("should render pre-trial banner after leaving payment information", async () => {
+    mockOrgInfo({ paymentStatus: "okay" });
+    mockTrialStatus({ trialStatus: "pre_trial" });
+    mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
+    const wrapper = await render(<StatusBanner />);
+    expect(wrapper.container.textContent).toContain("once your first sync has succeeded");
+  });
+
   it("should not show a trial banner if the user cannot view trial status", async () => {
     mockOrgInfo({ paymentStatus: "uninitialized" });
     mockTrialStatus({ trialStatus: "pre_trial" });

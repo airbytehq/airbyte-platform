@@ -118,14 +118,24 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (billing.paymentStatus === "uninitialized" && trialStatus) {
-    if (trialStatus.trialStatus === "pre_trial") {
+  if (trialStatus?.trialStatus === "pre_trial") {
+    return {
+      level: "info",
+      content: formatMessage({ id: "billing.banners.preTrial" }),
+    };
+  }
+
+  if (trialStatus?.trialStatus === "in_trial") {
+    if (billing.paymentStatus === "okay") {
       return {
         level: "info",
-        content: formatMessage({ id: "billing.banners.preTrial" }),
+        content: formatMessage(
+          { id: "billing.banners.inTrialWithPaymentMethod" },
+          { days: Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0) }
+        ),
       };
     }
-    if (trialStatus.trialStatus === "in_trial") {
+    if (billing.paymentStatus === "uninitialized") {
       return {
         level: "info",
         content: formatMessage(
@@ -144,32 +154,23 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         ),
       };
     }
-    if (trialStatus.trialStatus === "post_trial") {
-      return {
-        level: "info",
-        content: formatMessage(
-          {
-            id:
-              context === "top_level" && canManageOrganizationBilling
-                ? "billing.banners.postTrialWithLink"
-                : "billing.banners.postTrial",
-          },
-          {
-            lnk: (node: React.ReactNode) => (
-              <Link to={createLink(`/${RoutePaths.Settings}/${CloudRoutes.Billing}`)}>{node}</Link>
-            ),
-          }
-        ),
-      };
-    }
   }
 
-  if (billing.paymentStatus === "okay" && trialStatus?.trialStatus === "in_trial") {
+  if (trialStatus?.trialStatus === "post_trial" && billing.paymentStatus === "uninitialized") {
     return {
       level: "info",
       content: formatMessage(
-        { id: "billing.banners.inTrialWithPaymentMethod" },
-        { days: Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0) }
+        {
+          id:
+            context === "top_level" && canManageOrganizationBilling
+              ? "billing.banners.postTrialWithLink"
+              : "billing.banners.postTrial",
+        },
+        {
+          lnk: (node: React.ReactNode) => (
+            <Link to={createLink(`/${RoutePaths.Settings}/${CloudRoutes.Billing}`)}>{node}</Link>
+          ),
+        }
       ),
     };
   }
