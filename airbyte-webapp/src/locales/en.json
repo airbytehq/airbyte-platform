@@ -568,8 +568,8 @@
   "connection.onboarding.demoInstance": "or play around in our <demoLnk>demo instance</demoLnk>.",
 
   "connection.refreshDataRecommended": "Refresh streams recommended",
-  "connection.saveWithRefresh": "Save configuration and refresh streams (recommended)",
-  "connection.refreshDataHint": "Due to changes in the stream configuration, we recommend refreshing the affected streams.",
+  "connection.saveWithRefresh": "Save configuration and refresh (recommended)",
+  "connection.refreshDataHint": "Due to changes in the stream configuration, we recommend refreshing the connection.",
   "connection.saveWithoutRefresh": "Save configuration without refreshing streams",
   "connection.saveWithoutRefresh.description": "Note: If you do not refresh the affected streams, unexpected behavior may occur",
 
