@@ -34,20 +34,18 @@ global:
 
   # -- Auth configuration
   auth:
-    # -- Enable authentication
     enabled: true
-    # -- Admin user configuration
     instanceAdmin:
-      # -- First name of the initial user
+      # -- Secret name where the instanceAdmin configuration is stored
+      emailSecretName: "instance-admin-email"  # Secret for email
+      passwordSecretName: "instance-admin-password"  # Secret for password
       firstName: "numocity"
-      # -- Last name of the initial user
       lastName: ""
-      # -- Email of the initial user
-      email: "manjunath.kp@numocity.com"
-      # -- Password of the initial user
-      password: "Numocity@123"
+      emailSecretKey: "emailSecretKey"  # Key within `emailSecretName`
+      passwordSecretKey: "passwordSecretKey"  # Key within `passwordSecretName`
 
-    
+
+      
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
     #  # -- Secret name where the OIDC configuration is stored
