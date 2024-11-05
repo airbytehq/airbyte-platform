@@ -190,7 +190,7 @@ const AddStreamModal = ({
 
   const submitAction = useCallback(
     (values: AddStreamFormValues) => {
-      // use AI Assist if the user isn't copying from another and AI is on
+      // use AI Assistant if the user isn't copying from another and AI is on
       const shouldAssistValues = shouldAssist && !values.copyOtherStream;
       if (shouldAssistValues) {
         setAssistFormValues(values);

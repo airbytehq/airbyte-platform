@@ -55,7 +55,7 @@ class AssistProxy(private val proxyConfig: AssistConfiguration) {
           }
         }
     } catch (e: IOException) {
-      throw ConnectorBuilderException("AI Assist processing error", e)
+      throw ConnectorBuilderException("AI Assistant processing error", e)
     } finally {
       connection.disconnect()
     }

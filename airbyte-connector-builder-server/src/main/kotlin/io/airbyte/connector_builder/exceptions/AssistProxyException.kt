@@ -16,7 +16,7 @@ fun getStringFromResponse(jsonBody: JsonNode): String {
   if (jsonBody.has("message")) {
     return jsonBody.get("message").asText()
   }
-  return "Unknown AI Assist error"
+  return "Unknown AI Assistant error"
 }
 
 fun getDetailsFromResponse(jsonBody: JsonNode): Map<String, Any> {
