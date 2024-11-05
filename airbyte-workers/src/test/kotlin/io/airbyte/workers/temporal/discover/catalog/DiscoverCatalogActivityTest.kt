@@ -17,9 +17,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
+import io.airbyte.workers.commands.DiscoverCommand
+import io.airbyte.workers.commands.DiscoverCommand.Companion.DiscoverCatalogSnapDuration
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.sync.WorkloadClient
-import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivityImpl.DISCOVER_CATALOG_SNAP_DURATION
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadType
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
-import java.util.Optional
 import java.util.UUID
 
 class DiscoverCatalogActivityTest {
@@ -52,19 +52,27 @@ class DiscoverCatalogActivityTest {
     }
   private lateinit var createReqSlot: CapturingSlot<WorkloadCreateRequest>
   private lateinit var discoverCatalogActivity: DiscoverCatalogActivityImpl
+  private lateinit var discoverCommand: DiscoverCommand
 
   @BeforeEach
   fun init() {
     every { airbyteApiClient.connectionApi }.returns(connectionApi)
+    discoverCommand =
+      spyk(
+        DiscoverCommand(
+          workspaceRoot = workspaceRoot,
+          airbyteApiClient = airbyteApiClient,
+          workloadClient = workloadClient,
+          workloadIdGenerator = workloadIdGenerator,
+          logClientManager = logClientManager,
+        ),
+      )
     discoverCatalogActivity =
       spyk(
         DiscoverCatalogActivityImpl(
-          workspaceRoot,
-          airbyteApiClient,
           featureFlagClient,
           workloadClient,
-          workloadIdGenerator,
-          logClientManager,
+          discoverCommand,
         ),
       )
     every { discoverCatalogActivity.activityContext } returns executionContext
@@ -111,11 +119,11 @@ class DiscoverCatalogActivityTest {
       ).withWorkspaceId(workspaceId).withPriority(WorkloadPriority.DEFAULT)
 
     if (runAsPartOfSync) {
-      every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DISCOVER_CATALOG_SNAP_DURATION)) }.returns(workloadId)
+      every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DiscoverCatalogSnapDuration)) }.returns(workloadId)
     } else {
       every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
     }
-    every { discoverCatalogActivity.getGeography(Optional.of(connectionId), Optional.of(workspaceId)) }.returns(Geography.AUTO)
+    every { discoverCommand.getGeography(connectionId, workspaceId) }.returns(Geography.AUTO)
 
     val output =
       ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)

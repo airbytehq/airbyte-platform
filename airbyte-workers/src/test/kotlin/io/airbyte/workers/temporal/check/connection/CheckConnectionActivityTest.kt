@@ -17,6 +17,7 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
+import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.WorkloadIdGenerator
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
-import java.util.Optional
 import java.util.UUID
 
 class CheckConnectionActivityTest {
@@ -51,26 +51,24 @@ class CheckConnectionActivityTest {
     }
   private lateinit var createReqSlot: CapturingSlot<WorkloadCreateRequest>
   private lateinit var checkConnectionActivity: CheckConnectionActivityImpl
+  private lateinit var checkCommand: CheckCommand
 
   @BeforeEach
   fun init() {
+    checkCommand = spyk(CheckCommand(workspaceRoot, airbyteApiClient, workloadClient, workloadIdGenerator, logClientManager, mockk(relaxed = true)))
     checkConnectionActivity =
       spyk(
         CheckConnectionActivityImpl(
-          workspaceRoot,
-          airbyteApiClient,
           featureFlagClient,
           workloadClient,
-          workloadIdGenerator,
-          mockk(relaxed = true),
+          checkCommand,
           mockk(),
-          logClientManager,
         ),
       )
 
     every { featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds, any()) } returns WORKLOAD_CHECK_FREQUENCY_IN_SECONDS
     every { workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT) } returns WORKLOAD_ID
-    every { checkConnectionActivity.getGeography(Optional.of(CONNECTION_ID), Optional.of(WORKSPACE_ID)) } returns Geography.US
+    every { checkCommand.getGeography(CONNECTION_ID, WORKSPACE_ID) } returns Geography.US
     every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args[0].toString(), DEFAULT_LOG_FILENAME).toString() }
 
     mockkStatic(Activity::class)
