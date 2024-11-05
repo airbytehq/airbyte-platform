@@ -35,7 +35,7 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
-    enabled: true
+    enabled: false
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
