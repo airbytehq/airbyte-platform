@@ -35,7 +35,7 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
-    enabled: false
+    enabled: true
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
@@ -2376,10 +2376,5 @@ testWebapp:
     repository: busybox
     tag: latest
 
-env:
-  JOB_MAIN_CONTAINER_CPU_REQUEST: "0.3"
-  JOB_MAIN_CONTAINER_CPU_LIMIT: "0.3"
-  JOB_MAIN_CONTAINER_MEMORY_REQUEST: "500Mi"
-  JOB_MAIN_CONTAINER_MEMORY_LIMIT: "750Mi"
 
       
