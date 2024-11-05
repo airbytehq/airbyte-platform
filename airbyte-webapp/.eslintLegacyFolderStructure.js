@@ -9,7 +9,6 @@ module.exports = [
   "src/hooks/useDeleteModal.tsx",
   "src/hooks/useTypesafeReducer.ts",
   "src/hooks/connection/useConfirmCatalogDiff.tsx",
-  "src/hooks/connection/useDestinationNamespace.ts",
   "src/hooks/connection/useSchemaChanges.ts",
   "src/hooks/theme/useAirbyteTheme.tsx",
   "src/hooks/services/Health/HealthPollService.tsx",

@@ -7,7 +7,6 @@ import { useEffectOnce, useMount } from "react-use";
 
 import { CreateConnectionFormControls } from "components/connection/ConnectionForm/CreateConnectionFormControls";
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { SyncCatalogCard } from "components/connection/ConnectionForm/SyncCatalogCard";
 import { DESTINATION_ID_PARAM } from "components/connection/CreateConnection/DefineDestination";
 import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
 import { Box } from "components/ui/Box";
@@ -21,9 +20,7 @@ import { Text } from "components/ui/Text";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -31,7 +28,7 @@ import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
 import { ScrollableContainer } from "../../../ScrollableContainer";
-import { SyncCatalogTable } from "../../ConnectionForm/SyncCatalogTable";
+import { SyncCatalogTable } from "../../SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
 export const SimplifiedConnectionConfiguration: React.FC = () => {
@@ -61,9 +58,6 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
-  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
-  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
 
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
@@ -83,15 +77,11 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
         >
           <SimplifiedSchemaQuestionnaire />
         </Card>
-        {useSyncCatalogV2 ? (
-          <Card noPadding title={formatMessage({ id: "connection.schema" })}>
-            <Box mb="xl" data-testid="catalog-tree-table-body">
-              <SyncCatalogTable />
-            </Box>
-          </Card>
-        ) : (
-          <SyncCatalogCard />
-        )}
+        <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+          <Box mb="xl">
+            <SyncCatalogTable />
+          </Box>
+        </Card>
       </FlexContainer>
     </ScrollParent>
   );

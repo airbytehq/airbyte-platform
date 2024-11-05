@@ -16,10 +16,8 @@ import {
   DestinationSyncMode,
   SyncMode,
 } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
@@ -33,9 +31,6 @@ interface StreamActionsMenuProps {
 }
 
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace, catalogStream }) => {
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2");
-  const isSyncCatalogV2Allowed = useFeature(FeatureItem.SyncCatalogV2);
-  const useSyncCatalogV2 = isSyncCatalogV2Enabled && isSyncCatalogV2Allowed;
   const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
@@ -68,23 +63,10 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   }
 
   const options: DropdownMenuOptionType[] = [
-    ...(useSyncCatalogV2
-      ? [
-          {
-            displayName: formatMessage({ id: "connection.stream.actions.edit" }),
-            value: "editStream",
-          },
-        ]
-      : [
-          {
-            displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
-            value: "showInReplicationTable",
-          },
-          {
-            displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
-            value: "openDetails",
-          },
-        ]),
+    {
+      displayName: formatMessage({ id: "connection.stream.actions.edit" }),
+      value: "editStream",
+    },
     ...(showRefreshOption
       ? [
           {

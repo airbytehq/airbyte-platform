@@ -29,7 +29,7 @@ import {
   syncCatalogSchema,
   useGetScheduleDataSchema,
 } from "./schema";
-import { updateStreamSyncMode } from "../syncCatalog/SyncCatalog/updateStreamSyncMode";
+import { updateStreamSyncMode } from "../SyncCatalogTable/utils/updateStreamSyncMode";
 
 /**
  * react-hook-form form values type for the connection form
