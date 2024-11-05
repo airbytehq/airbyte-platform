@@ -44,6 +44,7 @@ netty-tcnative = "2.0.62.Final"
 okhttp3 = "4.12.0"
 picocli = "4.7.4"
 platform-testcontainers = "1.19.4"
+pmd = "7.6.0"
 postgresql = "42.7.3"
 reactor = "3.6.10"
 segment = "2.1.1"
@@ -178,6 +179,9 @@ picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
 platform-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "platform-testcontainers" }
+pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
+pmd-core = { module = "net.sourceforge.pmd:pmd-core", version.ref = "pmd" }
+pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
@@ -276,6 +280,7 @@ micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micro
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin"]
 mockito-inline = ["mockito-inline", "byte-buddy"]
+pmd = ["pmd-ant", "pmd-core", "pmd-java"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver", "azure-key-vault", "azure-identity"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]

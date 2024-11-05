@@ -120,6 +120,7 @@
 
     <!-- to be applied eventually -->
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
+    <exclude name="AvoidSynchronizedStatement"/>
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="DontCallThreadRun"/>
   </rule>
@@ -180,4 +181,5 @@
   <!--              value="java.io.ByteArrayOutputStream|java.io.ByteArrayInputStream|java.io.StringWriter|java.io.CharArrayWriter|java.util.stream.Stream|java.util.stream.IntStream|java.util.stream.LongStream|java.util.stream.DoubleStream|okhttp3.Response"/>-->
   <!--        </properties>-->
   <!--    </rule>-->
+  <rule ref="pmd/custom.xml/CheckBodyAnnotationInControllerMethodsRule"/>
 </ruleset>

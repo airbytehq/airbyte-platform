@@ -114,7 +114,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/backfill_events")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void backfillConnectionEvents(final ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
+  public void backfillConnectionEvents(@Body final ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
     ApiHelper.execute(() -> {
       connectionsHandler.backfillConnectionEvents(connectionEventsBackfillRequestBody);
       return null;

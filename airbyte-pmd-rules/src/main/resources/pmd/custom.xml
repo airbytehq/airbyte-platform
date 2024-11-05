@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ruleset name="Airbyte Custom Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+  <description>
+    Collection of custom PMD rules.
+  </description>
+
+  <rule name="CheckBodyAnnotationInControllerMethodsRule"
+    language="java"
+    class="io.airbyte.pmd.CheckBodyAnnotationInControllerMethodsRule"
+    message="Method {0} must have an @Body annotation"
+  >
+    <description>
+      Checks if a method in a Controller class with a @Post annotation has an argument with a @Body.
+    </description>
+  </rule>
+</ruleset>
