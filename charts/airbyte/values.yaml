@@ -33,8 +33,24 @@ global:
   imagePullSecrets: []
 
   # -- Auth configuration
+  auth:
+    # -- Whether auth is enabled
+    enabled: true
+    # -- Admin user configuration
+    instanceAdmin:
+      # -- Secret name where the instanceAdmin configuration is stored
+      namespace: "airbyte"
+      secretName: "airbyte-config-secrets"
+      # -- The first name of the initial user
+      firstName: "numocity"
+      # -- The last name of the initial user
+      lastName:  ""
+      # -- The key within emailSecretName where the initial user's email is stored
+      emailSecretKey: "emailSecretKey"
+      passwordSecretKey: "passwordSecretKey"  # Key within `passwordSecretName`
 
-    
+
+      
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
     #  # -- Secret name where the OIDC configuration is stored
