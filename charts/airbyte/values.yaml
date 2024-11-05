@@ -34,19 +34,20 @@ global:
 
   # -- Auth configuration
   auth:
-    # -- Enable authentication
-    enabled: true
+    # -- Whether auth is enabled
+    enabled: false
     # -- Admin user configuration
     instanceAdmin:
-      # -- First name of the initial user
+      # -- Secret name where the instanceAdmin configuration is stored
+      secretName: "airbyte-config-secrets"
+      # -- The first name of the initial user
       firstName: "numocity"
-      # -- Last name of the initial user
-      lastName: ""
-      # -- Email of the initial user
-      email: "manjunath.kp@numocity.com"
-      # -- Password of the initial user
-      password: "Numocity@123"
-
+      # -- The last name of the initial user
+      lastName:  ""
+      # -- The key within `emailSecretName` where the initial user's email is stored
+      emailSecretKey: "instance-admin-email"
+      # -- The key within `passwordSecretName` where the initial user's password is stored
+      passwordSecretKey: "instance-admin-password"
     
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
