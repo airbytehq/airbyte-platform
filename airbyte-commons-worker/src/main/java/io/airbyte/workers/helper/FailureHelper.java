@@ -382,7 +382,7 @@ public class FailureHelper {
                                                                    final Throwable t,
                                                                    final Long jobId,
                                                                    final Integer attemptNumber) {
-    if (SyncWorkflow.class.getName().equals(workflowType)) {
+    if (SyncWorkflow.class.getName().contains(workflowType)) {
       return replicationFailure(t, jobId, attemptNumber);
     } else {
       return unknownOriginFailure(t, jobId, attemptNumber);
