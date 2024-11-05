@@ -37,10 +37,14 @@ global:
     # -- Whether auth is enabled
     enabled: false
     # -- Admin user configuration
+    enabled: true
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
       secretName: "airbyte-config-secrets"
       # -- The first name of the initial user
+      # -- Secret name where the instanceAdmin configuration is stored
+      emailSecretName: "instance-admin-email"  # Secret for email
+      passwordSecretName: "instance-admin-password"  # Secret for password
       firstName: "numocity"
       # -- The last name of the initial user
       lastName:  ""
