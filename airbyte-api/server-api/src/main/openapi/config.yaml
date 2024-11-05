@@ -5222,6 +5222,31 @@ paths:
       tags:
         - connector_rollout
 
+  /v1/connector_rollout/get_actor_sync_info:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutGetActorSyncInfoRequestBody"
+
+      responses:
+        "200":
+          description: A list of actors pinned to the release candidate, and information about their syncs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutActorSyncInfoResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Get a list of actors pinned to a release candidate, and information about their syncs
+      operationId: getConnectorRolloutActorSyncInfo
+      tags:
+        - connector_rollout
+
   /v1/connector_rollout/start:
     post:
       requestBody:
@@ -7702,6 +7727,43 @@ components:
         updated_by:
           type: string
           format: uuid
+
+    ConnectorRolloutGetActorSyncInfoRequestBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    ConnectorRolloutActorSyncInfoResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
+
+    ConnectorRolloutActorSyncInfo:
+      type: object
+      required:
+        - actor_id
+        - n_succeeded
+        - n_failed
+        - n_connections
+      properties:
+        actor_id:
+          type: string
+          format: uuid
+        n_succeeded:
+          type: integer
+        n_failed:
+          type: integer
+        n_connections:
+          type: integer
 
     ConnectorRolloutManualFinalizeResponse:
       type: object

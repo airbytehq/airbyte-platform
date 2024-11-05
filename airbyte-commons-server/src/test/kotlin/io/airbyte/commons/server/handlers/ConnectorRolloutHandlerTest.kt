@@ -19,6 +19,7 @@ import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
 import io.airbyte.connector.rollout.shared.ActorSelectionInfo
+import io.airbyte.connector.rollout.shared.ActorSyncJobInfo
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
@@ -671,6 +672,28 @@ internal class ConnectorRolloutHandlerTest {
     }
 
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
+  }
+
+  @Test
+  fun `test getActorSyncInfo`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+    val actorId = UUID.randomUUID()
+    val nSucceeded = 1
+    val nFailed = 2
+    val nConnections = 5
+    val actorSyncJobInfo = ActorSyncJobInfo(nSucceeded, nFailed, nConnections)
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(connectorRollout) } returns mapOf(actorId to actorSyncJobInfo)
+
+    val result = connectorRolloutHandler.getActorSyncInfo(rolloutId)
+
+    assertEquals(1, result.size)
+    assertEquals(actorId, result.first().actorId)
+    assertEquals(nConnections, result.first().getnConnections())
+    assertEquals(nSucceeded, result.first().getnSucceeded())
+    assertEquals(nFailed, result.first().getnFailed())
   }
 
   @Test

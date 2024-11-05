@@ -7,8 +7,11 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
+import io.airbyte.config.Job
+import io.airbyte.config.JobConfig
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
-import io.airbyte.config.JobStatusSummary
+import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.StandardDestinationDefinition
@@ -18,10 +21,10 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
-import io.airbyte.persistence.job.DefaultJobPersistence
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -39,12 +42,13 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 class RolloutActorFinderTest {
   private val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
   private val connectionService = mockk<ConnectionService>()
-  private val jobPersistence = mockk<DefaultJobPersistence>()
+  private val jobService = mockk<JobService>()
   private val scopedConfigurationService = mockk<ScopedConfigurationService>()
   private val sourceService = mockk<SourceService>()
   private val destinationService = mockk<DestinationService>()
@@ -52,7 +56,7 @@ class RolloutActorFinderTest {
     RolloutActorFinder(
       actorDefinitionVersionUpdater,
       connectionService,
-      jobPersistence,
+      jobService,
       scopedConfigurationService,
       sourceService,
       destinationService,
@@ -63,6 +67,8 @@ class RolloutActorFinderTest {
     private val SOURCE_ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val DESTINATION_ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val RELEASE_CANDIDATE_VERSION_ID = UUID.randomUUID()
+    private val SOURCE_ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID()
+    private val DESTINATION_ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID()
 
     private val ORGANIZATION_ID_1 = UUID.randomUUID()
     private val ORGANIZATION_1_WORKSPACE_ID_1 = UUID.randomUUID()
@@ -188,12 +194,26 @@ class RolloutActorFinderTest {
         }
       }
 
-    val JOB_STATUS_SUMMARIES: List<JobStatusSummary> =
-      MOCK_CONNECTION_SYNCS.mapIndexed { index, connection ->
-        JobStatusSummary(
-          connection.connectionId,
-          connection.createdAt ?: 0L,
+    val JOBS: List<Job> =
+      MOCK_CONNECTION_SYNCS.map { connection ->
+        Job(
+          0,
+          ConfigType.SYNC,
+          "scope",
+          JobConfig().apply {
+            sync =
+              JobSyncConfig().apply {
+                sourceDockerImageIsDefault = true
+                sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                destinationDockerImageIsDefault = true
+                destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+              }
+          },
+          emptyList(),
           JobStatus.SUCCEEDED,
+          connection.createdAt ?: 0L,
+          connection.createdAt ?: 0L,
+          connection.createdAt ?: 0L,
         )
       }
 
@@ -240,7 +260,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
-    every { jobPersistence.getLastSyncJobForConnections(any()) } returns JOB_STATUS_SUMMARIES
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), TARGET_PERCENTAGE)
 
@@ -254,7 +274,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
-      jobPersistence.getLastSyncJobForConnections(any())
+      jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
 
     if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
@@ -267,6 +287,221 @@ class RolloutActorFinderTest {
     assertEquals(2, actorSelectionInfo.nNewPinned)
     assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
     assertEquals(50, actorSelectionInfo.percentagePinned)
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test getSyncInfoForPinnedActors`(actorDefinitionId: UUID) {
+    val connectorRolloutId = UUID.randomUUID()
+    val connectorRollout = createMockConnectorRollout(connectorRolloutId)
+
+    if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+      every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+    } else {
+      every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
+      every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+    }
+    every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns
+      listOf(
+        ScopedConfiguration().apply {
+          id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+          key = "key1"
+          value = RELEASE_CANDIDATE_VERSION_ID.toString()
+          resourceId = SOURCE_ACTOR_DEFINITION_ID
+          resourceType = ConfigResourceType.ACTOR_DEFINITION
+          scopeId = UUID.randomUUID()
+          scopeType = ConfigScopeType.ACTOR
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
+        },
+        ScopedConfiguration().apply {
+          id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+          key = "key1"
+          value = RELEASE_CANDIDATE_VERSION_ID.toString()
+          resourceId = DESTINATION_ACTOR_DEFINITION_ID
+          resourceType = ConfigResourceType.ACTOR_DEFINITION
+          scopeId = UUID.randomUUID()
+          scopeType = ConfigScopeType.ACTOR
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
+        },
+        ScopedConfiguration().apply {
+          id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
+          key = "key1"
+          value = RELEASE_CANDIDATE_VERSION_ID.toString()
+          resourceId = SOURCE_ACTOR_DEFINITION_ID
+          resourceType = ConfigResourceType.ACTOR_DEFINITION
+          scopeId = UUID.randomUUID()
+          scopeType = ConfigScopeType.ACTOR
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
+        },
+        ScopedConfiguration().apply {
+          id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION
+          key = "key1"
+          value = RELEASE_CANDIDATE_VERSION_ID.toString()
+          resourceId = DESTINATION_ACTOR_DEFINITION_ID
+          resourceType = ConfigResourceType.ACTOR_DEFINITION
+          scopeId = UUID.randomUUID()
+          scopeType = ConfigScopeType.ACTOR
+          originType = ConfigOriginType.CONNECTOR_ROLLOUT
+        },
+      )
+    every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      MOCK_CONNECTION_SYNCS.map { connection ->
+        Job(
+          0,
+          ConfigType.SYNC,
+          "scope",
+          JobConfig().apply {
+            sync =
+              JobSyncConfig().apply {
+                sourceDockerImageIsDefault = true
+                sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                destinationDockerImageIsDefault = true
+                destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+              }
+          },
+          emptyList(),
+          JobStatus.SUCCEEDED,
+          connection.createdAt ?: 0L,
+          connection.createdAt ?: 0L,
+          connection.createdAt ?: 0L,
+        )
+      }
+
+    val syncInfo = rolloutActorFinder.getSyncInfoForPinnedActors(connectorRollout)
+
+    // Two actors are pinned per actor type
+    assertEquals(2, syncInfo.size)
+
+    verify {
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test getActorJobInfo`(actorDefinitionId: UUID) {
+    val actorType = if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) ActorType.SOURCE else ActorType.DESTINATION
+    val connectorRolloutId = UUID.randomUUID()
+    val connectorRollout = createMockConnectorRollout(connectorRolloutId)
+
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+
+    val jobInfo =
+      rolloutActorFinder.getActorJobInfo(
+        connectorRollout,
+        MOCK_CONNECTION_SYNCS,
+        actorType,
+        OffsetDateTime.ofInstant(Instant.ofEpochMilli(connectorRollout.createdAt), ZoneOffset.UTC),
+        connectorRollout.releaseCandidateVersionId,
+      )
+
+    assertEquals(4, jobInfo.size)
+
+    verify { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test jobDefinitionVersionIdEq`(actorDefinitionId: UUID) {
+    val actorType: ActorType
+    val actorDefinitionVersionId: UUID
+    if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+      actorType = ActorType.SOURCE
+      actorDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+    } else {
+      actorType = ActorType.DESTINATION
+      actorDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+    }
+    val job1 =
+      Job(
+        1,
+        ConfigType.SYNC,
+        "scope",
+        JobConfig().apply {
+          sync =
+            JobSyncConfig().apply {
+              sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+              destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+            }
+        },
+        emptyList(),
+        JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+      )
+
+    val job2 =
+      Job(
+        2,
+        ConfigType.SYNC,
+        "scope",
+        JobConfig().apply {
+          sync =
+            JobSyncConfig().apply {
+              sourceDefinitionVersionId = UUID.randomUUID()
+              destinationDefinitionVersionId = UUID.randomUUID()
+            }
+        },
+        emptyList(),
+        JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+      )
+
+    assertEquals(true, rolloutActorFinder.jobDefinitionVersionIdEq(actorType, job1, actorDefinitionVersionId))
+    assertEquals(false, rolloutActorFinder.jobDefinitionVersionIdEq(actorType, job2, actorDefinitionVersionId))
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test jobDockerImageIsDefault`(actorDefinitionId: UUID) {
+    val actorType = if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) ActorType.SOURCE else ActorType.DESTINATION
+    val job1 =
+      Job(
+        1,
+        ConfigType.SYNC,
+        "scope",
+        JobConfig().apply {
+          sync =
+            JobSyncConfig().apply {
+              sourceDockerImageIsDefault = true
+              destinationDockerImageIsDefault = true
+            }
+        },
+        emptyList(),
+        JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+      )
+
+    val job2 =
+      Job(
+        2,
+        ConfigType.SYNC,
+        "scope",
+        JobConfig().apply {
+          sync =
+            JobSyncConfig().apply {
+              sourceDockerImageIsDefault = false
+              destinationDockerImageIsDefault = false
+            }
+        },
+        emptyList(),
+        JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+      )
+
+    assertEquals(true, rolloutActorFinder.jobDockerImageIsDefault(actorType, job1))
+    assertEquals(false, rolloutActorFinder.jobDockerImageIsDefault(actorType, job2))
   }
 
   @ParameterizedTest
@@ -285,7 +520,7 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
-    every { jobPersistence.getLastSyncJobForConnections(any()) } returns JOB_STATUS_SUMMARIES
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
 
@@ -299,7 +534,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
-      jobPersistence.getLastSyncJobForConnections(any())
+      jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
 
     assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
@@ -355,7 +590,7 @@ class RolloutActorFinderTest {
       )
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
-    every { jobPersistence.getLastSyncJobForConnections(any()) } returns JOB_STATUS_SUMMARIES
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
 
@@ -369,7 +604,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
-      jobPersistence.getLastSyncJobForConnections(any())
+      jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
 
     // We already exceed the target percentage so shouldn't pin something new
@@ -435,9 +670,9 @@ class RolloutActorFinderTest {
 
     assertEquals(
       0,
-      rolloutActorFinder.getNPinnedToReleaseCandidate(
+      rolloutActorFinder.getActorsPinnedToReleaseCandidate(
         createMockConnectorRollout(actorDefinitionId),
-      ),
+      ).size,
     )
 
     verify { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) }
@@ -470,7 +705,7 @@ class RolloutActorFinderTest {
         },
       )
 
-    assertEquals(2, rolloutActorFinder.getNPinnedToReleaseCandidate(createMockConnectorRollout(actorDefinitionId)))
+    assertEquals(2, rolloutActorFinder.getActorsPinnedToReleaseCandidate(createMockConnectorRollout(actorDefinitionId)).size)
 
     verify { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) }
   }
@@ -503,7 +738,7 @@ class RolloutActorFinderTest {
         },
       )
 
-    assertEquals(0, rolloutActorFinder.getNPinnedToReleaseCandidate(createMockConnectorRollout(actorDefinitionId)))
+    assertEquals(0, rolloutActorFinder.getActorsPinnedToReleaseCandidate(createMockConnectorRollout(actorDefinitionId)).size)
 
     verify { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) }
   }
@@ -582,7 +817,7 @@ class RolloutActorFinderTest {
 
     val sortedConnectionSyncs =
       rolloutActorFinder.getSortedActorDefinitionConnections(
-        CONFIG_SCOPE_MAP.values,
+        CONFIG_SCOPE_MAP.values.map { it.id },
         actorDefinitionId,
         if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) ActorType.SOURCE else ActorType.DESTINATION,
       )
@@ -702,38 +937,109 @@ class RolloutActorFinderTest {
   @ParameterizedTest
   @MethodSource("actorDefinitionIds")
   fun `test filterByJobStatus`(actorDefinitionId: UUID) {
-    val jobStatusSummaries: List<JobStatusSummary> =
-      MOCK_CONNECTION_SYNCS.mapIndexed { index, connection ->
-        JobStatusSummary(
-          connection.connectionId,
-          connection.createdAt ?: 0L,
-          if (index >= MOCK_CONNECTION_SYNCS.size - 2) JobStatus.FAILED else JobStatus.SUCCEEDED,
+    var callCount = 0
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers {
+      callCount++
+
+      // Return different job lists based on the call index
+      if (callCount <= 3) {
+        // First 3 calls: return 2 jobs, both successful
+        listOf(
+          Job(
+            0,
+            ConfigType.SYNC,
+            "scope",
+            JobConfig().apply {
+              sync =
+                JobSyncConfig().apply {
+                  sourceDockerImageIsDefault = true
+                  sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                  destinationDockerImageIsDefault = true
+                  destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+                }
+            },
+            emptyList(),
+            JobStatus.SUCCEEDED,
+            0L,
+            0L,
+            0L,
+          ),
+          Job(
+            1,
+            ConfigType.SYNC,
+            "scope",
+            JobConfig().apply {
+              sync =
+                JobSyncConfig().apply {
+                  sourceDockerImageIsDefault = true
+                  sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                  destinationDockerImageIsDefault = true
+                  destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+                }
+            },
+            emptyList(),
+            JobStatus.SUCCEEDED,
+            0L,
+            0L,
+            0L,
+          ),
+        )
+      } else {
+        // Last call: return 2 jobs, 1 success and 1 failure
+        listOf(
+          Job(
+            2,
+            ConfigType.SYNC,
+            "scope",
+            JobConfig().apply {
+              sync =
+                JobSyncConfig().apply {
+                  sourceDockerImageIsDefault = true
+                  sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                  destinationDockerImageIsDefault = true
+                  destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+                }
+            },
+            emptyList(),
+            JobStatus.SUCCEEDED,
+            0L,
+            0L,
+            0L,
+          ),
+          Job(
+            3,
+            ConfigType.SYNC,
+            "scope",
+            JobConfig().apply {
+              sync =
+                JobSyncConfig().apply {
+                  sourceDockerImageIsDefault = true
+                  sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
+                  destinationDockerImageIsDefault = true
+                  destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
+                }
+            },
+            emptyList(),
+            JobStatus.FAILED,
+            0L,
+            0L,
+            0L,
+          ),
         )
       }
-    every { jobPersistence.getLastSyncJobForConnections(any()) } returns jobStatusSummaries
+    }
 
     val actorType = if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) ActorType.SOURCE else ActorType.DESTINATION
 
     val candidates =
       rolloutActorFinder.filterByJobStatus(
+        createMockConnectorRollout(actorDefinitionId),
         CONFIG_SCOPE_MAP.values,
         MOCK_CONNECTION_SYNCS,
         actorType,
       )
-    candidates.forEach { candidate ->
-      val connection =
-        MOCK_CONNECTION_SYNCS.find { sync ->
-          when (actorType) {
-            ActorType.SOURCE -> sync.sourceId == candidate.id
-            ActorType.DESTINATION -> sync.destinationId == candidate.id
-          }
-        }
-      assertNotNull(connection, "Connection should not be null for candidate with actorId: ${candidate.id}")
-      val jobStatusSummary = jobStatusSummaries.find { it.connectionId == connection!!.connectionId }
-      assertEquals(JobStatus.SUCCEEDED, jobStatusSummary?.status, "The candidate list should only contain connections with successful jobs.")
-    }
-
-    verify { jobPersistence.getLastSyncJobForConnections(any()) }
+    assertEquals(3, candidates.size)
+    verify { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @Test

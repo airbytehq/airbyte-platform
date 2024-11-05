@@ -7,8 +7,11 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.ConnectorRolloutApi;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfoResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutGetActorSyncInfoRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListByActorDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
@@ -33,6 +36,7 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import java.util.List;
 import java.util.UUID;
 
 @Controller("/api/v1/connector_rollout")
@@ -140,6 +144,20 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
       final ConnectorRolloutRead connectorRollout = connectorRolloutHandler.getConnectorRollout(connectorRolloutId);
 
       return new ConnectorRolloutReadResponse().data(connectorRollout);
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/get_actor_sync_info")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutActorSyncInfoResponse getConnectorRolloutActorSyncInfo(@Body final ConnectorRolloutGetActorSyncInfoRequestBody connectorRolloutGetActorSyncInfoRequestBody) {
+    return ApiHelper.execute(() -> {
+      final UUID connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.getId();
+      final List<ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo = connectorRolloutHandler.getActorSyncInfo(connectorRolloutId);
+
+      return new ConnectorRolloutActorSyncInfoResponse().data(connectorRolloutSyncInfo);
     });
   }
 

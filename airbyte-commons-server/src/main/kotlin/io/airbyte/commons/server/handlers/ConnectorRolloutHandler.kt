@@ -4,6 +4,7 @@
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
@@ -428,6 +429,18 @@ open class ConnectorRolloutHandler
         )
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return buildConnectorRolloutRead(updatedConnectorRollout)
+    }
+
+    fun getActorSyncInfo(id: UUID): List<ConnectorRolloutActorSyncInfo> {
+      val rollout = connectorRolloutService.getConnectorRollout(id)
+      val actorSyncInfoMap = rolloutActorFinder.getSyncInfoForPinnedActors(rollout)
+      return actorSyncInfoMap.map { (actorId, syncInfo) ->
+        ConnectorRolloutActorSyncInfo()
+          .actorId(actorId)
+          .nConnections(syncInfo.nConnections)
+          .nSucceeded(syncInfo.nSucceeded)
+          .nFailed(syncInfo.nFailed)
+      }
     }
 
     open fun manualStartConnectorRollout(connectorRolloutWorkflowStart: ConnectorRolloutManualStartRequestBody): ConnectorRolloutRead {
