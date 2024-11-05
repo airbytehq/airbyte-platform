@@ -218,15 +218,14 @@ public class InstanceConfigurationHandler {
   }
 
   public LicenseInfoResponse licenseInfo() {
-    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
-    if (licenseMaybe.isPresent()) {
-      final AirbyteLicense license = licenseMaybe.get();
+    final AirbyteLicense license = activeAirbyteLicense.map(ActiveAirbyteLicense::getLicense).orElse(null);
+    if (license != null) {
       return new LicenseInfoResponse()
-          .edition(license.type().toString())
+          .edition(license.getType().toString())
           .expirationDate(licenseExpirationDate())
           .usedEditors(editorsUsage())
-          .maxEditors(license.maxEditors().orElse(null))
-          .maxNodes(license.maxNodes().orElse(null))
+          .maxEditors(license.getMaxEditors())
+          .maxNodes(license.getMaxNodes())
           .usedNodes(nodesUsage())
           .licenseStatus(currentLicenseStatus());
     }
@@ -234,11 +233,13 @@ public class InstanceConfigurationHandler {
   }
 
   private Long licenseExpirationDate() {
-    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
+    final AirbyteLicense license = activeAirbyteLicense.map(ActiveAirbyteLicense::getLicense).orElse(null);
 
-    if (licenseMaybe.isPresent()) {
-      final AirbyteLicense license = licenseMaybe.get();
-      return license.expirationDate().map(d -> d.toInstant().toEpochMilli() / 1000).orElse(null);
+    if (license != null) {
+      var expDate = license.getExpirationDate();
+      if (expDate != null) {
+        return expDate.toInstant().toEpochMilli() / 1000;
+      }
     }
     return null;
   }
@@ -256,16 +257,16 @@ public class InstanceConfigurationHandler {
     if (activeAirbyteLicense.isEmpty()) {
       return null;
     }
-    if (activeAirbyteLicense.get().getLicense().isEmpty()
-        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID
-        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.PRO) {
+    if (activeAirbyteLicense.get().getLicense() == null
+        || activeAirbyteLicense.get().getLicense().getType() == AirbyteLicense.LicenseType.INVALID
+        || activeAirbyteLicense.get().getLicense().getType() == AirbyteLicense.LicenseType.PRO) {
       return LicenseStatus.INVALID;
     }
-    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense().get();
-    if (actualLicense.expirationDate().map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
+    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense();
+    if (Optional.ofNullable(actualLicense.getExpirationDate()).map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
       return LicenseStatus.EXPIRED;
     }
-    if (actualLicense.maxEditors().map(m -> editorsUsage() > m).orElse(false)) {
+    if (Optional.ofNullable(actualLicense.getMaxEditors()).map(m -> editorsUsage() > m).orElse(false)) {
       return LicenseStatus.EXCEEDED;
     }
     return LicenseStatus.PRO;

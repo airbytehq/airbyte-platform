@@ -4,26 +4,24 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(platform(libs.micronaut.platform))
-  implementation(libs.bundles.micronaut)
-  implementation(libs.guava)
+  api(libs.bundles.micronaut.annotation)
+  api(libs.bundles.micronaut.kotlin)
+  api(libs.kotlin.logging)
+  api(libs.bundles.jackson)
 
-  implementation(project(":oss:airbyte-commons"))
-  implementation(project(":oss:airbyte-commons-micronaut"))
-  implementation(project(":oss:airbyte-config:config-models"))
+  api(project(":oss:airbyte-commons"))
+  api(project(":oss:airbyte-commons-micronaut"))
+  api(project(":oss:airbyte-config:config-models"))
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+  implementation(libs.micronaut.inject)
+
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.bundles.junit)
   testImplementation(libs.mockito.inline)
-}
-
-tasks.named<Test>("test") {
-  maxHeapSize = "2g"
 }
