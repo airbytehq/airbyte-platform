@@ -174,7 +174,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           final ReplicationInput replicationInput = workerAndReplicationInput.replicationInput;
           final ReplicationWorker worker = workerAndReplicationInput.worker;
 
-          LOGGER.info("connection {}, input: {}", tracingContext.connectionId, replicationInput);
+          LOGGER.debug("connection {}, input: {}", tracingContext.connectionId, replicationInput);
           cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution temporalAttempt =
