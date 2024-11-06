@@ -5,7 +5,6 @@ export const defaultOssFeatures = [
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.AllowSyncSubOneHourCronExpressions,
-  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultEnterpriseFeatures = [
@@ -36,6 +35,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
-  FeatureItem.SyncCatalogV2,
   FeatureItem.FieldHashing, // also goverened by connection.hashingUI experiment
 ];

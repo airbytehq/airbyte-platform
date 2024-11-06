@@ -41,9 +41,6 @@ describe("Sync catalog", () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     createFakerSourceViaApi()
       .then((source) => {
         fakerSource = source;
@@ -90,9 +87,6 @@ describe("Stream", { testIsolation: false }, () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     cleanDBSource();
     runDbQuery(createCarsTableQuery);
 
@@ -251,9 +245,6 @@ describe("Sync Modes", { testIsolation: false }, () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     cleanDBSource();
     runDbQuery(createUsersTableQuery);
     runDbQuery(createCitiesTableQuery);
@@ -528,9 +519,6 @@ describe("Diff styles", { testIsolation: false }, () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     cleanDBSource();
     runDbQuery(createUsersTableQuery);
     runDbQuery(createCitiesTableQuery);
@@ -674,9 +662,6 @@ describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     runDbQuery(dropUsersTableQuery);
     runDbQuery(createUsersTableQuery);
 
@@ -806,9 +791,6 @@ describe("Tab filter", { testIsolation: false }, () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     cleanDBSource();
     runDbQuery(createUsersTableQuery);
     runDbQuery(createCitiesTableQuery);

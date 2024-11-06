@@ -29,7 +29,6 @@ export enum FeatureItem {
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
-  SyncCatalogV2 = "SYNC_CATALOG_V2",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

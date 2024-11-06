@@ -237,9 +237,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
   describe("Streams table V2", () => {
     before(() => {
-      setFeatureFlags({ "connection.syncCatalogV2": true });
-      setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
       interceptDiscoverSchemaRequest();
 
       cy.visit(
@@ -364,9 +361,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
   describe("Stream V2", () => {
     before(() => {
-      setFeatureFlags({ "connection.syncCatalogV2": true });
-      setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
       interceptDiscoverSchemaRequest();
 
       cy.visit(

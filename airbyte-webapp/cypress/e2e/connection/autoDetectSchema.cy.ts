@@ -230,9 +230,6 @@ describe("Connection - Auto-detect schema changes with SyncCatalog V2", () => {
   let connection: WebBackendConnectionRead;
 
   before(() => {
-    setFeatureFlags({ "connection.syncCatalogV2": true });
-    setFeatureServiceFlags({ SYNC_CATALOG_V2: true });
-
     createPostgresDestinationViaApi().then((pgDestination) => {
       destination = pgDestination;
     });
