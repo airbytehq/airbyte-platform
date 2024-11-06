@@ -144,18 +144,24 @@ global:
   # resources, such as Minikube.
   jobs:
     resources:
-      ## Example:
-      ## requests:
-      ##    memory: 256Mi
-      ##    cpu: 250m
-      # -- Job resource requests
-      requests: {}
-      ## Example:
-      ## limits:
-      ##    cpu: 200m
-      ##    memory: 1Gi
-      # -- Job resource limits
-      limits: {}
+      requests:
+         memory: 500Mi
+         cpu: 300m
+    
+      limits:
+         cpu: 300m
+         memory: 750Mi
+      
+     
+  # jobs:
+  #   resources:
+  #     requests:
+  #       cpu: 300m  # equivalent to 0.3 CPU
+  #       memory: 500Mi
+  #     limits:
+  #       cpu: 300m  # equivalent to 0.3 CPU
+  #       memory: 750Mi
+
 
     kube:
       ## JOB_KUBE_ANNOTATIONS
