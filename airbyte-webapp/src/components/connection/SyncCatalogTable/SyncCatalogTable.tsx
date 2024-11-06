@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import classnames from "classnames";
 import set from "lodash/set";
-import React, { FC, useCallback, useMemo, useState, useDeferredValue, useContext } from "react";
+import React, { FC, useCallback, useMemo, useState, useContext } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
@@ -126,7 +126,7 @@ export const SyncCatalogTable: FC = () => {
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
-  const deferredFilteringValue = useDeferredValue(filtering);
+  const deferredFilteringValue = filtering;
 
   const customScrollParent = useContext(ScrollParentContext);
 
@@ -163,19 +163,19 @@ export const SyncCatalogTable: FC = () => {
     }),
     columnHelper.accessor("name", {
       id: "stream.name",
-      header: () =>
+      header: ({ table }) =>
         stickyRow && (
           <NamespaceNameCell
             row={stickyRow}
             streams={streams}
             onStreamsChanged={replace}
-            syncCheckboxDisabled={!!filtering.length}
+            syncCheckboxDisabled={!!table.getState().globalFilter.length}
             namespaceFormat={watchedNamespaceFormat}
             namespaceDefinition={watchedNamespaceDefinition}
             columnFilters={columnFilters}
           />
         ),
-      cell: ({ row, getValue }) => (
+      cell: ({ row, getValue, table }) => (
         <div
           style={{
             // shift row depending on depth: namespace -> stream -> field -> nestedField
@@ -187,7 +187,7 @@ export const SyncCatalogTable: FC = () => {
               row={row}
               streams={streams}
               onStreamsChanged={replace}
-              syncCheckboxDisabled={!!filtering.length}
+              syncCheckboxDisabled={!!table.getState().globalFilter.length}
               namespaceFormat={watchedNamespaceFormat}
               namespaceDefinition={watchedNamespaceDefinition}
               columnFilters={columnFilters}
@@ -197,13 +197,13 @@ export const SyncCatalogTable: FC = () => {
               value={getValue()}
               row={row}
               updateStreamField={onUpdateStreamConfigWithStreamNode}
-              globalFilterValue={filtering}
+              globalFilterValue={table.getState().globalFilter}
             />
           ) : (
             <StreamFieldNameCell
               row={row}
               updateStreamField={onUpdateStreamConfigWithStreamNode}
-              globalFilterValue={filtering}
+              globalFilterValue={table.getState().globalFilter}
             />
           )}
         </div>
@@ -312,10 +312,9 @@ export const SyncCatalogTable: FC = () => {
     }),
   ];
 
-  const preparedData = useMemo(
-    () => getSyncCatalogRows(streams, initialValues.syncCatalog.streams, prefix),
-    [initialValues.syncCatalog.streams, prefix, streams]
-  );
+  const preparedData = useMemo(() => {
+    return getSyncCatalogRows(streams, initialValues.syncCatalog.streams, prefix);
+  }, [initialValues.syncCatalog.streams, prefix, streams]);
 
   /**
    * Get initial expanded state for all namespaces rows
@@ -353,7 +352,6 @@ export const SyncCatalogTable: FC = () => {
     enableGlobalFilter: true,
     onExpandedChange: setExpanded,
     onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setFiltering,
     getRowCanExpand: (row) => !!row.subRows.length,
   });
 
