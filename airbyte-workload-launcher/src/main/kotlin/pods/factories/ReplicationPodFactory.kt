@@ -153,6 +153,7 @@ data class ReplicationPodFactory(
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelectors)
+      .withTolerations(tolerations)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()
