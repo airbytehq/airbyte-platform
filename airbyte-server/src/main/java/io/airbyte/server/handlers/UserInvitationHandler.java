@@ -313,7 +313,7 @@ public class UserInvitationHandler {
   public UserInvitationRead accept(final InviteCodeRequestBody req, final AuthenticatedUser currentUser) {
     final UserInvitation invitation = service.getUserInvitationByInviteCode(req.getInviteCode());
 
-    if (!invitation.getInvitedEmail().equals(currentUser.getEmail())) {
+    if (!invitation.getInvitedEmail().equalsIgnoreCase(currentUser.getEmail())) {
       throw new OperationNotAllowedException("Invited email does not match current user email.");
     }
 
