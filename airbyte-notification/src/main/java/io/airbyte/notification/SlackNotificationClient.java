@@ -238,6 +238,22 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
+  public boolean notifyBreakingUpcomingAutoUpgrade(final List<String> receiverEmails,
+                                                   final String connectorName,
+                                                   final ActorType actorType,
+                                                   final ActorDefinitionBreakingChange breakingChange) {
+    throw new UnsupportedOperationException("Slack notification is not supported for breaking change auto upgrade pending");
+  }
+
+  @Override
+  public boolean notifyBreakingChangeSyncsUpgraded(final List<String> receiverEmails,
+                                                   final String connectorName,
+                                                   final ActorType actorType,
+                                                   final ActorDefinitionBreakingChange breakingChange) {
+    throw new UnsupportedOperationException("Slack notification is not supported for breaking change syncs auto-upgraded notification");
+  }
+
+  @Override
   public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
                                         final String recipient) {
     final String summary = buildSummary(notification.getCatalogDiff());

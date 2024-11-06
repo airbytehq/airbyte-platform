@@ -34,7 +34,17 @@ public abstract class NotificationClient {
                                                       final ActorType actorType,
                                                       final ActorDefinitionBreakingChange breakingChange);
 
+  public abstract boolean notifyBreakingUpcomingAutoUpgrade(final List<String> receiverEmails,
+                                                            final String connectorName,
+                                                            final ActorType actorType,
+                                                            final ActorDefinitionBreakingChange breakingChange);
+
   public abstract boolean notifyBreakingChangeSyncsDisabled(final List<String> receiverEmails,
+                                                            final String connectorName,
+                                                            final ActorType actorType,
+                                                            final ActorDefinitionBreakingChange breakingChange);
+
+  public abstract boolean notifyBreakingChangeSyncsUpgraded(final List<String> receiverEmails,
                                                             final String connectorName,
                                                             final ActorType actorType,
                                                             final ActorDefinitionBreakingChange breakingChange);

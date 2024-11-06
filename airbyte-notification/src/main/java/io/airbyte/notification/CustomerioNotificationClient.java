@@ -65,6 +65,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "30";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
+  private static final String BREAKING_CHANGE_SYNCS_UPCOMING_UPGRADE_BROADCAST_ID = "48";
+  private static final String BREAKING_CHANGE_SYNCS_UPGRADED_BROADCAST_ID = "47";
   private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
   private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
 
@@ -77,6 +79,12 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/" + CAMPAIGNS_PATH_SEGMENT + "/%s/triggers";
 
   private static final String CUSTOMERIO_TYPE = "customerio";
+  public static final String CONNECTOR_NAME = "connector_name";
+  public static final String CONNECTOR_TYPE = "connector_type";
+  public static final String CONNECTOR_VERSION_NEW = "connector_version_new";
+  public static final String CONNECTOR_VERSION_CHANGE_DESCRIPTION = "connector_version_change_description";
+  public static final String CONNECTOR_VERSION_MIGRATION_URL = "connector_version_migration_url";
+  public static final String CONNECTOR_VERSION_UPGRADE_DEADLINE = "connector_version_upgrade_deadline";
 
   private final String baseUrl;
   private final OkHttpClient okHttpClient;
@@ -192,13 +200,14 @@ public class CustomerioNotificationClient extends NotificationClient {
                                              final ActorDefinitionBreakingChange breakingChange) {
     try {
       return notifyByEmailBroadcast(BREAKING_CHANGE_WARNING_BROADCAST_ID, receiverEmails, Map.of(
-          "connector_name", connectorName,
-          "connector_type", actorType.value(),
-          "connector_version_new", breakingChange.getVersion().serialize(),
-          "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
-          "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
-          "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+          CONNECTOR_NAME, connectorName,
+          CONNECTOR_TYPE, actorType.value(),
+          CONNECTOR_VERSION_NEW, breakingChange.getVersion().serialize(),
+          CONNECTOR_VERSION_UPGRADE_DEADLINE, formatDate(breakingChange.getUpgradeDeadline()),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION, convertMarkdownToHtml(breakingChange.getMessage()),
+          CONNECTOR_VERSION_MIGRATION_URL, breakingChange.getMigrationDocumentationUrl()));
     } catch (final IOException e) {
+      LOGGER.error("Failed to dispatch breaking change - sync warning notifications", e);
       return false;
     }
   }
@@ -210,12 +219,51 @@ public class CustomerioNotificationClient extends NotificationClient {
                                                    final ActorDefinitionBreakingChange breakingChange) {
     try {
       return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID, receiverEmails, Map.of(
-          "connector_name", connectorName,
-          "connector_type", actorType.value(),
-          "connector_version_new", breakingChange.getVersion().serialize(),
-          "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
-          "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+          CONNECTOR_NAME, connectorName,
+          CONNECTOR_TYPE, actorType.value(),
+          CONNECTOR_VERSION_NEW, breakingChange.getVersion().serialize(),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION, convertMarkdownToHtml(breakingChange.getMessage()),
+          CONNECTOR_VERSION_MIGRATION_URL, breakingChange.getMigrationDocumentationUrl()));
     } catch (final IOException e) {
+      LOGGER.error("Failed to dispatch breaking change - sync disabled notifications", e);
+      return false;
+    }
+  }
+
+  @Override
+  public boolean notifyBreakingUpcomingAutoUpgrade(final List<String> receiverEmails,
+                                                   final String connectorName,
+                                                   final ActorType actorType,
+                                                   final ActorDefinitionBreakingChange breakingChange) {
+    try {
+      return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_UPCOMING_UPGRADE_BROADCAST_ID, receiverEmails, Map.of(
+          CONNECTOR_NAME, connectorName,
+          CONNECTOR_TYPE, actorType.value(),
+          CONNECTOR_VERSION_NEW, breakingChange.getVersion().serialize(),
+          CONNECTOR_VERSION_UPGRADE_DEADLINE, formatDate(breakingChange.getUpgradeDeadline()),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION, convertMarkdownToHtml(breakingChange.getMessage()),
+          CONNECTOR_VERSION_MIGRATION_URL, breakingChange.getMigrationDocumentationUrl()));
+    } catch (final IOException e) {
+      LOGGER.error("Failed to dispatch breaking change - sync upcoming auto-upgrade notifications", e);
+      return false;
+    }
+
+  }
+
+  @Override
+  public boolean notifyBreakingChangeSyncsUpgraded(final List<String> receiverEmails,
+                                                   final String connectorName,
+                                                   final ActorType actorType,
+                                                   final ActorDefinitionBreakingChange breakingChange) {
+    try {
+      return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_UPGRADED_BROADCAST_ID, receiverEmails, Map.of(
+          CONNECTOR_NAME, connectorName,
+          CONNECTOR_TYPE, actorType.value(),
+          CONNECTOR_VERSION_NEW, breakingChange.getVersion().serialize(),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION, convertMarkdownToHtml(breakingChange.getMessage()),
+          CONNECTOR_VERSION_MIGRATION_URL, breakingChange.getMigrationDocumentationUrl()));
+    } catch (final IOException e) {
+      LOGGER.error("Failed to dispatch breaking change - sync auto upgraded notifications", e);
       return false;
     }
   }
