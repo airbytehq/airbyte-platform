@@ -7,6 +7,7 @@ package io.airbyte.server.apis
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -14,6 +15,7 @@ import io.airbyte.metrics.lib.ApmTraceConstants
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.jooq.exception.DataAccessException
 import java.io.IOException
 import java.util.concurrent.Callable
 import io.airbyte.data.exceptions.ConfigNotFoundException as DataConfigNotFoundException
@@ -39,6 +41,7 @@ internal fun <T> execute(call: Callable<T>): T? {
       )
       is OperationNotAllowedException -> throw e
       is IOException -> throw RuntimeException(e)
+      is DataAccessException -> throw ConflictException("Failed to access database. Check the server logs for more information")
       else -> {
         logger.error(e) { "Unexpected Exception" }
         throw e
