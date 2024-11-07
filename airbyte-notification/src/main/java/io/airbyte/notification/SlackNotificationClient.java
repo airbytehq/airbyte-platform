@@ -50,9 +50,17 @@ public class SlackNotificationClient extends NotificationClient {
   private static final String MRKDOWN_TYPE_LABEL = "mrkdwn";
 
   private final SlackNotificationConfiguration config;
+  private final String tag;
 
   public SlackNotificationClient(final SlackNotificationConfiguration slackNotificationConfiguration) {
     this.config = slackNotificationConfiguration;
+    this.tag = null;
+  }
+
+  public SlackNotificationClient(final SlackNotificationConfiguration slackNotificationConfiguration,
+                                 final String tag) {
+    this.config = slackNotificationConfiguration;
+    this.tag = tag;
   }
 
   @Override
@@ -71,7 +79,7 @@ public class SlackNotificationClient extends NotificationClient {
     } catch (IOException e) {
       return false;
     }
-    final Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
+    final Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty(), this.tag);
     notification.setData(summary);
     try {
       return notifyJson(notification.toJsonNode());
@@ -96,7 +104,7 @@ public class SlackNotificationClient extends NotificationClient {
     } catch (final IOException e) {
       return false;
     }
-    final Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
+    final Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty(), this.tag);
     notification.setData(summary);
     try {
       return notifyJson(notification.toJsonNode());
@@ -109,12 +117,14 @@ public class SlackNotificationClient extends NotificationClient {
   static Notification buildJobCompletedNotification(final SyncSummary summary,
                                                     final String titleText,
                                                     final String legacyText,
-                                                    final Optional<String> topContent) {
+                                                    final Optional<String> topContent,
+                                                    final String tag) {
     final Notification notification = new Notification();
     notification.setText(legacyText);
     final Section title = notification.addSection();
     final String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
-    title.setText(String.format("%s: %s", titleText, connectionLink));
+    final String tagContent = tag != null ? String.format("[%s] ", tag) : "";
+    title.setText(String.format("%s%s: %s", tagContent, titleText, connectionLink));
 
     if (topContent.isPresent()) {
       final Section topSection = notification.addSection();
@@ -187,7 +197,7 @@ public class SlackNotificationClient extends NotificationClient {
                            Your connection has been repeatedly failing and has been automatically disabled.
                            """;
     try {
-      return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
+      return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message), this.tag).toJsonNode());
     } catch (final IOException e) {
       return false;
     }
@@ -213,7 +223,8 @@ public class SlackNotificationClient extends NotificationClient {
                            """;
     try {
       return notifyJson(
-          buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
+          buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message), this.tag)
+              .toJsonNode());
     } catch (final IOException e) {
       return false;
     }
@@ -258,7 +269,8 @@ public class SlackNotificationClient extends NotificationClient {
                                         final String recipient) {
     final String summary = buildSummary(notification.getCatalogDiff());
 
-    final String header = String.format("The schema of '%s' has changed.",
+    final String tagContent = this.tag != null ? String.format("[%s] ", this.tag) : "";
+    final String header = String.format("%sThe schema of '%s' has changed.", tagContent,
         Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
     final Notification slackNotification =
         buildSchemaPropagationNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header,
