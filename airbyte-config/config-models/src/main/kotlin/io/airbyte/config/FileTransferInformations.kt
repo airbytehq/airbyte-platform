@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.io.Serializable
 
 data class FileTransferInformations
-  @JvmOverloads
   constructor(
     @JsonProperty("file_url")
     var fileUrl: String,

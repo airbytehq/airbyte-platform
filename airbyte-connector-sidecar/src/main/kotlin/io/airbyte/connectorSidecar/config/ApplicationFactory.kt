@@ -13,7 +13,7 @@ import jakarta.inject.Singleton
 class ApplicationFactory {
   @Singleton
   @Named("outputDocumentStore")
-  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT)
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 
   @Singleton
   fun metricClient(): MetricClient = NotImplementedMetricClient()

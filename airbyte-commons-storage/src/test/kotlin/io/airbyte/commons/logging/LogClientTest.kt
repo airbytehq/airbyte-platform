@@ -59,7 +59,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logPath = "log-path"
     val logClient =
@@ -95,7 +95,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -138,7 +138,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -175,7 +175,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -242,7 +242,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -290,7 +290,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -398,7 +398,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(
@@ -428,31 +428,56 @@ internal class LogClientTest {
         events =
           listOf(
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "Destination finished successfully — exiting read dest...",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "readFromDestination: done. (writeToDestFailed:false, dest.isFinished:true)",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:38", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "thread status... timeout thread: false , replication thread: true)",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:41", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:41", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "Closing StateCheckSumEventPubSubWriter",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = """sync summary: {
   "status" : "completed",
   "recordsSynced" : 1,
@@ -518,31 +543,56 @@ internal class LogClientTest {
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "failures: [ ]",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "----- END REPLICATION -----",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:42", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "",
               logSource = logSource,
               level = logLevel,
             ),
             LogEvent(
-              timestamp = LocalDateTime.parse("2024-10-11 13:56:43", EVENT_TIMESTAMP_FORMATTER).atZone(UTC_ZONE_ID).toInstant().toEpochMilli(),
+              timestamp =
+                LocalDateTime
+                  .parse("2024-10-11 13:56:43", EVENT_TIMESTAMP_FORMATTER)
+                  .atZone(UTC_ZONE_ID)
+                  .toInstant()
+                  .toEpochMilli(),
               message = "Returning output...",
               logSource = logSource,
               level = logLevel,
@@ -560,7 +610,7 @@ internal class LogClientTest {
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
-        every { get(DocumentType.LOGS) } returns storageClient
+        every { create(DocumentType.LOGS) } returns storageClient
       }
     val logClient =
       LogClient(

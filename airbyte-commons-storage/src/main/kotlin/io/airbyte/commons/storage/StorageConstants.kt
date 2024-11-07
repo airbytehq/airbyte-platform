@@ -20,7 +20,19 @@ internal const val STORAGE_MINIO = "$STORAGE_ROOT.minio"
 internal const val STORAGE_S3 = "$STORAGE_ROOT.s3"
 
 /** Specific settings for buckets, specifically their names. */
-internal const val STORAGE_BUCKET = "$STORAGE_ROOT.bucket"
+const val STORAGE_BUCKET = "$STORAGE_ROOT.bucket"
+
+/** Specific setting for the log bucket. */
+const val STORAGE_BUCKET_LOG = "${STORAGE_BUCKET}.log"
+
+/** Specific setting for the state bucket. */
+const val STORAGE_BUCKET_STATE = "${STORAGE_BUCKET}.state"
+
+/** Specific setting for the workload-output bucket. */
+const val STORAGE_BUCKET_WORKLOAD_OUTPUT = "${STORAGE_BUCKET}.workload-output"
+
+/** Specific setting for the activity bucket. */
+const val STORAGE_BUCKET_ACTIVITY_PAYLOAD = "${STORAGE_BUCKET}.activity-payload"
 
 /** The setting that contains what storage type the client represents. */
 const val STORAGE_TYPE = "$STORAGE_ROOT.type"

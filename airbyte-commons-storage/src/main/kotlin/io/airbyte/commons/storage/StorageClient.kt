@@ -46,7 +46,7 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.pathString
 import kotlin.io.path.relativeTo
 
-fun prependIfMissing(
+private fun prependIfMissing(
   prefix: String,
   id: String,
 ) = if (id.startsWith(prefix)) id else "${prefix.trimEnd('/')}/${id.trimStart('/')}"
@@ -70,7 +70,7 @@ class StorageClientFactory(
   /**
    * Returns a [StorageClient] for the specified [type]
    */
-  fun get(type: DocumentType): StorageClient =
+  fun create(type: DocumentType): StorageClient =
     when (storageType) {
       StorageType.AZURE -> appCtx.createBean<AzureStorageClient>(type)
       StorageType.GCS -> appCtx.createBean<GcsStorageClient>(type)
@@ -332,11 +332,10 @@ class LocalStorageClient(
     IOs.writeFile(path, document)
   }
 
-  override fun read(id: String): String? {
-    return toPath(id)
+  override fun read(id: String): String? =
+    toPath(id)
       .takeIf { it.exists() }
       ?.let { IOs.readFile(it) }
-  }
 
   override fun delete(id: String): Boolean =
     toPath(id)

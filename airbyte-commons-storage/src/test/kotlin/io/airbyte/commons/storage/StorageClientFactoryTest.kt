@@ -50,13 +50,13 @@ class LocalStorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    val state: LocalStorageClient = factory.get(DocumentType.STATE) as LocalStorageClient
+    val state: LocalStorageClient = factory.create(DocumentType.STATE) as LocalStorageClient
     assertEquals("/tmp/test/state/foo", state.toPath("foo").toString())
 
-    val workload: LocalStorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT) as LocalStorageClient
+    val workload: LocalStorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT) as LocalStorageClient
     assertEquals("/tmp/test/workload/output/foo", workload.toPath("foo").toString())
 
-    val log: LocalStorageClient = factory.get(DocumentType.LOGS) as LocalStorageClient
+    val log: LocalStorageClient = factory.create(DocumentType.LOGS) as LocalStorageClient
     assertEquals("/tmp/test/job-logging/foo", log.toPath("foo").toString())
   }
 }
@@ -88,9 +88,9 @@ class GcsStorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is GcsStorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is GcsStorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is GcsStorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is GcsStorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is GcsStorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is GcsStorageClient, "workload returned wrong type")
   }
 }
 
@@ -123,9 +123,9 @@ class MinioStorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is MinioStorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is MinioStorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is MinioStorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is MinioStorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is MinioStorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is MinioStorageClient, "workload returned wrong type")
   }
 }
 
@@ -158,8 +158,8 @@ class S3StorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is S3StorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is S3StorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is S3StorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is S3StorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is S3StorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is S3StorageClient, "workload returned wrong type")
   }
 }

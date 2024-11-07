@@ -30,13 +30,13 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("stateDocumentStore")
   StorageClient documentStoreClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.STATE);
+    return factory.create(DocumentType.STATE);
   }
 
   @Singleton
   @Named("outputDocumentStore")
   StorageClient outputDocumentStoreClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.WORKLOAD_OUTPUT);
+    return factory.create(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Prototype

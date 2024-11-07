@@ -70,7 +70,7 @@ class LogClient(
   private val logEventLayout: LogEventLayout,
   private val meterRegistry: MeterRegistry?,
 ) {
-  private val client = storageClientFactory.get(DocumentType.LOGS)
+  private val client = storageClientFactory.create(DocumentType.LOGS)
 
   // Copy the mapper to avoid changing deserialization for all usages in the containing application
   private val objectMapper = mapper.copy()
@@ -184,9 +184,7 @@ class LogClient(
     }
   }
 
-  private fun formatStructuredLogs(events: List<LogEvent>): List<String> {
-    return events.map { logEventLayout.doLayout(logEvent = it) }
-  }
+  private fun formatStructuredLogs(events: List<LogEvent>): List<String> = events.map { logEventLayout.doLayout(logEvent = it) }
 
   private fun readStructuredLogs(
     files: List<String>,
@@ -202,14 +200,12 @@ class LogClient(
           val events = client.read(id = file)
           byteCounter?.increment(events?.length?.toDouble() ?: 0.0)
           extractEvents(events = events)
-        }
-        .flatMap { it.events }
+        }.flatMap { it.events }
         .takeWhile {
           count++
           lineCounter?.increment()
           count <= numLines
-        }
-        .sortedBy { it.timestamp }
+        }.sortedBy { it.timestamp }
         .toList()
     return logLines
   }
@@ -247,9 +243,7 @@ class LogClient(
     return orderLogLines(lines = lines)
   }
 
-  private fun extractEvents(events: String?): LogEvents {
-    return events?.let { objectMapper.readValue(it) } ?: LogEvents(events = emptyList())
-  }
+  private fun extractEvents(events: String?): LogEvents = events?.let { objectMapper.readValue(it) } ?: LogEvents(events = emptyList())
 
   private fun extractLogLines(fileContents: String?): List<String> {
     val fileLines = mutableListOf<String>()

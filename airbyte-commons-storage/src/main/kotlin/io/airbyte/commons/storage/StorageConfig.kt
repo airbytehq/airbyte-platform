@@ -27,10 +27,10 @@ interface StorageConfig {
  */
 @Singleton
 data class StorageBucketConfig(
-  @Value("\${$STORAGE_BUCKET.log}") val log: String,
-  @Value("\${$STORAGE_BUCKET.state}") val state: String,
-  @Value("\${$STORAGE_BUCKET.workload-output}") val workloadOutput: String,
-  @Value("\${$STORAGE_BUCKET.activity-payload}") val activityPayload: String,
+  @Value("\${$STORAGE_BUCKET_LOG}") val log: String,
+  @Value("\${$STORAGE_BUCKET_STATE}") val state: String,
+  @Value("\${$STORAGE_BUCKET_WORKLOAD_OUTPUT}") val workloadOutput: String,
+  @Value("\${$STORAGE_BUCKET_ACTIVITY_PAYLOAD}") val activityPayload: String,
 )
 
 /**

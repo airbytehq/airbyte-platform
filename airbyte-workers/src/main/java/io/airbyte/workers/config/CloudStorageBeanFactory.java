@@ -27,13 +27,13 @@ public class CloudStorageBeanFactory {
   @Singleton
   @Named("logDocumentStore")
   public StorageClient logStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.LOGS);
+    return factory.create(DocumentType.LOGS);
   }
 
   @Singleton
   @Named("stateDocumentStore")
   public StorageClient stateStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.STATE);
+    return factory.create(DocumentType.STATE);
   }
 
   @SuppressWarnings("LineLength")
@@ -41,13 +41,13 @@ public class CloudStorageBeanFactory {
   @Singleton
   @Named("outputDocumentStore")
   public StorageClient workloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.WORKLOAD_OUTPUT);
+    return factory.create(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Singleton
   @Named("payloadDocumentStore")
   public StorageClient payloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.ACTIVITY_PAYLOADS);
+    return factory.create(DocumentType.ACTIVITY_PAYLOADS);
   }
 
   @Singleton

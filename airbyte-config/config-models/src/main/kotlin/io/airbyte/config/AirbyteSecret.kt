@@ -17,11 +17,15 @@ sealed class AirbyteSecret {
     const val SECRET_REFERENCE_FIELD_NAME = "_secret"
   }
 
-  data class Hydrated(val value: String) : AirbyteSecret()
+  data class Hydrated(
+    val value: String,
+  ) : AirbyteSecret()
 
-  data class Reference(val reference: String) : AirbyteSecret()
+  data class Reference(
+    val reference: String,
+  ) : AirbyteSecret()
 
-  class Deserializer() : StdDeserializer<AirbyteSecret>(AirbyteSecret::class.java) {
+  class Deserializer : StdDeserializer<AirbyteSecret>(AirbyteSecret::class.java) {
     override fun deserialize(
       parser: JsonParser,
       ctxt: DeserializationContext,
@@ -35,7 +39,7 @@ sealed class AirbyteSecret {
     }
   }
 
-  class Serializer() : StdSerializer<AirbyteSecret>(AirbyteSecret::class.java) {
+  class Serializer : StdSerializer<AirbyteSecret>(AirbyteSecret::class.java) {
     override fun serialize(
       secret: AirbyteSecret,
       gen: JsonGenerator,
