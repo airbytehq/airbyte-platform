@@ -4,6 +4,7 @@ import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutFinalizeResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
@@ -25,6 +26,8 @@ class FinalizeRolloutActivityImplTest {
     private const val PREVIOUS_VERSION_DOCKER_IMAGE_TAG = "0.1"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
+    private val USER_ID = UUID.randomUUID()
+    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -47,6 +50,8 @@ class FinalizeRolloutActivityImplTest {
         rolloutId = ROLLOUT_ID,
         previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         result = ConnectorRolloutFinalState.SUCCEEDED,
+        updatedBy = USER_ID,
+        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     finalizeRolloutActivity.finalizeRollout(input)

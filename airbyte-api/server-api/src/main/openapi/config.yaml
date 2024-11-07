@@ -7788,6 +7788,7 @@ components:
         - docker_image_tag
         - actor_definition_id
         - updated_by
+        - rollout_strategy
       properties:
         docker_repository:
           type: string
@@ -7799,6 +7800,8 @@ components:
         updated_by:
           type: string
           format: uuid
+        rollout_strategy:
+          $ref: "#/components/schemas/ConnectorRolloutStrategy"
 
     ConnectorRolloutManualRolloutRequestBody:
       type: object

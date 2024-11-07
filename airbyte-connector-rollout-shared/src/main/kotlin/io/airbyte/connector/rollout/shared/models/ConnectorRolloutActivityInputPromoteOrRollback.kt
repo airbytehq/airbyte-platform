@@ -1,5 +1,6 @@
 package io.airbyte.connector.rollout.shared.models
 
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import java.util.UUID
 
 data class ConnectorRolloutActivityInputPromoteOrRollback(
@@ -8,4 +9,5 @@ data class ConnectorRolloutActivityInputPromoteOrRollback(
   var technicalName: String,
   var action: ActionType,
   var rolloutId: UUID,
+  var rolloutStrategy: ConnectorEnumRolloutStrategy,
 )

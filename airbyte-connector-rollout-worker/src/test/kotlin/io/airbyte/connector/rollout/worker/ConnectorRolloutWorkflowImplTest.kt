@@ -2,6 +2,7 @@ package io.airbyte.connector.rollout.worker
 
 import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
 import io.airbyte.config.ConnectorEnumRolloutState
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
@@ -95,6 +96,8 @@ class ConnectorRolloutWorkflowImplTest {
     private val ROLLOUT_ID = UUID.randomUUID()
     private const val WORKFLOW_ID = "WORKFLOW1"
     private val ACTOR_IDS = listOf(UUID.randomUUID())
+    private val USER_ID = UUID.randomUUID()
+    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -149,6 +152,8 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
   }
@@ -181,6 +186,8 @@ class ConnectorRolloutWorkflowImplTest {
         DOCKER_IMAGE_TAG,
         ACTOR_DEFINITION_ID,
         ROLLOUT_ID,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
     workflowStub.finalizeRollout(
@@ -191,6 +198,10 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
         PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         finalState,
+        null,
+        null,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
 
@@ -277,6 +288,8 @@ class ConnectorRolloutWorkflowImplTest {
           DOCKER_IMAGE_TAG,
           ACTOR_DEFINITION_ID,
           ROLLOUT_ID,
+          USER_ID,
+          ROLLOUT_STRATEGY,
         ),
       )
     assertEquals(workflowStarted.workflowId, WORKFLOW_ID)
@@ -288,6 +301,8 @@ class ConnectorRolloutWorkflowImplTest {
           DOCKER_IMAGE_TAG,
           ACTOR_DEFINITION_ID,
           ROLLOUT_ID,
+          USER_ID,
+          ROLLOUT_STRATEGY,
         ),
       )
     }
@@ -314,6 +329,8 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
         ACTOR_IDS,
         null,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
     verify(doRolloutActivity).doRollout(MockitoHelper.anyObject())
@@ -361,6 +378,10 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
         PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.SUCCEEDED,
+        null,
+        null,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
@@ -383,6 +404,10 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
         PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.FAILED_ROLLED_BACK,
+        null,
+        null,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
@@ -403,6 +428,10 @@ class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_ID,
         PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
         ConnectorRolloutFinalState.CANCELED,
+        null,
+        null,
+        USER_ID,
+        ROLLOUT_STRATEGY,
       ),
     )
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
