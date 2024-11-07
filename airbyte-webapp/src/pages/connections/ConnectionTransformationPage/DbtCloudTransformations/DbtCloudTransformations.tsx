@@ -1,10 +1,9 @@
 import React from "react";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentConnection } from "core/api";
 import { useAvailableDbtJobs, useDbtIntegration } from "core/api/cloud";
+import { DefaultErrorBoundary } from "core/errors";
 
-import { DbtCloudErrorBoundary } from "./DbtCloudErrorBoundary";
 import { DbtCloudTransformationsForm } from "./DbtCloudTransformationsForm";
 
 /**
@@ -41,13 +40,10 @@ export const DbtCloudTransformations: React.FC = () => {
   /**
    * we can't use hooks inside the class component, so we to pass them as props
    */
-  const workspaceId = useCurrentWorkspaceId();
 
-  return hasDbtIntegration ? (
-    <DbtCloudErrorBoundary workspaceId={workspaceId}>
-      <DbtCloudTransformationsWithDbtIntegration />
-    </DbtCloudErrorBoundary>
-  ) : (
-    <DbtCloudTransformationsForm />
+  return (
+    <DefaultErrorBoundary>
+      {hasDbtIntegration ? <DbtCloudTransformationsWithDbtIntegration /> : <DbtCloudTransformationsForm />}
+    </DefaultErrorBoundary>
   );
 };

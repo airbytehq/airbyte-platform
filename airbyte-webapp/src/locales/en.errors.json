@@ -1,6 +1,8 @@
 {
   "cron-validation/invalid-timezone": "The timezone {cronTimezone} is currently not supported. Please chose another timezone.",
   "dbtcloud/access-denied": "dbt Cloud denied access. Please verify your service token and access URL.",
+  "dbtcloud/paid-plan-required": "To use the dbt Cloud integration, you must be on a paid plan.",
+  "dbtcloud/generic": "There was an error communicating with dbt Cloud.",
   "auth/user-already-exists": "A user with the email {email} already exists.",
   "generate-contribution": "An error occurred while generating the contribution: {message}",
   "generate-contribution/invalid-github-token": "The GitHub token provided is invalid. Please verify the token and try again.",

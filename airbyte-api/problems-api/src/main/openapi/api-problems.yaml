@@ -337,6 +337,48 @@ components:
               default: The integration service denied access.
             data:
               $ref: "#/components/schemas/DbtCloudIntegrationData"
+    DbtCloudPaidPlanRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:dbtcloud/paid-plan-required
+            title:
+              type: string
+              default: Unable to access dbt Cloud integration
+            detail:
+              type: string
+              default: To use the dbt Cloud integration, you must be on a paid plan.
+            data:
+              $ref: "#/components/schemas/DbtCloudIntegrationData"
+    DbtCloudGenericProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:dbtcloud/generic
+            title:
+              type: string
+              default: Unable to access dbt Cloud integration
+            detail:
+              type: string
+              default: There was an error communicating with dbt Cloud.
+            data:
+              $ref: "#/components/schemas/DbtCloudIntegrationData"
     CronValidationMissingCronProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
