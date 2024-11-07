@@ -3,8 +3,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
+import { MultiListBox } from "components/ui/ListBox/MultiListBox";
 import { Message } from "components/ui/Message";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
@@ -21,6 +22,7 @@ import {
   useJobInfoWithoutLogs,
 } from "core/api";
 import { trackError } from "core/utils/datadog";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -60,6 +62,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
 const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, connectionId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const job = useJobInfoWithoutLogs(jobId);
+  const showStructuredLogsUI = useExperiment("logs.structured-logs-ui");
 
   const [inputValue, setInputValue] = useState("");
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
@@ -250,17 +253,31 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
       </Box>
       <JobLogsModalFailureMessage failureSummary={jobAttempt.attempt.failureSummary} />
       <Box px="md">
-        <LogSearchInput
-          ref={searchInputRef}
-          inputValue={inputValue}
-          onSearchInputKeydown={onSearchInputKeydown}
-          onSearchTermChange={onSearchTermChange}
-          highlightedMatchDisplay={highlightedMatchingLineNumber}
-          highlightedMatchIndex={highlightedMatchIndex}
-          matches={matchingLines}
-          scrollToNextMatch={scrollToNextMatch}
-          scrollToPreviousMatch={scrollToPreviousMatch}
-        />
+        <FlexContainer>
+          <FlexItem grow>
+            <LogSearchInput
+              ref={searchInputRef}
+              inputValue={inputValue}
+              onSearchInputKeydown={onSearchInputKeydown}
+              onSearchTermChange={onSearchTermChange}
+              highlightedMatchDisplay={highlightedMatchingLineNumber}
+              highlightedMatchIndex={highlightedMatchIndex}
+              matches={matchingLines}
+              scrollToNextMatch={scrollToNextMatch}
+              scrollToPreviousMatch={scrollToPreviousMatch}
+            />
+          </FlexItem>
+          {showStructuredLogsUI && (
+            <FlexItem>
+              <MultiListBox
+                selectedValues={selectedLogOrigins ?? origins}
+                options={logOriginOptions}
+                onSelectValues={(newOrigins) => setSelectedLogOrigins(newOrigins ?? origins)}
+                label="Log sources"
+              />
+            </FlexItem>
+          )}
+        </FlexContainer>
       </Box>
 
       {origins.length > 0 && (

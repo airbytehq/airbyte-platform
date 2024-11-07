@@ -141,11 +141,11 @@ export const ListBox = <T,>({
         "data-testid": `${restOptionProps["data-testid"]}-option`,
       })}
     >
-      {({ active, selected }) => (
+      {({ focus, selected }) => (
         <FlexContainer
           alignItems="center"
           className={classNames(styles.optionValue, selected && selectedOptionClassName, {
-            [styles.active]: active,
+            [styles.focus]: focus,
             [styles.selected]: selected,
           })}
         >

@@ -21,6 +21,7 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "connectorBuilder.aiAssist.enabled": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
+  "logs.structured-logs-ui": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
@@ -44,6 +45,7 @@ export const defaultExperimentValues: Experiments = {
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
+  "logs.structured-logs-ui": false,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": false,
