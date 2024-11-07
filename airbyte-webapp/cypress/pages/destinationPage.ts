@@ -1,7 +1,6 @@
 import { clickOnCellInTable } from "@cy/commands/common";
 
 const newDestination = "button[data-id='new-destination']";
-const addSourceButton = "button[data-testid='select-source']";
 const createConnectionButton = "button[data-testid='create-connection']";
 
 const destinationsTable = "table[data-testid='destinationsTable']";
@@ -24,10 +23,6 @@ export const openNewDestinationForm = () => {
     }
   });
   cy.url().should("include", `/destination/new-destination`);
-};
-
-export const openAddSource = () => {
-  cy.get(addSourceButton).click();
 };
 
 export const openCreateConnection = () => {

@@ -3,7 +3,6 @@ import { getWorkspaceId } from "commands/api/workspace";
 import { interceptGetConnectionRequest, waitForGetConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
 
-const replicationTab = "div[data-id='replication-step']";
 const syncEnabledSwitch = "[data-testid='connection-status-switch']";
 
 interface VisitOptions {
@@ -16,10 +15,6 @@ export const visit = (connection: WebBackendConnectionRead, tab = "", { intercep
   cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connection.connectionId}/${tab}`);
 
   waitForGetConnectionRequest();
-};
-
-export const goToReplicationTab = () => {
-  cy.get(replicationTab).click();
 };
 
 export const getSyncEnabledSwitch = () => cy.get(syncEnabledSwitch);

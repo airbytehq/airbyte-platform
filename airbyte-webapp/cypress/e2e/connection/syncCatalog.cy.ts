@@ -22,8 +22,8 @@ import {
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "@cy/commands/interceptors";
 import { visit } from "@cy/pages/connection/connectionPageObject";
 import { confirmStreamConfigurationChangedPopup } from "@cy/pages/connection/connectionReplicationPageObject";
-import { StreamRowPageObjectV2 } from "@cy/pages/connection/StreamRowPageObjectV2";
-import { streamsTableV2 } from "@cy/pages/connection/StreamsTablePageObjectV2";
+import { StreamRowPageObject } from "@cy/pages/connection/StreamRowPageObject";
+import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
 import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
 import {
   DestinationRead,
@@ -125,7 +125,7 @@ describe("Stream", { testIsolation: false }, () => {
     cleanDBSource();
   });
 
-  const carsStreamRow = new StreamRowPageObjectV2("public", "cars");
+  const carsStreamRow = new StreamRowPageObject("public", "cars");
 
   describe("enabled state", () => {
     it("should have checked checkbox", () => {
@@ -286,8 +286,8 @@ describe("Sync Modes", { testIsolation: false }, () => {
     cleanDBSource();
   });
 
-  const usersStreamRow = new StreamRowPageObjectV2("public", "users");
-  const citiesStreamRow = new StreamRowPageObjectV2("public", "cities");
+  const usersStreamRow = new StreamRowPageObject("public", "users");
+  const citiesStreamRow = new StreamRowPageObject("public", "cities");
 
   describe("Full refresh | Append", { testIsolation: false }, () => {
     it("should select the sync mode", () => {
@@ -306,8 +306,8 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes", () => {
-      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.isNoStreamsSelectedErrorDisplayed(false);
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -335,8 +335,8 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes", () => {
-      streamsTableV2.isNoStreamsSelectedErrorDisplayed(false);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.isNoStreamsSelectedErrorDisplayed(false);
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -359,7 +359,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     it("should show missing PK error", () => {
       citiesStreamRow.isMissedPKErrorDisplayed(true);
       citiesStreamRow.isMissedCursorErrorDisplayed(false);
-      streamsTableV2.isSaveChangesButtonEnabled(false);
+      streamsTable.isSaveChangesButtonEnabled(false);
     });
 
     it("should select PK", () => {
@@ -371,7 +371,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes", () => {
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -382,7 +382,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
       citiesStreamRow.toggleExpandCollapseStream();
       citiesStreamRow.isPKField("city_code", true);
       citiesStreamRow.isPKField("city", true);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -406,7 +406,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     it("should NOT show missing PK and Cursor error", () => {
       usersStreamRow.isMissedPKErrorDisplayed(false);
       usersStreamRow.isMissedCursorErrorDisplayed(false);
-      streamsTableV2.isSaveChangesButtonEnabled(true);
+      streamsTable.isSaveChangesButtonEnabled(true);
     });
 
     it("should show non-editable selected PK", () => {
@@ -417,7 +417,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes", () => {
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -441,7 +441,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     it("should show missing Cursor error", () => {
       usersStreamRow.isMissedPKErrorDisplayed(false);
       usersStreamRow.isMissedCursorErrorDisplayed(true);
-      streamsTableV2.isSaveChangesButtonEnabled(false);
+      streamsTable.isSaveChangesButtonEnabled(false);
     });
 
     it("should select Cursor", () => {
@@ -452,7 +452,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes", () => {
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
     });
 
@@ -470,7 +470,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
       visit(connection, "replication");
       citiesStreamRow.selectPKs(["city_code", "city"]);
       citiesStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       waitForUpdateConnectionRequest();
 
       visit(connection, "replication");
@@ -484,7 +484,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     it("should show missing PK and Cursor errors", () => {
       citiesStreamRow.isMissedPKErrorDisplayed(true);
       citiesStreamRow.isMissedCursorErrorDisplayed(true);
-      streamsTableV2.isSaveChangesButtonEnabled(false);
+      streamsTable.isSaveChangesButtonEnabled(false);
     });
 
     it("should select PK and Cursor", () => {
@@ -498,7 +498,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
     });
 
     it("should allow to save changes and discard refresh streams", () => {
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       confirmStreamConfigurationChangedPopup({ reset: false });
       waitForUpdateConnectionRequest();
     });
@@ -558,14 +558,14 @@ describe("Diff styles", { testIsolation: false }, () => {
     cleanDBSource();
   });
 
-  const citiesStreamRow = new StreamRowPageObjectV2("public", "cities");
-  const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+  const citiesStreamRow = new StreamRowPageObject("public", "cities");
+  const usersStreamRow = new StreamRowPageObject("public", "users");
 
   describe("Stream", { testIsolation: false }, () => {
     it("should prepare streams for tests", () => {
       citiesStreamRow.toggleStreamSync(true);
       usersStreamRow.toggleStreamSync(true);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
     });
 
     it("should have `removed` style after changing state from `enabled` => `disabled`", () => {
@@ -575,7 +575,7 @@ describe("Diff styles", { testIsolation: false }, () => {
       citiesStreamRow.toggleExpandCollapseStream();
       citiesStreamRow.fieldHasDisabledStyle("city", true);
       citiesStreamRow.fieldHasDisabledStyle("city_code", true);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       citiesStreamRow.streamHasRemovedStyle(false);
     });
 
@@ -593,7 +593,7 @@ describe("Diff styles", { testIsolation: false }, () => {
       citiesStreamRow.streamHasAddedStyle(true);
       citiesStreamRow.fieldHasDisabledStyle("city", false);
       citiesStreamRow.fieldHasDisabledStyle("city_code", false);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       citiesStreamRow.streamHasAddedStyle(false);
     });
 
@@ -605,7 +605,7 @@ describe("Diff styles", { testIsolation: false }, () => {
       citiesStreamRow.streamHasChangedStyle(true);
       citiesStreamRow.selectPKs(["city_code"]);
       citiesStreamRow.selectCursor("city");
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       confirmStreamConfigurationChangedPopup({ reset: false });
       citiesStreamRow.streamHasChangedStyle(false);
     });
@@ -613,14 +613,14 @@ describe("Diff styles", { testIsolation: false }, () => {
     it("should have `changed` style after changing the PK", () => {
       citiesStreamRow.selectPKs(["city"]);
       citiesStreamRow.streamHasChangedStyle(true);
-      streamsTableV2.clickDiscardChangesButton();
+      streamsTable.clickDiscardChangesButton();
       citiesStreamRow.streamHasChangedStyle(false);
     });
 
     it("should have `changed` style after changing the Cursor", () => {
       citiesStreamRow.selectCursor("city_code");
       citiesStreamRow.streamHasChangedStyle(true);
-      streamsTableV2.clickDiscardChangesButton();
+      streamsTable.clickDiscardChangesButton();
       citiesStreamRow.streamHasChangedStyle(false);
     });
   });
@@ -628,7 +628,7 @@ describe("Diff styles", { testIsolation: false }, () => {
   describe("Field", { testIsolation: false }, () => {
     it("should prepare fields for tests", () => {
       citiesStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
     });
 
     it("should have field with `removed` and stream with `changed` styles after disabling the field", () => {
@@ -638,7 +638,7 @@ describe("Diff styles", { testIsolation: false }, () => {
 
       citiesStreamRow.streamHasChangedStyle(true);
       citiesStreamRow.fieldHasRemovedStyle("city", true);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       citiesStreamRow.streamHasChangedStyle(false);
       citiesStreamRow.fieldHasRemovedStyle("city", false);
     });
@@ -649,7 +649,7 @@ describe("Diff styles", { testIsolation: false }, () => {
 
       citiesStreamRow.streamHasChangedStyle(true);
       citiesStreamRow.fieldHasAddedStyle("city", true);
-      streamsTableV2.clickSaveChangesButton();
+      streamsTable.clickSaveChangesButton();
       citiesStreamRow.streamHasChangedStyle(false);
       citiesStreamRow.fieldHasRemovedStyle("city", false);
     });
@@ -722,44 +722,44 @@ describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   });
 
   it("should have stream filters still enabled", () => {
-    const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+    const usersStreamRow = new StreamRowPageObject("public", "users");
     // Filter input
-    streamsTableV2.isFilterByStreamOrFieldNameInputEnabled(true);
-    streamsTableV2.filterByStreamOrFieldName("users");
+    streamsTable.isFilterByStreamOrFieldNameInputEnabled(true);
+    streamsTable.filterByStreamOrFieldName("users");
     usersStreamRow.isStreamExistInTable(true);
 
-    streamsTableV2.filterByStreamOrFieldName("userss");
-    streamsTableV2.isNoMatchingStreamsMsgDisplayed(true);
-    streamsTableV2.clearFilterByStreamOrFieldNameInput();
+    streamsTable.filterByStreamOrFieldName("userss");
+    streamsTable.isNoMatchingStreamsMsgDisplayed(true);
+    streamsTable.clearFilterByStreamOrFieldNameInput();
 
     // Tab buttons
-    streamsTableV2.isFilterTabEnabled("all", true);
-    streamsTableV2.isFilterTabEnabled("enabledStreams", true);
-    streamsTableV2.isFilterTabEnabled("disabledStreams", true);
-    streamsTableV2.clickFilterTab("enabledStreams");
+    streamsTable.isFilterTabEnabled("all", true);
+    streamsTable.isFilterTabEnabled("enabledStreams", true);
+    streamsTable.isFilterTabEnabled("disabledStreams", true);
+    streamsTable.clickFilterTab("enabledStreams");
     usersStreamRow.isStreamExistInTable(true);
     usersStreamRow.isStreamSyncEnabled(true);
-    streamsTableV2.clickFilterTab("disabledStreams");
-    streamsTableV2.isNoStreamsMsgDisplayed(true);
-    streamsTableV2.clickFilterTab("all");
+    streamsTable.clickFilterTab("disabledStreams");
+    streamsTable.isNoStreamsMsgDisplayed(true);
+    streamsTable.clickFilterTab("all");
   });
 
   it("should not allow refreshing the source schema", () => {
-    streamsTableV2.isRefreshSourceSchemaBtnExist(true);
-    streamsTableV2.isRefreshSourceSchemaBtnEnabled(false);
+    streamsTable.isRefreshSourceSchemaBtnExist(true);
+    streamsTable.isRefreshSourceSchemaBtnEnabled(false);
   });
 
   it("should allow expanding and collapsing all streams", () => {
-    streamsTableV2.isToggleExpandCollapseAllStreamsBtnExist(true);
-    streamsTableV2.isToggleExpandCollapseAllStreamsBtnEnabled(true);
+    streamsTable.isToggleExpandCollapseAllStreamsBtnExist(true);
+    streamsTable.isToggleExpandCollapseAllStreamsBtnEnabled(true);
   });
 
   it("should not allow enabling or disabling all streams in a namespace", () => {
-    streamsTableV2.isNamespaceCheckboxEnabled(false);
+    streamsTable.isNamespaceCheckboxEnabled(false);
   });
 
   describe("stream", () => {
-    const usersStreamRow = new StreamRowPageObjectV2("public", "users");
+    const usersStreamRow = new StreamRowPageObject("public", "users");
 
     it("should not allow enabling or disabling individual streams", () => {
       usersStreamRow.isStreamSyncCheckboxDisabled(true);
@@ -831,13 +831,13 @@ describe("Tab filter", { testIsolation: false }, () => {
     cleanDBSource();
   });
 
-  const usersStreamRow = new StreamRowPageObjectV2("public", "users");
-  const citiesStreamRow = new StreamRowPageObjectV2("public", "cities");
-  const carsStreamRow = new StreamRowPageObjectV2("public", "cars");
+  const usersStreamRow = new StreamRowPageObject("public", "users");
+  const citiesStreamRow = new StreamRowPageObject("public", "cities");
+  const carsStreamRow = new StreamRowPageObject("public", "cars");
 
   describe("All", () => {
     it("should show all streams (enabled and disabled)", () => {
-      streamsTableV2.clickFilterTab("all");
+      streamsTable.clickFilterTab("all");
 
       usersStreamRow.isStreamExistInTable(true);
       citiesStreamRow.isStreamExistInTable(true);
@@ -847,13 +847,13 @@ describe("Tab filter", { testIsolation: false }, () => {
       carsStreamRow.isStreamExistInTable(true);
     });
     it("should show total count of streams in namespace row", () => {
-      streamsTableV2.isTotalAmountOfStreamsDisplayed(3, true);
+      streamsTable.isTotalAmountOfStreamsDisplayed(3, true);
     });
   });
 
   describe("Enabled streams", () => {
     it("should show only enabled streams", () => {
-      streamsTableV2.clickFilterTab("enabledStreams");
+      streamsTable.clickFilterTab("enabledStreams");
 
       usersStreamRow.isStreamExistInTable(false);
       citiesStreamRow.isStreamExistInTable(false);
@@ -861,26 +861,26 @@ describe("Tab filter", { testIsolation: false }, () => {
       carsStreamRow.isStreamSyncEnabled(true);
     });
     it("should show only enabled streams filtered by name", () => {
-      streamsTableV2.filterByStreamOrFieldName("cars");
+      streamsTable.filterByStreamOrFieldName("cars");
       carsStreamRow.isStreamExistInTable(true);
 
-      streamsTableV2.filterByStreamOrFieldName("carss");
-      streamsTableV2.isNoMatchingStreamsMsgDisplayed(true);
-      streamsTableV2.clearFilterByStreamOrFieldNameInput();
+      streamsTable.filterByStreamOrFieldName("carss");
+      streamsTable.isNoMatchingStreamsMsgDisplayed(true);
+      streamsTable.clearFilterByStreamOrFieldNameInput();
     });
     it("should show `{enabled} / {total} streams` count in namespace row if not all streams are enabled", () => {
-      streamsTableV2.isAmountOfCountedStreamsOutOfTotalDisplayed("1 / 3", true);
+      streamsTable.isAmountOfCountedStreamsOutOfTotalDisplayed("1 / 3", true);
     });
     it("should show empty table if there is no enabled streams", () => {
       carsStreamRow.toggleStreamSync(false);
-      streamsTableV2.isNamespaceCellEmpty(true);
-      streamsTableV2.isNoStreamsMsgDisplayed(true);
+      streamsTable.isNamespaceCellEmpty(true);
+      streamsTable.isNoStreamsMsgDisplayed(true);
     });
   });
 
   describe("Disabled streams", () => {
     it("should show only disabled streams", () => {
-      streamsTableV2.clickFilterTab("disabledStreams");
+      streamsTable.clickFilterTab("disabledStreams");
 
       usersStreamRow.isStreamExistInTable(true);
       citiesStreamRow.isStreamExistInTable(true);
@@ -890,13 +890,13 @@ describe("Tab filter", { testIsolation: false }, () => {
     it("should show only disabled streams filtered by name", () => {
       citiesStreamRow.toggleStreamSync(true);
       citiesStreamRow.isStreamExistInTable(false);
-      streamsTableV2.filterByStreamOrFieldName("cities");
-      streamsTableV2.isNamespaceCellEmpty(true);
-      streamsTableV2.isNoMatchingStreamsMsgDisplayed(true);
-      streamsTableV2.clearFilterByStreamOrFieldNameInput();
+      streamsTable.filterByStreamOrFieldName("cities");
+      streamsTable.isNamespaceCellEmpty(true);
+      streamsTable.isNoMatchingStreamsMsgDisplayed(true);
+      streamsTable.clearFilterByStreamOrFieldNameInput();
     });
     it("should show `{disabled} / {total} streams` count in namespace row if not all streams are disabled", () => {
-      streamsTableV2.isAmountOfCountedStreamsOutOfTotalDisplayed("2 / 3", true);
+      streamsTable.isAmountOfCountedStreamsOutOfTotalDisplayed("2 / 3", true);
     });
   });
 });

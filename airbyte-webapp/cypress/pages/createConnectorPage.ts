@@ -65,13 +65,6 @@ export const enterSchema = (value: string) => {
   cy.get(schemaInput).first().type("{enter}", { force: true });
 };
 
-export const removeSchema = (value = "Remove public") => {
-  if (!value) {
-    return;
-  }
-  cy.get(`[aria-label*="${value}"]`).click();
-};
-
 export const openOptionalFields = () => {
   cy.get(optionalFieldsButton).click();
 };
