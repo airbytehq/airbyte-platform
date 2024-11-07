@@ -2067,7 +2067,7 @@
   "credits.freeUsage": "Free",
   "credits.internalUsage": "Free (internal)",
   "credits.billedCost": "Billed",
-  "credits.totalUsage": "Total credits usage",
+  "credits.totalInLegend": "{total} total",
   "credits.stripePortalLink": "Invoice history",
   "credits.workspace.deleted": "This workspace has been deleted",
   "credits.connection.deleted": "This connection has been deleted",

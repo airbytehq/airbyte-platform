@@ -16,6 +16,7 @@ import {
 
 import { Text } from "components/ui/Text";
 
+import { useFormatCredits } from "core/utils/numberHelper";
 import { UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
 import styles from "./UsagePerDayGraph.module.scss";
@@ -34,6 +35,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({
   hasInternalUsage,
 }) => {
   const { formatMessage } = useIntl();
+  const { formatCredits } = useFormatCredits();
   const chartLinesColor = styles.grey100;
   const chartTicksColor = styles.grey;
   const chartHoverFill = styles.grey100;
@@ -53,6 +55,19 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({
     );
   }, [chartData, minimized]);
 
+  const totals = useMemo(() => {
+    return chartData.reduce(
+      (acc, data) => {
+        return {
+          freeUsage: acc.freeUsage + data.freeUsage,
+          billedCost: acc.billedCost + data.billedCost,
+          internalUsage: acc.internalUsage + data.internalUsage,
+        };
+      },
+      { freeUsage: 0, billedCost: 0, internalUsage: 0 }
+    );
+  }, [chartData]);
+
   return (
     <div
       className={classnames(styles.container, {
@@ -69,10 +84,11 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({
               iconType="circle"
               height={40}
               wrapperStyle={{ color: `${styles.white}` }}
-              formatter={(value: "freeUsage" | "billedCost") => {
+              formatter={(value: "freeUsage" | "billedCost" | "internalUsage") => {
                 return (
                   <Text as="span">
-                    <FormattedMessage id={`credits.${value}`} />
+                    <FormattedMessage id={`credits.${value}`} /> (
+                    <FormattedMessage id="credits.totalInLegend" values={{ total: formatCredits(totals[value]) }} />)
                   </Text>
                 );
               }}
