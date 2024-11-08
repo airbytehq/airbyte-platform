@@ -5,7 +5,6 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
 import io.airbyte.config.ConnectorEnumRolloutState
-import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputCleanup
 import io.airbyte.connector.rollout.worker.activities.CleanupActivityImpl
 import io.mockk.every
@@ -25,8 +24,6 @@ class CleanupActivityImplTest {
     private const val DOCKER_IMAGE_TAG = "0.1"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
-    private val USER_ID = UUID.randomUUID()
-    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -48,8 +45,6 @@ class CleanupActivityImplTest {
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
         newState = ConnectorEnumRolloutState.SUCCEEDED,
-        updatedBy = USER_ID,
-        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     cleanupActivity.cleanup(input)

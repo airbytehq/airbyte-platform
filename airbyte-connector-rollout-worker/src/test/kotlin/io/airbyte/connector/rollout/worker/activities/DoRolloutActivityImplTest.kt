@@ -4,7 +4,6 @@ import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
-import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.mockk.every
@@ -26,8 +25,6 @@ class DoRolloutActivityImplTest {
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
     private val ACTOR_IDS = listOf(UUID.randomUUID())
-    private val USER_ID = UUID.randomUUID()
-    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -50,8 +47,6 @@ class DoRolloutActivityImplTest {
         rolloutId = ROLLOUT_ID,
         actorIds = ACTOR_IDS,
         targetPercentage = TARGET_PERCENTAGE,
-        updatedBy = USER_ID,
-        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     doRolloutActivity.doRollout(input)

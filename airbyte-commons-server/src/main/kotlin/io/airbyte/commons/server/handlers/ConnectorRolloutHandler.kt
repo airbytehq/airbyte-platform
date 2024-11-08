@@ -128,7 +128,6 @@ open class ConnectorRolloutHandler
       actorDefinitionId: UUID,
       dockerImageTag: String,
       updatedBy: UUID,
-      rolloutStrategy: ConnectorRolloutStrategy,
     ): ConnectorRollout {
       val actorDefinitionVersion =
         actorDefinitionService.getActorDefinitionVersion(
@@ -173,7 +172,6 @@ open class ConnectorRolloutHandler
             .withUpdatedBy(updatedBy)
             .withState(ConnectorEnumRolloutState.INITIALIZED)
             .withHasBreakingChanges(false)
-            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
         connectorRolloutService.writeConnectorRollout(connectorRollout)
         return connectorRollout
       }
@@ -452,7 +450,6 @@ open class ConnectorRolloutHandler
           connectorRolloutWorkflowStart.actorDefinitionId,
           connectorRolloutWorkflowStart.dockerImageTag,
           connectorRolloutWorkflowStart.updatedBy,
-          connectorRolloutWorkflowStart.rolloutStrategy,
         )
       try {
         connectorRolloutClient.startRollout(
@@ -461,8 +458,6 @@ open class ConnectorRolloutHandler
             connectorRolloutWorkflowStart.dockerImageTag,
             connectorRolloutWorkflowStart.actorDefinitionId,
             rollout.id,
-            connectorRolloutWorkflowStart.updatedBy,
-            rollout.rolloutStrategy,
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -485,7 +480,6 @@ open class ConnectorRolloutHandler
               connectorRolloutUpdate.actorDefinitionId,
               connectorRolloutUpdate.id,
               connectorRolloutUpdate.updatedBy,
-              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -502,7 +496,6 @@ open class ConnectorRolloutHandler
             connectorRolloutUpdate.actorIds,
             connectorRolloutUpdate.targetPercentage,
             connectorRolloutUpdate.updatedBy,
-            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -525,7 +518,6 @@ open class ConnectorRolloutHandler
               connectorRolloutFinalize.actorDefinitionId,
               connectorRolloutFinalize.id,
               connectorRolloutFinalize.updatedBy,
-              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -550,7 +542,6 @@ open class ConnectorRolloutHandler
             connectorRolloutFinalize.errorMsg,
             connectorRolloutFinalize.failedReason,
             connectorRolloutFinalize.updatedBy,
-            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -559,14 +550,6 @@ open class ConnectorRolloutHandler
       val response = ConnectorRolloutManualFinalizeResponse()
       response.status("ok")
       return response
-    }
-
-    private fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {
-      return if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
-        ConnectorEnumRolloutStrategy.MANUAL
-      } else {
-        ConnectorEnumRolloutStrategy.OVERRIDDEN
-      }
     }
 
     @Transactional("config")

@@ -15,7 +15,6 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutManualRolloutReques
 import io.airbyte.api.client.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutReadRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutStateTerminal
-import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.configuration.picocli.PicocliRunner
@@ -113,7 +112,6 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             UUID(0, 0),
-            ConnectorRolloutStrategy.MANUAL,
           )
         startWorkflow(rolloutClient, startInput)
       }

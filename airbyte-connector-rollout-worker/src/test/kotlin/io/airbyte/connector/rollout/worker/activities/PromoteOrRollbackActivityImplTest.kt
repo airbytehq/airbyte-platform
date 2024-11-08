@@ -4,7 +4,6 @@ import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
-import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
 import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivityImpl
@@ -30,7 +29,6 @@ class PromoteOrRollbackActivityImplTest {
     private const val TECHNICAL_NAME = "source-faker"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
-    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -66,7 +64,6 @@ class PromoteOrRollbackActivityImplTest {
         technicalName = TECHNICAL_NAME,
         rolloutId = ROLLOUT_ID,
         action = actionType,
-        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     promoteOrRollbackActivity.promoteOrRollback(input)
