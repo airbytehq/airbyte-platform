@@ -19,6 +19,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
+import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
 
 private val logger = KotlinLogging.logger {}
 
@@ -165,7 +166,7 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -190,7 +191,7 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -209,7 +210,7 @@ class WorkloadHandlerImpl(
           WorkloadStatus.SUCCESS,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.SUCCESS ->
         logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
@@ -323,7 +324,10 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
-  private fun sendSignal(signalPayload: String?) {
+  private fun sendSignal(
+    workloadType: DomainWorkloadType,
+    signalPayload: String?,
+  ) {
     val signalInput =
       if (signalPayload == null) {
         null
@@ -350,14 +354,16 @@ class WorkloadHandlerImpl(
         )
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
           MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
         )
       } catch (e: Exception) {
         logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
           MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
           MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
         )

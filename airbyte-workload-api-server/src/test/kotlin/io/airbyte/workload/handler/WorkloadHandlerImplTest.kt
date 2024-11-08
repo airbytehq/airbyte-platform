@@ -784,7 +784,8 @@ class WorkloadHandlerImplTest {
       verify {
         metricClient.count(
           OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          any(),
           MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
           any(),
         )

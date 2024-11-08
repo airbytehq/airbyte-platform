@@ -63,6 +63,7 @@ public class MetricTags {
   public static final String SUCCESS = "success";
   public static final String WILL_RETRY = "will_retry";
   public static final String WORKSPACE_ID = "workspace_id";
+  public static final String WORKFLOW_TYPE = "workflow_type";
   public static final String WORKLOAD_TYPE = "workload_type";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
