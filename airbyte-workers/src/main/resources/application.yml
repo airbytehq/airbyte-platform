@@ -189,6 +189,8 @@ airbyte:
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   temporal:
+    queues:
+      ui-commands: ui_commands
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
   tracking:

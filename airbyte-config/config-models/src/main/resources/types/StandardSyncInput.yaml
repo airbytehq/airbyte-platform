@@ -67,3 +67,6 @@ properties:
   useAsyncReplicate:
     description: whether we should use async replicate
     type: boolean
+  useAsyncActivities:
+    description: whether we should use async activities
+    type: boolean

@@ -13,6 +13,7 @@ data class SignalInput(
 ) : Serializable {
   companion object {
     const val SYNC_WORKFLOW = "sync"
+    const val CONNECTOR_COMMAND_WORKFLOW = "connector_command"
   }
 
   data class Builder

@@ -45,6 +45,7 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -111,10 +112,12 @@ public class TemporalClientTest {
   private ConnectionManagerUtils connectionManagerUtils;
   private StreamResetRecordsHelper streamResetRecordsHelper;
   private Path workspaceRoot;
+  private String uiCommandsQueue;
 
   @BeforeEach
   void setup() throws IOException {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test");
+    uiCommandsQueue = "ui-commands-queue";
     logPath = workspaceRoot.resolve(String.valueOf(JOB_ID)).resolve(String.valueOf(ATTEMPT_ID)).resolve(DEFAULT_LOG_FILENAME);
     workflowClient = mock(WorkflowClient.class);
     when(workflowClient.getOptions()).thenReturn(WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build());
@@ -131,8 +134,9 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
-        spy(new TemporalClient(workspaceRoot, workflowClientWrapped, workflowServiceStubsWrapped, streamResetPersistence, streamRefreshesRepository,
-            connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class)));
+        spy(new TemporalClient(workspaceRoot, uiCommandsQueue, workflowClientWrapped, workflowServiceStubsWrapped, streamResetPersistence,
+            streamRefreshesRepository,
+            connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class), new TestClient()));
   }
 
   @Nested
@@ -146,9 +150,9 @@ public class TemporalClientTest {
 
       final var metricClient = mock(MetricClient.class);
       temporalClient = spy(
-          new TemporalClient(workspaceRoot, new WorkflowClientWrapped(workflowClient, metricClient),
+          new TemporalClient(workspaceRoot, uiCommandsQueue, new WorkflowClientWrapped(workflowClient, metricClient),
               new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence, streamRefreshesRepository,
-              mConnectionManagerUtils, streamResetRecordsHelper, metricClient));
+              mConnectionManagerUtils, streamResetRecordsHelper, metricClient, new TestClient()));
     }
 
     @Test

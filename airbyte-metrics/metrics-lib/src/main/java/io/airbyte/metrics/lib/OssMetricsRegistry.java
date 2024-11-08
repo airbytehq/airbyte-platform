@@ -108,6 +108,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.SERVER,
       "authentication_request",
       "increments when an authentication request is attempted."),
+  COMMAND_STEP(
+      MetricEmittingApps.WORKER,
+      "command_step",
+      "increments when a command step is done."),
+  COMMAND_STEP_DURATION(
+      MetricEmittingApps.WORKER,
+      "command",
+      "tracks the duration of a command step."),
 
   KEYCLOAK_TOKEN_VALIDATION(
       MetricEmittingApps.SERVER,

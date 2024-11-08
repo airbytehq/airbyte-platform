@@ -58,7 +58,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   @Override
   public ConnectorJobOutput runWithWorkload(final CheckConnectionInput input) throws WorkerException {
     final UUID workspaceId = input.getCheckConnectionInput().getActorContext().getWorkspaceId();
-    final WorkloadCreateRequest workloadCreateRequest = checkCommand.buildWorkloadCreateRequest(input);
+    final WorkloadCreateRequest workloadCreateRequest = checkCommand.buildWorkloadCreateRequest(input, null);
 
     final int checkFrequencyInSeconds =
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));

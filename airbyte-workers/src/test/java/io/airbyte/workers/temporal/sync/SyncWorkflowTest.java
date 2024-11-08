@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.sync;
 
-import static io.airbyte.workers.temporal.workflow.MockDiscoverCatalogAndAutoPropagateWorkflow.REFRESH_SCHEMA_ACTIVITY_OUTPUT;
+import static io.airbyte.workers.temporal.workflows.MockDiscoverCatalogAndAutoPropagateWorkflow.REFRESH_SCHEMA_ACTIVITY_OUTPUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +43,7 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.workflow.MockDiscoverCatalogAndAutoPropagateWorkflow;
+import io.airbyte.workers.temporal.workflows.MockDiscoverCatalogAndAutoPropagateWorkflow;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;

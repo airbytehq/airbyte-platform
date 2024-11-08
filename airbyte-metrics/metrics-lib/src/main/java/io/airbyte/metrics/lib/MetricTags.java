@@ -22,6 +22,8 @@ public class MetricTags {
   public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
   public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CANCELLATION_SOURCE = "cancellation_source";
+  public static final String COMMAND = "command";
+  public static final String COMMAND_STEP = "command_step";
   public static final String CONFIG_TYPES = "config_types";
   public static final String CONNECTION_ID = "connection_id";
   public static final String CONNECTION_IDS = "connection_ids";

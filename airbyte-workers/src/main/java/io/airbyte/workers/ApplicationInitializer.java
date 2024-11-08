@@ -17,9 +17,11 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
+import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl;
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
 import io.airbyte.workers.tracing.TemporalSdkInterceptor;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;
@@ -58,6 +60,10 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Inject
   @Named("checkConnectionActivities")
   private Optional<List<Object>> checkConnectionActivities;
+
+  @Inject
+  @Named("uiCommandsActivities")
+  private Optional<List<Object>> uiCommandsActivities;
 
   @Inject
   @Named("connectionManagerActivities")
@@ -115,6 +121,9 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Value("${airbyte.data.discover.task-queue}")
   private String discoverTaskQueue;
 
+  @Property(name = "airbyte.temporal.queues.ui-commands")
+  private String uiCommandsQueue;
+
   @Override
   public void onApplicationEvent(final ServiceReadyEvent event) {
     try {
@@ -151,6 +160,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private void registerWorkerFactory(final WorkerFactory workerFactory,
                                      final MaxWorkersConfig maxWorkersConfiguration) {
     log.info("Registering worker factories....");
+    registerUiCommandsWorker(workerFactory, maxWorkersConfiguration);
+
     if (shouldRunGetSpecWorkflows) {
       registerGetSpec(workerFactory, maxWorkersConfiguration);
     }
@@ -170,6 +181,18 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     if (shouldRunConnectionManagerWorkflows) {
       registerConnectionManager(workerFactory, maxWorkersConfiguration);
     }
+  }
+
+  private void registerUiCommandsWorker(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfiguration) {
+    final Worker uiCommandsWorker = factory.newWorker(uiCommandsQueue, getWorkerOptions(maxWorkersConfiguration.getMaxCheckWorkers()));
+    final WorkflowImplementationOptions workflowOptions = WorkflowImplementationOptions.newBuilder()
+        .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
+
+    uiCommandsWorker.registerWorkflowImplementationTypes(
+        workflowOptions,
+        temporalProxyHelper.proxyWorkflowClass(ConnectorCommandWorkflowImpl.class));
+    uiCommandsWorker.registerActivitiesImplementations(uiCommandsActivities.orElseThrow().toArray(new Object[] {}));
+    log.info("UI Commands Worker registered.");
   }
 
   private void registerCheckConnection(final WorkerFactory factory,
@@ -256,6 +279,10 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
           temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
       syncWorker.registerActivitiesImplementations(
           syncActivities.orElseThrow().toArray(new Object[] {}));
+
+      log.info("Registering connector command workflow for task queue '{}'...", taskQueue);
+      syncWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectorCommandWorkflowImpl.class));
+      syncWorker.registerActivitiesImplementations(uiCommandsActivities.orElseThrow().toArray(new Object[] {}));
     }
     log.info("Sync Workflow registered.");
   }

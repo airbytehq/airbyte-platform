@@ -1,9 +1,7 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.Geography
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
@@ -14,7 +12,6 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
@@ -26,18 +23,25 @@ import io.airbyte.workload.api.client.model.generated.WorkloadType
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
-import java.util.UUID
 
 @Singleton
 class CheckCommand(
   @Named("workspaceRoot") private val workspaceRoot: Path,
-  private val airbyteApiClient: AirbyteApiClient,
-  private val workloadClient: WorkloadClient,
+  airbyteApiClient: AirbyteApiClient,
+  workloadClient: WorkloadClient,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
   private val metricClient: MetricClient,
-) {
-  fun buildWorkloadCreateRequest(input: CheckConnectionInput): WorkloadCreateRequest {
+) : WorkloadCommandBase<CheckConnectionInput>(
+    airbyteApiClient = airbyteApiClient,
+    workloadClient = workloadClient,
+  ) {
+  override val name: String = "check"
+
+  override fun buildWorkloadCreateRequest(
+    input: CheckConnectionInput,
+    signalPayload: String?,
+  ): WorkloadCreateRequest {
     val jobId = input.jobRunConfig.jobId
     val attemptNumber = if (input.jobRunConfig.attemptId == null) 0 else Math.toIntExact(input.jobRunConfig.attemptId)
     val workloadId: String =
@@ -65,23 +69,14 @@ class CheckCommand(
       geography = geo.value,
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,
-      // TODO
-      signalInput = null,
+      signalInput = signalPayload,
     )
   }
 
-  fun start(input: CheckConnectionInput): String {
-    val workloadCreateRequest = buildWorkloadCreateRequest(input)
-    workloadClient.createWorkload(workloadCreateRequest)
-    return workloadCreateRequest.workloadId
-  }
-
-  fun isTerminal(workloadId: String): Boolean = workloadClient.isTerminal(workloadId)
-
-  fun getOutput(workloadId: String): ConnectorJobOutput {
+  override fun getOutput(id: String): ConnectorJobOutput {
     val output =
       workloadClient.getConnectorJobOutput(
-        workloadId,
+        id,
       ) { failureReason: FailureReason ->
         ConnectorJobOutput()
           .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
@@ -100,22 +95,5 @@ class CheckCommand(
     )
 
     return output
-  }
-
-  fun cancel(): Nothing = TODO()
-
-  fun getGeography(
-    connectionId: UUID?,
-    workspaceId: UUID?,
-  ): Geography {
-    try {
-      return connectionId?.let {
-        airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(it)).geography
-      } ?: workspaceId?.let {
-        airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId, false)).defaultGeography
-      } ?: Geography.AUTO
-    } catch (e: Exception) {
-      throw WorkerException("Unable to find geography of connection $connectionId", e)
-    }
   }
 }

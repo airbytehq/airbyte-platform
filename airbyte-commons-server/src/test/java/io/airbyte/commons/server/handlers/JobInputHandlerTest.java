@@ -201,7 +201,8 @@ class JobInputHandlerTest {
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withIsReset(false)
-        .withUseAsyncReplicate(false);
+        .withUseAsyncReplicate(false)
+        .withUseAsyncActivities(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -276,7 +277,8 @@ class JobInputHandlerTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true)
-        .withUseAsyncReplicate(false);
+        .withUseAsyncReplicate(false)
+        .withUseAsyncActivities(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))

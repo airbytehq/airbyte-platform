@@ -23,10 +23,14 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWorkflow;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput.DiscoverCatalogInput;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.SignalInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
@@ -39,11 +43,14 @@ import io.airbyte.config.WorkloadPriority;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.PostprocessCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.CanceledFailure;
@@ -85,6 +92,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private AsyncReplicationActivity asyncReplicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "workloadStatusCheckActivityOptions")
   private WorkloadStatusCheckActivity workloadStatusCheckActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
 
   private Boolean shouldBlock;
 
@@ -219,26 +228,42 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                 final JsonNode sourceConfig,
                                                                 final String discoverTaskQueue) {
     try {
-      final DiscoverCatalogAndAutoPropagateWorkflow childDiscoverCatalogWorkflow =
-          Workflow.newChildWorkflowStub(DiscoverCatalogAndAutoPropagateWorkflow.class,
-              ChildWorkflowOptions.newBuilder()
-                  .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
-                  .setTaskQueue(discoverTaskQueue)
-                  .build());
-      return childDiscoverCatalogWorkflow.run(jobRunConfig, sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT),
-          new StandardDiscoverCatalogInput()
-              .withActorContext(new ActorContext()
-                  .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
-                  .withActorType(ActorType.SOURCE)
-                  .withActorId(syncInput.getSourceId())
-                  .withWorkspaceId(syncInput.getWorkspaceId())
-                  .withOrganizationId(syncInput.getConnectionContext().getOrganizationId()))
-              .withConnectionConfiguration(syncInput.getSourceConfiguration())
-              .withSourceId(syncInput.getSourceId().toString())
-              .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
-                  Charsets.UTF_8)).toString())
-              .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
-              .withManual(false));
+      final StandardDiscoverCatalogInput discoverCatalogInput = new StandardDiscoverCatalogInput()
+          .withActorContext(new ActorContext()
+              .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
+              .withActorType(ActorType.SOURCE)
+              .withActorId(syncInput.getSourceId())
+              .withWorkspaceId(syncInput.getWorkspaceId())
+              .withOrganizationId(syncInput.getConnectionContext().getOrganizationId()))
+          .withConnectionConfiguration(syncInput.getSourceConfiguration())
+          .withSourceId(syncInput.getSourceId().toString())
+          .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
+              Charsets.UTF_8)).toString())
+          .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
+          .withManual(false);
+      if (Boolean.TRUE.equals(syncInput.getUseAsyncActivities())) {
+        final ConnectorCommandWorkflow childDiscoverWorkflow = Workflow.newChildWorkflowStub(
+            ConnectorCommandWorkflow.class,
+            ChildWorkflowOptions.newBuilder()
+                .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
+                .build());
+        final ConnectorJobOutput discoverOutput = childDiscoverWorkflow.run(new DiscoverCommandInput(
+            new DiscoverCatalogInput(jobRunConfig, sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT), discoverCatalogInput)));
+
+        final PostprocessCatalogOutput postprocessCatalogOutput = discoverCatalogHelperActivity
+            .postprocess(new PostprocessCatalogInput(discoverOutput.getDiscoverCatalogId(), sourceLauncherConfig.getConnectionId()));
+        return new RefreshSchemaActivityOutput(postprocessCatalogOutput.getDiff());
+      } else {
+        final DiscoverCatalogAndAutoPropagateWorkflow childDiscoverCatalogWorkflow =
+            Workflow.newChildWorkflowStub(DiscoverCatalogAndAutoPropagateWorkflow.class,
+                ChildWorkflowOptions.newBuilder()
+                    .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
+                    .setTaskQueue(discoverTaskQueue)
+                    .build());
+        return childDiscoverCatalogWorkflow.run(jobRunConfig,
+            sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT),
+            discoverCatalogInput);
+      }
     } catch (Exception e) {
       LOGGER.error("error", e);
       throw new RuntimeException(e);

@@ -48,7 +48,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   @Override
   public ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException {
     final UUID workspaceId = input.getDiscoverCatalogInput().getActorContext().getWorkspaceId();
-    final WorkloadCreateRequest workloadCreateRequest = discoverCommand.buildWorkloadCreateRequest(input);
+    final WorkloadCreateRequest workloadCreateRequest = discoverCommand.buildWorkloadCreateRequest(input, null);
 
     final int checkFrequencyInSeconds =
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));

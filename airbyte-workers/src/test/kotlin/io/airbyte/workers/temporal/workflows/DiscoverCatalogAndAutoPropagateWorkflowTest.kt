@@ -1,4 +1,4 @@
-package io.airbyte.workers.temporal.workflow
+package io.airbyte.workers.temporal.workflows
 
 import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConnectorJobOutput
@@ -10,7 +10,6 @@ import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
-import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

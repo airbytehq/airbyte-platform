@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseAsyncActivities;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -28,7 +30,7 @@ class FeatureFlagFetchActivityTest {
     mWorkspaceApi = mock(WorkspaceApi.class);
     mAirbyteApiClient = mock(AirbyteApiClient.class);
     when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
-    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(mAirbyteApiClient);
+    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(mAirbyteApiClient, new TestClient());
   }
 
   @Test
@@ -36,7 +38,7 @@ class FeatureFlagFetchActivityTest {
     final FeatureFlagFetchActivity.FeatureFlagFetchInput input = new FeatureFlagFetchActivity.FeatureFlagFetchInput(CONNECTION_ID);
 
     final FeatureFlagFetchActivity.FeatureFlagFetchOutput output = featureFlagFetchActivity.getFeatureFlags(input);
-    Assertions.assertEquals(output.getFeatureFlags(), Map.of());
+    Assertions.assertEquals(Map.of(UseAsyncActivities.INSTANCE.getKey(), false), output.getFeatureFlags());
 
   }
 

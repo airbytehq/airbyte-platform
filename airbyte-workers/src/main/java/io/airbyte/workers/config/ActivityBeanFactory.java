@@ -31,6 +31,7 @@ import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
 import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity;
+import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -55,6 +56,13 @@ public class ActivityBeanFactory {
   public List<Object> checkConnectionActivities(
                                                 final CheckConnectionActivity checkConnectionActivity) {
     return List.of(checkConnectionActivity);
+  }
+
+  @Singleton
+  @Named("uiCommandsActivities")
+  public List<Object> uiCommandsActivities(
+                                           final ConnectorCommandActivity connectorCommandActivity) {
+    return List.of(connectorCommandActivity);
   }
 
   @Singleton
@@ -117,10 +125,11 @@ public class ActivityBeanFactory {
                                      final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
                                      final InvokeOperationsActivity invokeOperationsActivity,
                                      final AsyncReplicationActivity asyncReplicationActivity,
-                                     final WorkloadStatusCheckActivity workloadStatusCheckActivity) {
+                                     final WorkloadStatusCheckActivity workloadStatusCheckActivity,
+                                     final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
     return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
         reportRunTimeActivity, syncFeatureFlagFetcherActivity,
-        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity);
+        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity, discoverCatalogHelperActivity);
   }
 
   @Singleton

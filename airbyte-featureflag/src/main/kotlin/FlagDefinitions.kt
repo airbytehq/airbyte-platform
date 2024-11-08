@@ -178,6 +178,8 @@ object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-ov
 
 object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
 
+object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = false)
+
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")

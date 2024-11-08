@@ -1,4 +1,4 @@
-package io.airbyte.workers.temporal.workflow
+package io.airbyte.workers.temporal.workflows
 
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWorkflow
 import io.airbyte.config.CatalogDiff
