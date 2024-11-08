@@ -114,7 +114,7 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "increments when a command step is done."),
   COMMAND_STEP_DURATION(
       MetricEmittingApps.WORKER,
-      "command",
+      "command_step_duration",
       "tracks the duration of a command step."),
 
   KEYCLOAK_TOKEN_VALIDATION(
