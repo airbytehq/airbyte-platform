@@ -9,7 +9,7 @@ import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
-import { DestinationDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
+import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
@@ -23,7 +23,11 @@ jest.mock("components/ui/Markdown", () => ({ children }: React.PropsWithChildren
 
 jest.mock("core/api", () => ({
   useDestinationList: () => ({ destinations: [] }),
-  useConsentUrls: () => ({ getSourceConsentUrl: () => "http://example.com" }),
+  useConsentUrls: () => ({
+    getSourceConsentUrl: (): OAuthConsentRead => ({
+      consentUrl: "http://example.com",
+    }),
+  }),
   useCompleteOAuth: jest.fn(() => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
