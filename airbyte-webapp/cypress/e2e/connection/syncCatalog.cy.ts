@@ -214,6 +214,15 @@ describe("Stream", { testIsolation: false }, () => {
       carsStreamRow.isFieldSyncEnabled("mark", true);
       carsStreamRow.isFieldSyncCheckboxDisabled("mark", true);
     });
+
+    it("should disable the stream if all fields are unselected", () => {
+      carsStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
+      carsStreamRow.toggleFieldSync("color", false);
+      carsStreamRow.toggleFieldSync("id", false);
+      carsStreamRow.toggleFieldSync("mark", false);
+
+      carsStreamRow.isStreamSyncEnabled(false);
+    });
   });
 
   describe("Field - disabled columnSelection", () => {

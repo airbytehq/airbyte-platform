@@ -103,6 +103,8 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
       ...updatedConfig,
       // any field selection immediately enables the disabled stream
       ...(isSelected && !config?.selected && { selected: true }),
+      // disable the stream if all fields are unselected
+      ...(updatedConfig?.selectedFields?.length === 0 && updatedConfig?.fieldSelectionEnabled && { selected: false }),
       selectedFields: !updatedConfig?.fieldSelectionEnabled
         ? []
         : [...(updatedConfig?.selectedFields ?? []), ...mandatorySelectedFields],
