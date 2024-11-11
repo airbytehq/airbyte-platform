@@ -13,7 +13,6 @@ configurations.all {
   exclude(group = "io.micronaut.email")
   exclude(group = "io.micronaut.validation")
   exclude(group = "io.micronaut.cache")
-  exclude(group = "io.micronaut.security")
   exclude(group = "io.micronaut.reactor")
   exclude(group = "io.micronaut.kotlin")
   exclude(group = "io.micronaut.acme")
