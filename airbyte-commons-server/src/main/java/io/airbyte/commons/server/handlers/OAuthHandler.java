@@ -143,8 +143,8 @@ public class OAuthHandler {
         sourceService.getStandardSourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         sourceOauthConsentRequest.getWorkspaceId(), sourceOauthConsentRequest.getSourceId());
-    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository(), spec);
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final OAuthConsentRead result;
 
@@ -209,8 +209,8 @@ public class OAuthHandler {
         destinationService.getStandardDestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationId());
-    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository(), spec);
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final OAuthConsentRead result;
 
@@ -279,8 +279,8 @@ public class OAuthHandler {
         sourceService.getStandardSourceDefinition(completeSourceOauthRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         completeSourceOauthRequest.getWorkspaceId(), completeSourceOauthRequest.getSourceId());
-    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository(), spec);
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final Map<String, Object> result;
 
@@ -340,8 +340,8 @@ public class OAuthHandler {
         destinationService.getStandardDestinationDefinition(completeDestinationOAuthRequest.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationId());
-    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository(), spec);
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final Map<String, Object> result;
 
@@ -397,7 +397,8 @@ public class OAuthHandler {
         sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
         revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceId());
-    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
+    final ConnectorSpecification spec = sourceVersion.getSpec();
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository(), spec);
     final SourceConnection hydratedSourceConnection;
     try {
       hydratedSourceConnection = sourceService.getSourceConnectionWithSecrets(
@@ -698,7 +699,7 @@ public class OAuthHandler {
       // here see https://github.com/airbytehq/airbyte/issues/7624
       // Should already be hydrated
       return MoreOAuthParameters.flattenOAuthConfig(param.getConfiguration());
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
 
     }
@@ -723,7 +724,7 @@ public class OAuthHandler {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
         secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
-      } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
     }

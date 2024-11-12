@@ -156,7 +156,6 @@ public class DeclarativeOAuthSpecHandler {
    * @return the Map of (String, String) as parsedConfig.
    */
   protected final Map<String, String> createDefaultTemplateMap(final JsonNode userConfig) {
-
     final Map<String, String> templateMap = new HashMap<>();
 
     // populate interpolation values with mandatory keys, using override checks from user's input
@@ -210,7 +209,6 @@ public class DeclarativeOAuthSpecHandler {
                                                                       final String clientSecret,
                                                                       final String authCode,
                                                                       final String redirectUrl) {
-
     final Map<String, String> templateValues = createDefaultTemplateMap(userConfig);
     templateValues.put(templateValues.get(CLIENT_ID_KEY), clientId);
     templateValues.put(templateValues.get(CLIENT_SECRET_KEY), clientSecret);
@@ -218,7 +216,6 @@ public class DeclarativeOAuthSpecHandler {
     templateValues.put(templateValues.get(REDIRECT_URI_KEY), redirectUrl);
 
     return templateValues;
-
   }
 
   /**
@@ -238,7 +235,6 @@ public class DeclarativeOAuthSpecHandler {
                                                                 final String authCode,
                                                                 final String redirectUrl,
                                                                 final String state) {
-
     final Map<String, String> templateValues = createDefaultTemplateMap(userConfig);
     templateValues.put(templateValues.get(CLIENT_ID_KEY), clientId);
     templateValues.put(templateValues.get(CLIENT_SECRET_KEY), clientSecret);
@@ -260,13 +256,11 @@ public class DeclarativeOAuthSpecHandler {
    * @throws IOException if an I/O error occurs during the rendering process.
    */
   protected final String renderStringTemplate(final Map<String, String> templateValues, final String templateString) throws IOException {
-
     try {
       return getInterpolator(templateValues).replace(checkContext(templateString));
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
-
   }
 
   /**

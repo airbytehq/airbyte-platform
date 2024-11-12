@@ -209,7 +209,6 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
     } catch (final URISyntaxException e) {
       throw new IOException("Failed to format AccessToken URL for OAuth flow.", e);
     }
-
   }
 
   /**
