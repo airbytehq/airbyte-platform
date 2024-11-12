@@ -197,70 +197,68 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
-      {(streamReadData !== undefined || errorMessage !== undefined) && (
-        <ResizablePanels
-          className={styles.resizablePanelsContainer}
-          orientation="horizontal"
-          panels={[
-            {
-              children: (
-                <>
-                  {hasRegularRequests && (
-                    <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
-                  )}
-                </>
-              ),
-              minWidth: 40,
-            },
-            ...(errorMessage || (streamReadData?.logs && streamReadData.logs.length > 0)
-              ? [
-                  {
-                    children: (
-                      <LogsDisplay
-                        logs={streamReadData?.logs ?? []}
-                        error={errorMessage}
-                        testWarnings={streamTestWarnings}
-                      />
-                    ),
-                    minWidth: 0,
-                    flex: logsFlex,
-                    splitter: (
-                      <Splitter
-                        label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
-                        infoNum={logNumByType.info}
-                        warningNum={logNumByType.warning}
-                        errorNum={logNumByType.error}
-                      />
-                    ),
-                    className: styles.secondaryPanel,
-                  },
-                ]
-              : []),
-            ...(hasAuxiliaryRequests
-              ? [
-                  {
-                    children: (
-                      // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
-                      // to reset the selected request index in case the number of requests differs between streams
-                      <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
-                    ),
-                    minWidth: 0,
-                    flex: auxiliaryRequestsFlex,
-                    splitter: (
-                      <Splitter
-                        label={formatMessage(
-                          { id: "connectorBuilder.auxiliaryRequests" },
-                          { count: auxiliaryRequests.length }
-                        )}
-                      />
-                    ),
-                    className: styles.secondaryPanel,
-                  },
-                ]
-              : []),
-          ]}
-        />
-      )}
+      <ResizablePanels
+        className={styles.resizablePanelsContainer}
+        orientation="horizontal"
+        panels={[
+          {
+            children: (
+              <>
+                {hasRegularRequests && (
+                  <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
+                )}
+              </>
+            ),
+            minWidth: 40,
+          },
+          ...(errorMessage || (streamReadData?.logs && streamReadData.logs.length > 0) || streamTestWarnings.length > 0
+            ? [
+                {
+                  children: (
+                    <LogsDisplay
+                      logs={streamReadData?.logs ?? []}
+                      error={errorMessage}
+                      testWarnings={streamTestWarnings}
+                    />
+                  ),
+                  minWidth: 0,
+                  flex: logsFlex,
+                  splitter: (
+                    <Splitter
+                      label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
+                      infoNum={logNumByType.info}
+                      warningNum={logNumByType.warning}
+                      errorNum={logNumByType.error}
+                    />
+                  ),
+                  className: styles.secondaryPanel,
+                },
+              ]
+            : []),
+          ...(hasAuxiliaryRequests
+            ? [
+                {
+                  children: (
+                    // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
+                    // to reset the selected request index in case the number of requests differs between streams
+                    <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
+                  ),
+                  minWidth: 0,
+                  flex: auxiliaryRequestsFlex,
+                  splitter: (
+                    <Splitter
+                      label={formatMessage(
+                        { id: "connectorBuilder.auxiliaryRequests" },
+                        { count: auxiliaryRequests.length }
+                      )}
+                    />
+                  ),
+                  className: styles.secondaryPanel,
+                },
+              ]
+            : []),
+        ]}
+      />
     </div>
   );
 };
