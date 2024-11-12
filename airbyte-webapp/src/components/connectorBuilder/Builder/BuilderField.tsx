@@ -218,29 +218,26 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
-        <>
-          <Input
-            {...field}
-            onChange={(e) => {
-              setValue(e.target.value);
-            }}
-            placeholder={props.placeholder}
-            className={props.className}
-            type={props.type}
-            value={(fieldValue as string | number | undefined) ?? ""}
-            error={hasError}
-            readOnly={readOnly}
-            adornment={adornment}
-            disabled={isDisabled}
-            step={props.step}
-            min={props.min}
-            onBlur={(e) => {
-              field.onBlur();
-              props.onBlur?.(e.target.value);
-            }}
-          />
-          {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
-        </>
+        <Input
+          {...field}
+          onChange={(e) => {
+            setValue(e.target.value);
+          }}
+          placeholder={props.placeholder}
+          className={props.className}
+          type={props.type}
+          value={(fieldValue as string | number | undefined) ?? ""}
+          error={hasError}
+          readOnly={readOnly}
+          adornment={adornment}
+          disabled={isDisabled}
+          step={props.step}
+          min={props.min}
+          onBlur={(e) => {
+            field.onBlur();
+            props.onBlur?.(e.target.value);
+          }}
+        />
       )}
       {(props.type === "date" || props.type === "date-time") && (
         <DatePicker
@@ -348,6 +345,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           />
         </Text>
       )}
+      {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
     </ControlLabels>
   );
 };

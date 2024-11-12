@@ -1805,6 +1805,7 @@
   "connectorBuilder.incremental.outgoingDatetimeFormat.tooltip": "The datetime format used to format the datetime values that are sent in outgoing requests to the API. If not provided, the first format in Cursor Datetime Formats will be used.",
   "connectorBuilder.incremental.splitUpInterval.label": "Split Up Interval",
   "connectorBuilder.incremental.splitUpInterval.tooltip": "Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures",
+  "connectorBuilder.incremental.cursorValuePreview": "Found <b>{cursorValue}</b> in the response",
   "connectorBuilder.incremental.cursorDatetimeFormat.label": "Cursor Datetime Formats",
   "connectorBuilder.incremental.cursorDatetimeFormat.tooltip": "The possible formats for the cursor field, in order of preference. The first format that matches the cursor field value will be used to parse it.",
   "connectorBuilder.injectInto.label": "Inject Into",
