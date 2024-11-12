@@ -33,19 +33,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-public class AutoPropagateSchemaChangeHelper {
+public class ApplySchemaChangeHelper {
 
   private final CatalogConverter catalogConverter;
 
-  public AutoPropagateSchemaChangeHelper(final CatalogConverter catalogConverter) {
+  public ApplySchemaChangeHelper(final CatalogConverter catalogConverter) {
     this.catalogConverter = catalogConverter;
-  }
-
-  private enum DefaultSyncModeCase {
-    SOURCE_CURSOR_AND_PRIMARY_KEY,
-    SOURCE_CURSOR_NO_PRIMARY_KEY_SUPPORTS_FULL_REFRESH,
-    SOURCE_CURSOR_NO_PRIMARY_KEY_NO_FULL_REFRESH,
-    NO_SOURCE_CURSOR
   }
 
   /**
@@ -223,6 +216,16 @@ public class AutoPropagateSchemaChangeHelper {
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
     return nonBreakingChange && autoPropagationIsEnabledForConnection;
+  }
+
+  public boolean shouldManuallyApply(final CatalogDiff diff,
+                                     final ConnectionRead connectionRead) {
+    if (!containsChanges(diff)) {
+      // There is no schema diff to apply.
+      return false;
+    }
+    return (connectionRead.getNonBreakingChangesPreference() != null
+        && connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.IGNORE));
   }
 
   public boolean containsChanges(final CatalogDiff diff) {

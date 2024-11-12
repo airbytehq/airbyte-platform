@@ -52,7 +52,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
@@ -118,7 +118,7 @@ public class WebBackendConnectionsHandler {
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
   private final CatalogConverter catalogConverter;
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+  private final ApplySchemaChangeHelper applySchemaChangeHelper;
   private final ApiPojoConverters apiPojoConverters;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
@@ -138,7 +138,7 @@ public class WebBackendConnectionsHandler {
                                       final SourceService sourceService,
                                       final WorkspaceService workspaceService,
                                       final CatalogConverter catalogConverter,
-                                      final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper,
+                                      final ApplySchemaChangeHelper applySchemaChangeHelper,
                                       final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
@@ -157,7 +157,7 @@ public class WebBackendConnectionsHandler {
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
     this.catalogConverter = catalogConverter;
-    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
+    this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
   }
 
@@ -653,7 +653,7 @@ public class WebBackendConnectionsHandler {
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, catalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 catalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
-        breakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
+        breakingChange = applySchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
 

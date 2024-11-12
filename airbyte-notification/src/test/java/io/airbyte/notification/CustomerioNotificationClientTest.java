@@ -11,8 +11,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.Version;
@@ -207,6 +210,11 @@ class CustomerioNotificationClientTest {
     String sourceName = "facebook marketing";
     CatalogDiff diff = new CatalogDiff()
         .addTransformsItem(
+            new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
+                .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name("updatedStream"))
+                .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+                    FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true))))
+        .addTransformsItem(
             new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(new StreamDescriptor().name("foo")))
         .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
             .streamDescriptor(new StreamDescriptor().name("removed")));
@@ -219,7 +227,7 @@ class CustomerioNotificationClientTest {
         .catalogDiff(diff)
         .build();
     ObjectNode node =
-        CustomerioNotificationClient.buildSchemaPropagationJson(notification, recipient, transactionMessageId);
+        CustomerioNotificationClient.buildSchemaChangeJson(notification, recipient, transactionMessageId);
 
     assertEquals(transactionMessageId, node.get("transactional_message_id").asText());
     assertEquals(recipient, node.get("to").asText());
@@ -227,8 +235,11 @@ class CustomerioNotificationClientTest {
     assertEquals(connectionName, node.get("message_data").get("connection_name").asText());
 
     assertTrue(node.get("message_data").get("changes").get("new_streams").isArray());
+    assertEquals(1, node.get("message_data").get("changes").get("new_streams").size());
     assertTrue(node.get("message_data").get("changes").get("deleted_streams").isArray());
+    assertEquals(1, node.get("message_data").get("changes").get("deleted_streams").size());
     assertTrue(node.get("message_data").get("changes").get("modified_streams").isObject());
+    assertEquals(1, node.get("message_data").get("changes").get("modified_streams").get("updatedStream").get("deleted").size());
   }
 
   @Test

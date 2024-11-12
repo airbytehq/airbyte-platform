@@ -91,7 +91,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
@@ -141,6 +141,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOutput;
@@ -298,7 +299,7 @@ class ConnectionsHandlerTest {
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final ConnectionScheduleHelper connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters);
 
@@ -500,7 +501,7 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter,
-          autoPropagateSchemaChangeHelper,
+          applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper);
 
@@ -2045,7 +2046,7 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator, catalogConverter, autoPropagateSchemaChangeHelper,
+          destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper);
     }
 
@@ -2286,7 +2287,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, autoPropagateSchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper);
+          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper);
     }
 
     @Test
@@ -3214,7 +3215,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, autoPropagateSchemaChangeHelper,
+          catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper);
     }
 
@@ -3306,6 +3307,45 @@ class ConnectionsHandlerTest {
     }
 
     @Test
+    void testSendingNotificationToManuallyApplySchemaChange()
+        throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException,
+        io.airbyte.config.persistence.ConfigNotFoundException {
+      // Override the non-breaking changes preference to ignore so that the changes are not
+      // auto-propagated, but needs to be manually applied.
+      standardSync.setNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE);
+      when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      final StandardSync originalSync = Jsons.clone(standardSync);
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+              Field.of(SKU, JsonSchemaType.STRING),
+              newField),
+          SOURCE_VERSION);
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
+
+      verify(notificationHelper).notifySchemaDiffToApply(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source, EMAIL);
+    }
+
+    @Test
     void diffCatalogGeneratesADiffAndUpdatesTheConnection()
         throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
@@ -3343,8 +3383,8 @@ class ConnectionsHandlerTest {
     void diffCatalogADisablesForBreakingChange()
         throws JsonValidationException, ConfigNotFoundException, IOException,
         io.airbyte.config.persistence.ConfigNotFoundException, NoSuchFieldException, IllegalAccessException {
-      final AutoPropagateSchemaChangeHelper helper = mock(AutoPropagateSchemaChangeHelper.class);
-      final java.lang.reflect.Field field = ConnectionsHandler.class.getDeclaredField("autoPropagateSchemaChangeHelper");
+      final ApplySchemaChangeHelper helper = mock(ApplySchemaChangeHelper.class);
+      final java.lang.reflect.Field field = ConnectionsHandler.class.getDeclaredField("applySchemaChangeHelper");
       field.setAccessible(true);
       field.set(connectionsHandler, helper);
 
@@ -3440,7 +3480,7 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter,
-          autoPropagateSchemaChangeHelper,
+          applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper);
     }

@@ -287,6 +287,35 @@ public class SlackNotificationClient extends NotificationClient {
     return false;
   }
 
+  @Override
+  public boolean notifySchemaDiffToApply(final SchemaUpdateNotification notification,
+                                         final String recipient) {
+    LOGGER.info("Sending slack notification to apply schema changes...");
+    final String summary = buildSummary(notification.getCatalogDiff());
+    // The following header and message are consistent with the email notification template.
+    final String header = String.format("Airbyte detected schema changes for '%s'.",
+        Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
+    final String message = String.format(
+        "The upstream schema of '%s' has changed. Please review and approve the changes to reflect them in your connection.",
+        notification.getConnectionInfo().getName());
+
+    final Notification slackNotification =
+        buildSchemaDiffToApplyNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header, message,
+            notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
+
+    final String webhookUrl = config.getWebhook();
+    if (!StringUtils.isEmpty(webhookUrl)) {
+      try {
+        LOGGER.info("Sending JSON...");
+        return notifyJson(slackNotification.toJsonNode());
+      } catch (final IOException e) {
+        LOGGER.error("Failed to send notification", e);
+        return false;
+      }
+    }
+    return false;
+  }
+
   @NotNull
   @VisibleForTesting
   protected static String buildSummary(final CatalogDiff diff) {
@@ -366,6 +395,40 @@ public class SlackNotificationClient extends NotificationClient {
     slackNotification.setText(header);
     final Section titleSection = slackNotification.addSection();
     titleSection.setText(header);
+    final Section section = slackNotification.addSection();
+    Field field = section.addField();
+    field.setType(MRKDOWN_TYPE_LABEL);
+    field.setText("*Workspace*");
+    field = section.addField();
+    field.setType(MRKDOWN_TYPE_LABEL);
+    field.setText(Notification.createLink(workspaceName, workspaceUrl));
+    field = section.addField();
+    field.setType(MRKDOWN_TYPE_LABEL);
+    field.setText("*Source*");
+    field = section.addField();
+    field.setType(MRKDOWN_TYPE_LABEL);
+    field.setText(Notification.createLink(sourceName, sourceUrl));
+    slackNotification.addDivider();
+    final Section changeSection = slackNotification.addSection();
+    changeSection.setText(summary);
+    return slackNotification;
+  }
+
+  @NotNull
+  static Notification buildSchemaDiffToApplyNotification(
+                                                         final String workspaceName,
+                                                         final String sourceName,
+                                                         final String summary,
+                                                         final String header,
+                                                         final String message,
+                                                         final String workspaceUrl,
+                                                         final String sourceUrl) {
+    final Notification slackNotification = new Notification();
+    slackNotification.setText(header);
+    final Section titleSection = slackNotification.addSection();
+    titleSection.setText(header);
+    final Section actionSection = slackNotification.addSection();
+    actionSection.setText(message);
     final Section section = slackNotification.addSection();
     Field field = section.addField();
     field.setType(MRKDOWN_TYPE_LABEL);

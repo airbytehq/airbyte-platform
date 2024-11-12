@@ -61,6 +61,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CustomerioNotificationClient.class);
 
+  // Email templates created in Customer.io
   private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "29";
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "30";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
@@ -69,6 +70,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String BREAKING_CHANGE_SYNCS_UPGRADED_BROADCAST_ID = "47";
   private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
   private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
+  private static final String SCHEMA_CHANGE_DETECTED_TRANSACTION_ID = "31";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "27";
   private static final String SYNC_FAILURE_MESSAGE_ID = "26";
@@ -274,8 +276,20 @@ public class CustomerioNotificationClient extends NotificationClient {
     final String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
 
     final ObjectNode node =
-        buildSchemaPropagationJson(notification, recipient, transactionalMessageId);
+        buildSchemaChangeJson(notification, recipient, transactionalMessageId);
 
+    final String payload = Jsons.serialize(node);
+    try {
+      return notifyByEmail(payload);
+    } catch (final IOException e) {
+      return false;
+    }
+  }
+
+  @Override
+  public boolean notifySchemaDiffToApply(final SchemaUpdateNotification notification, final String recipient) {
+    final ObjectNode node =
+        buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_TRANSACTION_ID);
     final String payload = Jsons.serialize(node);
     try {
       return notifyByEmail(payload);
@@ -307,9 +321,9 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   @NotNull
   @VisibleForTesting
-  static ObjectNode buildSchemaPropagationJson(final SchemaUpdateNotification notification,
-                                               final String recipient,
-                                               final String transactionalMessageId) {
+  static ObjectNode buildSchemaChangeJson(final SchemaUpdateNotification notification,
+                                          final String recipient,
+                                          final String transactionalMessageId) {
     final ObjectNode node = MAPPER.createObjectNode();
     node.put("transactional_message_id", transactionalMessageId);
     node.put("to", recipient);
@@ -329,6 +343,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
     final var diff = notification.getCatalogDiff();
     final var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
+    LOGGER.info("Notify schema changes on new streams: {}", newStreams);
     final ArrayNode newStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("new_streams", newStreamsNodes);
     for (final var stream : newStreams) {
@@ -337,6 +352,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
     final var deletedStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM).toList();
+    LOGGER.info("Notify schema changes on deleted streams: {}", deletedStreams);
     final ArrayNode deletedStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("deleted_streams", deletedStreamsNodes);
     for (final var stream : deletedStreams) {
@@ -345,6 +361,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
     final var alteredStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM).toList();
+    LOGGER.info("Notify schema changes on altered streams: {}", alteredStreams);
     final ObjectNode modifiedStreamsNodes = MAPPER.createObjectNode();
     changesNode.set("modified_streams", modifiedStreamsNodes);
     for (final var stream : alteredStreams) {

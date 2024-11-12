@@ -80,7 +80,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -171,7 +171,7 @@ class WebBackendConnectionsHandlerTest {
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
   private static final String STREAM1 = "stream1";
@@ -260,7 +260,7 @@ class WebBackendConnectionsHandlerTest {
         destinationService,
         sourceService,
         workspaceService, catalogConverter,
-        autoPropagateSchemaChangeHelper,
+        applySchemaChangeHelper,
         apiPojoConverters));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()

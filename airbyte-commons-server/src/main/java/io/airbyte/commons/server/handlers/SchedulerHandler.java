@@ -41,7 +41,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
@@ -156,7 +156,7 @@ public class SchedulerHandler {
   private final DestinationService destinationService;
 
   private final CatalogConverter catalogConverter;
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+  private final ApplySchemaChangeHelper applySchemaChangeHelper;
 
   @VisibleForTesting
   public SchedulerHandler(final ActorDefinitionService actorDefinitionService,
@@ -187,7 +187,7 @@ public class SchedulerHandler {
                           final SourceService sourceService,
                           final DestinationService destinationService,
                           final CatalogConverter catalogConverter,
-                          final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper) {
+                          final ApplySchemaChangeHelper applySchemaChangeHelper) {
     this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
@@ -221,7 +221,7 @@ public class SchedulerHandler {
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.catalogConverter = catalogConverter;
-    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
+    this.applySchemaChangeHelper = applySchemaChangeHelper;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -676,7 +676,7 @@ public class SchedulerHandler {
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               catalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
-      final boolean containsBreakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+      final boolean containsBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
       final ConnectionRead updatedConnection =
           connectionsHandler.disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {

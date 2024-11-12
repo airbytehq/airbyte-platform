@@ -77,8 +77,8 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
@@ -220,7 +220,7 @@ public class ConnectionsHandler {
   private final WorkspaceService workspaceService;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final CatalogConverter catalogConverter;
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper;
+  private final ApplySchemaChangeHelper applySchemaChangeHelper;
   private final ApiPojoConverters apiPojoConverters;
 
   private final ConnectionScheduleHelper connectionScheduleHelper;
@@ -255,7 +255,7 @@ public class ConnectionsHandler {
                             final WorkspaceService workspaceService,
                             final DestinationCatalogGenerator destinationCatalogGenerator,
                             final CatalogConverter catalogConverter,
-                            final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper,
+                            final ApplySchemaChangeHelper applySchemaChangeHelper,
                             final ApiPojoConverters apiPojoConverters,
                             final ConnectionScheduleHelper connectionScheduleHelper) {
     this.jobPersistence = jobPersistence;
@@ -286,7 +286,7 @@ public class ConnectionsHandler {
     this.workspaceService = workspaceService;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
     this.catalogConverter = catalogConverter;
-    this.autoPropagateSchemaChangeHelper = autoPropagateSchemaChangeHelper;
+    this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
     this.connectionScheduleHelper = connectionScheduleHelper;
   }
@@ -1508,7 +1508,7 @@ public class ConnectionsHandler {
     final var workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     final var source = sourceService.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
-    if (autoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
+    if (applySchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
           workspaceId,
@@ -1532,6 +1532,17 @@ public class ConnectionsHandler {
           workspace.getEmail());
     } else {
       appliedDiff = null;
+      // Send notification to the user if schema change needs to be manually applied.
+      if (applySchemaChangeHelper.shouldManuallyApply(diffToApply, connection)) {
+        LOGGER.info("Sending notification of manually applying schema change for connectionId: '{}'", connection.getConnectionId());
+        notificationHelper.notifySchemaDiffToApply(
+            workspace.getNotificationSettings(),
+            diffToApply,
+            workspace,
+            connection,
+            source,
+            workspace.getEmail());
+      }
     }
     return new ConnectionAutoPropagateResult().propagatedDiff(appliedDiff);
   }
@@ -1547,7 +1558,7 @@ public class ConnectionsHandler {
                                                 final List<DestinationSyncMode> supportedDestinationSyncModes) {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    final AutoPropagateSchemaChangeHelper.UpdateSchemaResult propagateResult = autoPropagateSchemaChangeHelper.getUpdatedSchema(
+    final ApplySchemaChangeHelper.UpdateSchemaResult propagateResult = applySchemaChangeHelper.getUpdatedSchema(
         currentSyncCatalog,
         newCatalog,
         transformations,
@@ -1674,7 +1685,7 @@ public class ConnectionsHandler {
       patch.status(ConnectionStatus.INACTIVE);
       autoDisabledReason = ConnectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING;
     } else if (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE
-        && autoPropagateSchemaChangeHelper.containsChanges(diff)) {
+        && applySchemaChangeHelper.containsChanges(diff)) {
       patch.status(ConnectionStatus.INACTIVE);
       autoDisabledReason = ConnectionAutoDisabledReason.DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES;
     }
@@ -1696,7 +1707,7 @@ public class ConnectionsHandler {
     final var discoveredCatalog = retrieveDiscoveredCatalog(discoveredCatalogId, sourceVersion);
 
     final var diff = getDiff(connectionRead, discoveredCatalog);
-    final boolean containsBreakingChange = autoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final boolean containsBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
     final ConnectionRead updatedConnection = disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
     return new SourceDiscoverSchemaRead()
         .breakingChange(containsBreakingChange)

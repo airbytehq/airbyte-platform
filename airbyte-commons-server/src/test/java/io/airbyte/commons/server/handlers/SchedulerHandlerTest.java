@@ -71,7 +71,7 @@ import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -283,7 +283,7 @@ class SchedulerHandlerTest {
   private ConnectionService connectionService;
   private OperationService operationService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
-  private final AutoPropagateSchemaChangeHelper autoPropagateSchemaChangeHelper = new AutoPropagateSchemaChangeHelper(catalogConverter);
+  private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private WorkspaceHelper workspaceHelper;
 
   @BeforeEach
@@ -374,7 +374,7 @@ class SchedulerHandlerTest {
         sourceService,
         destinationService,
         catalogConverter,
-        autoPropagateSchemaChangeHelper);
+        applySchemaChangeHelper);
   }
 
   @Test

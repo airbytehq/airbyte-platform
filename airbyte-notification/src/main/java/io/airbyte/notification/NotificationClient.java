@@ -52,6 +52,9 @@ public abstract class NotificationClient {
   public abstract boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
                                                  final String recipient);
 
+  public abstract boolean notifySchemaDiffToApply(final SchemaUpdateNotification notification,
+                                                  final String recipient);
+
   public abstract String getNotificationClientType();
 
 }
