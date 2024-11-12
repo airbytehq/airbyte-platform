@@ -142,6 +142,8 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           actorDefinitionId = input.actorDefinitionId,
           rolloutId = input.rolloutId,
           errorMsg = "Failed to start rollout.",
+          updatedBy = input.updatedBy,
+          rolloutStrategy = input.rolloutStrategy,
         ),
       )
       startRolloutFailed = true
@@ -220,6 +222,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
                   else -> throw IllegalArgumentException("Unrecognized status: $input.result")
                 },
               rolloutId = input.rolloutId,
+              rolloutStrategy = input.rolloutStrategy,
             ),
           )
         state = output.state
@@ -237,6 +240,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
             actorDefinitionId = input.actorDefinitionId,
             rolloutId = input.rolloutId,
             previousVersionDockerImageTag = input.previousVersionDockerImageTag,
+            rolloutStrategy = input.rolloutStrategy,
           ),
         )
       if (!defaultVersionOutput.isReleased) {

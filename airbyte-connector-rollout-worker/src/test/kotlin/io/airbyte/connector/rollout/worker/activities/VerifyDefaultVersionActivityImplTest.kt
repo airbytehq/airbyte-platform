@@ -3,6 +3,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi
 import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.client.model.generated.SupportState
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputVerifyDefaultVersion
 import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivityImpl
 import io.mockk.Runs
@@ -29,6 +30,7 @@ class VerifyDefaultVersionActivityImplTest {
     private const val DOCKER_IMAGE_TAG = "0.2"
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private val ROLLOUT_ID = UUID.randomUUID()
+    private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
   }
 
   @BeforeEach
@@ -82,6 +84,7 @@ class VerifyDefaultVersionActivityImplTest {
         limit = 1000,
         // Poll every half second
         timeBetweenPolls = 500,
+        ROLLOUT_STRATEGY,
       )
 
     val output = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(input)
@@ -97,6 +100,7 @@ class VerifyDefaultVersionActivityImplTest {
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
         previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
+        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     val outputWithRcSuffix = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(inputWithRcSuffix)
@@ -127,6 +131,7 @@ class VerifyDefaultVersionActivityImplTest {
         actorDefinitionId = ACTOR_DEFINITION_ID,
         rolloutId = ROLLOUT_ID,
         previousVersionDockerImageTag = PREVIOUS_VERSION_DOCKER_IMAGE_TAG,
+        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     val output = verifyDefaultVersionActivity.getAndVerifyDefaultVersion(input)
@@ -162,6 +167,7 @@ class VerifyDefaultVersionActivityImplTest {
         limit = 1000,
         // Poll every half second
         timeBetweenPolls = 500,
+        rolloutStrategy = ROLLOUT_STRATEGY,
       )
 
     // Use assertThrows to verify that the exception is thrown due to timeout

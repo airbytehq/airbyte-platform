@@ -705,6 +705,7 @@ internal class ConnectorRolloutHandlerTest {
         dockerImageTag = DOCKER_IMAGE_TAG
         actorDefinitionId = ACTOR_DEFINITION_ID
         updatedBy = UPDATED_BY
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL
       }
     val connectorRollout = createMockConnectorRollout(rolloutId)
 
@@ -851,7 +852,14 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(createMockActorDefinitionVersion())
 
-    val result = connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, actorDefinitionId, dockerImageTag, UPDATED_BY)
+    val result =
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+        DOCKER_REPOSITORY,
+        actorDefinitionId,
+        dockerImageTag,
+        UPDATED_BY,
+        ConnectorRolloutStrategy.MANUAL,
+      )
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
@@ -885,6 +893,7 @@ internal class ConnectorRolloutHandlerTest {
         actorDefinitionId,
         dockerImageTag,
         UPDATED_BY,
+        ConnectorRolloutStrategy.MANUAL,
       )
     }
   }
@@ -904,7 +913,13 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(actorDefinitionVersion)
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
-    connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+    connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+      DOCKER_REPOSITORY,
+      ACTOR_DEFINITION_ID,
+      DOCKER_IMAGE_TAG,
+      UPDATED_BY,
+      ConnectorRolloutStrategy.MANUAL,
+    )
 
     verifyAll {
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
@@ -919,7 +934,13 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.empty()
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(DOCKER_REPOSITORY, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+        DOCKER_REPOSITORY,
+        ACTOR_DEFINITION_ID,
+        DOCKER_IMAGE_TAG,
+        UPDATED_BY,
+        ConnectorRolloutStrategy.MANUAL,
+      )
     }
 
     verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
@@ -933,7 +954,13 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(dockerRepository, ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG, UPDATED_BY)
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+        dockerRepository,
+        ACTOR_DEFINITION_ID,
+        DOCKER_IMAGE_TAG,
+        UPDATED_BY,
+        ConnectorRolloutStrategy.MANUAL,
+      )
     }
 
     verifyAll {
