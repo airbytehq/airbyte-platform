@@ -31,6 +31,8 @@ import java.util.UUID
 import java.util.stream.Stream
 import kotlin.jvm.optionals.getOrDefault
 
+private const val AUTO_UPGRADE = "auto_upgrade"
+
 /**
  * Updates the support state of actor definition versions according to breaking changes.
  */
@@ -165,7 +167,8 @@ class SupportStateUpdater(
     val allBreakingChanges = actorDefinitionService.listBreakingChanges()
     val breakingChangesMap = allBreakingChanges.groupBy { it.actorDefinitionId }
     var comboSupportStateUpdate = SupportStateUpdate(listOf(), listOf(), listOf())
-    val notificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
+    val syncDeprecatedNotificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
+    val syncUpcomingAutoUpgradeNotificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
 
     for (sourceDefinition in sourceDefinitions) {
       log.info("Processing source definition {} {}", sourceDefinition.sourceDefinitionId, sourceDefinition.name)
@@ -202,14 +205,18 @@ class SupportStateUpdater(
             sourceDefinition.defaultVersionId,
             breakingChangesForDef,
           )
-        notificationData.add(
+        val notificationData =
           buildSourceNotificationData(
             sourceDefinition,
             latestBreakingChange,
             actorDefinitionVersions,
             supportStateUpdate,
-          ),
-        )
+          )
+        if (AUTO_UPGRADE == latestBreakingChange.deadlineAction) {
+          syncUpcomingAutoUpgradeNotificationData.add(notificationData)
+        } else {
+          syncDeprecatedNotificationData.add(notificationData)
+        }
       }
     }
 
@@ -231,19 +238,24 @@ class SupportStateUpdater(
             destinationDefinition.defaultVersionId,
             breakingChangesForDef,
           )
-        notificationData.add(
+        val notificationData =
           buildDestinationNotificationData(
             destinationDefinition,
             latestBreakingChange,
             actorDefinitionVersions,
             supportStateUpdate,
-          ),
-        )
+          )
+        if (AUTO_UPGRADE == latestBreakingChange.deadlineAction) {
+          syncUpcomingAutoUpgradeNotificationData.add(notificationData)
+        } else {
+          syncDeprecatedNotificationData.add(notificationData)
+        }
       }
     }
 
     executeSupportStateUpdate(comboSupportStateUpdate)
-    breakingChangeNotificationHelper.notifyDeprecatedSyncs(notificationData)
+    breakingChangeNotificationHelper.notifyDeprecatedSyncs(syncDeprecatedNotificationData)
+    breakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(syncUpcomingAutoUpgradeNotificationData)
     log.info("Finished updating support states for all definitions")
   }
 

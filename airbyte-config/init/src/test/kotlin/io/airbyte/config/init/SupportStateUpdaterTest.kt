@@ -61,6 +61,7 @@ internal class SupportStateUpdaterTest {
 
     justRun { mActorDefinitionService.setActorDefinitionVersionSupportStates(any(), any()) }
     justRun { mBreakingChangeNotificationHelper.notifyDeprecatedSyncs(any()) }
+    justRun { mBreakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(any()) }
   }
 
   private fun createBreakingChange(
@@ -241,6 +242,7 @@ internal class SupportStateUpdaterTest {
           BreakingChangeNotificationData(ActorType.DESTINATION, destinationDefinition.name, workspaceIdsToNotify, destV1BreakingChange),
         ),
       )
+      mBreakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(listOf())
       mSourceService.listPublicSourceDefinitions(false)
       mDestinationService.listPublicDestinationDefinitions(false)
       mActorDefinitionService.listBreakingChanges()
