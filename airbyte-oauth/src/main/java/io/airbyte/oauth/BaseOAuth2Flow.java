@@ -21,9 +21,9 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +80,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
 
   // possible errors enumerated @
   // https://www.oauth.com/oauth2-servers/server-side-apps/possible-errors/
-  private final List<String> ignoredOauthErrors = Arrays.asList("access_denied");
+  private final List<String> ignoredOauthErrors = List.of("access_denied");
 
   public BaseOAuth2Flow(final HttpClient httpClient) {
     this(httpClient, BaseOAuth2Flow::generateRandomState);
@@ -115,7 +115,11 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
           "Undefined OAuth Parameter.",
           new ProblemResourceData().resourceType(ConfigSchema.SOURCE_OAUTH_PARAM.name()));
     }
-    return formatConsentUrl(sourceDefinitionId, getClientIdUnsafe(sourceOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
+
+    return formatConsentUrl(sourceDefinitionId,
+        getClientIdUnsafe(sourceOAuthParamConfig),
+        redirectUrl,
+        Jsons.mergeNodes(inputOAuthConfiguration, getOAuthDeclarativeInputSpec(oauthConfigSpecification)));
   }
 
   @Override
@@ -124,7 +128,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                          final String redirectUrl,
                                          final JsonNode inputOAuthConfiguration,
                                          final OAuthConfigSpecification oauthConfigSpecification,
-                                         JsonNode destinationOAuthParamConfig)
+                                         final JsonNode destinationOAuthParamConfig)
       throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     // This should probably never happen because the caller of this function should throw this exception
@@ -134,7 +138,11 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
           "Undefined OAuth Parameter.",
           new ProblemResourceData().resourceType(ConfigSchema.DESTINATION_OAUTH_PARAM.name()));
     }
-    return formatConsentUrl(destinationDefinitionId, getClientIdUnsafe(destinationOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
+
+    return formatConsentUrl(destinationDefinitionId,
+        getClientIdUnsafe(destinationOAuthParamConfig),
+        redirectUrl,
+        Jsons.mergeNodes(inputOAuthConfiguration, getOAuthDeclarativeInputSpec(oauthConfigSpecification)));
   }
 
   /**
@@ -165,13 +173,18 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     return stateSupplier.get();
   }
 
+  // Overload method to provide the `inputOAuthConfiguration` spec config.
+  protected String getState(final JsonNode inputOAuthConfiguration) {
+    return getState();
+  }
+
   @Override
   @Deprecated
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
-                                                 JsonNode oauthParamConfig)
+                                                 final JsonNode oauthParamConfig)
       throws IOException {
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
@@ -184,7 +197,8 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             extractCodeParameter(queryParams),
             redirectUrl,
             Jsons.emptyObject(),
-            oauthParamConfig),
+            oauthParamConfig,
+            null),
         getDefaultOAuthOutputPath());
 
   }
@@ -202,6 +216,8 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
+
+    final JsonNode oauthConfigurationMerged = Jsons.mergeNodes(inputOAuthConfiguration, getOAuthDeclarativeInputSpec(oauthConfigSpecification));
     return formatOAuthOutput(
         oauthParamConfig,
         completeOAuthFlow(
@@ -209,8 +225,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
-            inputOAuthConfiguration,
-            oauthParamConfig),
+            oauthConfigurationMerged,
+            oauthParamConfig,
+            extractStateParameter(queryParams, oauthConfigurationMerged)),
         oauthConfigSpecification);
 
   }
@@ -221,7 +238,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                       final UUID destinationDefinitionId,
                                                       final Map<String, Object> queryParams,
                                                       final String redirectUrl,
-                                                      JsonNode oauthParamConfig)
+                                                      final JsonNode oauthParamConfig)
       throws IOException {
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
@@ -234,7 +251,8 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             extractCodeParameter(queryParams),
             redirectUrl,
             Jsons.emptyObject(),
-            oauthParamConfig),
+            oauthParamConfig,
+            null),
         getDefaultOAuthOutputPath());
 
   }
@@ -246,12 +264,14 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                       final String redirectUrl,
                                                       final JsonNode inputOAuthConfiguration,
                                                       final OAuthConfigSpecification oauthConfigSpecification,
-                                                      JsonNode oauthParamConfig)
+                                                      final JsonNode oauthParamConfig)
       throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
+
+    final JsonNode oauthConfigurationMerged = Jsons.mergeNodes(inputOAuthConfiguration, getOAuthDeclarativeInputSpec(oauthConfigSpecification));
     return formatOAuthOutput(
         oauthParamConfig,
         completeOAuthFlow(
@@ -259,10 +279,63 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
-            inputOAuthConfiguration,
-            oauthParamConfig),
+            oauthConfigurationMerged,
+            oauthParamConfig,
+            extractStateParameter(queryParams, oauthConfigurationMerged)),
         oauthConfigSpecification);
 
+  }
+
+  /**
+   * Generates the headers required for completing the OAuth flow request.
+   *
+   * @param inputOAuthConfiguration the JSON node containing the OAuth configuration.
+   * @return a map containing the headers for the OAuth flow request.
+   * @throws IOException if an I/O error occurs.
+   */
+  protected Map<String, String> getCompleteOAuthFlowRequestHeaders(final String clientId,
+                                                                   final String clientSecret,
+                                                                   final String authCode,
+                                                                   final String redirectUrl,
+                                                                   final JsonNode inputOAuthConfiguration)
+      throws IOException {
+
+    final Map<String, String> requestHeaders = new HashMap<>();
+    requestHeaders.put("Content-Type", tokenReqContentType.getContentType());
+    requestHeaders.put("Accept", "application/json");
+
+    return requestHeaders;
+  }
+
+  /**
+   * Constructs an HTTP request to complete the OAuth2 flow.
+   *
+   * @param accessTokenUrl The URL to request the access token from.
+   * @param accessTokenQueryParameters The query parameters to include in the access token request.
+   * @param requestHeaders The headers to include in the HTTP request.
+   * @param requestContentType The content type of the token request.
+   * @param inputOAuthConfiguration The OAuth configuration input as a JsonNode.
+   * @return The constructed HTTP request.
+   * @throws IOException If an I/O error occurs when building the request.
+   */
+  protected HttpRequest getCompleteOAuthFlowHttpRequest(final String accessTokenUrl,
+                                                        final Map<String, String> accessTokenQueryParameters,
+                                                        final Map<String, String> requestHeaders,
+                                                        final TokenRequestContentType requestContentType,
+                                                        final JsonNode inputOAuthConfiguration)
+      throws IOException {
+    // prepare query params
+    final Function<Map<String, String>, String> contentTypeConverter = requestContentType.getConverter();
+    final String contentTypeConvertedParams = contentTypeConverter.apply(accessTokenQueryParameters);
+
+    // prepare the request
+    final Builder request = HttpRequest.newBuilder();
+    request.POST(HttpRequest.BodyPublishers.ofString(contentTypeConvertedParams));
+    request.uri(URI.create(accessTokenUrl));
+    requestHeaders.forEach(request::header);
+
+    // build the request
+    return request.build();
   }
 
   /**
@@ -284,21 +357,80 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                   final JsonNode inputOAuthConfiguration,
                                                   final JsonNode oauthParamConfig)
       throws IOException {
-    final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
-    final HttpRequest request = HttpRequest.newBuilder()
-        .POST(HttpRequest.BodyPublishers
-            .ofString(tokenReqContentType.converter.apply(getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))))
-        .uri(URI.create(accessTokenUrl))
-        .header("Content-Type", tokenReqContentType.contentType)
-        .header("Accept", "application/json")
-        .build();
-    // TODO: Handle error response to report better messages
+    return getCompleteOAuthFlowOutput(
+        formatAccessTokenUrl(getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        tokenReqContentType,
+        inputOAuthConfiguration);
+  }
+
+  /**
+   * Complete OAuth flow overload to ensure backward compatibility, and provide the `state` param
+   * input.
+   *
+   * @param clientId client id
+   * @param clientSecret client secret
+   * @param authCode oauth code
+   * @param redirectUrl redirect url
+   * @param inputOAuthConfiguration oauth configuration
+   * @param oauthParamConfig oauth params
+   * @param state state value
+   * @return object returned from oauth flow
+   * @throws IOException thrown while executing io
+   */
+  protected Map<String, Object> completeOAuthFlow(final String clientId,
+                                                  final String clientSecret,
+                                                  final String authCode,
+                                                  final String redirectUrl,
+                                                  final JsonNode inputOAuthConfiguration,
+                                                  final JsonNode oauthParamConfig,
+                                                  final String state)
+      throws IOException {
+    if (state == null) {
+      // use the method without `state` argument
+      return completeOAuthFlow(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, oauthParamConfig);
+    } else {
+      return getCompleteOAuthFlowOutput(
+          formatAccessTokenUrl(getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration,
+              state),
+          getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+          getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+          tokenReqContentType,
+          inputOAuthConfiguration);
+    }
+  }
+
+  protected Map<String, Object> getCompleteOAuthFlowOutput(final String accessTokenUrl,
+                                                           final Map<String, String> accessTokenQueryParameters,
+                                                           final Map<String, String> requestHeaders,
+                                                           final TokenRequestContentType requestContentType,
+                                                           final JsonNode inputOAuthConfiguration)
+      throws IOException {
+
+    final HttpRequest request = getCompleteOAuthFlowHttpRequest(accessTokenUrl,
+        accessTokenQueryParameters,
+        requestHeaders,
+        requestContentType,
+        inputOAuthConfiguration);
+
     try {
       final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl);
+      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl, inputOAuthConfiguration);
     } catch (final InterruptedException e) {
       throw new IOException("Failed to complete OAuth flow", e);
     }
+  }
+
+  /**
+   * Query parameters to provide the access token url with.
+   */
+  protected Map<String, String> getAccessTokenQueryParameters(final String clientId,
+                                                              final String clientSecret,
+                                                              final String authCode,
+                                                              final String redirectUrl,
+                                                              final JsonNode inputOAuthConfiguration) {
+    return getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl);
   }
 
   /**
@@ -357,9 +489,64 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   /**
-   * Returns the URL where to retrieve the access token from.
+   * An Overload to return the accessTokenUrl with additional customisation.
    */
   protected abstract String getAccessTokenUrl(final JsonNode inputOAuthConfiguration);
+
+  /**
+   * Formats the access token URL with the provided parameters.
+   *
+   * @param accessTokenUrl The base URL for obtaining the access token.
+   * @param clientId The client ID for the OAuth application.
+   * @param clientSecret The client secret for the OAuth application.
+   * @param authCode The authorization code received from the OAuth provider.
+   * @param redirectUrl The URL to which the OAuth provider will redirect after authorization.
+   * @param inputOAuthConfiguration Additional OAuth configuration parameters.
+   * @return The formatted access token URL.
+   */
+  protected String formatAccessTokenUrl(final String accessTokenUrl,
+                                        final String clientId,
+                                        final String clientSecret,
+                                        final String authCode,
+                                        final String redirectUrl,
+                                        final JsonNode inputOAuthConfiguration)
+      throws IOException {
+
+    return accessTokenUrl;
+  }
+
+  /**
+   * Formats the access token URL with the provided parameters. Overload to ensure backward
+   * compatibility, and provide the `state` param input.
+   *
+   * @param accessTokenUrl The base URL for obtaining the access token.
+   * @param clientId The client ID for the OAuth application.
+   * @param clientSecret The client secret for the OAuth application.
+   * @param authCode The authorization code received from the OAuth provider.
+   * @param redirectUrl The URL to which the OAuth provider will redirect after authorization.
+   * @param inputOAuthConfiguration Additional OAuth configuration parameters.
+   * @param state The state value
+   * @return The formatted access token URL.
+   */
+  protected String formatAccessTokenUrl(final String accessTokenUrl,
+                                        final String clientId,
+                                        final String clientSecret,
+                                        final String authCode,
+                                        final String redirectUrl,
+                                        final JsonNode inputOAuthConfiguration,
+                                        final String state)
+      throws IOException {
+
+    return formatAccessTokenUrl(accessTokenUrl, clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration);
+  }
+
+  /**
+   * Extract all OAuth outputs from distant API response and store them in a flat map.
+   */
+  protected Map<String, Object> extractOAuthOutput(final JsonNode data, final String accessTokenUrl, final JsonNode inputOAuthConfiguration)
+      throws IOException {
+    return extractOAuthOutput(data, accessTokenUrl);
+  }
 
   /**
    * Extract all OAuth outputs from distant API response and store them in a flat map.
@@ -372,6 +559,18 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
       throw new IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl));
     }
     return result;
+  }
+
+  /**
+   * This function should parse and extract the state from these query parameters in order to continue
+   * the OAuth Flow.
+   */
+  protected String extractStateParameter(final Map<String, Object> queryParams, final JsonNode inputOAuthConfiguration) throws IOException {
+    if (queryParams.containsKey("state")) {
+      return (String) queryParams.get("state");
+    } else {
+      return null;
+    }
   }
 
   @Override

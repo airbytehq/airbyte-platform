@@ -41,6 +41,7 @@ public abstract class BaseOAuthFlowTest {
   private static final String TYPE = "type";
   private static final String CODE = "code";
   private static final String TEST_CODE = "test_code";
+  private static final String STATE = "state";
   private static final String EXPECTED_BUT_GOT = "Expected %s values but got\n\t%s\ninstead of\n\t%s";
 
   private HttpClient httpClient;
@@ -204,7 +205,7 @@ public abstract class BaseOAuthFlowTest {
   }
 
   protected Map<String, Object> getQueryParams() {
-    return Map.of(CODE, TEST_CODE);
+    return Map.of(CODE, TEST_CODE, STATE, getConstantState());
   }
 
   protected String getMockedResponse() {
