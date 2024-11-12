@@ -147,6 +147,16 @@ public final class ApmTraceConstants {
     public static final String TEMPORAL_ACTIVITY_ID_KEY = "temporal.activity_id";
 
     /**
+     * Name of the APM trace tag that holds the Temporal run ID value associated with the trace.
+     */
+    public static final String TEMPORAL_RUN_ID_KEY = "temporal.run_id";
+
+    /**
+     * Name of the APM trace tag that holds the Temporal task queue value associated with the trace.
+     */
+    public static final String TEMPORAL_TASK_QUEUE_KEY = "temporal.task_queue";
+
+    /**
      * Name of the APM trace tag that holds the Temporal workflow ID value associated with the trace.
      */
     public static final String TEMPORAL_WORKFLOW_ID_KEY = "temporal.workflow_id";

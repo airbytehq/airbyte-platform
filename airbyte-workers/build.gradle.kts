@@ -48,6 +48,7 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.cache)
   implementation(libs.bundles.micronaut.metrics)
+  implementation(libs.bundles.temporal.telemetry)
   implementation(libs.jooq)
   implementation(libs.s3)
   implementation(libs.sts)

@@ -29,6 +29,7 @@ class ConnectorCommandActivityTest {
   lateinit var checkCommand: CheckCommand
   lateinit var discoverCommand: DiscoverCommand
   lateinit var specCommand: SpecCommand
+  lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
   lateinit var metricClient: MetricClient
 
   @BeforeEach
@@ -36,8 +37,9 @@ class ConnectorCommandActivityTest {
     checkCommand = mockk(relaxed = true)
     discoverCommand = mockk(relaxed = true)
     specCommand = mockk(relaxed = true)
+    activityExecutionContextProvider = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
-    activity = ConnectorCommandActivityImpl(checkCommand, discoverCommand, specCommand, metricClient)
+    activity = ConnectorCommandActivityImpl(checkCommand, discoverCommand, specCommand, activityExecutionContextProvider, metricClient)
   }
 
   @Test

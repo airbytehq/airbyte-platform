@@ -36,6 +36,7 @@ class ConnectorCommandWorkflowTest {
     lateinit var checkCommand: CheckCommand
     lateinit var discoverCommand: DiscoverCommand
     lateinit var specCommand: SpecCommand
+    lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
     lateinit var connectorCommandActivity: ConnectorCommandActivity
 
     lateinit var testEnv: TestWorkflowEnvironment
@@ -54,7 +55,7 @@ class ConnectorCommandWorkflowTest {
           .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
           .build()
       val activityOptionsBeanRegistration: BeanRegistration<ActivityOptions> =
-        mockk {
+        mockk(relaxed = true) {
           every { identifier } returns
             mockk {
               every { name } returns "shortActivityOptions"
@@ -71,7 +72,15 @@ class ConnectorCommandWorkflowTest {
       checkCommand = mockk()
       discoverCommand = mockk()
       specCommand = mockk()
-      connectorCommandActivity = ConnectorCommandActivityImpl(checkCommand, discoverCommand, specCommand, mockk(relaxed = true))
+      activityExecutionContextProvider = ActivityExecutionContextProvider()
+      connectorCommandActivity =
+        ConnectorCommandActivityImpl(
+          checkCommand,
+          discoverCommand,
+          specCommand,
+          activityExecutionContextProvider,
+          mockk(relaxed = true),
+        )
       worker.registerActivitiesImplementations(connectorCommandActivity)
       testEnv.start()
     }
@@ -85,7 +94,7 @@ class ConnectorCommandWorkflowTest {
 
   @Test
   fun `testing check`() {
-    val workflowClient = WorkflowClientWrapped(client, mockk())
+    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
     val workloadId = "test workload"
     val output = ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
 

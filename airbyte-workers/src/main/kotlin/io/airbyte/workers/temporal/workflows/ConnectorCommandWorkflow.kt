@@ -12,6 +12,7 @@ import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.SignalInput
 import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
+import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
@@ -24,6 +25,9 @@ import io.airbyte.workers.commands.SpecCommand
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.github.oshai.kotlinlogging.KotlinLogging
+import io.temporal.activity.Activity
+import io.temporal.activity.ActivityExecutionContext
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import io.temporal.failure.ActivityFailure
@@ -60,11 +64,20 @@ interface ConnectorCommandActivity {
   )
 }
 
+/**
+ * Wraps static activity context accessor to make it testable.
+ */
+@Singleton
+class ActivityExecutionContextProvider {
+  fun get(): ActivityExecutionContext = Activity.getExecutionContext()
+}
+
 @Singleton
 class ConnectorCommandActivityImpl(
   private val checkCommand: CheckCommand,
   private val discoverCommand: DiscoverCommand,
   private val specCommand: SpecCommand,
+  private val activityExecutionContextProvider: ActivityExecutionContextProvider,
   private val metricClient: MetricClient,
 ) : ConnectorCommandActivity {
   companion object {
@@ -75,6 +88,8 @@ class ConnectorCommandActivityImpl(
       DiscoverCatalogInput(jobRunConfig, integrationLauncherConfig, discoverCatalogInput)
 
     fun SpecCommandInput.SpecInput.toWorkerModels(): SpecInput = SpecInput(jobRunConfig, integrationLauncherConfig)
+
+    val logger = KotlinLogging.logger {}
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -129,6 +144,21 @@ class ConnectorCommandActivityImpl(
         MetricAttribute(MetricTags.COMMAND_STEP, Thread.currentThread().stackTrace[2].methodName),
       )
     ApmTraceUtils.addTagsToTrace(metricAttributes)
+
+    try {
+      val activityInfo = activityExecutionContextProvider.get().info
+      ApmTraceUtils.addTagsToTrace(
+        listOf(
+          MetricAttribute(Tags.TEMPORAL_WORKFLOW_ID_KEY, activityInfo.workflowId),
+          MetricAttribute(Tags.TEMPORAL_RUN_ID_KEY, activityInfo.runId),
+          MetricAttribute(Tags.TEMPORAL_TASK_QUEUE_KEY, activityInfo.activityTaskQueue),
+        ),
+      )
+    } catch (e: Exception) {
+      // We shouldn't fail because we fail to populate trace attributes
+      logger.warn(e) { "Failed to lookup activity execution context" }
+    }
+
     val stopwatch = Stopwatch()
 
     try {
