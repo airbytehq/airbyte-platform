@@ -1,4 +1,4 @@
-ARG JAVA_BASE_IMAGE=3.2.3
+ARG JAVA_BASE_IMAGE=3.3.1
 
 FROM scratch as builder
 WORKDIR /app

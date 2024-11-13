@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.1
 FROM ${JDK_IMAGE}
 
 USER root
@@ -13,7 +13,7 @@ EOF
 
 # Set up python
 USER airbyte:airbyte
-ENV PYTHON_VERSION=3.10.14
+ENV PYTHON_VERSION=3.10.15
 ENV PYENV_ROOT=/home/airbyte/.pyenv
 ENV PATH=${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:$PATH
 
