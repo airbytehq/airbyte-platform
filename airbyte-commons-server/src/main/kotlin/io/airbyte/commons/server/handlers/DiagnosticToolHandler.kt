@@ -177,7 +177,7 @@ open class DiagnosticToolHandler(
             try {
               sourceDefinitionVersion =
                 actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
-                  sourceService.getSourceDefinitionFromSource(source.sourceDefinitionId),
+                  sourceService.getStandardSourceDefinition(source.sourceDefinitionId),
                   workspaceId,
                   source.sourceId,
                 )
@@ -214,7 +214,7 @@ open class DiagnosticToolHandler(
             try {
               destinationDefinitionVersion =
                 actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
-                  destinationService.getStandardDestinationDefinition(destination.destinationId),
+                  destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId),
                   workspaceId,
                   destination.destinationId,
                 )
@@ -225,7 +225,7 @@ open class DiagnosticToolHandler(
               "name" to destination.name,
               "id" to destination.destinationId.toString(),
               "type" to ActorType.DESTINATION.toString(),
-              "connectorDefinitionId" to destination.destinationId.toString(),
+              "connectorDefinitionId" to destination.destinationDefinitionId.toString(),
               "connectorDockerImageTag" to (destinationDefinitionVersion?.actorDefinitionVersion?.dockerImageTag ?: ""),
               "connectorVersionOverrideApplied" to (destinationDefinitionVersion?.isOverrideApplied?.toString() ?: ""),
               "connectorSupportState" to (destinationDefinitionVersion?.actorDefinitionVersion?.supportState?.toString() ?: ""),
