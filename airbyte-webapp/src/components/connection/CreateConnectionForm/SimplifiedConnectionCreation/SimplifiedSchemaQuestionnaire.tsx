@@ -9,7 +9,7 @@ import {
   replicateSourceModes,
 } from "components/connection/ConnectionForm/preferredSyncModes";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
-import { updateStreamSyncMode } from "components/connection/SyncCatalogTable/utils/updateStreamSyncMode";
+import { updateStreamSyncMode } from "components/connection/SyncCatalogTable/utils";
 import { ControlLabels } from "components/LabeledControl";
 import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";

@@ -1,17 +1,19 @@
+import { mockAirbyteStream } from "test-utils/mock-data/mockAirbyteStream";
 import { mockStreamConfiguration } from "test-utils/mock-data/mockAirbyteStreamConfiguration";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 
+import { mergeFieldPathArrays } from "./miscUtils";
 import {
-  mergeFieldPathArrays,
-  toggleFieldInPrimaryKey,
   updatePrimaryKey,
   updateCursorField,
   updateFieldSelected,
-  toggleAllFieldsSelected,
   getSelectedMandatoryFields,
+  updateStreamSyncMode,
+  updateFieldHashing,
 } from "./streamConfigHelpers";
+import { SyncModeValue } from "../components/SyncModeCell";
 
 const FIELD_ONE: SyncSchemaField = {
   path: ["field_one"],
@@ -248,90 +250,6 @@ describe(`${updatePrimaryKey.name}`, () => {
   });
 });
 
-describe(`${toggleFieldInPrimaryKey.name}`, () => {
-  it("adds a new field to the composite primary key", () => {
-    const mockConfig: AirbyteStreamConfiguration = {
-      ...mockStreamConfiguration,
-      primaryKey: [FIELD_ONE.path],
-    };
-
-    const newStreamConfiguration = toggleFieldInPrimaryKey(mockConfig, FIELD_TWO.path, 3);
-
-    expect(newStreamConfiguration).toEqual({
-      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
-    });
-  });
-
-  describe("when fieldSelection is active", () => {
-    it("adds the new primary key field to selectedFields", () => {
-      const mockConfig: AirbyteStreamConfiguration = {
-        ...mockStreamConfiguration,
-        primaryKey: [FIELD_ONE.path],
-        fieldSelectionEnabled: true,
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-      };
-
-      const newStreamConfiguration = toggleFieldInPrimaryKey(mockConfig, FIELD_THREE.path, 100);
-
-      expect(newStreamConfiguration).toEqual({
-        primaryKey: [FIELD_ONE.path, FIELD_THREE.path],
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }, { fieldPath: FIELD_THREE.path }],
-        fieldSelectionEnabled: true,
-      });
-    });
-
-    it("adds the new primary key when only one other field is unselected", () => {
-      const mockConfig: AirbyteStreamConfiguration = {
-        ...mockStreamConfiguration,
-        primaryKey: [],
-        fieldSelectionEnabled: true,
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-      };
-
-      const newStreamConfiguration = toggleFieldInPrimaryKey(mockConfig, FIELD_TWO.path, 3);
-
-      expect(newStreamConfiguration).toEqual({
-        primaryKey: [FIELD_TWO.path],
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-        fieldSelectionEnabled: true,
-      });
-    });
-
-    it("adds the new primary key when it is one of many unselected fields", () => {
-      const mockConfig: AirbyteStreamConfiguration = {
-        ...mockStreamConfiguration,
-        fieldSelectionEnabled: true,
-        selectedFields: [{ fieldPath: FIELD_ONE.path }],
-      };
-
-      const newStreamConfiguration = toggleFieldInPrimaryKey(mockConfig, FIELD_TWO.path, 100);
-
-      expect(newStreamConfiguration).toEqual({
-        primaryKey: [FIELD_TWO.path],
-        fieldSelectionEnabled: true,
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-      });
-    });
-
-    it("disables field selection when selected primary key is the last unselected field", () => {
-      const mockConfig: AirbyteStreamConfiguration = {
-        ...mockStreamConfiguration,
-        primaryKey: [FIELD_ONE.path],
-        fieldSelectionEnabled: true,
-        selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-      };
-
-      const newStreamConfiguration = toggleFieldInPrimaryKey(mockConfig, FIELD_THREE.path, 3);
-
-      expect(newStreamConfiguration).toEqual({
-        primaryKey: [FIELD_ONE.path, FIELD_THREE.path],
-        selectedFields: [],
-        fieldSelectionEnabled: false,
-      });
-    });
-  });
-});
-
 describe(`${updateFieldSelected.name}`, () => {
   it("Adds a field to selectedFields when selected", () => {
     const newStreamConfiguration = updateFieldSelected({
@@ -458,69 +376,172 @@ describe(`${getSelectedMandatoryFields.name}`, () => {
   });
 });
 
-describe(`${toggleAllFieldsSelected.name}`, () => {
-  it("unselects all fields if field selection was disabled", () => {
-    const newStreamConfiguration = toggleAllFieldsSelected({ ...mockStreamConfiguration });
+describe(`${updateStreamSyncMode.name}`, () => {
+  it("updates the sync modes", () => {
+    const syncModes: SyncModeValue = {
+      syncMode: "full_refresh",
+      destinationSyncMode: "overwrite",
+    };
+    expect(updateStreamSyncMode(mockAirbyteStream, mockStreamConfiguration, syncModes)).toEqual(
+      expect.objectContaining({ ...syncModes })
+    );
+  });
+
+  describe("when fieldSelection is enabled", () => {
+    const PK_PART_ONE = ["pk_part_one"];
+    const PK_PART_TWO = ["pk_part_two"];
+    const DEFAULT_CURSOR_FIELD_PATH = ["default_cursor"];
+    const DEFAULT_PRIMARY_KEY = [PK_PART_ONE, PK_PART_TWO];
+    const UNRELATED_FIELD_PATH = ["unrelated_field_path"];
+
+    it("does not add default pk or cursor for irrelevant sync modes", () => {
+      const syncModes: SyncModeValue = {
+        syncMode: "full_refresh",
+        destinationSyncMode: "overwrite",
+      };
+      const updatedConfig = updateStreamSyncMode(
+        {
+          ...mockAirbyteStream,
+          sourceDefinedCursor: true,
+          defaultCursorField: DEFAULT_CURSOR_FIELD_PATH,
+          sourceDefinedPrimaryKey: DEFAULT_PRIMARY_KEY,
+        },
+        mockStreamConfiguration,
+        syncModes
+      );
+
+      expect(updatedConfig).toEqual(
+        expect.objectContaining({
+          fieldSelectionEnabled: false,
+          selectedFields: [],
+          ...syncModes,
+        })
+      );
+    });
+
+    it("automatically selects the default cursor", () => {
+      const syncModes: SyncModeValue = {
+        syncMode: "incremental",
+        destinationSyncMode: "append",
+      };
+
+      const updatedConfig = updateStreamSyncMode(
+        { ...mockAirbyteStream, sourceDefinedCursor: true, defaultCursorField: DEFAULT_CURSOR_FIELD_PATH },
+        {
+          ...mockStreamConfiguration,
+          fieldSelectionEnabled: true,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }],
+        },
+        syncModes
+      );
+
+      expect(updatedConfig).toEqual(
+        expect.objectContaining({
+          ...syncModes,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }, { fieldPath: DEFAULT_CURSOR_FIELD_PATH }],
+        })
+      );
+    });
+
+    it("automatically selects the composite primary key fields (append)", () => {
+      const syncModes: SyncModeValue = {
+        syncMode: "incremental",
+        destinationSyncMode: "append_dedup",
+      };
+
+      const updatedConfig = updateStreamSyncMode(
+        { ...mockAirbyteStream, sourceDefinedPrimaryKey: DEFAULT_PRIMARY_KEY },
+        {
+          ...mockStreamConfiguration,
+          fieldSelectionEnabled: true,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }],
+        },
+        syncModes
+      );
+
+      expect(updatedConfig).toEqual(
+        expect.objectContaining({
+          ...syncModes,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }, { fieldPath: PK_PART_ONE }, { fieldPath: PK_PART_TWO }],
+        })
+      );
+    });
+
+    it("automatically selects the composite primary key fields (overwrite)", () => {
+      const syncModes: SyncModeValue = {
+        syncMode: "incremental",
+        destinationSyncMode: "overwrite_dedup",
+      };
+
+      const updatedConfig = updateStreamSyncMode(
+        { ...mockAirbyteStream, sourceDefinedPrimaryKey: DEFAULT_PRIMARY_KEY },
+        {
+          ...mockStreamConfiguration,
+          fieldSelectionEnabled: true,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }],
+        },
+        syncModes
+      );
+
+      expect(updatedConfig).toEqual(
+        expect.objectContaining({
+          ...syncModes,
+          selectedFields: [{ fieldPath: UNRELATED_FIELD_PATH }, { fieldPath: PK_PART_ONE }, { fieldPath: PK_PART_TWO }],
+        })
+      );
+    });
+  });
+});
+
+describe(`${updateFieldHashing.name}`, () => {
+  it("adds a field to hashedFields when isFieldHashed is true", () => {
+    const mockConfig: AirbyteStreamConfiguration = {
+      ...mockStreamConfiguration,
+      hashedFields: [{ fieldPath: FIELD_ONE.path }],
+    };
+
+    const newStreamConfiguration = updateFieldHashing({
+      config: mockConfig,
+      fieldPath: FIELD_TWO.path,
+      isFieldHashed: true,
+    });
+
     expect(newStreamConfiguration).toEqual({
-      fieldSelectionEnabled: true,
-      selectedFields: [],
+      hashedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
     });
   });
 
-  it("selects all fields if field selection was enabled", () => {
-    const newStreamConfiguration = toggleAllFieldsSelected({
+  it("removes a field from hashedFields when isFieldHashed is false", () => {
+    const mockConfig: AirbyteStreamConfiguration = {
       ...mockStreamConfiguration,
-      fieldSelectionEnabled: true,
-      selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }, { fieldPath: FIELD_THREE.path }],
+      hashedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
+    };
+
+    const newStreamConfiguration = updateFieldHashing({
+      config: mockConfig,
+      fieldPath: FIELD_TWO.path,
+      isFieldHashed: false,
     });
+
     expect(newStreamConfiguration).toEqual({
-      fieldSelectionEnabled: false,
-      selectedFields: [],
+      hashedFields: [{ fieldPath: FIELD_ONE.path }],
     });
   });
 
-  it("keeps cursor field selected if syncMode is incremental", () => {
-    const newStreamConfiguration = toggleAllFieldsSelected({
+  it("removes the last field from hashedFields and sets hashedFields to undefined", () => {
+    const mockConfig: AirbyteStreamConfiguration = {
       ...mockStreamConfiguration,
-      fieldSelectionEnabled: false,
-      selectedFields: [],
-      syncMode: "incremental",
-      cursorField: FIELD_ONE.path,
+      hashedFields: [{ fieldPath: FIELD_ONE.path }],
+    };
+
+    const newStreamConfiguration = updateFieldHashing({
+      config: mockConfig,
+      fieldPath: FIELD_ONE.path,
+      isFieldHashed: false,
     });
 
     expect(newStreamConfiguration).toEqual({
-      fieldSelectionEnabled: true,
-      selectedFields: [{ fieldPath: FIELD_ONE.path }],
-    });
-  });
-
-  it("keeps primary key fields selected if destinationSyncMode is append_dedup", () => {
-    const newStreamConfiguration = toggleAllFieldsSelected({
-      ...mockStreamConfiguration,
-      fieldSelectionEnabled: false,
-      selectedFields: [],
-      destinationSyncMode: "append_dedup",
-      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
-    });
-
-    expect(newStreamConfiguration).toEqual({
-      fieldSelectionEnabled: true,
-      selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
-    });
-  });
-
-  it("keeps primary key fields selected if destinationSyncMode is overwrite_dedup", () => {
-    const newStreamConfiguration = toggleAllFieldsSelected({
-      ...mockStreamConfiguration,
-      fieldSelectionEnabled: false,
-      selectedFields: [],
-      destinationSyncMode: "overwrite_dedup",
-      primaryKey: [FIELD_ONE.path, FIELD_TWO.path],
-    });
-
-    expect(newStreamConfiguration).toEqual({
-      fieldSelectionEnabled: true,
-      selectedFields: [{ fieldPath: FIELD_ONE.path }, { fieldPath: FIELD_TWO.path }],
+      hashedFields: undefined,
     });
   });
 });

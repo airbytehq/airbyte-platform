@@ -16,7 +16,7 @@ import { useModalService } from "hooks/services/Modal";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { DestinationNamespaceFormValues, DestinationNamespaceModal } from "../../DestinationNamespaceModal";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { getColumnFilterValue } from "../utils/utils";
+import { getColumnFilterValue } from "../utils";
 
 interface NamespaceNameCellProps extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat"> {
   row: Row<SyncCatalogUIModel>;

@@ -1,25 +1,15 @@
 import isEqual from "lodash/isEqual";
 
-import { AirbyteStreamConfiguration, SelectedFieldInfo } from "core/api/types/AirbyteClient";
+import {
+  AirbyteStream,
+  AirbyteStreamConfiguration,
+  DestinationSyncMode,
+  SelectedFieldInfo,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 
-/**
- * Merges arrays of SelectedFieldInfo, ensuring there are no duplicates
- */
-export function mergeFieldPathArrays(...args: SelectedFieldInfo[][]): SelectedFieldInfo[] {
-  const set = new Set<string>();
-
-  args.forEach((array) =>
-    array.forEach((selectedFieldInfo) => {
-      if (selectedFieldInfo.fieldPath) {
-        const key = JSON.stringify(selectedFieldInfo.fieldPath);
-        set.add(key);
-      }
-    })
-  );
-
-  return Array.from(set).map((key) => ({ fieldPath: JSON.parse(key) }));
-}
+import { mergeFieldPathArrays } from "./miscUtils";
 
 interface onToggleFieldSelectedArguments {
   config: AirbyteStreamConfiguration;
@@ -89,7 +79,6 @@ interface updateFieldHashingArguments {
   fieldPath: string[];
   isFieldHashed: boolean;
 }
-// TODO: cover with tests
 export function updateFieldHashing({
   config,
   fieldPath,
@@ -136,34 +125,6 @@ export function updateCursorField(
 }
 
 /**
- * @deprecated it seems like this function is not used anywhere except tests
- */
-export function toggleAllFieldsSelected(config: AirbyteStreamConfiguration): Partial<AirbyteStreamConfiguration> {
-  const wasFieldSelectionEnabled = config?.fieldSelectionEnabled;
-  const fieldSelectionEnabled = !wasFieldSelectionEnabled;
-  const selectedFields: string[][] = [];
-
-  // When deselecting all fields, we need to be careful not to deselect any primary keys or the cursor field
-  if (!wasFieldSelectionEnabled) {
-    if (
-      config?.primaryKey &&
-      config.primaryKey.length > 0 &&
-      (config.destinationSyncMode === "append_dedup" || config.destinationSyncMode === "overwrite_dedup")
-    ) {
-      selectedFields.push(...config.primaryKey);
-    }
-    if (config?.cursorField && config.cursorField.length > 0 && config.syncMode === "incremental") {
-      selectedFields.push(config.cursorField);
-    }
-  }
-
-  return {
-    fieldSelectionEnabled,
-    selectedFields: selectedFields.map((fieldPath) => ({ fieldPath })),
-  };
-}
-
-/**
  * Overwrites the entire primaryKey value in AirbyteStreamConfiguration, which is a composite of one or more fieldPaths
  */
 export function updatePrimaryKey(
@@ -196,42 +157,61 @@ export function updatePrimaryKey(
   };
 }
 
-/**
- * Toggles whether a fieldPath is part of the composite primaryKey
- * @deprecated it seems like this function is not used anywhere except tests
- */
-export function toggleFieldInPrimaryKey(
+export function updateStreamSyncMode(
+  stream: AirbyteStream,
   config: AirbyteStreamConfiguration,
-  fieldPath: string[],
-  numberOfFieldsInStream: number
-): Partial<AirbyteStreamConfiguration> {
-  const fieldIsSelected = !config?.primaryKey?.find((pk) => isEqual(pk, fieldPath));
-  let newPrimaryKey: string[][];
+  syncModes: { syncMode: SyncMode; destinationSyncMode: DestinationSyncMode }
+): AirbyteStreamConfiguration {
+  const { syncMode, destinationSyncMode } = syncModes;
 
-  if (!fieldIsSelected) {
-    newPrimaryKey = config.primaryKey?.filter((key) => !isEqual(key, fieldPath)) ?? [];
-  } else {
-    newPrimaryKey = [...(config?.primaryKey ?? []), fieldPath];
-  }
-
-  // If field selection is enabled, we need to be sure the new fieldPath is also selected
-  if (fieldIsSelected && config?.fieldSelectionEnabled) {
+  // If field selection was enabled, we need to ensure that any source-defined primary key or cursor is selected automatically
+  if (config?.fieldSelectionEnabled) {
     const previouslySelectedFields = config?.selectedFields || [];
-    const selectedFields = mergeFieldPathArrays(previouslySelectedFields, [{ fieldPath }]);
+    const requiredSelectedFields: SelectedFieldInfo[] = [];
 
-    // If the number of selected fields is equal to the fields in the stream, field selection is disabled because all fields are selected
-    if (selectedFields.length === numberOfFieldsInStream) {
-      return { primaryKey: newPrimaryKey, selectedFields: [], fieldSelectionEnabled: false };
+    // If the sync mode is incremental, we need to ensure the cursor is selected
+    if (syncMode === "incremental") {
+      if (stream.sourceDefinedCursor && stream.defaultCursorField?.length) {
+        requiredSelectedFields.push({ fieldPath: stream.defaultCursorField });
+      }
+      if (config.cursorField?.length) {
+        requiredSelectedFields.push({ fieldPath: config.cursorField });
+      }
     }
 
+    // If the destination sync mode is performs dedup, we need to ensure that each piece of the composite primary key is selected
+    if (
+      (destinationSyncMode === "append_dedup" || destinationSyncMode === "overwrite_dedup") &&
+      stream.sourceDefinedPrimaryKey
+    ) {
+      if (stream.sourceDefinedPrimaryKey?.length) {
+        requiredSelectedFields.push(
+          ...stream.sourceDefinedPrimaryKey.map((path) => ({
+            fieldPath: path,
+          }))
+        );
+      }
+      if (config.primaryKey) {
+        requiredSelectedFields.push(
+          ...config.primaryKey.map((path) => ({
+            fieldPath: path,
+          }))
+        );
+      }
+    }
+
+    // Deduplicate the selected fields array, since the same field could have been added twice (e.g. as cursor and pk)
+    const selectedFields = mergeFieldPathArrays(previouslySelectedFields, requiredSelectedFields);
+
     return {
-      fieldSelectionEnabled: true,
+      ...config,
       selectedFields,
-      primaryKey: newPrimaryKey,
+      ...syncModes,
     };
   }
 
   return {
-    primaryKey: newPrimaryKey,
+    ...config,
+    ...syncModes,
   };
 }

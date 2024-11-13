@@ -58,7 +58,7 @@ import {
   getSyncCatalogRows,
   isNamespaceRow,
   isStreamRow,
-} from "./utils/utils";
+} from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../ConnectionForm/formConfig";
 
 export interface SyncCatalogUIModel {

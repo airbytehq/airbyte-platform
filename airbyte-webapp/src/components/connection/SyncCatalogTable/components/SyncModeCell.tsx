@@ -9,7 +9,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { SyncModeButton } from "./SyncModeButton";
 import { SUPPORTED_MODES, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { updateStreamSyncMode } from "../utils/updateStreamSyncMode";
+import { updateStreamSyncMode } from "../utils";
 
 export interface SyncModeValue {
   syncMode: SyncMode;

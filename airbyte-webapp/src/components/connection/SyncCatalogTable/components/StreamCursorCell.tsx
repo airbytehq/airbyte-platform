@@ -18,8 +18,8 @@ import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamCursorCell.module.scss";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
+import { checkIsFieldHashed, getFieldPathType, checkCursorAndPKRequirements, getFieldPathDisplayName } from "../utils";
 import { updateCursorField } from "../utils/streamConfigHelpers";
-import { checkIsFieldHashed, pathDisplayName, checkCursorAndPKRequirements, getFieldPathType } from "../utils/utils";
 
 interface NextCursorCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -62,9 +62,9 @@ export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStr
 
   const cursorValue =
     cursorType === "sourceDefined"
-      ? pathDisplayName(stream?.defaultCursorField ?? [])
+      ? getFieldPathDisplayName(stream?.defaultCursorField ?? [])
       : cursorType === "required"
-      ? pathDisplayName(config?.cursorField ?? [])
+      ? getFieldPathDisplayName(config?.cursorField ?? [])
       : "";
 
   const cursorConfigValidationError: ValidationError | undefined = get(

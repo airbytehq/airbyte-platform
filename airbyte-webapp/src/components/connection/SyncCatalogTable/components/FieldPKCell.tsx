@@ -11,7 +11,7 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { isPrimaryKey, checkCursorAndPKRequirements } from "../utils/utils";
+import { isPrimaryKey, checkCursorAndPKRequirements } from "../utils";
 
 export interface FieldPKCellProps {
   row: Row<SyncCatalogUIModel>;

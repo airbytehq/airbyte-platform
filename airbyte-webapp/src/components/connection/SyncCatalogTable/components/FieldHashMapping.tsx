@@ -12,7 +12,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 
 import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { checkIsFieldHashed, checkIsFieldSelected, isCursor, isPrimaryKey } from "../utils/utils";
+import { checkIsFieldSelected, checkIsFieldHashed, isCursor, isPrimaryKey } from "../utils";
 
 interface FieldHashMappingProps {
   row: Row<SyncCatalogUIModel>;

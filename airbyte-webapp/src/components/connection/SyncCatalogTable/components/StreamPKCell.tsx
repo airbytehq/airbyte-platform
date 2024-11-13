@@ -18,8 +18,13 @@ import { MultiCatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamPKCell.module.scss";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { updatePrimaryKey } from "../utils/streamConfigHelpers";
-import { checkIsFieldHashed, pathDisplayName, checkCursorAndPKRequirements, getFieldPathType } from "../utils/utils";
+import {
+  checkIsFieldHashed,
+  getFieldPathType,
+  checkCursorAndPKRequirements,
+  getFieldPathDisplayName,
+  updatePrimaryKey,
+} from "../utils";
 
 interface NextPKCellProps {
   row: Row<SyncCatalogUIModel>;
@@ -82,7 +87,7 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
       <MultiCatalogComboBox
         options={pkOptions}
         disabled={!shouldDefinePk || mode === "readonly"}
-        value={config?.primaryKey?.map(pathDisplayName)}
+        value={config?.primaryKey?.map(getFieldPathDisplayName)}
         onChange={onChange}
         maxSelectedLabels={1}
         error={pkConfigValidationError}
@@ -112,7 +117,7 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
             {isMultiplePKs && (
               <ul className={styles.pkList}>
                 {config?.primaryKey
-                  ?.map((pk) => pathDisplayName(pk))
+                  ?.map((pk) => getFieldPathDisplayName(pk))
                   .sort((a, b) => a.localeCompare(b))
                   .map((pk) => <li>{pk}</li>)}
               </ul>

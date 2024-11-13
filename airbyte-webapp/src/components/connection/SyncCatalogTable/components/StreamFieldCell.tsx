@@ -18,16 +18,17 @@ import { useExperiment } from "hooks/services/Experiment";
 import { TextHighlighter } from "./TextHighlighter";
 import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { getSelectedMandatoryFields, updateFieldSelected } from "../utils/streamConfigHelpers";
 import {
-  checkIsFieldHashed,
-  checkIsFieldSelected,
-  getFieldPathDisplayName,
   isChildFieldCursor as checkIsChildFieldCursor,
   isChildFieldPrimaryKey as checkIsChildFieldPrimaryKey,
   isCursor as checkIsCursor,
   isPrimaryKey as checkIsPrimaryKey,
-} from "../utils/utils";
+  getFieldPathDisplayName,
+  checkIsFieldSelected,
+  checkIsFieldHashed,
+  getSelectedMandatoryFields,
+  updateFieldSelected,
+} from "../utils";
 
 interface StreamFieldNameCellProps {
   row: Row<SyncCatalogUIModel>;
