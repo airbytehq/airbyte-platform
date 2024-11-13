@@ -1,6 +1,7 @@
 package io.airbyte.workers.temporal.workflows
 
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.config.StandardCheckConnectionInput
@@ -44,8 +45,15 @@ class ConnectorCommandActivityTest {
 
   @Test
   fun `test instrumentation`() {
+    every { activityExecutionContextProvider.get() } returns
+      mockk(relaxed = true) {
+        every { info } returns
+          mockk(relaxed = true) {
+            every { activityType } returns "StartCommand"
+          }
+      }
     val input = getCheckInput()
-    activity.startCommand(input, null)
+    activity.startCommand(getActivityInput(input = input, signalPayload = null))
 
     val commandStepTags = mutableMapOf<String, String>()
     verify {
@@ -72,7 +80,7 @@ class ConnectorCommandActivityTest {
     }
 
     assertEquals(commandStepTags, commandStepDurationTags)
-    assertEquals("startCommand", commandStepTags[MetricTags.COMMAND_STEP])
+    assertEquals("StartCommand", commandStepTags[MetricTags.COMMAND_STEP])
     assertEquals(input.type, commandStepTags[MetricTags.COMMAND])
     assertEquals(MetricTags.SUCCESS, commandStepTags[MetricTags.STATUS])
   }
@@ -85,7 +93,7 @@ class ConnectorCommandActivityTest {
 
     val actualException =
       assertThrows<Exception> {
-        activity.cancelCommand(input, "something")
+        activity.cancelCommand(getActivityInput(input = input, id = "something"))
       }
     assertEquals(exception, actualException)
 
@@ -103,45 +111,45 @@ class ConnectorCommandActivityTest {
   @Test
   fun `test cancel dispatching works`() {
     val checkInput = getCheckInput()
-    activity.cancelCommand(checkInput, "check cancel test")
+    activity.cancelCommand(getActivityInput(input = checkInput, id = "check cancel test"))
     verify { checkCommand.cancel("check cancel test") }
 
     val discoverInput = getDiscoverInput()
-    activity.cancelCommand(discoverInput, "discover cancel test")
+    activity.cancelCommand(getActivityInput(input = discoverInput, id = "discover cancel test"))
     verify { discoverCommand.cancel("discover cancel test") }
 
     val specInput = getSpecInput()
-    activity.cancelCommand(specInput, "spec cancel test")
+    activity.cancelCommand(getActivityInput(input = specInput, id = "spec cancel test"))
     verify { specCommand.cancel("spec cancel test") }
   }
 
   @Test
   fun `test getOutput dispatching works`() {
     val checkInput = getCheckInput()
-    activity.getCommandOutput(checkInput, "check getOutput test")
+    activity.getCommandOutput(getActivityInput(input = checkInput, id = "check getOutput test"))
     verify { checkCommand.getOutput("check getOutput test") }
 
     val discoverInput = getDiscoverInput()
-    activity.getCommandOutput(discoverInput, "discover getOutput test")
+    activity.getCommandOutput(getActivityInput(input = discoverInput, id = "discover getOutput test"))
     verify { discoverCommand.getOutput("discover getOutput test") }
 
     val specInput = getSpecInput()
-    activity.getCommandOutput(specInput, "spec getOutput test")
+    activity.getCommandOutput(getActivityInput(input = specInput, id = "spec getOutput test"))
     verify { specCommand.getOutput("spec getOutput test") }
   }
 
   @Test
   fun `test isTerminal dispatching works`() {
     val checkInput = getCheckInput()
-    activity.isCommandTerminal(checkInput, "check isTerminal test")
+    activity.isCommandTerminal(getActivityInput(input = checkInput, id = "check isTerminal test"))
     verify { checkCommand.isTerminal("check isTerminal test") }
 
     val discoverInput = getDiscoverInput()
-    activity.isCommandTerminal(discoverInput, "discover isTerminal test")
+    activity.isCommandTerminal(getActivityInput(input = discoverInput, id = "discover isTerminal test"))
     verify { discoverCommand.isTerminal("discover isTerminal test") }
 
     val specInput = getSpecInput()
-    activity.isCommandTerminal(specInput, "spec isTerminal test")
+    activity.isCommandTerminal(getActivityInput(input = specInput, id = "spec isTerminal test"))
     verify { specCommand.isTerminal("spec isTerminal test") }
   }
 
@@ -149,7 +157,7 @@ class ConnectorCommandActivityTest {
   fun `test start dispatching works`() {
     val signalPayload = "signal"
     val checkInput = getCheckInput()
-    activity.startCommand(checkInput, signalPayload)
+    activity.startCommand(getActivityInput(input = checkInput, signalPayload = signalPayload))
     verify {
       checkCommand.start(
         CheckConnectionInput(checkInput.input.jobRunConfig, checkInput.input.integrationLauncherConfig, checkInput.input.checkConnectionInput),
@@ -158,7 +166,7 @@ class ConnectorCommandActivityTest {
     }
 
     val discoverInput = getDiscoverInput()
-    activity.startCommand(discoverInput, signalPayload)
+    activity.startCommand(getActivityInput(input = discoverInput, signalPayload = signalPayload))
     verify {
       discoverCommand.start(
         DiscoverCatalogInput(
@@ -171,7 +179,7 @@ class ConnectorCommandActivityTest {
     }
 
     val specInput = getSpecInput()
-    activity.startCommand(specInput, signalPayload)
+    activity.startCommand(getActivityInput(input = specInput, signalPayload = signalPayload))
     verify {
       specCommand.start(
         SpecInput(specInput.input.jobRunConfig, specInput.input.integrationLauncherConfig),
@@ -208,4 +216,11 @@ class ConnectorCommandActivityTest {
           integrationLauncherConfig = IntegrationLauncherConfig(),
         ),
     )
+
+  private fun getActivityInput(
+    input: ConnectorCommandInput,
+    signalPayload: String? = null,
+    id: String? = null,
+    startTimeInMillis: Long = 0,
+  ) = ConnectorCommandActivityInput(input = input, signalPayload = signalPayload, id = id, startTimeInMillis = startTimeInMillis)
 }

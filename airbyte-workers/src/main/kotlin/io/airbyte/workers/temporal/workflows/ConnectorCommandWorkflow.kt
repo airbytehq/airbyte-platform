@@ -1,5 +1,6 @@
 package io.airbyte.workers.temporal.workflows
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
@@ -37,31 +38,50 @@ import jakarta.inject.Singleton
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
+@JsonDeserialize(builder = ConnectorCommandActivityInput.Builder::class)
+data class ConnectorCommandActivityInput(
+  val input: ConnectorCommandInput,
+  val signalPayload: String?,
+  val id: String?,
+  val startTimeInMillis: Long,
+) {
+  class Builder(
+    var input: ConnectorCommandInput? = null,
+    var signalPayload: String? = null,
+    var id: String? = null,
+    var startTimeInMillis: Long? = null,
+  ) {
+    fun input(input: ConnectorCommandInput) = apply { this.input = input }
+
+    fun signalPayload(signalPayload: String) = apply { this.signalPayload = signalPayload }
+
+    fun id(id: String) = apply { this.id = id }
+
+    fun startTimeInMillis(startTimeInMillis: Long) = apply { this.startTimeInMillis = startTimeInMillis }
+
+    fun build() =
+      ConnectorCommandActivityInput(
+        input = input ?: throw IllegalArgumentException("input must be defined"),
+        signalPayload = signalPayload,
+        id = id,
+        startTimeInMillis = startTimeInMillis ?: throw IllegalArgumentException("startTimeInMillis must be defined"),
+      )
+  }
+}
+
 @ActivityInterface
 interface ConnectorCommandActivity {
   @ActivityMethod
-  fun startCommand(
-    input: ConnectorCommandInput,
-    signalPayload: String?,
-  ): String
+  fun startCommand(activityInput: ConnectorCommandActivityInput): String
 
   @ActivityMethod
-  fun isCommandTerminal(
-    input: ConnectorCommandInput,
-    id: String,
-  ): Boolean
+  fun isCommandTerminal(activityInput: ConnectorCommandActivityInput): Boolean
 
   @ActivityMethod
-  fun getCommandOutput(
-    input: ConnectorCommandInput,
-    id: String,
-  ): ConnectorJobOutput
+  fun getCommandOutput(activityInput: ConnectorCommandActivityInput): ConnectorJobOutput
 
   @ActivityMethod
-  fun cancelCommand(
-    input: ConnectorCommandInput,
-    id: String,
-  )
+  fun cancelCommand(activityInput: ConnectorCommandActivityInput)
 }
 
 /**
@@ -93,60 +113,49 @@ class ConnectorCommandActivityImpl(
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun startCommand(
-    input: ConnectorCommandInput,
-    signalPayload: String?,
-  ): String =
-    withInstrumentation(input) {
-      when (input) {
-        is CheckCommandInput -> checkCommand.start(input.input.toWorkerModels(), signalPayload)
-        is DiscoverCommandInput -> discoverCommand.start(input.input.toWorkerModels(), signalPayload)
-        is SpecCommandInput -> specCommand.start(input.input.toWorkerModels(), signalPayload)
+  override fun startCommand(activityInput: ConnectorCommandActivityInput): String =
+    withInstrumentation(activityInput) {
+      when (activityInput.input) {
+        is CheckCommandInput -> checkCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
+        is DiscoverCommandInput -> discoverCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
+        is SpecCommandInput -> specCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
       }
     }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun isCommandTerminal(
-    input: ConnectorCommandInput,
-    id: String,
-  ): Boolean =
-    withInstrumentation(input) {
-      getCommand(input).isTerminal(id)
+  override fun isCommandTerminal(activityInput: ConnectorCommandActivityInput): Boolean =
+    withInstrumentation(activityInput) {
+      getCommand(activityInput.input).isTerminal(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun getCommandOutput(
-    input: ConnectorCommandInput,
-    id: String,
-  ): ConnectorJobOutput =
-    withInstrumentation(input) {
-      getCommand(input).getOutput(id)
+  override fun getCommandOutput(activityInput: ConnectorCommandActivityInput): ConnectorJobOutput =
+    withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
+      getCommand(activityInput.input).getOutput(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun cancelCommand(
-    input: ConnectorCommandInput,
-    id: String,
-  ) {
-    withInstrumentation(input) {
-      getCommand(input).cancel(id)
+  override fun cancelCommand(activityInput: ConnectorCommandActivityInput) {
+    withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
+      getCommand(activityInput.input).cancel(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
   }
 
   private fun <T> withInstrumentation(
-    input: ConnectorCommandInput,
+    activityInput: ConnectorCommandActivityInput,
+    reportCommandSummaryMetrics: Boolean = false,
     block: () -> T,
   ): T {
     var success = true
     val metricAttributes =
       mutableListOf(
-        MetricAttribute(MetricTags.COMMAND, input.type),
-        MetricAttribute(MetricTags.COMMAND_STEP, Thread.currentThread().stackTrace[2].methodName),
+        MetricAttribute(MetricTags.COMMAND, activityInput.input.type),
       )
     ApmTraceUtils.addTagsToTrace(metricAttributes)
 
     try {
       val activityInfo = activityExecutionContextProvider.get().info
+      metricAttributes.add(MetricAttribute(MetricTags.COMMAND_STEP, activityInfo.activityType))
       ApmTraceUtils.addTagsToTrace(
         listOf(
           MetricAttribute(Tags.TEMPORAL_WORKFLOW_ID_KEY, activityInfo.workflowId),
@@ -175,6 +184,15 @@ class ConnectorCommandActivityImpl(
         stopwatch.getElapsedTimeInNanos().toDouble(),
         *metricAttributes.toTypedArray(),
       )
+
+      if (reportCommandSummaryMetrics) {
+        metricClient.count(OssMetricsRegistry.COMMAND, 1, MetricAttribute(MetricTags.COMMAND, activityInput.input.type))
+        metricClient.distribution(
+          OssMetricsRegistry.COMMAND_DURATION,
+          (System.currentTimeMillis() - activityInput.startTimeInMillis).toDouble(),
+          MetricAttribute(MetricTags.COMMAND, activityInput.input.type),
+        )
+      }
     }
   }
 
@@ -198,20 +216,28 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
 
   override fun run(input: ConnectorCommandInput): ConnectorJobOutput {
     val signalPayload = Jsons.serialize(SignalInput(SignalInput.CONNECTOR_COMMAND_WORKFLOW, Workflow.getInfo().workflowId))
-    val id = connectorCommandActivity.startCommand(input, signalPayload)
+    var activityInput =
+      ConnectorCommandActivityInput(
+        input = input,
+        signalPayload = signalPayload,
+        id = null,
+        startTimeInMillis = System.currentTimeMillis(),
+      )
+    val id = connectorCommandActivity.startCommand(activityInput)
+    activityInput = activityInput.copy(id = id)
 
     try {
       shouldBlock = true
       while (shouldBlock) {
         Workflow.await(1.minutes.toJavaDuration()) { !shouldBlock }
-        shouldBlock = !connectorCommandActivity.isCommandTerminal(input, id)
+        shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       }
     } catch (e: Exception) {
       when (e) {
         is CanceledFailure, is ActivityFailure -> {
           val detachedCancellationScope =
             Workflow.newDetachedCancellationScope {
-              connectorCommandActivity.cancelCommand(input, id)
+              connectorCommandActivity.cancelCommand(activityInput)
               shouldBlock = false
             }
           detachedCancellationScope.run()
@@ -220,6 +246,6 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
       }
     }
 
-    return connectorCommandActivity.getCommandOutput(input, id)
+    return connectorCommandActivity.getCommandOutput(activityInput)
   }
 }
