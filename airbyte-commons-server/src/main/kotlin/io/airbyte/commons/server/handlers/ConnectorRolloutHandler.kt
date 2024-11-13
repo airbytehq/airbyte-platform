@@ -4,6 +4,7 @@
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
 import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
@@ -443,6 +444,15 @@ open class ConnectorRolloutHandler
           .nSucceeded(syncInfo.nSucceeded)
           .nFailed(syncInfo.nFailed)
       }
+    }
+
+    fun getPinnedActorInfo(id: UUID): ConnectorRolloutActorSelectionInfo {
+      val rollout = connectorRolloutService.getConnectorRollout(id)
+      val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(rollout, null)
+      return ConnectorRolloutActorSelectionInfo()
+        .nActors(actorSelectionInfo.nActors)
+        .nPinnedToConnectorRollout(actorSelectionInfo.nPreviouslyPinned)
+        .nActorsEligibleOrAlreadyPinned(actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
     }
 
     open fun manualStartConnectorRollout(connectorRolloutWorkflowStart: ConnectorRolloutManualStartRequestBody): ConnectorRolloutRead {

@@ -291,6 +291,47 @@ class RolloutActorFinderTest {
 
   @ParameterizedTest
   @MethodSource("actorDefinitionIds")
+  fun `test getActorSelectionInfo with null percentage`(actorDefinitionId: UUID) {
+    if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+      every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+    } else {
+      every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
+      every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+    }
+    every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
+    every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
+    every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
+    every {
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+    } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+
+    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), null)
+
+    verify {
+      if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+        sourceService.getStandardSourceDefinition(any())
+      } else {
+        destinationService.getStandardDestinationDefinition(any())
+      }
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+      actorDefinitionVersionUpdater.getConfigScopeMaps(any())
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+    }
+
+    assertEquals(0, actorSelectionInfo.actorIdsToPin.size)
+    assertEquals(8, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(0, actorSelectionInfo.nNewPinned)
+    assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
+    assertEquals(0, actorSelectionInfo.percentagePinned)
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
   fun `test getSyncInfoForPinnedActors`(actorDefinitionId: UUID) {
     val connectorRolloutId = UUID.randomUUID()
     val connectorRollout = createMockConnectorRollout(connectorRolloutId)
@@ -304,42 +345,42 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns
       listOf(
         ScopedConfiguration().apply {
-          id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+          id = UUID.randomUUID()
           key = "key1"
           value = RELEASE_CANDIDATE_VERSION_ID.toString()
           resourceId = SOURCE_ACTOR_DEFINITION_ID
           resourceType = ConfigResourceType.ACTOR_DEFINITION
-          scopeId = UUID.randomUUID()
+          scopeId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
           scopeType = ConfigScopeType.ACTOR
           originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
         ScopedConfiguration().apply {
-          id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+          id = UUID.randomUUID()
           key = "key1"
           value = RELEASE_CANDIDATE_VERSION_ID.toString()
           resourceId = DESTINATION_ACTOR_DEFINITION_ID
           resourceType = ConfigResourceType.ACTOR_DEFINITION
-          scopeId = UUID.randomUUID()
+          scopeId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
           scopeType = ConfigScopeType.ACTOR
           originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
         ScopedConfiguration().apply {
-          id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
+          id = UUID.randomUUID()
           key = "key1"
           value = RELEASE_CANDIDATE_VERSION_ID.toString()
           resourceId = SOURCE_ACTOR_DEFINITION_ID
           resourceType = ConfigResourceType.ACTOR_DEFINITION
-          scopeId = UUID.randomUUID()
+          scopeId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
           scopeType = ConfigScopeType.ACTOR
           originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },
         ScopedConfiguration().apply {
-          id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION
+          id = UUID.randomUUID()
           key = "key1"
           value = RELEASE_CANDIDATE_VERSION_ID.toString()
           resourceId = DESTINATION_ACTOR_DEFINITION_ID
           resourceType = ConfigResourceType.ACTOR_DEFINITION
-          scopeId = UUID.randomUUID()
+          scopeId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION
           scopeType = ConfigScopeType.ACTOR
           originType = ConfigOriginType.CONNECTOR_ROLLOUT
         },

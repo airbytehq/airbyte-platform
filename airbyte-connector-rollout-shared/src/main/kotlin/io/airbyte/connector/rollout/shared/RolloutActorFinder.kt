@@ -56,7 +56,7 @@ class RolloutActorFinder(
 ) {
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
-    targetPercent: Int,
+    targetPercent: Int?,
   ): ActorSelectionInfo {
     logger.info { "Finding actors to pin for rollout ${connectorRollout.id}" }
 
@@ -87,6 +87,16 @@ class RolloutActorFinder(
 
     logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
     logger.info { "Rollout ${connectorRollout.id}: ${nEligibleOrAlreadyPinned - candidates.size - nPreviouslyPinned} pinned to a non-RC" }
+
+    if (targetPercent == null) {
+      return ActorSelectionInfo(
+        actorIdsToPin = emptyList(),
+        nActors = initialNCandidates,
+        nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
+        nPreviouslyPinned = nPreviouslyPinned,
+        percentagePinned = ceil(nPreviouslyPinned * 100.0 / nEligibleOrAlreadyPinned).toInt(),
+      )
+    }
 
     // Calculate the number to pin based on the input percentage
     val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
@@ -123,9 +133,12 @@ class RolloutActorFinder(
   fun getSyncInfoForPinnedActors(connectorRollout: ConnectorRollout): Map<UUID, ActorSyncJobInfo> {
     val actorType = getActorType(connectorRollout.actorDefinitionId)
 
+    val pinnedActors = getActorsPinnedToReleaseCandidate(connectorRollout)
+    logger.info { "Connector rollout getting sync info for pinned actors: connectorRollout=${connectorRollout.id} pinnedActors=$pinnedActors" }
+
     val pinnedActorSyncs =
       getSortedActorDefinitionConnections(
-        getActorsPinnedToReleaseCandidate(connectorRollout),
+        pinnedActors,
         connectorRollout.actorDefinitionId,
         actorType,
       )
@@ -149,11 +162,15 @@ class RolloutActorFinder(
     createdAt: OffsetDateTime?,
     versionId: UUID?,
   ): Map<UUID, ActorSyncJobInfo> {
-    val actorActorSyncJobInfoMap = mutableMapOf<UUID, ActorSyncJobInfo>()
+    val actorSyncJobInfoMap = mutableMapOf<UUID, ActorSyncJobInfo>()
+
+    logger.info {
+      "Connector rollout getting actorSyncJobInfo connectorRollout.id=${connectorRollout.id} actorSyncs=${actorSyncs.size} versionId=$versionId"
+    }
 
     for (connection in actorSyncs) {
       val actorId = (if (actorType == ActorType.SOURCE) connection.sourceId else connection.destinationId) ?: continue
-      val connectionJobs =
+      val allConnectionJobs =
         jobService.listJobs(
           setOf(JobConfig.ConfigType.SYNC),
           connection.connectionId.toString(),
@@ -164,22 +181,36 @@ class RolloutActorFinder(
           null,
           null,
           null,
-        ).filter { if (versionId != null) jobDefinitionVersionIdEq(actorType, it, versionId) else jobDockerImageIsDefault(actorType, it) }
-      val nSucceeded = connectionJobs.filter { it.status == JobStatus.SUCCEEDED }.size
-      val nFailed = connectionJobs.filter { it.status == JobStatus.FAILED }.size
+        )
+      logger.info { "connectorRollout.id=${connectorRollout.id} actorId=$actorId allConnectionJobs.size=${allConnectionJobs.size}" }
 
-      if (actorActorSyncJobInfoMap.containsKey(actorId)) {
-        actorActorSyncJobInfoMap[actorId]!!.nSucceeded += nSucceeded
-        actorActorSyncJobInfoMap[actorId]!!.nFailed += nSucceeded
-      } else {
-        actorActorSyncJobInfoMap[actorId] = ActorSyncJobInfo(nSucceeded = nSucceeded, nFailed = nFailed)
+      val filteredConnectionJobs =
+        allConnectionJobs.filter {
+          if (versionId != null) {
+            jobDefinitionVersionIdEq(actorType, it, versionId)
+          } else {
+            jobDockerImageIsDefault(actorType, it)
+          }
+        }
+      val nSucceeded = filteredConnectionJobs.filter { it.status == JobStatus.SUCCEEDED }.size
+      val nFailed = filteredConnectionJobs.filter { it.status == JobStatus.FAILED }.size
+      logger.info {
+        "connectorRollout.id=${connectorRollout.id} actorId=$actorId " +
+          "filteredConnectionJobs.size=${filteredConnectionJobs.size} nSucceeded=$nSucceeded nFailed=$nFailed"
       }
-      actorActorSyncJobInfoMap[actorId]!!.nConnections++
+
+      if (actorSyncJobInfoMap.containsKey(actorId)) {
+        actorSyncJobInfoMap[actorId]!!.nSucceeded += nSucceeded
+        actorSyncJobInfoMap[actorId]!!.nFailed += nSucceeded
+      } else {
+        actorSyncJobInfoMap[actorId] = ActorSyncJobInfo(nSucceeded = nSucceeded, nFailed = nFailed)
+      }
+      actorSyncJobInfoMap[actorId]!!.nConnections++
     }
 
-    logger.info { "connectorRollout.id=${connectorRollout.id} actorActorSyncJobInfoMap=$actorActorSyncJobInfoMap" }
+    logger.info { "connectorRollout.id=${connectorRollout.id} actorActorSyncJobInfoMap=$actorSyncJobInfoMap" }
 
-    return actorActorSyncJobInfoMap
+    return actorSyncJobInfoMap
   }
 
   @VisibleForTesting
@@ -276,10 +307,18 @@ class RolloutActorFinder(
         listOf(connectorRollout.releaseCandidateVersionId.toString()),
       )
 
-    return scopedConfigurations.filter {
-      it.value == connectorRollout.releaseCandidateVersionId.toString() &&
-        it.originType == ConfigOriginType.CONNECTOR_ROLLOUT
-    }.map { it.id }
+    logger.info {
+      "Getting actors pinned to release candidate: connectorRollout.id=${connectorRollout.id} scopedConfigurations=$scopedConfigurations"
+    }
+
+    val filtered =
+      scopedConfigurations.filter {
+        it.value == connectorRollout.releaseCandidateVersionId.toString() &&
+          it.originType == ConfigOriginType.CONNECTOR_ROLLOUT
+      }.map { it.scopeId }
+
+    logger.info { "getActorsPinnedToReleaseCandidate  connectorRollout.id=${connectorRollout.id} filtered=$filtered" }
+    return filtered
   }
 
   @VisibleForTesting
@@ -288,20 +327,38 @@ class RolloutActorFinder(
     actorDefinitionId: UUID,
     actorType: ActorType,
   ): List<StandardSync> {
-    return connectionService.listConnectionsByActorDefinitionIdAndType(
-      actorDefinitionId,
-      actorType.toString(),
-      false,
-    ).filter { connection ->
-      when (actorType) {
-        ActorType.SOURCE -> connection.sourceId in actorIds
-        ActorType.DESTINATION -> connection.destinationId in actorIds
-      }
-    }.filter { connection ->
-      connection.manual != true
-    }.sortedBy { connection ->
-      getFrequencyInMinutes(connection.schedule)
+    logger.info {
+      "Connector rollout getting sorted actor definition connections: actorIds=$actorIds actorDefinitionId=$actorDefinitionId actorType=$actorType"
     }
+
+    val connections =
+      connectionService.listConnectionsByActorDefinitionIdAndType(
+        actorDefinitionId,
+        actorType.toString(),
+        false,
+      )
+    logger.info { "getSortedActorDefinitionConnections connections=${connections.size}" }
+    for (connection in connections) {
+      logger.info { "getSortedActorDefinitionConnections connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
+    }
+
+    val sortedSyncs =
+      connections.filter { connection ->
+        when (actorType) {
+          ActorType.SOURCE -> connection.sourceId in actorIds
+          ActorType.DESTINATION -> connection.destinationId in actorIds
+        }
+      }.filter { connection ->
+        connection.manual != true
+      }.sortedBy { connection ->
+        getFrequencyInMinutes(connection.schedule)
+      }
+
+    logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
+    for (sync in sortedSyncs) {
+      logger.info { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
+    }
+    return sortedSyncs
   }
 
   @VisibleForTesting

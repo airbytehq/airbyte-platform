@@ -7743,9 +7743,28 @@ components:
         - data
       properties:
         data:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
+          type: object
+          properties:
+            actor_selection_info:
+              $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
+            syncs:
+              type: array
+              items:
+                $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
+
+    ConnectorRolloutActorSelectionInfo:
+      type: object
+      required:
+        - n_actors
+        - n_actors_eligible_or_already_pinned
+        - n_pinned_to_connector_rollout
+      properties:
+        n_actors:
+          type: integer
+        n_actors_eligible_or_already_pinned:
+          type: integer
+        n_pinned_to_connector_rollout:
+          type: integer
 
     ConnectorRolloutActorSyncInfo:
       type: object

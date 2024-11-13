@@ -7,8 +7,10 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.ConnectorRolloutApi;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo;
 import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo;
 import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfoResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfoResponseData;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutGetActorSyncInfoRequestBody;
@@ -156,8 +158,12 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
     return ApiHelper.execute(() -> {
       final UUID connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.getId();
       final List<ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo = connectorRolloutHandler.getActorSyncInfo(connectorRolloutId);
+      final ConnectorRolloutActorSelectionInfo actorSelectionInfo = connectorRolloutHandler.getPinnedActorInfo(connectorRolloutId);
 
-      return new ConnectorRolloutActorSyncInfoResponse().data(connectorRolloutSyncInfo);
+      final ConnectorRolloutActorSyncInfoResponseData responseData = new ConnectorRolloutActorSyncInfoResponseData();
+      responseData.actorSelectionInfo(actorSelectionInfo).syncs(connectorRolloutSyncInfo);
+
+      return new ConnectorRolloutActorSyncInfoResponse().data(responseData);
     });
   }
 
