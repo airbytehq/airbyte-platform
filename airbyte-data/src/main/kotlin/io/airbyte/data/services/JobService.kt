@@ -16,7 +16,7 @@ interface JobService {
     createdAtEnd: OffsetDateTime?,
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
-    orderByField: String? = "created_at",
+    orderByField: String? = "createdAt",
     orderByMethod: String? = "desc",
   ): List<Job>
 }

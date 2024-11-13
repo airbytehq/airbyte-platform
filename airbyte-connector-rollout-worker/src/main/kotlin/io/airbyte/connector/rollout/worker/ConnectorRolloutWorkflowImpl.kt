@@ -39,11 +39,11 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   private val defaultActivityOptions =
     ActivityOptions
       .newBuilder()
-      .setStartToCloseTimeout(Duration.ofSeconds(10))
+      .setStartToCloseTimeout(Duration.ofSeconds(600))
       .setRetryOptions(
         RetryOptions
           .newBuilder()
-          .setMaximumInterval(Duration.ofSeconds(20))
+          .setMaximumInterval(Duration.ofSeconds(600))
           .setMaximumAttempts(1)
           .setDoNotRetry("org.openapitools.client.infrastructure.ClientException")
           .build(),
