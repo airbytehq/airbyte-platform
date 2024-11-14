@@ -62,7 +62,7 @@ class ConnectorRolloutClient
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
       }
 
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.connectorRollout!!.actorDefinitionId)
       val workflowStub =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,

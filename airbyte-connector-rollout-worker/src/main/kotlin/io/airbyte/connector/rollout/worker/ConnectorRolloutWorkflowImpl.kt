@@ -32,6 +32,9 @@ import io.temporal.failure.ApplicationFailure
 import io.temporal.workflow.Workflow
 import java.lang.reflect.Field
 import java.time.Duration
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 private val logger = KotlinLogging.logger {}
 
@@ -107,21 +110,71 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private var startRolloutFailed = false
-  private var state = ConnectorEnumRolloutState.INITIALIZED
+  private var connectorRollout: ConnectorRolloutOutput? = null
 
   override fun run(input: ConnectorRolloutActivityInputStart): ConnectorEnumRolloutState {
-    val workflowId = "${input.dockerRepository}:${input.dockerImageTag}:${input.actorDefinitionId.toString().substring(0, 8)}"
-    logger.info { "Initialized rollout for $workflowId" }
+    val workflowId = Workflow.getInfo().workflowId
+
+    // Checkpoint to record the workflow version
+    Workflow.getVersion("ChangedActivityInputStart", Workflow.DEFAULT_VERSION, 1)
+
+    setRollout(input)
+
     // End the workflow if we were unable to start the rollout, or we've reached a terminal state
-    Workflow.await { startRolloutFailed || ConnectorRolloutFinalState.entries.any { it.value() == state.value() } }
+    Workflow.await { startRolloutFailed || rolloutStateIsTerminal() }
     if (startRolloutFailed) {
       throw ApplicationFailure.newFailure(
         "Failure starting rollout for $workflowId",
         ConnectorEnumRolloutState.CANCELED.value(),
       )
     }
-    logger.info { "Rollout for $workflowId has reached a terminal state: $state" }
-    return state
+    logger.info { "Rollout for $workflowId has reached a terminal state: ${connectorRollout?.state}" }
+
+    return getRolloutState()
+  }
+
+  private fun setRollout(input: ConnectorRolloutActivityInputStart) {
+    connectorRollout =
+      ConnectorRolloutOutput(
+        id = input.connectorRollout?.id,
+        workflowRunId = input.connectorRollout?.workflowRunId,
+        actorDefinitionId = input.connectorRollout?.actorDefinitionId,
+        releaseCandidateVersionId = input.connectorRollout?.releaseCandidateVersionId,
+        initialVersionId = input.connectorRollout?.initialVersionId,
+        // In Workflow.DEFAULT_VERSION, input.connectorRollout doesn't exist, and we only store the `state` variable.
+        // Therefore, we require it to be non-null here.
+        // Once all DEFAULT_VERSION workflows are finished, we can delete the null branch.
+        state = input.connectorRollout?.state ?: ConnectorEnumRolloutState.INITIALIZED,
+        initialRolloutPct = input.connectorRollout?.initialRolloutPct?.toInt(),
+        currentTargetRolloutPct = input.connectorRollout?.currentTargetRolloutPct?.toInt(),
+        finalTargetRolloutPct = input.connectorRollout?.finalTargetRolloutPct?.toInt(),
+        hasBreakingChanges = false,
+        rolloutStrategy = input.connectorRollout?.rolloutStrategy,
+        maxStepWaitTimeMins = input.connectorRollout?.maxStepWaitTimeMins?.toInt(),
+        updatedBy = input.connectorRollout?.updatedBy.toString(),
+        createdAt = getOffset(input.connectorRollout?.createdAt),
+        updatedAt = getOffset(input.connectorRollout?.updatedAt),
+        completedAt = getOffset(input.connectorRollout?.completedAt),
+        expiresAt = getOffset(input.connectorRollout?.expiresAt),
+        errorMsg = input.connectorRollout?.errorMsg,
+        failedReason = input.connectorRollout?.failedReason,
+      )
+  }
+
+  private fun getOffset(timestamp: Long?): OffsetDateTime? {
+    return if (timestamp == null) {
+      null
+    } else {
+      Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC)
+    }
+  }
+
+  private fun getRolloutState(): ConnectorEnumRolloutState {
+    return connectorRollout?.state ?: ConnectorEnumRolloutState.INITIALIZED
+  }
+
+  private fun rolloutStateIsTerminal(): Boolean {
+    return ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
   }
 
   override fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
@@ -130,7 +183,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     return try {
       val output = startRolloutActivity.startRollout(workflowRunId, input)
       logger.info { "startRolloutActivity.startRollout" }
-      state = output.state
+      connectorRollout = output
       output
     } catch (e: Exception) {
       val newState = ConnectorEnumRolloutState.CANCELED
@@ -142,6 +195,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           actorDefinitionId = input.actorDefinitionId,
           rolloutId = input.rolloutId,
           errorMsg = "Failed to start rollout.",
+          failureMsg = e.message,
           updatedBy = input.updatedBy,
           rolloutStrategy = input.rolloutStrategy,
         ),
@@ -175,7 +229,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   override fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
     logger.info { "getRollout: calling getRolloutActivity" }
     val output = getRolloutActivity.getRollout(input)
-    logger.info { "getRolloutActivity.getRollout pinned_actors = ${output.actorIds}" }
+    logger.info { "getRolloutActivity.getRollout = $output" }
     return output
   }
 
@@ -189,8 +243,8 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   override fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
     logger.info { "doRollout: calling doRolloutActivity" }
     val output = doRolloutActivity.doRollout(input)
-    state = output.state
-    logger.info { "doRolloutActivity.doRollout pinned_connections = ${output.actorIds}" }
+    connectorRollout = output
+    logger.info { "doRolloutActivity.doRollout = $output" }
     return output
   }
 
@@ -205,7 +259,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     // Start a GH workflow to make the release candidate available as `latest`, if the rollout was successful
     // Delete the release candidate on either success or failure (but not cancellation)
     if (input.result == ConnectorRolloutFinalState.SUCCEEDED || input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
-      if (state == ConnectorEnumRolloutState.FINALIZING) {
+      if (connectorRollout?.state == ConnectorEnumRolloutState.FINALIZING) {
         logger.info { "finalizeRollout: already promoted/rolled back, skipping; if you need to re-run the GHA please do so manually " }
       } else {
         logger.info { "finalizeRollout: calling promoteOrRollback" }
@@ -225,7 +279,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
               rolloutStrategy = input.rolloutStrategy,
             ),
           )
-        state = output.state
+        connectorRollout = output
       }
     }
 
@@ -254,7 +308,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     logger.info { "finalizeRollout: calling finalizeRolloutActivity" }
     val rolloutResult = finalizeRolloutActivity.finalizeRollout(input)
     logger.info { "finalizeRolloutActivity.finalizeRollout rolloutResult = $rolloutResult" }
-    state = rolloutResult.state
+    connectorRollout = rolloutResult
     return rolloutResult
   }
 

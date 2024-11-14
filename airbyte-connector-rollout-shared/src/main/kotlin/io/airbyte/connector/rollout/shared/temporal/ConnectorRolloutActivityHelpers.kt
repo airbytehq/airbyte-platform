@@ -33,7 +33,6 @@ object ConnectorRolloutActivityHelpers {
       expiresAt = rolloutRead.expiresAt,
       errorMsg = rolloutRead.errorMsg,
       failedReason = rolloutRead.failedReason,
-      actorIds = ArrayList(),
     )
   }
 

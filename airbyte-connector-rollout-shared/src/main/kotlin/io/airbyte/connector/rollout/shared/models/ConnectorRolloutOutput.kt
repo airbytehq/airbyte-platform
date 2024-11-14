@@ -25,5 +25,4 @@ data class ConnectorRolloutOutput(
   var expiresAt: OffsetDateTime? = null,
   var errorMsg: String? = null,
   var failedReason: String? = null,
-  var actorIds: List<UUID>? = null,
 )

@@ -1,6 +1,7 @@
 package io.airbyte.connector.rollout.shared.models
 
 import io.airbyte.config.ConnectorEnumRolloutStrategy
+import io.airbyte.config.ConnectorRollout
 import java.util.UUID
 
 data class ConnectorRolloutActivityInputStart(
@@ -10,4 +11,5 @@ data class ConnectorRolloutActivityInputStart(
   var rolloutId: UUID,
   var updatedBy: UUID? = null,
   var rolloutStrategy: ConnectorEnumRolloutStrategy? = null,
+  var connectorRollout: ConnectorRollout? = null,
 )

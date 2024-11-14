@@ -473,6 +473,7 @@ open class ConnectorRolloutHandler
             rollout.id,
             connectorRolloutWorkflowStart.updatedBy,
             rollout.rolloutStrategy,
+            rollout,
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -496,6 +497,7 @@ open class ConnectorRolloutHandler
               connectorRolloutUpdate.id,
               connectorRolloutUpdate.updatedBy,
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+              connectorRollout,
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -536,6 +538,7 @@ open class ConnectorRolloutHandler
               connectorRolloutFinalize.id,
               connectorRolloutFinalize.updatedBy,
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+              connectorRollout,
             ),
           )
         } catch (e: WorkflowUpdateException) {
