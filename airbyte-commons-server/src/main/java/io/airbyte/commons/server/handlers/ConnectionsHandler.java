@@ -560,7 +560,7 @@ public class ConnectionsHandler {
     final List<ProblemMapperErrorData> errors = result.getErrors().entrySet().stream()
         .flatMap(streamErrors -> streamErrors.getValue().entrySet().stream().map(mapperError -> new ProblemMapperErrorData()
             .stream(streamErrors.getKey().getName())
-            .error(mapperError.getValue().name())
+            .error(mapperError.getValue().getType().name())
             .mapper(
                 new ProblemMapperErrorDataMapper()
                     .type(mapperError.getKey().name())

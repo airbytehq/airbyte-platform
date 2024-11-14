@@ -22,6 +22,15 @@ class DestinationCatalogGenerator(
 ) {
   private val mappersByName = mappers.associateBy { it.name }
 
+  enum class MapperErrorType {
+    MISSING_MAPPER,
+    INVALID_MAPPER_CONFIG,
+    FIELD_NOT_FOUND,
+    FIELD_ALREADY_EXISTS,
+  }
+
+  data class MapperError(val type: MapperErrorType, val message: String)
+
   data class CatalogGenerationResult(
     val catalog: ConfiguredAirbyteCatalog,
     val errors: Map<StreamDescriptor, Map<MapperConfig, MapperError>>,
@@ -69,11 +78,6 @@ class DestinationCatalogGenerator(
     val errors: Map<MapperConfig, MapperError>,
   )
 
-  enum class MapperError {
-    MISSING_MAPPER,
-    INVALID_MAPPER_CONFIG,
-  }
-
   internal fun applyMapperToFields(stream: ConfiguredAirbyteStream): MapperToFieldAccumulator {
     val result =
       stream.mappers.map {
@@ -98,19 +102,39 @@ class DestinationCatalogGenerator(
             mapperAcc, (mapperInstance, mapperConfig) ->
           if (mapperInstance == null) {
             log.warn { "Trying to use a mapper named ${mapperConfig.name()} which doesn't have a known implementation. The mapper won't be apply" }
-            mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError.MISSING_MAPPER))
+            mapperAcc.copy(
+              errors =
+                mapperAcc.errors +
+                  Pair(
+                    mapperConfig,
+                    MapperError(type = MapperErrorType.MISSING_MAPPER, message = "Cannot find mapper ${mapperConfig.name()}, ignoring."),
+                  ),
+            )
           } else {
             try {
               mapperAcc.copy(
                 slimStream = (mapperInstance as Mapper<MapperConfig>).schema(mapperConfig, mapperAcc.slimStream),
                 validConfig = mapperAcc.validConfig + mapperConfig,
               )
+            } catch (e: MapperException) {
+              log.error(e) {
+                "Trying to use a mapper named ${mapperConfig.name()} which failed to resolve its schema for the config:" +
+                  " ${mapperConfig.config()}. The mapper won't be applied"
+              }
+              mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError(type = e.type, message = e.message ?: "Unexpected error")))
             } catch (e: Exception) {
               log.error(e) {
                 "Trying to use a mapper named ${mapperConfig.name()} which failed to resolve its schema for the config:" +
                   " ${mapperConfig.config()}. The mapper won't be apply"
               }
-              mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError.INVALID_MAPPER_CONFIG))
+              mapperAcc.copy(
+                errors =
+                  mapperAcc.errors +
+                    Pair(
+                      mapperConfig,
+                      MapperError(type = MapperErrorType.INVALID_MAPPER_CONFIG, message = e.message ?: "Unexpected error"),
+                    ),
+              )
             }
           }
         }

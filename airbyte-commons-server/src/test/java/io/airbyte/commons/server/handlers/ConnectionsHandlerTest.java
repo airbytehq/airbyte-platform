@@ -177,6 +177,7 @@ import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperErrorType;
 import io.airbyte.mappers.transformations.HashingMapper;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -1300,7 +1301,7 @@ class ConnectionsHandlerTest {
                             return Map.of();
                           }
 
-                        }, MapperError.INVALID_MAPPER_CONFIG))));
+                        }, new MapperError(MapperErrorType.INVALID_MAPPER_CONFIG, "error message")))));
 
         final MapperValidationProblem exception =
             assertThrows(MapperValidationProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
@@ -1309,7 +1310,7 @@ class ConnectionsHandlerTest {
         assertEquals(problem.getData().getErrors().getFirst(),
             new ProblemMapperErrorData()
                 .stream(streamName)
-                .error(MapperError.INVALID_MAPPER_CONFIG.name())
+                .error(MapperErrorType.INVALID_MAPPER_CONFIG.name())
                 .mapper(new ProblemMapperErrorDataMapper().type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
       }
 
@@ -1763,7 +1764,7 @@ class ConnectionsHandlerTest {
                             return MapperOperationName.HASHING;
                           }
 
-                        }, MapperError.INVALID_MAPPER_CONFIG))));
+                        }, new MapperError(MapperErrorType.INVALID_MAPPER_CONFIG, "error")))));
 
         final MapperValidationProblem exception =
             assertThrows(MapperValidationProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
@@ -1772,7 +1773,7 @@ class ConnectionsHandlerTest {
         assertEquals(problem.getData().getErrors().getFirst(),
             new ProblemMapperErrorData()
                 .stream(streamName)
-                .error(MapperError.INVALID_MAPPER_CONFIG.name())
+                .error(MapperErrorType.INVALID_MAPPER_CONFIG.name())
                 .mapper(new ProblemMapperErrorDataMapper().type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
       }
 

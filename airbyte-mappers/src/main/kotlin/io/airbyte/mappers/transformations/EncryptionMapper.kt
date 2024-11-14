@@ -19,7 +19,11 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-class EncryptionConfigException(msg: String, cause: Throwable) : RuntimeException(msg, cause)
+class EncryptionConfigException(msg: String, cause: Throwable) : MapperException(
+  type = DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG,
+  message = msg,
+  cause = cause,
+)
 
 @Singleton
 class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {

@@ -65,7 +65,10 @@ class SlimStream(
     newType: FieldType? = null,
   ) {
     if (oldName != newName && _fields.any { it.name == newName }) {
-      throw IllegalStateException("Field $newName already exists in stream fields")
+      throw MapperException(
+        type = DestinationCatalogGenerator.MapperErrorType.FIELD_ALREADY_EXISTS,
+        message = "Field $newName already exists in stream fields",
+      )
     }
 
     var match = 0
@@ -78,7 +81,7 @@ class SlimStream(
       }
     }
     if (match == 0) {
-      throw IllegalStateException("Field $oldName not found in stream fields")
+      throw MapperException(type = DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND, message = "Field $oldName not found in stream fields")
     }
 
     _cursor?.apply { renameInSimpleList(this, oldName, newName) }

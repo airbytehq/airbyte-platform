@@ -348,7 +348,7 @@ class DestinationCatalogGeneratorTest {
 
     assertTrue(result.catalog.streams[0].mappers.isEmpty())
     val streamDescriptor = StreamDescriptor().withName("users")
-    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.MISSING_MAPPER), result.errors[streamDescriptor])
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.MISSING_MAPPER, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
 
   @Test
@@ -382,7 +382,7 @@ class DestinationCatalogGeneratorTest {
 
     assertTrue(result.catalog.streams[0].mappers.isEmpty())
     val streamDescriptor = StreamDescriptor().withName("users")
-    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG), result.errors[streamDescriptor])
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
 
   @Test

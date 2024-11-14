@@ -114,27 +114,12 @@ class ReplicationHydrationProcessor(
   ) {
     transformedCatalog.errors.entries.forEach { streamErrors ->
       streamErrors.value.values.forEach { streamError ->
-        when (streamError) {
-          DestinationCatalogGenerator.MapperError.MISSING_MAPPER ->
-            metricClient.count(
-              OssMetricsRegistry.MISSING_MAPPER,
-              1,
-              MetricAttribute(
-                MetricTags.CONNECTION_ID,
-                connectionId.toString(),
-              ),
-            )
-
-          DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG ->
-            metricClient.count(
-              OssMetricsRegistry.INVALID_MAPPER_CONFIG,
-              1,
-              MetricAttribute(
-                MetricTags.CONNECTION_ID,
-                connectionId.toString(),
-              ),
-            )
-        }
+        metricClient.count(
+          OssMetricsRegistry.MAPPER_ERROR,
+          1,
+          MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+          MetricAttribute(MetricTags.FAILURE_TYPE, streamError.type.name),
+        )
       }
     }
   }

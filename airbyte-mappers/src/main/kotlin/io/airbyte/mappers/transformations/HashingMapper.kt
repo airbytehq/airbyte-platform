@@ -76,7 +76,7 @@ class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
     data: ByteArray,
   ): String {
     if (supportedMethods.contains(method).not()) {
-      throw IllegalArgumentException("Unsupported hashing method: $method")
+      throw MapperException(type = DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG, message = "Unsupported hashing method: $method")
     }
 
     val hashedValue = MessageDigest.getInstance(method).digest(data)
