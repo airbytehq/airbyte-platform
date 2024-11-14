@@ -6,9 +6,12 @@ package io.airbyte.oauth.declarative;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,35 @@ import org.apache.commons.text.lookup.StringLookupFactory;
  * configuration.
  */
 public class DeclarativeOAuthSpecHandler {
+
+  private Clock clock;
+  private final SecureRandom secureRandom;
+
+  /**
+   * Constructor for DeclarativeOAuthSpecHandler. Initializes the clock to the system's UTC clock and
+   * the secureRandom to a new instance of SecureRandom.
+   */
+  protected DeclarativeOAuthSpecHandler() {
+    this.clock = Clock.systemUTC();
+    this.secureRandom = new SecureRandom();
+  }
+
+  /**
+   * Sets the clock instance to be used by this handler, mainly for the testing purposes.
+   *
+   * @param clock the Clock instance to set
+   */
+  @VisibleForTesting
+  public void setClock(final Clock clock) {
+    this.clock = clock;
+  }
+
+  /**
+   * TypeReference to cover expected objects in the userConfig.
+   */
+  private static final TypeReference<Map<String, Integer>> STATE_TYPE_REF = new TypeReference<>() {};
+  private static final TypeReference<Map<String, String>> COMPLETE_OAUTH_HEADERS_TYPE_REF = new TypeReference<>() {};
+  private static final TypeReference<List<String>> EXTRACT_OUTPUT_TYPE_REF = new TypeReference<>() {};
 
   /**
    * The Airbyte Protocol declared literals for an easy access and reuse.
@@ -47,13 +79,8 @@ public class DeclarativeOAuthSpecHandler {
   protected static final String STATE_KEY = "state_key";
   protected static final String STATE_VALUE = "state";
   protected static final String STATE_PARAM_KEY = STATE_VALUE;
-
-  /**
-   * TypeReference to cover expected objects in the userConfig.
-   */
-  private static final TypeReference<Map<String, Integer>> STATE_TYPE_REF = new TypeReference<>() {};
-  private static final TypeReference<Map<String, String>> COMPLETE_OAUTH_HEADERS_TYPE_REF = new TypeReference<>() {};
-  private static final TypeReference<List<String>> EXTRACT_OUTPUT_TYPE_REF = new TypeReference<>() {};
+  protected static final String TOKEN_EXPIRY_KEY = "expires_in";
+  protected static final String TOKEN_EXPIRY_DATE_KEY = "token_expiry_date";
 
   /**
    * The minimum and maximum length for the OAuth state parameter. This values is used to ensure that
@@ -97,12 +124,6 @@ public class DeclarativeOAuthSpecHandler {
       "sys:");
 
   /**
-   * A secure random number generator instance used for generating cryptographically strong random
-   * values.
-   */
-  private static final SecureRandom secureRandom = new SecureRandom();
-
-  /**
    * Creates and configures a StringSubstitutor for interpolating variables within strings.
    *
    * @param templateValues a map containing the template values to be used for interpolation.
@@ -111,7 +132,7 @@ public class DeclarativeOAuthSpecHandler {
   private static StringSubstitutor getInterpolator(final Map<String, String> templateValues) {
 
     final StringLookup defaultResolver = StringLookupFactory.INSTANCE.interpolatorStringLookup(templateValues);
-    final StringLookup resolver = new CodeChallengeLookup(defaultResolver);
+    final StringLookup resolver = new CodeChallengeS256Lookup(defaultResolver);
     final StringSubstitutor interpolator = new StringSubstitutor(resolver);
 
     interpolator.setVariablePrefix("{");
@@ -119,7 +140,6 @@ public class DeclarativeOAuthSpecHandler {
     interpolator.setEnableUndefinedVariableException(true);
 
     return interpolator;
-
   }
 
   /**
@@ -132,6 +152,15 @@ public class DeclarativeOAuthSpecHandler {
     return userConfig.path(STATE_KEY).asText(STATE_VALUE);
   }
 
+  /**
+   * Generates a configurable state string based on the provided JSON configuration.
+   *
+   * @param stateConfig the JSON node containing the state configuration with optional "min" and "max"
+   *        length values.
+   * @return a randomly generated state string of a length between the specified "min" and "max"
+   *         values, inclusive. If "min" or "max" are not provided in the configuration, default
+   *         values are used.
+   */
   protected final String getConfigurableState(final JsonNode stateConfig) {
 
     final Map<String, Integer> state = Jsons.object(stateConfig, STATE_TYPE_REF);
@@ -145,7 +174,6 @@ public class DeclarativeOAuthSpecHandler {
     }
 
     return stateValue.toString();
-
   }
 
   /**
@@ -156,6 +184,7 @@ public class DeclarativeOAuthSpecHandler {
    * @return the Map of (String, String) as parsedConfig.
    */
   protected final Map<String, String> createDefaultTemplateMap(final JsonNode userConfig) {
+
     final Map<String, String> templateMap = new HashMap<>();
 
     // populate interpolation values with mandatory keys, using override checks from user's input
@@ -191,7 +220,6 @@ public class DeclarativeOAuthSpecHandler {
     templateValues.put(templateValues.get(STATE_KEY), state);
 
     return templateValues;
-
   }
 
   /**
@@ -209,6 +237,7 @@ public class DeclarativeOAuthSpecHandler {
                                                                       final String clientSecret,
                                                                       final String authCode,
                                                                       final String redirectUrl) {
+
     final Map<String, String> templateValues = createDefaultTemplateMap(userConfig);
     templateValues.put(templateValues.get(CLIENT_ID_KEY), clientId);
     templateValues.put(templateValues.get(CLIENT_SECRET_KEY), clientSecret);
@@ -235,6 +264,7 @@ public class DeclarativeOAuthSpecHandler {
                                                                 final String authCode,
                                                                 final String redirectUrl,
                                                                 final String state) {
+
     final Map<String, String> templateValues = createDefaultTemplateMap(userConfig);
     templateValues.put(templateValues.get(CLIENT_ID_KEY), clientId);
     templateValues.put(templateValues.get(CLIENT_SECRET_KEY), clientSecret);
@@ -243,7 +273,6 @@ public class DeclarativeOAuthSpecHandler {
     templateValues.put(templateValues.get(STATE_KEY), state);
 
     return templateValues;
-
   }
 
   /**
@@ -256,8 +285,10 @@ public class DeclarativeOAuthSpecHandler {
    * @throws IOException if an I/O error occurs during the rendering process.
    */
   protected final String renderStringTemplate(final Map<String, String> templateValues, final String templateString) throws IOException {
+
     try {
-      return getInterpolator(templateValues).replace(checkContext(templateString));
+      checkContext(templateString);
+      return getInterpolator(templateValues).replace(templateString);
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -271,7 +302,7 @@ public class DeclarativeOAuthSpecHandler {
    * @return the original templateString if no restricted items are found.
    * @throws IOException if the templateString contains any restricted interpolation context items.
    */
-  private String checkContext(final String templateString) throws IOException {
+  protected void checkContext(final String templateString) throws IOException {
 
     for (final String item : RESTRICTED_CONTEXT) {
       if (templateString.contains(item)) {
@@ -279,8 +310,6 @@ public class DeclarativeOAuthSpecHandler {
         throw new IOException(String.format(errorMsg, item, templateString));
       }
     }
-
-    return templateString;
   }
 
   /**
@@ -335,6 +364,38 @@ public class DeclarativeOAuthSpecHandler {
     });
 
     return accessTokenHeadersRendered;
+  }
+
+  /**
+   * Processes the OAuth output by extracting specified configuration items from the provided JSON
+   * data.
+   *
+   * @param userConfig the JSON configuration node containing items to extract from the JSON data.
+   * @param data The JSON data containing the OAuth output.
+   * @param accessTokenUrl The URL used to obtain the access token, used for error reporting.
+   * @return A map containing the extracted configuration items and their corresponding values.
+   * @throws IOException If any of the specified configuration items are missing from the JSON data.
+   */
+  protected Map<String, Object> processOAuthOutput(final JsonNode userConfig,
+                                                   final JsonNode data,
+                                                   final String accessTokenUrl)
+      throws IOException {
+
+    final Map<String, Object> oauth_output = new HashMap<>();
+
+    for (final String item : getConfigExtractOutput(userConfig)) {
+      if (data.has(item)) {
+        if (TOKEN_EXPIRY_KEY.equals(item)) {
+          oauth_output.put(
+              TOKEN_EXPIRY_DATE_KEY,
+              Instant.now(clock).plusSeconds(data.get(TOKEN_EXPIRY_KEY).asInt()).toString());
+        }
+        oauth_output.put(item, data.get(item).asText());
+      } else {
+        throw new IOException(String.format("Missing '%s' in query params from %s", item, accessTokenUrl));
+      }
+    }
+    return oauth_output;
   }
 
 }

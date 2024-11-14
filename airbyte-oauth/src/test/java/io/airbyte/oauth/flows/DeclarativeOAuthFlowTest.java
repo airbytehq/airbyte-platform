@@ -10,6 +10,9 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,8 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
   private static final String REFRESH_TOKEN = "refresh_token";
   private static final String CLIENT_ID = "client_id";
   private static final String CLIENT_SECRET = "client_secret";
+  private static final String EXPIRES_IN = "expires_in";
+  private static final String TOKEN_EXPIRY_DATE = "token_expiry_date";
 
   // JsonSchema Types
   private static final JsonNode STRING_TYPE = JsonNodeFactory.instance.objectNode().put("type", "string");
@@ -29,7 +34,9 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new DeclarativeOAuthFlow(getHttpClient(), this::getConstantState);
+    final DeclarativeOAuthFlow oauthFlow = new DeclarativeOAuthFlow(getHttpClient(), this::getConstantState);
+    oauthFlow.specHandler.setClock(Clock.fixed(Instant.parse("2024-01-01T00:00:00Z"), ZoneId.of("UTC")));
+    return oauthFlow;
   }
 
   @Override
@@ -60,13 +67,13 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
         // these are the part of the spec,
         // not all spec properties are provided, since they provide an override to the default values.
         "consent_url",
-        "https://some.domain.com/oauth2/authorize?{client_id_key}={{client_id_key}}&{redirect_uri_key}={urlEncoder:{{redirect_uri_key}}}&{scope_key}={urlEncoder:{{scope_key}}}&{state_key}={{state_key}}&subdomain={subdomain}&code_challenge={codeChallenge:{{state_key}}}",
+        "https://some.domain.com/oauth2/authorize?{client_id_key}={{client_id_key}}&{redirect_uri_key}={urlEncoder:{{redirect_uri_key}}}&{scope_key}={urlEncoder:{{scope_key}}}&{state_key}={{state_key}}&subdomain={subdomain}&code_challenge={codeChallengeS256:{{state_key}}}",
         "scope", "test_scope_1 test_scope_2 test_scope_3",
         "access_token_url", "https://some.domain.com/oauth2/token/",
         "access_token_headers", Jsons.jsonNode(Map.of("test_header", "test_value")),
         // "state", Jsons.jsonNode(Map.of("min", 43, "max", 128)),
         // "state_key", "my_custom_state_key",
-        "extract_output", Jsons.jsonNode(List.of(ACCESS_TOKEN, REFRESH_TOKEN))));
+        "extract_output", Jsons.jsonNode(List.of(ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN))));
   }
 
   @Override
@@ -92,6 +99,7 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected Map<String, String> getExpectedOutput() {
     return Map.of(
+        EXPIRES_IN, "7200",
         ACCESS_TOKEN, "access_token_response",
         REFRESH_TOKEN, "refresh_token_response",
         CLIENT_ID, MoreOAuthParameters.SECRET_MASK,
@@ -101,6 +109,7 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected JsonNode getCompleteOAuthOutputSpecification() {
     return getJsonSchema(Map.of(
+        TOKEN_EXPIRY_DATE, STRING_TYPE,
         ACCESS_TOKEN, STRING_TYPE,
         REFRESH_TOKEN, STRING_TYPE,
         CLIENT_ID, STRING_TYPE));
@@ -109,9 +118,17 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected Map<String, String> getExpectedFilteredOutput() {
     return Map.of(
+        TOKEN_EXPIRY_DATE, "2024-01-01T02:00:00Z",
         ACCESS_TOKEN, "access_token_response",
         REFRESH_TOKEN, "refresh_token_response",
         CLIENT_ID, MoreOAuthParameters.SECRET_MASK);
+  }
+
+  @Override
+  protected Map<String, Object> getQueryParams() {
+    return Map.of(
+        "code", "test_code",
+        "state", getConstantState());
   }
 
   @Test

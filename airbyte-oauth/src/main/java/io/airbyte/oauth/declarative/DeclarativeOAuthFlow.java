@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -19,7 +18,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
 
-  private final DeclarativeOAuthSpecHandler specHandler = new DeclarativeOAuthSpecHandler();
+  public final DeclarativeOAuthSpecHandler specHandler = new DeclarativeOAuthSpecHandler();
 
   public DeclarativeOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
@@ -27,34 +26,7 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
 
   @VisibleForTesting
   public DeclarativeOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    // TODO: add Clock to handle the `expires_in` for SingleUseRefreshToken.
     super(httpClient, stateSupplier);
-  }
-
-  /**
-   * Processes the OAuth output by extracting specified configuration items from the provided JSON
-   * data.
-   *
-   * @param oauthOutputConfig A list of configuration items to extract from the JSON data.
-   * @param data The JSON data containing the OAuth output.
-   * @param accessTokenUrl The URL used to obtain the access token, used for error reporting.
-   * @return A map containing the extracted configuration items and their corresponding values.
-   * @throws IOException If any of the specified configuration items are missing from the JSON data.
-   */
-  private Map<String, Object> processOAuthOutput(final List<String> oauthOutputConfig,
-                                                 final JsonNode data,
-                                                 final String accessTokenUrl)
-      throws IOException {
-    final Map<String, Object> oauth_output = new HashMap<>();
-    for (final String item : oauthOutputConfig) {
-      if (data.has(item)) {
-        oauth_output.put(item, data.get(item).asText());
-        // TODO: add condition handle the `expires_in` for SingleUseRefreshToken.
-      } else {
-        throw new IOException(String.format("Missing '%s' in query params from %s", item, accessTokenUrl));
-      }
-    }
-    return oauth_output;
   }
 
   /**
@@ -227,10 +199,7 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
                                                    final String accessTokenUrl,
                                                    final JsonNode inputOAuthConfiguration)
       throws IOException {
-    return processOAuthOutput(
-        specHandler.getConfigExtractOutput(inputOAuthConfiguration),
-        data,
-        accessTokenUrl);
+    return specHandler.processOAuthOutput(inputOAuthConfiguration, data, accessTokenUrl);
   }
 
   /**

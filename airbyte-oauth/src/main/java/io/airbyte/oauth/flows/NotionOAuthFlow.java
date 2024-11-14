@@ -88,7 +88,8 @@ public class NotionOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oauthParamConfig)
+                                                  final JsonNode oauthParamConfig,
+                                                  final String state)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final String authorization = Base64.getEncoder()

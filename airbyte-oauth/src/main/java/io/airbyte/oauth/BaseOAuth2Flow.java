@@ -339,33 +339,6 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   /**
-   * Complete OAuth flow.
-   *
-   * @param clientId client id
-   * @param clientSecret client secret
-   * @param authCode oauth code
-   * @param redirectUrl redirect url
-   * @param inputOAuthConfiguration oauth configuration
-   * @param oauthParamConfig oauth params
-   * @return object returned from oauth flow
-   * @throws IOException thrown while executing io
-   */
-  protected Map<String, Object> completeOAuthFlow(final String clientId,
-                                                  final String clientSecret,
-                                                  final String authCode,
-                                                  final String redirectUrl,
-                                                  final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oauthParamConfig)
-      throws IOException {
-    return getCompleteOAuthFlowOutput(
-        formatAccessTokenUrl(getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-        getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-        getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-        tokenReqContentType,
-        inputOAuthConfiguration);
-  }
-
-  /**
    * Complete OAuth flow overload to ensure backward compatibility, and provide the `state` param
    * input.
    *
@@ -387,18 +360,14 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                   final JsonNode oauthParamConfig,
                                                   final String state)
       throws IOException {
-    if (state == null) {
-      // use the method without `state` argument
-      return completeOAuthFlow(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, oauthParamConfig);
-    } else {
-      return getCompleteOAuthFlowOutput(
-          formatAccessTokenUrl(getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration,
-              state),
-          getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-          getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-          tokenReqContentType,
-          inputOAuthConfiguration);
-    }
+    return getCompleteOAuthFlowOutput(
+        formatAccessTokenUrl(
+            getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, state),
+        getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        tokenReqContentType,
+        inputOAuthConfiguration);
+
   }
 
   protected Map<String, Object> getCompleteOAuthFlowOutput(final String accessTokenUrl,
