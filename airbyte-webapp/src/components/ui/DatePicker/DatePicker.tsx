@@ -63,6 +63,7 @@ DatepickerButton.displayName = "DatepickerButton";
 
 // Additional locales can be registered here as necessary
 registerLocale("en-US", en);
+registerLocale("en-GB", en);
 registerLocale("en", en);
 
 export const DatePicker: React.FC<DatePickerProps> = ({
