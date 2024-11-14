@@ -23,7 +23,7 @@ global:
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
-    # Image tag to use for airbyte images. 
+    # Image tag to use for airbyte images.
     # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
@@ -46,7 +46,7 @@ global:
       emailSecretKey: "instance-admin-email"
       # -- The key within `passwordSecretName` where the initial user's password is stored
       passwordSecretKey: "instance-admin-password"
-    
+
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
     #  # -- Secret name where the OIDC configuration is stored
@@ -237,7 +237,7 @@ webapp:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -463,7 +463,7 @@ server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -645,7 +645,7 @@ worker:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -780,7 +780,7 @@ workload-launcher:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1080,7 +1080,7 @@ metrics:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1202,7 +1202,7 @@ airbyte-bootloader:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1333,7 +1333,7 @@ temporal:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(temporal)
     runAsUser: 1000
@@ -1577,7 +1577,7 @@ postgresql:
     fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
@@ -1588,6 +1588,17 @@ postgresql:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
+  resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 200m
+  ##    memory: 1Gi
+    limits: {}
+  ## Examples:
+  ## requests:
+  ##    memory: 256Mi
+  ##    cpu: 250m
+    requests: {}
 
   commonAnnotations:
     # -- It will determine when the hook should be rendered
@@ -1656,7 +1667,7 @@ cron:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1827,7 +1838,7 @@ connector-builder-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1926,7 +1937,7 @@ keycloak:
       image: "postgres:13-alpine"
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -1935,9 +1946,9 @@ keycloak:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-    
+
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -1971,7 +1982,7 @@ keycloak-setup:
     fsGroup: 1000
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -1982,7 +1993,7 @@ keycloak-setup:
       type: RuntimeDefault
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2024,7 +2035,7 @@ workload-api-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000

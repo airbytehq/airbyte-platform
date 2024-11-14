@@ -56,6 +56,9 @@ spec:
               value: /var/lib/postgresql/data/pgdata
           ports:
             - containerPort: 5432
+          {{ if .Values.postgresql.resources }}
+          resources: {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          {{- end }}
           securityContext: {{- toYaml .Values.postgresql.containerSecurityContext | nindent 12 }}
           volumeMounts:
             - name: airbyte-volume-db
