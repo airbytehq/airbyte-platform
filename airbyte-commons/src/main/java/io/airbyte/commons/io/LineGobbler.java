@@ -104,7 +104,7 @@ public class LineGobbler implements VoidCallable {
    *
    * @param message message to be consumed
    */
-  public static void gobble(final String message) {
+  private static void gobble(final String message) {
     gobble(message, LOGGER::info);
   }
 
@@ -113,9 +113,15 @@ public class LineGobbler implements VoidCallable {
    * temporal activity.
    *
    * @param message message to emphasize
+   * @deprecated use info logging with correct mdc context instead
    */
+  @Deprecated
   public static void startSection(final String message) {
-    gobble("\r\n----- START " + message + " -----\r\n\r\n");
+    gobble(formatStartSection(message));
+  }
+
+  public static String formatStartSection(final String message) {
+    return "\r\n----- START " + message + " -----\r\n\r\n";
   }
 
   /**
@@ -123,9 +129,14 @@ public class LineGobbler implements VoidCallable {
    * temporal. activity
    *
    * @param message message to emphasize
+   * @deprecated use info logging with correct mdc context instead
    */
   public static void endSection(final String message) {
-    gobble("\r\n----- END " + message + " -----\r\n\r\n");
+    gobble(formatEndSection(message));
+  }
+
+  public static String formatEndSection(final String message) {
+    return "\r\n----- END " + message + " -----\r\n\r\n";
   }
 
   private final BufferedReader is;
