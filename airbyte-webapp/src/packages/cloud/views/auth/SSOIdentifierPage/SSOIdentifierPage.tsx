@@ -17,6 +17,7 @@ import { Text } from "components/ui/Text";
 
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { SSO_LOGIN_REQUIRED_STATE } from "packages/cloud/services/auth/CloudAuthService";
 
@@ -31,6 +32,10 @@ const schema = yup.object().shape({
 });
 
 export const SSOIdentifierPage = () => {
+  const [lastSsoCompanyIdentifier, setLastSsoCompanyIdentifier] = useLocalStorage(
+    "airbyte_last-sso-company-identifier",
+    ""
+  );
   const { changeRealmAndRedirectToSignin } = useAuthService();
   const { formatMessage } = useIntl();
   const { state } = useLocation();
@@ -41,8 +46,10 @@ export const SSOIdentifierPage = () => {
 
   const handleSubmit: FormSubmissionHandler<CompanyIdentifierValues> = async ({ companyIdentifier }, methods) => {
     try {
+      setLastSsoCompanyIdentifier(companyIdentifier);
       return await changeRealmAndRedirectToSignin(companyIdentifier);
     } catch (e) {
+      setLastSsoCompanyIdentifier("");
       methods.setError("companyIdentifier", { message: "login.sso.invalidCompanyIdentifier" });
       return Promise.reject();
     }
@@ -50,7 +57,11 @@ export const SSOIdentifierPage = () => {
 
   return (
     <main className={styles.ssoIdentifierPage}>
-      <Form<CompanyIdentifierValues> onSubmit={handleSubmit} defaultValues={{ companyIdentifier: "" }} schema={schema}>
+      <Form<CompanyIdentifierValues>
+        onSubmit={handleSubmit}
+        defaultValues={{ companyIdentifier: lastSsoCompanyIdentifier }}
+        schema={schema}
+      >
         <Box mb="md">
           <Heading as="h1" size="xl" color="blue">
             <FormattedMessage id="login.sso.title" />
