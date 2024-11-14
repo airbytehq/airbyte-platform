@@ -130,7 +130,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
       <FlexContainer direction="column" gap="xl">
         <Card className={styles.form} noPadding>
           <FlexContainer direction="column" gap="lg">
-            <ControlLabels label="Search for custom or catalog connector">
+            <ControlLabels label={formatMessage({ id: "connectorBuilder.forkPage.search" })}>
               <ComboBox
                 options={connectorOptions}
                 onChange={setSelectedId}
@@ -141,7 +141,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
               />
             </ControlLabels>
             {versionOptions.length > 1 && (
-              <ControlLabels label="Select a version">
+              <ControlLabels label={formatMessage({ id: "connectorBuilder.forkPage.version" })}>
                 <ListBox<"draft" | number>
                   options={versionOptions}
                   onSelect={(selected) => selected && setSelectedBuilderProjectVersion(selected)}

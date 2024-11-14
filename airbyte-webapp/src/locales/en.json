@@ -1642,6 +1642,8 @@
   "connectorBuilder.generatePage.firstStreamTooltip": "The name of the first object from the API that you want to load into your destination.",
   "connectorBuilder.forkPage.prompt": "Fork an existing connector",
   "connectorBuilder.forkPage.description": "Create a new builder connector based off of an existing connector",
+  "connectorBuilder.forkPage.search": "Search for custom or catalog connector",
+  "connectorBuilder.forkPage.version": "Select a version",
   "connectorBuilder.forkPage.connectorSelectionText.builderProject": "Copy <b>{version}</b> of <b>{name}</b> into a new custom connector.",
   "connectorBuilder.forkPage.connectorSelectionText.catalogConnector": "Copy the latest <b>{name}</b> version into a new custom connector, with the option to contribute your changes back to Airbyte's catalog.",
   "connectorBuilder.loadingStreamList": "Loading",
