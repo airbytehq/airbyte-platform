@@ -1757,6 +1757,13 @@ minio:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  resources:
+     requests:
+       memory: 1Gi
+       cpu: 250m
+     limits:
+       cpu: 300m
+       memory: 2Gi
 ## @section cron parameters
 cron:
   enabled: true

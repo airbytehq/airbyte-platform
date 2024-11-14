@@ -53,11 +53,11 @@ spec:
             - containerPort: 9000
           resources:
             requests:
-              memory: "1024Mi"
-              cpu: "200m"
+              memory: {{ .Values.minio.resources.requests.memory }}
+              cpu: {{ .Values.minio.resources.requests.cpu }}
             limits:
-              memory: "1024Mi"
-              cpu: "200m"
+              memory: {{ .Values.minio.resources.limits.memory }}
+              cpu: {{ .Values.minio.resources.limits.cpu }}
           # Mount the volume into the pod
           securityContext:
             allowPrivilegeEscalation: false 
