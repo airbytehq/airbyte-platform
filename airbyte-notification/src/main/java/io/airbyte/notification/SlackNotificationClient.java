@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.resources.MoreResources;
@@ -321,42 +322,74 @@ public class SlackNotificationClient extends NotificationClient {
   protected static String buildSummary(final CatalogDiff diff) {
     final StringBuilder summaryBuilder = new StringBuilder();
 
-    final var newStreams =
+    final List<StreamTransform> newStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
-    final var deletedStreams =
+    final List<StreamTransform> deletedStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
-    if (!newStreams.isEmpty() || !deletedStreams.isEmpty()) {
-      summaryBuilder.append(String.format(" • Streams (+%d/-%d)\n", newStreams.size(), deletedStreams.size()));
-      for (final var stream : newStreams) {
+    final List<StreamTransform> streamsWithPkChanges =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+            .filter(t -> t.getUpdateStream().getStreamAttributeTransforms().stream()
+                .anyMatch(a -> a.getTransformType().equals(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)))
+            .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
+
+    if (!newStreams.isEmpty() || !deletedStreams.isEmpty() || !streamsWithPkChanges.isEmpty()) {
+      summaryBuilder.append(String.format(" • Streams (+%d/-%d/~%d)\n", newStreams.size(), deletedStreams.size(), streamsWithPkChanges.size()));
+      for (final StreamTransform stream : newStreams) {
         final StreamDescriptor descriptor = stream.getStreamDescriptor();
         final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   ＋ %s\n", fullyQualifiedStreamName));
       }
-      for (final var stream : deletedStreams) {
+      for (final StreamTransform stream : deletedStreams) {
         final StreamDescriptor descriptor = stream.getStreamDescriptor();
         final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   － %s\n", fullyQualifiedStreamName));
       }
+      for (final StreamTransform stream : streamsWithPkChanges) {
+        final StreamDescriptor descriptor = stream.getStreamDescriptor();
+        final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+        final Optional<StreamAttributeTransform> primaryKeyChange = stream.getUpdateStream().getStreamAttributeTransforms().stream()
+            .filter(t -> t.getTransformType().equals(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY))
+            .findFirst();
+        if (primaryKeyChange.isPresent()) {
+          final String oldPrimaryKeyString = formatPrimaryKeyString(primaryKeyChange.get().getUpdatePrimaryKey().getOldPrimaryKey());
+          final String newPrimaryKeyString = formatPrimaryKeyString(primaryKeyChange.get().getUpdatePrimaryKey().getNewPrimaryKey());
+
+          summaryBuilder.append(String.format("   ~ %s\n", fullyQualifiedStreamName));
+
+          if (!oldPrimaryKeyString.isEmpty() && newPrimaryKeyString.isEmpty()) {
+            summaryBuilder.append(String.format("     • %s removed as primary key\n", oldPrimaryKeyString));
+          } else if (oldPrimaryKeyString.isEmpty() && !newPrimaryKeyString.isEmpty()) {
+            summaryBuilder.append(String.format("     • %s added as primary key\n", newPrimaryKeyString));
+          } else if (!oldPrimaryKeyString.isEmpty()) {
+            summaryBuilder.append(String.format("     • Primary key changed (%s -> %s)\n", oldPrimaryKeyString, newPrimaryKeyString));
+          }
+        }
+      }
     }
 
-    final var alteredStreams =
-        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+    final List<StreamTransform> streamsWithFiledChanges =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM
+            && t.getUpdateStream().getStreamAttributeTransforms().stream()
+                .noneMatch(a -> a.getTransformType().equals(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)))
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
-    if (!alteredStreams.isEmpty()) {
-      final var newFieldCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
+    if (!streamsWithFiledChanges.isEmpty()) {
+      final long newFieldCount = streamsWithFiledChanges.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.ADD_FIELD)).count();
-      final var deletedFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
+      final long deletedFieldsCount = streamsWithFiledChanges.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.REMOVE_FIELD)).count();
-      final var alteredFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
+      final long alteredFieldsCount = streamsWithFiledChanges.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)).count();
+
       summaryBuilder.append(String.format(" • Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount));
-      for (final var stream : alteredStreams) {
+
+      for (final StreamTransform stream : streamsWithFiledChanges) {
         final StreamDescriptor descriptor = stream.getStreamDescriptor();
         final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   • %s\n", fullyQualifiedStreamName));
-        for (final var fieldChange : stream.getUpdateStream().getFieldTransforms().stream().sorted((o1, o2) -> {
+
+        for (final FieldTransform fieldChange : stream.getUpdateStream().getFieldTransforms().stream().sorted((o1, o2) -> {
           if (o1.getTransformType().equals(o2.getTransformType())) {
             return StreamDescriptorUtils.buildFieldName(o1.getFieldName())
                 .compareTo(StreamDescriptorUtils.buildFieldName(o2.getFieldName()));
@@ -380,8 +413,8 @@ public class SlackNotificationClient extends NotificationClient {
         }
       }
     }
-
     return summaryBuilder.toString();
+
   }
 
   @NotNull

@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
@@ -217,7 +219,16 @@ class CustomerioNotificationClientTest {
         .addTransformsItem(
             new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(new StreamDescriptor().name("foo")))
         .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-            .streamDescriptor(new StreamDescriptor().name("removed")));
+            .streamDescriptor(new StreamDescriptor().name("removed")))
+        .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+            .updateStream(new StreamTransformUpdateStream()
+                .streamAttributeTransforms(List.of(
+                    new StreamAttributeTransform()
+                        .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                        .updatePrimaryKey(
+                            new StreamAttributePrimaryKeyUpdate()
+                                .newPrimaryKey(List.of(List.of("new_pk")))))))
+            .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
     String recipient = "airbyte@airbyte.io";
     String transactionMessageId = "455";
     SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
@@ -239,6 +250,7 @@ class CustomerioNotificationClientTest {
     assertTrue(node.get("message_data").get("changes").get("deleted_streams").isArray());
     assertEquals(1, node.get("message_data").get("changes").get("deleted_streams").size());
     assertTrue(node.get("message_data").get("changes").get("modified_streams").isObject());
+    assertEquals(1, node.get("message_data").get("changes").get("deleted_streams").size());
     assertEquals(1, node.get("message_data").get("changes").get("modified_streams").get("updatedStream").get("deleted").size());
   }
 

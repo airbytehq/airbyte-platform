@@ -12,6 +12,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
@@ -277,7 +279,7 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("invoices")));
 
     final String expected = """
-                             • Streams (+2/-0)
+                             • Streams (+2/-0/~0)
                                ＋ invoices
                                ＋ ns.foo
                             """;
@@ -293,10 +295,57 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
 
     final String expected = """
-                             • Streams (+0/-2)
+                             • Streams (+0/-2/~0)
                                － deprecated
                                － schema1.also_removed
                             """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
+
+  }
+
+  @Test
+  void buildSummaryUpdatedPkTest() {
+    final CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .newPrimaryKey(List.of(List.of("new_pk")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
+
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .oldPrimaryKey(List.of(List.of("also_old_pk")))
+                            .newPrimaryKey(List.of(List.of("new_pk"), List.of("this_one_is_compound")))))))
+        .streamDescriptor(new StreamDescriptor().name("another_stream_with_new_pk")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .oldPrimaryKey(List.of(List.of("this_pk_is_removed")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_pk_removed")));
+
+    final String expected = """
+                             • Streams (+0/-0/~3)
+                               ~ another_stream_with_new_pk
+                                 • Primary key changed (also_old_pk -> [new_pk, this_one_is_compound])
+                               ~ stream_with_added_pk
+                                 • new_pk added as primary key
+                               ~ stream_with_pk_removed
+                                 • this_pk_is_removed removed as primary key
+                            """;
+
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
 
   }
@@ -340,6 +389,15 @@ class SlackNotificationClientTest {
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .newPrimaryKey(List.of(List.of("new_pk")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
         .updateStream(new StreamTransformUpdateStream().fieldTransforms(List.of(
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
@@ -350,10 +408,12 @@ class SlackNotificationClientTest {
                 .fieldName(List.of("cow"))))));
 
     final String expected = """
-                             • Streams (+1/-2)
+                             • Streams (+1/-2/~1)
                                ＋ ns.foo
                                － deprecated
                                － schema1.also_removed
+                               ~ stream_with_added_pk
+                                 • new_pk added as primary key
                              • Fields (+2/~1/-0)
                                • main.users
                                  ＋ added_too

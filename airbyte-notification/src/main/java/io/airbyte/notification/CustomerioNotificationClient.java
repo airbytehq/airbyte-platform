@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.common.StreamDescriptorUtils;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
@@ -26,6 +28,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -341,40 +344,66 @@ public class CustomerioNotificationClient extends NotificationClient {
     final ObjectNode changesNode = MAPPER.createObjectNode();
     messageDataNode.set("changes", changesNode);
 
-    final var diff = notification.getCatalogDiff();
-    final var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
+    final CatalogDiff diff = notification.getCatalogDiff();
+
+    final List<StreamTransform> newStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
     LOGGER.info("Notify schema changes on new streams: {}", newStreams);
     final ArrayNode newStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("new_streams", newStreamsNodes);
-    for (final var stream : newStreams) {
+    for (final StreamTransform stream : newStreams) {
       newStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
     }
 
-    final var deletedStreams =
+    final List<StreamTransform> deletedStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM).toList();
     LOGGER.info("Notify schema changes on deleted streams: {}", deletedStreams);
     final ArrayNode deletedStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("deleted_streams", deletedStreamsNodes);
-    for (final var stream : deletedStreams) {
+    for (final StreamTransform stream : deletedStreams) {
       deletedStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
     }
 
-    final var alteredStreams =
+    final List<StreamTransform> alteredStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM).toList();
     LOGGER.info("Notify schema changes on altered streams: {}", alteredStreams);
     final ObjectNode modifiedStreamsNodes = MAPPER.createObjectNode();
     changesNode.set("modified_streams", modifiedStreamsNodes);
-    for (final var stream : alteredStreams) {
 
-      final var streamNode = MAPPER.createObjectNode();
+    for (final StreamTransform stream : alteredStreams) {
+
+      final ObjectNode streamNode = MAPPER.createObjectNode();
       modifiedStreamsNodes.set(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()), streamNode);
       final ArrayNode newFields = MAPPER.createArrayNode();
       final ArrayNode deletedFields = MAPPER.createArrayNode();
       final ArrayNode modifiedFields = MAPPER.createArrayNode();
+      final ArrayNode updatedPrimaryKeyInfo = MAPPER.createArrayNode();
 
       streamNode.set("new", newFields);
       streamNode.set("deleted", deletedFields);
       streamNode.set("altered", modifiedFields);
+      streamNode.set("updated_primary_key", updatedPrimaryKeyInfo);
+
+      final Optional<StreamAttributeTransform> primaryKeyChangeOptional = stream.getUpdateStream().getStreamAttributeTransforms().stream()
+          .filter(t -> t.getTransformType().equals(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY))
+          .findFirst();
+
+      if (primaryKeyChangeOptional.isPresent()) {
+        final StreamAttributeTransform primaryKeyChange = primaryKeyChangeOptional.get();
+        final List<List<String>> oldPrimaryKey = primaryKeyChange.getUpdatePrimaryKey().getOldPrimaryKey();
+        final String oldPrimaryKeyString = formatPrimaryKeyString(oldPrimaryKey);
+
+        final List<List<String>> newPrimaryKey = primaryKeyChange.getUpdatePrimaryKey().getNewPrimaryKey();
+        final String newPrimaryKeyString = formatPrimaryKeyString(newPrimaryKey);
+
+        if (!oldPrimaryKeyString.isEmpty() && newPrimaryKeyString.isEmpty()) {
+          updatedPrimaryKeyInfo.add(String.format("%s removed as primary key", oldPrimaryKeyString));
+        } else if (oldPrimaryKeyString.isEmpty() && !newPrimaryKeyString.isEmpty()) {
+          updatedPrimaryKeyInfo.add(String.format("%s added as primary key", newPrimaryKeyString));
+        } else if (!oldPrimaryKeyString.isEmpty()) {
+          updatedPrimaryKeyInfo.add(String.format("Primary key changed (%s -> %s)", oldPrimaryKeyString, newPrimaryKeyString));
+        }
+      }
 
       for (final var fieldChange : stream.getUpdateStream().getFieldTransforms()) {
         final String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());

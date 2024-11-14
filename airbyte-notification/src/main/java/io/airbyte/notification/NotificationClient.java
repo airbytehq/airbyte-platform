@@ -4,6 +4,7 @@
 
 package io.airbyte.notification;
 
+import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.notification.messages.SchemaUpdateNotification;
@@ -56,5 +57,15 @@ public abstract class NotificationClient {
                                                   final String recipient);
 
   public abstract String getNotificationClientType();
+
+  static String formatPrimaryKeyString(List<List<String>> primaryKey) {
+    final String primaryKeyString = String.join(", ", primaryKey.stream().map(StreamDescriptorUtils::buildFieldName).toList());
+
+    if (primaryKeyString.isEmpty()) {
+      return "";
+    }
+
+    return primaryKeyString.contains(",") ? "[" + primaryKeyString + "]" : primaryKeyString;
+  }
 
 }
