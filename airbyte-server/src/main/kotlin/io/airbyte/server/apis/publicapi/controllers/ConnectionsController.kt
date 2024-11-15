@@ -57,8 +57,8 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(connectionCreateRequest.destinationId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      connectionCreateRequest.destinationId.toString(),
       Scope.DESTINATION,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -199,8 +199,8 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(connectionId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      connectionId,
       Scope.CONNECTION,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -232,8 +232,8 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(connectionId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      connectionId,
       Scope.CONNECTION,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -264,7 +264,7 @@ open class ConnectionsController(
     offset: Int,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacesPermission(
       workspaceIds?.let { workspaceIds.map { it.toString() } } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -300,8 +300,8 @@ open class ConnectionsController(
     @Valid @Body @NotNull connectionPatchRequest: ConnectionPatchRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(connectionId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      connectionId,
       Scope.CONNECTION,
       userId,
       PermissionType.WORKSPACE_EDITOR,

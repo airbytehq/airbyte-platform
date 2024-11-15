@@ -22,22 +22,18 @@ class JobServiceTest {
 
   private val connectionId = UUID.randomUUID()
 
-  private val schedulerHandler = mockk<SchedulerHandler>()
+  @Inject
+  lateinit var schedulerHandler: SchedulerHandler
 
   @MockBean(SchedulerHandler::class)
-  fun schedulerHandler(): SchedulerHandler {
-    return schedulerHandler
-  }
+  fun schedulerHandler(): SchedulerHandler = mockk()
 
   @MockBean(ApplicationService::class)
-  fun applicationService(): ApplicationService {
-    return mockk<ApplicationService>()
-  }
+  fun applicationService(): ApplicationService = mockk<ApplicationService>()
 
   @Test
   fun `test sync already running value conflict known exception`() {
     val failureReason = "A sync is already running for: $connectionId"
-    val schedulerHandler = schedulerHandler()
     every { schedulerHandler.syncConnection(any()) } throws
       ValueConflictKnownException(failureReason)
 
@@ -47,7 +43,6 @@ class JobServiceTest {
   @Test
   fun `test sync already running illegal state exception`() {
     val failureReason = "A sync is already running for: $connectionId"
-    val schedulerHandler = schedulerHandler()
     every { schedulerHandler.syncConnection(any()) } throws
       IllegalStateException(failureReason)
 

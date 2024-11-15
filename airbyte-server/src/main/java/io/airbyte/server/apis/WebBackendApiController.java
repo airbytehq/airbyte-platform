@@ -33,6 +33,7 @@ import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.metrics.lib.TracingHelper;
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler;
 import io.micronaut.http.annotation.Body;
@@ -52,17 +53,20 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
   private final WebBackendCronExpressionHandler webBackendCronExpressionHandler;
   private final ApiAuthorizationHelper apiAuthorizationHelper;
+  private final CurrentUserService currentUserService;
 
   public WebBackendApiController(final WebBackendConnectionsHandler webBackendConnectionsHandler,
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
                                  final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
                                  final WebBackendCronExpressionHandler webBackendCronExpressionHandler,
-                                 final ApiAuthorizationHelper apiAuthorizationHelper) {
+                                 final ApiAuthorizationHelper apiAuthorizationHelper,
+                                 final CurrentUserService currentUserService) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
     this.webBackendCronExpressionHandler = webBackendCronExpressionHandler;
     this.apiAuthorizationHelper = apiAuthorizationHelper;
+    this.currentUserService = currentUserService;
   }
 
   @Post("/state/get_type")
@@ -105,9 +109,10 @@ public class WebBackendApiController implements WebBackendApi {
       if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
-        apiAuthorizationHelper.checkWorkspacePermissions(
+        apiAuthorizationHelper.checkWorkspacesPermissions(
             webBackendConnectionRequestBody.getConnectionId().toString(),
             Scope.CONNECTION,
+            currentUserService.getCurrentUser().getUserId(),
             Set.of(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR));
       }
       return webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody);

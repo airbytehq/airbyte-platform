@@ -103,6 +103,15 @@ enum class DocumentType(
  * Interface for writing, reading, and deleting documents.
  */
 interface StorageClient {
+  /** @property documentType the [DocumentType] of this [StorageClient] */
+  val documentType: DocumentType
+
+  /** @property storageType the [StorageType] of this [StorageClient] */
+  val storageType: StorageType
+
+  /** @property bucketName the name of the bucket used by this [StorageClient] */
+  val bucketName: String
+
   /**
    * Lists the documents stored at the given id.
    *
@@ -140,26 +149,12 @@ interface StorageClient {
   fun delete(id: String): Boolean
 
   /**
-   * The [DocumentType] supported by this client.
-   *
-   * @return the associated [DocumentType] of the client.
-   */
-  fun documentType(): DocumentType
-
-  /**
-   * The client storage type.
-   *
-   * @return the associated [StorageType] of the client
-   */
-  fun storageType(): StorageType
-
-  /**
    * Generates a file ID.
    *
    * @param id a relative file path
    * @return the file ID including any configured storage prefix
    */
-  fun key(id: String): String = prependIfMissing(prefix = documentType().prefix.toString(), id = id)
+  fun key(id: String): String = prependIfMissing(prefix = documentType.prefix.toString(), id = id)
 }
 
 /**
@@ -175,7 +170,9 @@ class AzureStorageClient(
   private val type: DocumentType,
   private val azureClient: BlobServiceClient,
 ) : StorageClient {
-  private val bucketName = config.bucketName(type)
+  override val storageType = StorageType.AZURE
+  override val documentType = type
+  override val bucketName = config.bucketName(type)
 
   @Inject
   constructor(
@@ -223,10 +220,6 @@ class AzureStorageClient(
       .getBlobClient(key(id))
       .deleteIfExists()
 
-  override fun documentType(): DocumentType = type
-
-  override fun storageType(): StorageType = StorageType.AZURE
-
   private fun createBucketIfNotExists() {
     val blobContainerClient = azureClient.getBlobContainerClient(bucketName)
     if (!blobContainerClient.exists()) {
@@ -248,7 +241,9 @@ class GcsStorageClient(
   private val type: DocumentType,
   private val gcsClient: Storage,
 ) : StorageClient {
-  private val bucketName = config.bucketName(type)
+  override val storageType = StorageType.GCS
+  override val documentType = type
+  override val bucketName = config.bucketName(type)
 
   @Inject
   constructor(
@@ -287,10 +282,6 @@ class GcsStorageClient(
 
   override fun delete(id: String): Boolean = gcsClient.delete(BlobId.of(bucketName, key(id)))
 
-  override fun documentType(): DocumentType = type
-
-  override fun storageType(): StorageType = StorageType.GCS
-
   @VisibleForTesting
   internal fun blobId(id: String): BlobId = BlobId.of(bucketName, key(id))
 
@@ -312,6 +303,10 @@ class LocalStorageClient(
   private val config: LocalStorageConfig,
   @Parameter private val type: DocumentType,
 ) : StorageClient {
+  override val storageType = StorageType.LOCAL
+  override val documentType = type
+  override val bucketName = config.bucketName(type)
+
   override fun list(id: String): List<String> {
     val res =
       toPath(id)
@@ -341,15 +336,11 @@ class LocalStorageClient(
     toPath(id)
       .deleteIfExists()
 
-  override fun documentType(): DocumentType = type
-
-  override fun storageType(): StorageType = StorageType.LOCAL
-
   /** Converts an ID [String] to an absolute [Path]. */
   internal fun toPath(id: String): Path = Path.of(config.root, type.prefix.toString(), id)
 
   /** Converts an absolute [Path] to an ID [String]. */
-  internal fun toId(abspath: Path): String = abspath.relativeTo(Path.of(config.root, type.prefix.toString())).pathString
+  private fun toId(abspath: Path): String = abspath.relativeTo(Path.of(config.root, type.prefix.toString())).pathString
 }
 
 /**
@@ -365,13 +356,13 @@ class MinioStorageClient(
   type: DocumentType,
   s3Client: S3Client = config.s3Client(),
 ) : AbstractS3StorageClient(config = config, type = type, s3Client = s3Client) {
+  override val storageType = StorageType.MINIO
+
   @Inject
   constructor(
     config: MinioStorageConfig,
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, s3Client = config.s3Client())
-
-  override fun storageType(): StorageType = StorageType.MINIO
 }
 
 /**
@@ -393,7 +384,7 @@ class S3StorageClient(
     @Parameter type: DocumentType,
   ) : this(config = config, type = type, s3Client = config.s3Client())
 
-  override fun storageType(): StorageType = StorageType.S3
+  override val storageType = StorageType.S3
 }
 
 /**
@@ -410,7 +401,8 @@ abstract class AbstractS3StorageClient internal constructor(
   private val type: DocumentType,
   private val s3Client: S3Client,
 ) : StorageClient {
-  private val bucketName = config.bucketName(type)
+  override val documentType: DocumentType = type
+  override val bucketName = config.bucketName(type)
 
   init {
     runCatching { createBucketIfNotExists() }
@@ -484,8 +476,6 @@ abstract class AbstractS3StorageClient internal constructor(
     )
     return exists
   }
-
-  override fun documentType(): DocumentType = type
 
   private fun createBucketIfNotExists() {
     if (!doesBucketExist(bucketName=bucketName)) {

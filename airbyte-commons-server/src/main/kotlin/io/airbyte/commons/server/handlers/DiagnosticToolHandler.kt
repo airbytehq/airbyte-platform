@@ -4,6 +4,8 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ActorType
+import io.airbyte.commons.csp.CspChecker
+import io.airbyte.commons.yaml.Yamls
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
@@ -14,7 +16,6 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.client.KubernetesClient
 import jakarta.inject.Singleton
@@ -26,16 +27,16 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
-import java.util.function.Consumer
 import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-const val AIRBYTE_INSTANCE_YAML: String = "airbyte_instance.yaml"
-const val AIRBYTE_DEPLOYMENT_YAML: String = "airbyte_deployment.yaml"
-const val DIAGNOSTIC_REPORT_FILE_NAME: String = "diagnostic_report"
-const val DIAGNOSTIC_REPORT_FILE_FORMAT: String = ".zip"
-const val UNKNOWN: String = "Unknown"
+internal const val AIRBYTE_INSTANCE_YAML = "airbyte_instance.yaml"
+internal const val AIRBYTE_DEPLOYMENT_YAML = "airbyte_deployment.yaml"
+internal const val AIRBYTE_CSP_CHECKS = "airbyte_csp_checks.yaml"
+private const val DIAGNOSTIC_REPORT_FILE_NAME = "diagnostic_report"
+private const val DIAGNOSTIC_REPORT_FILE_FORMAT = ".zip"
+private const val UNKNOWN = "Unknown"
 
 /**
  * DiagnosticToolHandler.
@@ -49,8 +50,9 @@ open class DiagnosticToolHandler(
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
   private val instanceConfigurationHandler: InstanceConfigurationHandler,
   private val kubernetesClient: KubernetesClient,
+  private val cspChecker: CspChecker,
 ) {
-  private val yamlDumperOptions = DumperOptions().apply { defaultFlowStyle = DumperOptions.FlowStyle.BLOCK }
+  private val yaml = Yaml(DumperOptions().apply { defaultFlowStyle = DumperOptions.FlowStyle.BLOCK })
 
   /**
    * Generate diagnostic report by collecting relevant data and zipping them into a single file.
@@ -64,9 +66,7 @@ open class DiagnosticToolHandler(
 
       // Write the byte[] to a temporary file
       val tempFile = File.createTempFile(DIAGNOSTIC_REPORT_FILE_NAME, DIAGNOSTIC_REPORT_FILE_FORMAT)
-      FileOutputStream(tempFile).use { fos ->
-        fos.write(zipFileContent)
-      }
+      FileOutputStream(tempFile).use { it.write(zipFileContent) }
       // Return the temporary file
       tempFile
     } catch (e: IOException) {
@@ -77,16 +77,22 @@ open class DiagnosticToolHandler(
   private fun generateZipInMemory(): ByteArray {
     val byteArrayOutputStream = ByteArrayOutputStream()
     val zipOut = ZipOutputStream(byteArrayOutputStream)
-    try {
+
+    runCatching {
       addAirbyteInstanceYaml(zipOut)
-    } catch (e: Exception) {
-      logger.error { "Error in writing airbyte instance yaml. Message: ${e.message}" }
+    }.onFailure {
+      logger.error { "Error in writing airbyte instance yaml. Message: ${it.message}" }
     }
-    try {
+    runCatching {
       addAirbyteDeploymentYaml(zipOut)
-    } catch (e: IOException) {
-      logger.error { "Error in writing deployment yaml. Message: ${e.message}" }
+    }.onFailure {
+      logger.error { "Error in writing deployment yaml. Message: ${it.message}" }
     }
+
+    runCatching {
+      addAirbyteCspChecks(zipOut)
+    }.onFailure { logger.error { "Error in writing csp-check yaml. Message: ${it.message}" } }
+
     zipOut.finish()
     return byteArrayOutputStream.toByteArray()
   }
@@ -111,9 +117,17 @@ open class DiagnosticToolHandler(
         "license" to collectLicenseInfo(),
         // TODO: Collect other information here, e.g: application logs, etc.
       )
-    val yaml = Yaml(yamlDumperOptions)
+
     return yaml.dump(airbyteInstanceYamlData)
   }
+
+  private fun addAirbyteCspChecks(zipOut: ZipOutputStream) {
+    ZipEntry(AIRBYTE_CSP_CHECKS).let { zipOut.putNextEntry(it) }
+    zipOut.write(generateAirbyteCspChecks().toByteArray())
+    zipOut.closeEntry()
+  }
+
+  private fun generateAirbyteCspChecks(): String = Yamls.serialize(cspChecker.check())
 
   private fun collectWorkspaceInfo(): List<Map<String, Any>> =
     try {
@@ -128,8 +142,7 @@ open class DiagnosticToolHandler(
             "connections" to collectConnectionInfo(workspace.workspaceId),
             "connectors" to collectConnectorInfo(workspace.workspaceId),
           )
-        }
-        .toList()
+        }.toList()
     } catch (e: IOException) {
       logger.error { "Error collecting workspace information. Message: ${e.message}}" }
       emptyList()
@@ -149,8 +162,7 @@ open class DiagnosticToolHandler(
             "sourceId" to connection.sourceId.toString(),
             "destinationId" to connection.destinationId.toString(),
           )
-        }
-        .toList()
+        }.toList()
     } catch (e: IOException) {
       logger.error { "Error collecting connection information. Message: ${e.message}" }
       emptyList()
@@ -167,12 +179,11 @@ open class DiagnosticToolHandler(
             // TODO: isSourceActive feels like it could not throw and just return false if the config is not
             // found.
             try {
-              return@filter sourceService.isSourceActive(source.sourceId)
+              sourceService.isSourceActive(source.sourceId)
             } catch (e: IOException) {
-              return@filter false
+              false
             }
-          }
-          .map { source: SourceConnection ->
+          }.map { source: SourceConnection ->
             var sourceDefinitionVersion: ActorDefinitionVersionWithOverrideStatus? = null
             try {
               sourceDefinitionVersion =
@@ -193,8 +204,7 @@ open class DiagnosticToolHandler(
               "connectorVersionOverrideApplied" to (sourceDefinitionVersion?.isOverrideApplied?.toString() ?: ""),
               "connectorSupportState" to (sourceDefinitionVersion?.actorDefinitionVersion?.supportState?.toString() ?: ""),
             )
-          }
-          .toList()
+          }.toList()
 
       // get all destinations by workspaceId (only include active ones in the report)
       val destinations =
@@ -204,12 +214,11 @@ open class DiagnosticToolHandler(
             // TODO: isDestinationActive feels like it could not throw and just return false if the config is
             // not found.
             try {
-              return@filter destinationService.isDestinationActive(destination.destinationId)
+              destinationService.isDestinationActive(destination.destinationId)
             } catch (e: IOException) {
-              return@filter false
+              false
             }
-          }
-          .map { destination: DestinationConnection ->
+          }.map { destination: DestinationConnection ->
             var destinationDefinitionVersion: ActorDefinitionVersionWithOverrideStatus? = null
             try {
               destinationDefinitionVersion =
@@ -269,11 +278,7 @@ open class DiagnosticToolHandler(
 
   private fun generateDeploymentYaml(): String {
     // Collect cluster information
-    val deploymentYamlData =
-      mapOf(
-        "k8s" to collectK8sInfo(),
-      )
-    val yaml = Yaml(yamlDumperOptions)
+    val deploymentYamlData = mapOf("k8s" to collectK8sInfo())
     return yaml.dump(deploymentYamlData)
   }
 
@@ -289,54 +294,74 @@ open class DiagnosticToolHandler(
 
   private fun collectNodeInfo(client: KubernetesClient): List<Map<String, Any>> {
     logger.info { "Collecting nodes data..." }
-    val nodeList: MutableList<Map<String, Any>> = ArrayList()
-    val nodes = client.nodes()?.list()?.items ?: emptyList()
-    for (node in nodes) {
-      val nodeInfo =
-        mapOf(
-          "name" to node.metadata.name,
-          "readyStatus" to (
+
+    val nodeList: List<Map<String, Any>> =
+      client
+        .nodes()
+        ?.list()
+        ?.items
+        ?.map { node ->
+          val limits = Limits(node.status.allocatable)
+          val readyStatus =
             node.status.conditions
               .filter { it.type == "Ready" }
               .firstNotNullOfOrNull { it.status } ?: UNKNOWN
-          ),
-          "cpu" to (node.status.allocatable["cpu"]?.let { it.amount.toString() + it.format } ?: UNKNOWN),
-          "memory" to (node.status.allocatable["memory"]?.let { it.amount.toString() + it.format } ?: UNKNOWN),
-        )
-      nodeList.add(nodeInfo)
-    }
+
+          mapOf(
+            "name" to node.metadata.name,
+            "readyStatus" to readyStatus,
+            "cpu" to limits.cpu,
+            "memory" to limits.memory,
+          )
+        }?.toList() ?: emptyList()
+
     return nodeList
   }
 
   private fun collectPodInfo(client: KubernetesClient): List<Map<String, Any>> {
     logger.info { "Collecting pods data..." }
-    val podList: MutableList<Map<String, Any>> = ArrayList()
-    val pods = client.pods()?.inNamespace("ab")?.list()?.items ?: emptyList()
-    for (pod in pods) {
-      val podInfo: MutableMap<String, Any> = HashMap()
-      podInfo["name"] = pod.metadata.name
-      podInfo["status"] = pod.status.phase
-      val containerLimits: MutableList<Map<String, Any?>> = ArrayList()
-      pod.spec.containers.forEach(
-        Consumer { container: Container ->
-          val containerLimit: MutableMap<String, Any?> = HashMap()
-          containerLimit["containerName"] = container.name
-          val limit = getContainerResourceLimit(container)
-          containerLimit["cpu"] = limit?.get("cpu")?.let { it.amount.toString() + it.format.toString() } ?: UNKNOWN
-          containerLimit["memory"] = limit?.get("memory")?.let { it.amount.toString() + it.format.toString() } ?: UNKNOWN
-          containerLimits.add(containerLimit)
-        },
-      )
-      podInfo["limits"] = containerLimits
-      podList.add(podInfo)
-    }
+    val pods =
+      client
+        .pods()
+        ?.inNamespace("ab")
+        ?.list()
+        ?.items ?: emptyList()
+
+    val podList: List<Map<String, Any>> =
+      pods
+        .map { pod ->
+          val podInfo =
+            mutableMapOf<String, Any>(
+              "name" to pod.metadata.name,
+              "status" to pod.status.phase,
+            )
+
+          val containerLimits: List<Map<String, String>> =
+            pod.spec.containers
+              .map { container ->
+                val limits = Limits(container.resources?.limits)
+
+                mapOf(
+                  "containerName" to container.name,
+                  "cpu" to limits.cpu,
+                  "memory" to limits.memory,
+                )
+              }.toList()
+
+          podInfo["limits"] = containerLimits
+          podInfo
+        }.toList()
+
     return podList
   }
+}
 
-  private fun getContainerResourceLimit(container: Container): Map<String, Quantity>? {
-    if (container.resources == null || container.resources.limits == null) {
-      return null
-    }
-    return container.resources.limits
-  }
+private data class Limits(
+  val cpu: String = UNKNOWN,
+  val memory: String = UNKNOWN,
+) {
+  constructor(limits: Map<String, Quantity>?) : this(
+    cpu = limits?.get("cpu")?.let { it.amount.toString() + it.format.toString() } ?: UNKNOWN,
+    memory = limits?.get("memory")?.let { it.amount.toString() + it.format.toString() } ?: UNKNOWN,
+  )
 }

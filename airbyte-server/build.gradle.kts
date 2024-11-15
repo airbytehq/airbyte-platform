@@ -90,6 +90,11 @@ dependencies {
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.micronaut.jaxrs.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.postgresql)
@@ -108,11 +113,12 @@ dependencies {
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
-val copySeed = tasks.register<Copy>("copySeed") {
-  from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
-  into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
-  dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
-}
+val copySeed =
+  tasks.register<Copy>("copySeed") {
+    from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
+    into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
+    dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
+  }
 
 // need to make sure that the files are in the resource directory before copying.)
 // tests require the seed to exist.)

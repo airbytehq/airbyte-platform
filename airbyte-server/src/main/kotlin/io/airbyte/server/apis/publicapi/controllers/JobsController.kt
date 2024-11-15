@@ -56,8 +56,8 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      jobId.toString(),
       Scope.JOB,
       userId,
       PermissionType.WORKSPACE_RUNNER,
@@ -92,15 +92,15 @@ open class JobsController(
     // Only Editor and above should be able to run a Clear.
     when (jobCreateRequest.jobType) {
       JobTypeEnum.CLEAR ->
-        apiAuthorizationHelper.checkWorkspacePermissions(
-          listOf(jobCreateRequest.connectionId),
+        apiAuthorizationHelper.checkWorkspacePermission(
+          jobCreateRequest.connectionId,
           Scope.CONNECTION,
           userId,
           PermissionType.WORKSPACE_EDITOR,
         )
       else ->
-        apiAuthorizationHelper.checkWorkspacePermissions(
-          listOf(jobCreateRequest.connectionId),
+        apiAuthorizationHelper.checkWorkspacePermission(
+          jobCreateRequest.connectionId,
           Scope.CONNECTION,
           userId,
           PermissionType.WORKSPACE_RUNNER,
@@ -209,8 +209,8 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      jobId.toString(),
       Scope.JOB,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -255,14 +255,14 @@ open class JobsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
-      apiAuthorizationHelper.checkWorkspacePermissions(
-        listOf(connectionId),
+      apiAuthorizationHelper.checkWorkspacePermission(
+        connectionId,
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
       )
     } else {
-      apiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacesPermission(
         workspaceIds?.map { it.toString() } ?: emptyList(),
         Scope.WORKSPACES,
         userId,

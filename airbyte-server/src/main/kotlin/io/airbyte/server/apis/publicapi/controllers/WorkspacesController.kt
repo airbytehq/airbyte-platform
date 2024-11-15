@@ -44,8 +44,8 @@ open class WorkspacesController(
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(workspaceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      workspaceId,
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -71,8 +71,8 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteWorkspace(workspaceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(workspaceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      workspaceId,
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -84,8 +84,8 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetWorkspace(workspaceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(workspaceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      workspaceId,
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -102,7 +102,7 @@ open class WorkspacesController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     logger.debug { "listing workspaces: $workspaceIds" }
-    apiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacesPermission(
       workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -124,8 +124,8 @@ open class WorkspacesController(
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(workspaceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      workspaceId,
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_EDITOR,

@@ -46,6 +46,7 @@ class LocalStorageClientFactoryTest {
   val localStorageConfig: LocalStorageConfig =
     mockk {
       every { root } returns "/tmp/test"
+      every { buckets } returns StorageBucketConfig(log = "log", state = "state", workloadOutput = "wo", activityPayload = "ap")
     }
 
   @Test

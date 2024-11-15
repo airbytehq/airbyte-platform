@@ -14,7 +14,7 @@ import java.time.ZonedDateTime
 import java.util.Locale
 
 @Singleton
-class WebBackendCronExpressionHandler {
+open class WebBackendCronExpressionHandler {
   fun describeCronExpression(body: WebBackendDescribeCronExpressionRequestBody): WebBackendCronExpressionDescription? {
     val cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ)
 
