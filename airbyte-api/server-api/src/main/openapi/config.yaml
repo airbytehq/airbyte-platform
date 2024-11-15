@@ -11198,12 +11198,10 @@ components:
             - pre_trial
             - in_trial
             - post_trial
-            - unknown
           x-enum-descriptions:
             - The trial has not yet started for this organization
             - The organization is currently in the trial. End of the trial is indicated by the `trialEndsAt` property
             - The organization has left the trial already
-            - The trial status is unknown
         trialEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
 
