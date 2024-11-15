@@ -85,6 +85,13 @@ airbyte:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
 
+  # minimal configuration to authenticate internal service accounts w/ keycloak
+  keycloak:
+    host: ${KEYCLOAK_HOST:}
+    protocol: ${KEYCLOAK_PROTOCOL:http}
+    base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
+    internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
+
 endpoints:
   beans:
     enabled: true
