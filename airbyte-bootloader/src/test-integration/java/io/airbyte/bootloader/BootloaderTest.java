@@ -16,6 +16,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs.SeedDefinitionsProviderType;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.BreakingChangeNotificationHelper;
@@ -85,6 +86,7 @@ class BootloaderTest {
   private FeatureFlagClient featureFlagClient;
   private static final String DEFAULT_REALM = "airbyte";
   private static final String DOCKER = "docker";
+  private static final SeedDefinitionsProviderType SEED_PROVIDER_TYPE = SeedDefinitionsProviderType.LOCAL;
   private static final String PROTOCOL_VERSION_001 = "0.0.1";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
   private static final String VERSION_0330_ALPHA = "0.33.0-alpha";
@@ -200,7 +202,8 @@ class BootloaderTest {
     when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
+        new ApplyDefinitionsHelper(definitionsProvider, SEED_PROVIDER_TYPE, jobsPersistence, actorDefinitionService, sourceService,
+            destinationService,
             metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
@@ -298,7 +301,8 @@ class BootloaderTest {
     val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     val connectorRolloutService = mock(ConnectorRolloutService.class);
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
+        new ApplyDefinitionsHelper(definitionsProvider, SEED_PROVIDER_TYPE, jobsPersistence, actorDefinitionService, sourceService,
+            destinationService,
             metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =

@@ -3,6 +3,7 @@
  */
 package io.airbyte.config.init.config
 
+import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider
 import io.airbyte.config.init.DeclarativeSourceUpdater
@@ -32,15 +33,29 @@ class SeedBeanFactory {
   @Singleton
   @Named("seedDefinitionsProvider")
   fun seedDefinitionsProvider(
-    @Value("\${airbyte.connector-registry.seed-provider}") seedProvider: String,
+    seedProvider: SeedDefinitionsProviderType,
     remoteDefinitionsProvider: RemoteDefinitionsProvider,
   ): DefinitionsProvider {
+    return when (seedProvider) {
+      SeedDefinitionsProviderType.LOCAL -> {
+        LOGGER.info("Using local definitions provider for seeding")
+        LocalDefinitionsProvider()
+      }
+      SeedDefinitionsProviderType.REMOTE -> {
+        LOGGER.info("Using remote definitions provider for seeding")
+        remoteDefinitionsProvider
+      }
+    }
+  }
+
+  @Singleton
+  fun seedDefinitionsProviderType(
+    @Value("\${airbyte.connector-registry.seed-provider}") seedProvider: String,
+  ): SeedDefinitionsProviderType {
     if (StringUtils.isEmpty(seedProvider) || LOCAL_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
-      LOGGER.info("Using local definitions provider for seeding")
-      return LocalDefinitionsProvider()
+      return SeedDefinitionsProviderType.LOCAL
     } else if (REMOTE_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
-      LOGGER.info("Using remote definitions provider for seeding")
-      return remoteDefinitionsProvider
+      return SeedDefinitionsProviderType.REMOTE
     }
 
     throw IllegalArgumentException("Invalid seed provider: $seedProvider")

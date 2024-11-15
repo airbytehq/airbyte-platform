@@ -8,6 +8,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.BreakingChanges
+import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
@@ -40,6 +41,8 @@ import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -65,6 +68,7 @@ internal class ApplyDefinitionsHelperTest {
   private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
   private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
   private val connectorRolloutService: ConnectorRolloutService = mockk()
+  private val seedDefinitionsProviderType: SeedDefinitionsProviderType = mockk()
   private lateinit var applyDefinitionsHelper: ApplyDefinitionsHelper
 
   @BeforeEach
@@ -72,6 +76,7 @@ internal class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper =
       ApplyDefinitionsHelper(
         definitionsProvider,
+        seedDefinitionsProviderType,
         jobPersistence,
         actorDefinitionService,
         sourceService,
@@ -90,6 +95,7 @@ internal class ApplyDefinitionsHelperTest {
     every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
     every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
     every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns Optional.empty()
+    every { seedDefinitionsProviderType.ordinal } returns SeedDefinitionsProviderType.REMOTE.ordinal
     mockVoidReturningFunctions()
   }
 
@@ -856,6 +862,89 @@ internal class ApplyDefinitionsHelperTest {
     confirmVerified(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient)
   }
 
+  @ParameterizedTest
+  @MethodSource("updateScenarioWithSeedType")
+  fun `should only perform version rollbacks when using remote definitions provider`(
+    updateAll: Boolean,
+    isInUse: Boolean,
+    seedType: SeedDefinitionsProviderType,
+  ) {
+    every { seedDefinitionsProviderType.ordinal } returns seedType.ordinal
+
+    val currentVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2)
+    val newVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES)
+
+    val definitionsInUse = if (isInUse) setOf(currentVersion.actorDefinitionId) else setOf()
+
+    val shouldUpdateVersion =
+      applyDefinitionsHelper.getShouldUpdateActorDefinitionDefaultVersion(
+        currentVersion,
+        newVersion,
+        definitionsInUse,
+        updateAll,
+      )
+
+    if (seedType == SeedDefinitionsProviderType.REMOTE && (!isInUse || updateAll)) {
+      assertTrue(shouldUpdateVersion)
+    } else {
+      assertFalse(shouldUpdateVersion)
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenarioWithSeedType")
+  fun `should perform version upgrades regardless of definitions provider`(
+    updateAll: Boolean,
+    isInUse: Boolean,
+    seedType: SeedDefinitionsProviderType,
+  ) {
+    every { seedDefinitionsProviderType.ordinal } returns seedType.ordinal
+
+    val currentVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES)
+    val newVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2)
+
+    val definitionsInUse = if (isInUse) setOf(currentVersion.actorDefinitionId) else setOf()
+
+    val shouldUpdateVersion =
+      applyDefinitionsHelper.getShouldUpdateActorDefinitionDefaultVersion(
+        currentVersion,
+        newVersion,
+        definitionsInUse,
+        updateAll,
+      )
+
+    if (!isInUse || updateAll) {
+      assertTrue(shouldUpdateVersion)
+    } else {
+      assertFalse(shouldUpdateVersion)
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenarioWithSeedType")
+  fun `should not try to update the connector version if it is already matching`(
+    updateAll: Boolean,
+    isInUse: Boolean,
+    seedType: SeedDefinitionsProviderType,
+  ) {
+    every { seedDefinitionsProviderType.ordinal } returns seedType.ordinal
+
+    val currentVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES)
+    val newVersion = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES)
+
+    val definitionsInUse = if (isInUse) setOf(currentVersion.actorDefinitionId) else setOf()
+
+    val shouldUpdateVersion =
+      applyDefinitionsHelper.getShouldUpdateActorDefinitionDefaultVersion(
+        currentVersion,
+        newVersion,
+        definitionsInUse,
+        updateAll,
+      )
+
+    assertFalse(shouldUpdateVersion)
+  }
+
   companion object {
     private const val INITIAL_CONNECTOR_VERSION = "0.1.0"
     private const val UPDATED_CONNECTOR_VERSION = "0.2.0"
@@ -996,6 +1085,19 @@ internal class ApplyDefinitionsHelperTest {
         Arguments.of(true, false),
         Arguments.of(false, false),
         Arguments.of(false, true),
+      )
+
+    @JvmStatic
+    fun updateScenarioWithSeedType(): Stream<Arguments> =
+      Stream.of(
+        Arguments.of(true, true, SeedDefinitionsProviderType.REMOTE),
+        Arguments.of(true, false, SeedDefinitionsProviderType.REMOTE),
+        Arguments.of(false, false, SeedDefinitionsProviderType.REMOTE),
+        Arguments.of(false, true, SeedDefinitionsProviderType.REMOTE),
+        Arguments.of(true, true, SeedDefinitionsProviderType.LOCAL),
+        Arguments.of(true, false, SeedDefinitionsProviderType.LOCAL),
+        Arguments.of(false, false, SeedDefinitionsProviderType.LOCAL),
+        Arguments.of(false, true, SeedDefinitionsProviderType.LOCAL),
       )
 
     @JvmStatic

@@ -9,6 +9,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
+import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
@@ -49,6 +50,7 @@ import kotlin.jvm.optionals.getOrNull
 @Requires(bean = MetricClient::class)
 class ApplyDefinitionsHelper(
   @param:Named("seedDefinitionsProvider") private val definitionsProvider: DefinitionsProvider,
+  private val seedProviderType: SeedDefinitionsProviderType,
   private val jobPersistence: JobPersistence,
   private val actorDefinitionService: ActorDefinitionService,
   private val sourceService: SourceService,
@@ -201,7 +203,7 @@ class ApplyDefinitionsHelper(
   }
 
   @VisibleForTesting
-  fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
+  internal fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
     for (rcDef in rcDefinitions) {
       val rcAdv =
         when (rcDef) {
@@ -349,13 +351,24 @@ class ApplyDefinitionsHelper(
     return reImportVersionInUse && definitionIsInUse
   }
 
-  private fun getShouldUpdateActorDefinitionDefaultVersion(
+  @VisibleForTesting
+  internal fun getShouldUpdateActorDefinitionDefaultVersion(
     currentDefaultADV: ActorDefinitionVersion,
     newADV: ActorDefinitionVersion,
     actorDefinitionIdsInUse: Set<UUID>,
     updateAll: Boolean,
   ): Boolean {
-    val newVersionIsAvailable = newADV.dockerImageTag != currentDefaultADV.dockerImageTag
+    val newVersionIsAvailable =
+      when (seedProviderType) {
+        SeedDefinitionsProviderType.REMOTE -> newADV.dockerImageTag != currentDefaultADV.dockerImageTag
+        SeedDefinitionsProviderType.LOCAL -> {
+          // (oss) if we're using the registry shipped with the platform, connector versions may be stale.
+          // We should only update if the new version is greater than the current version, in case the user has manually
+          // upgraded the connector via the UI. See https://github.com/airbytehq/airbyte-internal-issues/issues/8691.
+          newADV.dockerImageTag > currentDefaultADV.dockerImageTag
+        }
+      }
+
     val definitionIsInUse = actorDefinitionIdsInUse.contains(currentDefaultADV.actorDefinitionId)
     val shouldApplyNewVersion = updateAll || !definitionIsInUse
 
