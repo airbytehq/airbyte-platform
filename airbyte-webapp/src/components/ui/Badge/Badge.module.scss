@@ -2,6 +2,7 @@
 @use "scss/variables";
 
 .badge {
+  width: fit-content;
   font-size: variables.$font-size-xs;
   border-radius: variables.$border-radius-pill;
   text-transform: uppercase;

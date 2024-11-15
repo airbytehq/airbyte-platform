@@ -714,6 +714,15 @@
   "connection.actions.cancel.clear.confirm.submit": "Yes, cancel clear",
   "connection.actions.cancel.clear.confirm.cancel": "No, continue clear",
 
+  "connection.mappings.title": "Mappings",
+  "connection.mappings.emptyState": "No mappings yet",
+  "connection.mappings.selectStream": "Select a stream to apply mappings",
+  "connection.mappings.selectAStream": "Select a stream",
+  "connections.mappings.emptyState.upsellTitle": "Unlock the power of mappings",
+  "connections.mappings.emptyState.upsellBody": "Hash, encrypt, filter rows, rename fields, and more. Transform your data directly in Airbyte to ensure it arrives exactly how you want it to.",
+  "connections.mappings.emptyState.upsellFooter": "Talk to our sales team about upgrading to {product, select, teams {Teams} enterprise {Enterprise} other {Teams}} to unlock this feature.",
+  "connections.mappings.emptyState.upsellButton": "Unlock mappings",
+
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",
   "connection.timeline.error": "Error: ",

@@ -1,0 +1,10 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.highlightCard__card {
+  border: variables.$border-thin solid colors.$blue-400;
+}
+
+.highlightCard__cardBody {
+  background: colors.$blue-30;
+}

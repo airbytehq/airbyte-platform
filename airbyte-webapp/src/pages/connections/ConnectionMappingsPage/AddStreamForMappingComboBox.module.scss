@@ -1,0 +1,29 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.addStreamForMappingComboBox {
+  min-width: variables.$width-extra-wide-menu;
+  border-radius: variables.$border-radius-md;
+
+  &:not(:focus-within) {
+    background-color: colors.$blue;
+    color: colors.$white;
+
+    input {
+      cursor: pointer;
+    }
+
+    button svg {
+      color: colors.$white;
+    }
+  }
+
+  input:not(:focus) {
+    color: colors.$white;
+
+    &::placeholder {
+      color: colors.$white;
+      text-align: center;
+    }
+  }
+}

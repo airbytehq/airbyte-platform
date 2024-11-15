@@ -9,12 +9,14 @@
   margin-top: variables.$spacing-sm;
   min-width: variables.$min-width-listbox-options-list;
   max-height: variables.$height-long-listbox-options-list;
-  overflow: auto;
+  list-style-type: none;
+  overflow-y: auto;
 }
 
 .optionValue {
   padding: variables.$spacing-md variables.$spacing-lg;
   cursor: pointer;
+  word-break: break-all;
 }
 
 .focus {

@@ -33,7 +33,7 @@ export const AirbyteHomeLink: React.FC = () => {
   );
 };
 
-const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams" }> = ({ product }) => (
+export const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams" }> = ({ product }) => (
   <Badge variant={product === "enterprise" ? "darkBlue" : "blue"}>
     <FlexContainer alignItems="center">
       <FormattedMessage id={product === "enterprise" ? "enterprise.enterprise" : "cloud.cloudForTeams"} />

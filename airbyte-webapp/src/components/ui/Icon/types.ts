@@ -76,6 +76,7 @@ export type IconType =
   | "loading"
   | "location"
   | "lock"
+  | "mapping"
   | "menu"
   | "metricSuccessHigh"
   | "metricSuccessLow"

@@ -35,6 +35,7 @@ export const enum ConnectionRoutePaths {
   Configure = "configure",
   ConfigureContinued = "continued",
   Timeline = "timeline",
+  Mappings = "mappings",
 }
 
 export enum SettingsRoutePaths {

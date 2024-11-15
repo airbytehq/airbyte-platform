@@ -10,6 +10,7 @@ import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
@@ -20,6 +21,7 @@ export const ConnectionPageHeader = () => {
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const mappingsUIEnabled = useExperiment("connection.mappingsUI");
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -56,6 +58,16 @@ export const ConnectionPageHeader = () => {
         to: `${basePath}/${ConnectionRoutePaths.Replication}`,
         disabled: schemaRefreshing,
       },
+      ...(mappingsUIEnabled
+        ? [
+            {
+              id: ConnectionRoutePaths.Mappings,
+              name: <FormattedMessage id="connection.mappings.title" />,
+              to: `${basePath}/${ConnectionRoutePaths.Mappings}`,
+              disabled: schemaRefreshing,
+            },
+          ]
+        : []),
       ...(supportsDbtCloud
         ? [
             {
@@ -75,7 +87,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, connection.schemaChange, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, connection.schemaChange, mappingsUIEnabled, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

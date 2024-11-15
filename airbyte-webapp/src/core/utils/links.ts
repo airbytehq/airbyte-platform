@@ -60,8 +60,8 @@ export const links = {
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
-  enterpriseTalkToSales:
-    "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=enterprise-connector",
+  featureTalkToSales:
+    "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=feature-{feature}",
   billingNotificationsForm:
     "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}",
 } as const;

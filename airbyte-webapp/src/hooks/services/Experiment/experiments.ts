@@ -13,6 +13,7 @@ export interface Experiments {
   "billing.migrationMaintenance": boolean;
   "connection.columnSelection": boolean;
   "connection.hashingUI": boolean;
+  "connection.mappingsUI": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
@@ -36,6 +37,7 @@ export const defaultExperimentValues: Experiments = {
   "billing.migrationMaintenance": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
+  "connection.mappingsUI": false,
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,

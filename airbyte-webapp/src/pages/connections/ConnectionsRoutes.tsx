@@ -15,6 +15,8 @@ const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
 const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
+const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
+
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
 export const JobHistoryToTimelineRedirect = () => {
@@ -70,6 +72,7 @@ export const ConnectionsRoutes: React.FC = () => {
           <Route path={ConnectionRoutePaths.JobHistory} element={<JobHistoryToTimelineRedirect />} />
           <Route path={ConnectionRoutePaths.Timeline} element={<ConnectionTimelinePage />} />
           <Route path={ConnectionRoutePaths.Replication} element={<ConnectionReplicationPage />} />
+          <Route path={ConnectionRoutePaths.Mappings} element={<ConnectionMappingsPage />} />
           <Route path={ConnectionRoutePaths.Transformation} element={<ConnectionTransformationPage />} />
           <Route path={ConnectionRoutePaths.Settings} element={<ConnectionSettingsPage />} />
           <Route index element={<Navigate to={ConnectionRoutePaths.Status} replace />} />
