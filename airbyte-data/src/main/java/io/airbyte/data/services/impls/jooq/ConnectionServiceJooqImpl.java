@@ -18,6 +18,7 @@ import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
@@ -107,6 +108,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
+  @Trace
   public StandardSync getStandardSync(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
@@ -203,6 +205,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
+  @Trace
   public List<StandardSync> listWorkspaceStandardSyncs(final StandardSyncQuery standardSyncQuery)
       throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx

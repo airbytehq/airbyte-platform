@@ -353,18 +353,21 @@ public class WebBackendConnectionsHandler {
     return SchemaChange.NO_CHANGE;
   }
 
+  @Trace
   private SourceRead getSourceRead(final UUID sourceId)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceId);
     return sourceHandler.getSource(sourceIdRequestBody);
   }
 
+  @Trace
   private DestinationRead getDestinationRead(final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(destinationId);
     return destinationHandler.getDestination(destinationIdRequestBody);
   }
 
+  @Trace
   private OperationReadList getOperationReadList(final ConnectionRead connectionRead)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionRead.getConnectionId());

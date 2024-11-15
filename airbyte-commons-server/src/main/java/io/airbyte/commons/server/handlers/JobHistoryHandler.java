@@ -355,6 +355,7 @@ public class JobHistoryHandler {
     return jobDebugInfoRead;
   }
 
+  @Trace
   public Optional<JobRead> getLatestRunningSyncJob(final UUID connectionId) throws IOException {
     final List<Job> nonTerminalSyncJobsForConnection = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
@@ -437,14 +438,17 @@ public class JobHistoryHandler {
         .streams(finalStreamsWithStats);
   }
 
+  @Trace
   public Optional<JobRead> getLatestSyncJob(final UUID connectionId) throws IOException {
     return jobPersistence.getLastSyncJob(connectionId).map(JobConverter::getJobRead);
   }
 
+  @Trace
   public List<JobStatusSummary> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getLastSyncJobForConnections(connectionIds);
   }
 
+  @Trace
   public List<JobRead> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getRunningSyncJobForConnections(connectionIds).stream()
         .map(JobConverter::getJobRead)

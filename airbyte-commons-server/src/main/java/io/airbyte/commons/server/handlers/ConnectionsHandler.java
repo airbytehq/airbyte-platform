@@ -989,6 +989,7 @@ public class ConnectionsHandler {
         AirbyteStreamAndConfiguration::getConfig));
   }
 
+  @Trace
   public Optional<AirbyteCatalog> getConnectionAirbyteCatalog(final UUID connectionId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSync connection = connectionService.getStandardSync(connectionId);
