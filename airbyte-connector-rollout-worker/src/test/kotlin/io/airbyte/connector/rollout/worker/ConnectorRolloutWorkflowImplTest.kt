@@ -155,6 +155,7 @@ class ConnectorRolloutWorkflowImplTest {
         USER_ID,
         ROLLOUT_STRATEGY,
         null,
+        null,
       ),
     )
   }

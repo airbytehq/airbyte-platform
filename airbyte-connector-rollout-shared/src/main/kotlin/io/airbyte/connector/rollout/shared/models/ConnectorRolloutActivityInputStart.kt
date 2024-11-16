@@ -11,5 +11,6 @@ data class ConnectorRolloutActivityInputStart(
   var rolloutId: UUID,
   var updatedBy: UUID? = null,
   var rolloutStrategy: ConnectorEnumRolloutStrategy? = null,
+  var initialVersionDockerImageTag: String? = null,
   var connectorRollout: ConnectorRollout? = null,
 )

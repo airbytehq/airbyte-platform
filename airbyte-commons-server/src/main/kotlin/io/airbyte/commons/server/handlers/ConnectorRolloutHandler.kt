@@ -473,6 +473,7 @@ open class ConnectorRolloutHandler
             rollout.id,
             connectorRolloutWorkflowStart.updatedBy,
             rollout.rolloutStrategy,
+            actorDefinitionService.getActorDefinitionVersion(rollout.initialVersionId).dockerImageTag,
             rollout,
           ),
         )
@@ -497,6 +498,7 @@ open class ConnectorRolloutHandler
               connectorRolloutUpdate.id,
               connectorRolloutUpdate.updatedBy,
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
               connectorRollout,
             ),
           )
@@ -538,6 +540,7 @@ open class ConnectorRolloutHandler
               connectorRolloutFinalize.id,
               connectorRolloutFinalize.updatedBy,
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
               connectorRollout,
             ),
           )
