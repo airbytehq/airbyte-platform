@@ -379,7 +379,7 @@ public class JobConverter {
       logEvent.setLevel(LogLevel.fromString(e.getLevel().toLowerCase(Locale.ROOT)));
       logEvent.setMessage(e.getMessage());
       logEvent.setTimestamp(e.getTimestamp());
-      logEvent.setStrackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));
+      logEvent.setStackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));
       logEvent.setCaller(toModelLogCaller(e.getCaller()));
       return logEvent;
     }).toList();

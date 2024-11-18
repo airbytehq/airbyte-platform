@@ -12446,7 +12446,7 @@ components:
           $ref: "#/components/schemas/LogSource"
         caller:
           $ref: "#/components/schemas/LogCaller"
-        strackTrace:
+        stackTrace:
           type: string
     LogRead:
       type: object
