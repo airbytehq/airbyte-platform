@@ -39,6 +39,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
 
   const { connection, updateConnection } = useConnectionEditService();
+  const { defaultGeography } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
 
@@ -68,6 +69,10 @@ export const ConnectionSettingsPage: React.FC = () => {
   };
 
   const isDeprecated = connection.status === "deprecated";
+  const hasConfiguredGeography =
+    connection.geography !== undefined &&
+    connection.geography !== defaultGeography &&
+    connection.geography !== Geography.auto;
 
   return (
     <ScrollableContainer>
@@ -94,6 +99,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             destination={connection.destination}
             isCreating={false}
             isDeprecated={isDeprecated}
+            hasConfiguredGeography={hasConfiguredGeography}
           />
         </Form>
 
