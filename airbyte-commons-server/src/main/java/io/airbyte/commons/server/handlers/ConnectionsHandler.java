@@ -79,6 +79,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper.Update
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -202,6 +203,7 @@ public class ConnectionsHandler {
   private final ConnectionTimelineEventService connectionTimelineEventService;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final StatePersistence statePersistence;
+  private final MapperSecretHelper mapperSecretHelper;
 
   private final CatalogService catalogService;
   private final SourceService sourceService;
@@ -244,7 +246,8 @@ public class ConnectionsHandler {
                             final CatalogConverter catalogConverter,
                             final ApplySchemaChangeHelper applySchemaChangeHelper,
                             final ApiPojoConverters apiPojoConverters,
-                            final ConnectionScheduleHelper connectionScheduleHelper) {
+                            final ConnectionScheduleHelper connectionScheduleHelper,
+                            final MapperSecretHelper mapperSecretHelper) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -273,6 +276,7 @@ public class ConnectionsHandler {
     this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
     this.connectionScheduleHelper = connectionScheduleHelper;
+    this.mapperSecretHelper = mapperSecretHelper;
   }
 
   /**
@@ -299,7 +303,9 @@ public class ConnectionsHandler {
       final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(patch.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
 
-      sync.setCatalog(configuredCatalog);
+      final ConfiguredAirbyteCatalog configuredCatalogNoSecrets =
+          mapperSecretHelper.updateAndReplaceMapperSecrets(workspaceId, sync.getCatalog(), configuredCatalog);
+      sync.setCatalog(configuredCatalogNoSecrets);
       sync.withFieldSelectionData(catalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
@@ -455,7 +461,9 @@ public class ConnectionsHandler {
       final ConfiguredAirbyteCatalog configuredCatalog =
           catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
-      standardSync.withCatalog(configuredCatalog);
+
+      final ConfiguredAirbyteCatalog configuredCatalogNoSecrets = mapperSecretHelper.createAndReplaceMapperSecrets(workspaceId, configuredCatalog);
+      standardSync.withCatalog(configuredCatalogNoSecrets);
       standardSync.withFieldSelectionData(catalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
@@ -853,6 +861,10 @@ public class ConnectionsHandler {
   public ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSync standardSync = connectionService.getStandardSync(connectionId);
+
+    final ConfiguredAirbyteCatalog maskedCatalog = mapperSecretHelper.maskMapperSecrets(standardSync.getCatalog());
+    standardSync.setCatalog(maskedCatalog);
+
     return apiPojoConverters.internalToConnectionRead(standardSync);
   }
 

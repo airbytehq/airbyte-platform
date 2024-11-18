@@ -90,6 +90,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
@@ -265,6 +266,7 @@ class ConnectionsHandlerTest {
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private MapperSecretHelper mapperSecretHelper;
 
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
@@ -396,6 +398,7 @@ class ConnectionsHandlerTest {
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     statePersistence = mock(StatePersistence.class);
+    mapperSecretHelper = mock(MapperSecretHelper.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -447,6 +450,10 @@ class ConnectionsHandlerTest {
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(), Map.of()));
+
+    when(mapperSecretHelper.maskMapperSecrets(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(mapperSecretHelper.createAndReplaceMapperSecrets(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
+    when(mapperSecretHelper.updateAndReplaceMapperSecrets(any(), any(), any())).thenAnswer(invocation -> invocation.getArgument(2));
   }
 
   @Nested
@@ -482,7 +489,8 @@ class ConnectionsHandlerTest {
           catalogConverter,
           applySchemaChangeHelper,
           apiPojoConverters,
-          connectionSchedulerHelper);
+          connectionSchedulerHelper,
+          mapperSecretHelper);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1826,7 +1834,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2063,7 +2071,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper);
+          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
     }
 
     @Test
@@ -2989,7 +2997,7 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
     }
 
     @Test
@@ -3252,7 +3260,8 @@ class ConnectionsHandlerTest {
           catalogConverter,
           applySchemaChangeHelper,
           apiPojoConverters,
-          connectionSchedulerHelper);
+          connectionSchedulerHelper,
+          mapperSecretHelper);
     }
 
     @Test

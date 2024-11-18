@@ -13,6 +13,7 @@ import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.helper.BackfillHelper
+import io.airbyte.workers.helper.MapperSecretHydrationHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.input.ReplicationInputMapper
 import io.micronaut.context.annotation.Factory
@@ -26,6 +27,7 @@ class ApplicationBeanFactory {
     airbyteApiClient: AirbyteApiClient,
     resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
     secretsRepositoryReader: SecretsRepositoryReader,
+    mapperSecretHydrationHelper: MapperSecretHydrationHelper,
     backfillHelper: BackfillHelper,
     catalogClientConverters: CatalogClientConverters,
     metricClient: MetricClient,
@@ -36,6 +38,7 @@ class ApplicationBeanFactory {
       airbyteApiClient,
       resumableFullRefreshStatsHelper,
       secretsRepositoryReader,
+      mapperSecretHydrationHelper,
       backfillHelper,
       catalogClientConverters,
       mapper,

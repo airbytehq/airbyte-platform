@@ -53,6 +53,7 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
+import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.JobInput;
@@ -77,6 +78,7 @@ public class ReplicationInputHydrator {
   private final AirbyteApiClient airbyteApiClient;
   private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
   private final SecretsRepositoryReader secretsRepositoryReader;
+  private final MapperSecretHydrationHelper mapperSecretHydrationHelper;
   private final ReplicationInputMapper mapper;
   private final Boolean useRuntimeSecretPersistence;
 
@@ -89,6 +91,7 @@ public class ReplicationInputHydrator {
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
                                   final SecretsRepositoryReader secretsRepositoryReader,
+                                  final MapperSecretHydrationHelper mapperSecretHydrationHelper,
                                   final BackfillHelper backfillHelper,
                                   final CatalogClientConverters catalogClientConverters,
                                   final ReplicationInputMapper mapper,
@@ -99,6 +102,7 @@ public class ReplicationInputHydrator {
     this.catalogClientConverters = catalogClientConverters;
     this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
     this.secretsRepositoryReader = secretsRepositoryReader;
+    this.mapperSecretHydrationHelper = mapperSecretHydrationHelper;
     this.mapper = mapper;
     this.metricClient = metricClient;
     this.useRuntimeSecretPersistence = useRuntimeSecretPersistence;
@@ -242,10 +246,14 @@ public class ReplicationInputHydrator {
       }
     }
 
+    // Hydrate mapper secrets
+    final ConfiguredAirbyteCatalog hydratedCatalog =
+        mapperSecretHydrationHelper.hydrateMapperSecrets(catalog, useRuntimeSecretPersistence, organizationId);
+
     return mapper.toReplicationInput(replicationActivityInput)
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)
-        .withCatalog(catalog)
+        .withCatalog(hydratedCatalog)
         .withState(state)
         .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
   }

@@ -8,6 +8,7 @@ import static io.airbyte.workers.ReplicationInputHydrator.FILE_TRANSFER_DELIVERY
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,6 +66,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
+import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -189,6 +191,7 @@ class ReplicationInputHydratorTest {
       null);
 
   private static SecretsRepositoryReader secretsRepositoryReader;
+  private static MapperSecretHydrationHelper mapperSecretHydrationHelper;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
@@ -205,6 +208,7 @@ class ReplicationInputHydratorTest {
   @BeforeEach
   void setup() throws IOException {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    mapperSecretHydrationHelper = mock(MapperSecretHydrationHelper.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     attemptApi = mock(AttemptApi.class);
     connectionApi = mock(ConnectionApi.class);
@@ -228,6 +232,7 @@ class ReplicationInputHydratorTest {
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(stateApi.getState(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
+    when(mapperSecretHydrationHelper.hydrateMapperSecrets(any(), anyBoolean(), any())).thenAnswer(invocation -> invocation.getArgument(0));
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
@@ -235,6 +240,7 @@ class ReplicationInputHydratorTest {
         airbyteApiClient,
         resumableFullRefreshStatsHelper,
         secretsRepositoryReader,
+        mapperSecretHydrationHelper,
         backfillHelper,
         catalogClientConverters,
         new ReplicationInputMapper(),

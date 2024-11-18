@@ -503,6 +503,25 @@ components:
               default: The mapper configuration is invalid
             data:
               $ref: "#/components/schemas/ProblemMapperErrorsData"
+    RuntimeSecretsManagerRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:mapper-validation/runtime-secrets-manager-required
+            title:
+              type: string
+              default: Runtime Secrets Manager Required
+            detail:
+              type: string
+              default: The requested operation requires a runtime secrets manager to be configured.
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
