@@ -298,8 +298,10 @@ airbyte:
   server:
     connection:
       limits:
-        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
-        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:20}
+        max-days-warning: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_WARNING:4}
+        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:7}
+        max-jobs-warning: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_WARNING:20}
+        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:30}
         max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   temporal:
     queues:

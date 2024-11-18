@@ -790,6 +790,7 @@
   "connection.timeline.schema_update.fieldChanges": "{streams, plural, one {# stream} other {# streams}} changed",
   "connection.timeline.schema_update.viewDetails": "View details",
 
+  "connectionAutoDisabledReason.TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS": "Airbyte disabled the connection due to consecutive failures with no recent success.",
   "connectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY": "Airbyte disabled the connection due to only failed jobs recently.",
   "connectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW": "Airbyte disabled the connection due to consecutive failures.",
   "connectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING": "Airbyte disabled the connection due to a detected breaking schema change. Resolve the error in the <schemaTabLink>Schema tab</schemaTabLink> to re-enable.",

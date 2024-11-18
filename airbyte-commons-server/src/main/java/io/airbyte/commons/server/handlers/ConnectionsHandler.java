@@ -6,9 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
-import static java.time.temporal.ChronoUnit.DAYS;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -47,7 +45,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FailureOrigin;
 import io.airbyte.api.model.generated.FailureReason;
 import io.airbyte.api.model.generated.FailureType;
-import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobAggregatedStats;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobSyncResultRead;
@@ -101,7 +98,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.config.JobWithStatusAndTimestamp;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.ScopeType;
@@ -110,7 +106,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
-import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -145,11 +140,9 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -199,9 +192,6 @@ public class ConnectionsHandler {
   private final FeatureFlagClient featureFlagClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ConnectorDefinitionSpecificationHandler connectorSpecHandler;
-  private final JobNotifier jobNotifier;
-  private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-  private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final StreamGenerationRepository streamGenerationRepository;
@@ -238,9 +228,6 @@ public class ConnectionsHandler {
                             final FeatureFlagClient featureFlagClient,
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
-                            final JobNotifier jobNotifier,
-                            @Value("${airbyte.server.connection.limits.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
-                            @Value("${airbyte.server.connection.limits.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
                             final StreamGenerationRepository streamGenerationRepository,
                             final CatalogGenerationSetter catalogGenerationSetter,
                             final CatalogValidator catalogValidator,
@@ -268,9 +255,6 @@ public class ConnectionsHandler {
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.connectorSpecHandler = connectorSpecHandler;
-    this.jobNotifier = jobNotifier;
-    this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-    this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.streamGenerationRepository = streamGenerationRepository;
     this.catalogGenerationSetter = catalogGenerationSetter;
@@ -392,163 +376,6 @@ public class ConnectionsHandler {
         throw new RuntimeException("Unexpected schedule type");
       }
     }
-  }
-
-  public InternalOperationResult autoDisableConnection(final UUID connectionId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    return autoDisableConnection(connectionId, Instant.now());
-  }
-
-  @VisibleForTesting
-  InternalOperationResult autoDisableConnection(final UUID connectionId, final Instant timestamp)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    // if connection is already inactive, no need to disable
-    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
-    if (standardSync.getStatus() == Status.INACTIVE) {
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final int maxDaysOfOnlyFailedJobs = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-    final int maxDaysOfOnlyFailedJobsBeforeWarning = maxDaysOfOnlyFailedJobs / 2;
-    final int maxFailedJobsInARowBeforeConnectionDisableWarning = maxFailedJobsInARowBeforeConnectionDisable / 2;
-    final long currTimestampInSeconds = timestamp.getEpochSecond();
-    final Optional<Job> optionalLastJob = jobPersistence.getLastReplicationJob(connectionId);
-    final Optional<Job> optionalFirstJob = jobPersistence.getFirstReplicationJob(connectionId);
-
-    if (optionalLastJob.isEmpty()) {
-      LOGGER.error("Auto-Disable Connection should not have been attempted if can't get latest replication job.");
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    if (optionalFirstJob.isEmpty()) {
-      LOGGER.error("Auto-Disable Connection should not have been attempted if no replication job has been run.");
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final List<JobWithStatusAndTimestamp> jobs = jobPersistence.listJobStatusAndTimestampWithConnection(connectionId,
-        REPLICATION_TYPES, timestamp.minus(maxDaysOfOnlyFailedJobs, DAYS));
-
-    int numFailures = 0;
-    Optional<Long> successTimestamp = Optional.empty();
-
-    for (final JobWithStatusAndTimestamp job : jobs) {
-      final JobStatus jobStatus = job.getStatus();
-      if (jobStatus == JobStatus.FAILED) {
-        numFailures++;
-      } else if (jobStatus == JobStatus.SUCCEEDED) {
-        successTimestamp = Optional.of(job.getUpdatedAtInSecond());
-        break;
-      }
-    }
-
-    final boolean warningPreviouslySentForMaxDays =
-        warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (final Attempt attempt : optionalLastJob.get().getAttempts()) {
-      attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
-    }
-    if (numFailures == 0) {
-      return new InternalOperationResult().succeeded(false);
-    } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
-      // disable connection if max consecutive failed jobs limit has been hit
-      autoDisableConnection(standardSync, optionalLastJob.get(),
-          ConnectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW);
-      return new InternalOperationResult().succeeded(true);
-    } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
-      // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    // calculate the number of days this connection first tried a replication job, used to ensure not to
-    // disable or warn for `maxDaysOfOnlyFailedJobs` if the first job is younger than
-    // `maxDaysOfOnlyFailedJobs` days, This avoids cases such as "the very first job run was a failure".
-    final int numDaysSinceFirstReplicationJob = getDaysSinceTimestamp(currTimestampInSeconds, optionalFirstJob.get().getCreatedAtInSecond());
-    final boolean firstReplicationOlderThanMaxDisableDays = numDaysSinceFirstReplicationJob >= maxDaysOfOnlyFailedJobs;
-    final boolean noPreviousSuccess = successTimestamp.isEmpty();
-
-    // disable connection if only failed jobs in the past maxDaysOfOnlyFailedJobs days
-    if (firstReplicationOlderThanMaxDisableDays && noPreviousSuccess) {
-      autoDisableConnection(standardSync, optionalLastJob.get(), ConnectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY);
-      return new InternalOperationResult().succeeded(true);
-    }
-
-    // skip warning if previously sent
-    if (warningPreviouslySentForMaxDays || numFailures > maxFailedJobsInARowBeforeConnectionDisableWarning) {
-      LOGGER.info("Warning was previously sent for connection: {}", connectionId);
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final boolean firstReplicationOlderThanMaxDisableWarningDays = numDaysSinceFirstReplicationJob >= maxDaysOfOnlyFailedJobsBeforeWarning;
-    final boolean successOlderThanPrevFailureByMaxWarningDays = // set to true if no previous success is found
-        noPreviousSuccess || getDaysSinceTimestamp(currTimestampInSeconds, successTimestamp.get()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-
-    // send warning if there are only failed jobs in the past maxDaysOfOnlyFailedJobsBeforeWarning days
-    // _unless_ a warning should have already been sent in the previous failure
-    if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
-
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-    }
-    return new InternalOperationResult().succeeded(false);
-  }
-
-  private void autoDisableConnection(final StandardSync standardSync, final Job lastJob, final ConnectionAutoDisabledReason disabledReason)
-      throws IOException {
-    // apply patch to connection
-    standardSync.setStatus(Status.INACTIVE);
-    connectionService.writeStandardSync(standardSync);
-    // log connection disabled event in connection timeline
-    connectionTimelineEventHelper.logStatusChangedEventInConnectionTimeline(standardSync.getConnectionId(), ConnectionStatus.INACTIVE,
-        disabledReason.name(), true);
-
-    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (final Attempt attempt : lastJob.getAttempts()) {
-      attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
-    }
-    jobNotifier.autoDisableConnection(lastJob, attemptStats);
-  }
-
-  private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
-    return Math.toIntExact(TimeUnit.SECONDS.toDays(currentTimestampInSeconds - timestampInSeconds));
-  }
-
-  // Checks to see if warning should have been sent in the previous failure, if so skip sending of
-  // warning to avoid spam
-  // Assume warning has been sent if either of the following is true:
-  // 1. no success found in the time span and the previous failure occurred
-  // maxDaysOfOnlyFailedJobsBeforeWarning days after the first job
-  // 2. success found and the previous failure occurred maxDaysOfOnlyFailedJobsBeforeWarning days
-  // after that success
-  private boolean warningPreviouslySentForMaxDays(final int numFailures,
-                                                  final Optional<Long> successTimestamp,
-                                                  final int maxDaysOfOnlyFailedJobsBeforeWarning,
-                                                  final Job firstJob,
-                                                  final List<JobWithStatusAndTimestamp> jobs) {
-    // no previous warning sent if there was no previous failure
-    if (numFailures <= 1 || jobs.size() <= 1) {
-      return false;
-    }
-
-    // get previous failed job (skipping first job since that's considered "current" job)
-    JobWithStatusAndTimestamp prevFailedJob = jobs.get(1);
-    for (int i = 2; i < jobs.size(); i++) {
-      if (prevFailedJob.getStatus() == JobStatus.FAILED) {
-        break;
-      }
-      prevFailedJob = jobs.get(i);
-    }
-
-    final boolean successExists = successTimestamp.isPresent();
-    boolean successOlderThanPrevFailureByMaxWarningDays = false;
-    if (successExists) {
-      successOlderThanPrevFailureByMaxWarningDays =
-          getDaysSinceTimestamp(prevFailedJob.getUpdatedAtInSecond(), successTimestamp.get()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-    }
-    final boolean prevFailureOlderThanFirstJobByMaxWarningDays =
-        getDaysSinceTimestamp(prevFailedJob.getUpdatedAtInSecond(), firstJob.getUpdatedAtInSecond()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-
-    return (successExists && successOlderThanPrevFailureByMaxWarningDays)
-        || (!successExists && prevFailureOlderThanFirstJobByMaxWarningDays);
   }
 
   private void validateConfiguredMappers(final ConfiguredAirbyteCatalog configuredCatalog) {

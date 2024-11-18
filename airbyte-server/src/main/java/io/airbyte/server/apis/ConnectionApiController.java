@@ -56,6 +56,7 @@ import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.services.AutoDisableConnectionService;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
@@ -85,6 +86,7 @@ public class ConnectionApiController implements ConnectionApi {
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final JobHistoryHandler jobHistoryHandler;
+  private final AutoDisableConnectionService autoDisableConnectionService;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
@@ -92,7 +94,8 @@ public class ConnectionApiController implements ConnectionApi {
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
                                  final StreamRefreshesHandler streamRefreshesHandler,
-                                 final JobHistoryHandler jobHistoryHandler) {
+                                 final JobHistoryHandler jobHistoryHandler,
+                                 final AutoDisableConnectionService autoDisableConnectionService) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
@@ -100,6 +103,7 @@ public class ConnectionApiController implements ConnectionApi {
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.jobHistoryHandler = jobHistoryHandler;
+    this.autoDisableConnectionService = autoDisableConnectionService;
   }
 
   @Override
@@ -107,7 +111,10 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
+    return ApiHelper.execute(() -> {
+      final boolean wasDisabled = autoDisableConnectionService.autoDisableConnection(connectionIdRequestBody.getConnectionId());
+      return new InternalOperationResult().succeeded(wasDisabled);
+    });
   }
 
   @Override

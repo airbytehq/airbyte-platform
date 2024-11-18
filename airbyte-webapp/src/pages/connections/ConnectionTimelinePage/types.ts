@@ -29,8 +29,7 @@ import {
  */
 
 const connectionAutoDisabledReasons = [
-  "ONLY_FAILED_JOBS_RECENTLY",
-  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
+  "TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS",
   "SCHEMA_CHANGES_ARE_BREAKING",
   "DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES",
   "INVALID_CREDIT_BALANCE",
@@ -39,6 +38,11 @@ const connectionAutoDisabledReasons = [
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",
+
+  // these two are no longer written for new events, but can exist in existing timelines.
+  // can be removed once all such events are expired/removed
+  "ONLY_FAILED_JOBS_RECENTLY",
+  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
 ];
 
 // property-specific schemas
