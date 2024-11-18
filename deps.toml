@@ -13,30 +13,30 @@ failsafe = "3.3.2"
 flyway = "10.10.0"
 glassfish_version = "2.31"
 grpc_version = "1.62.2"
-hikaricp = "5.0.1"
+hikaricp = "6.0.0"
 jax-rs = "3.1.0"
 jna = "5.8.0"
 jmh = "1.37"
 jooq = "3.19.7"
-junit-jupiter = "5.10.3"
+junit-jupiter = "5.11.3"
 keycloak = "25.0.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.12.1"
-logback = "1.5.8"
+logback = "1.5.12"
 lombok = "1.18.34"
-micronaut = "4.6.3"
-micronaut-cache = "5.0.1"
-micronaut-core = "4.6.6"
-micronaut-data = "4.9.4"
-micronaut-email = "2.6.0"
-micronaut-jaxrs = "4.6.1"
-micronaut-jdbc = "5.8.1"
-micronaut-kotlin = "4.4.0"
-micronaut-micrometer = "5.8.0"
-micronaut-openapi = "6.12.3"
-micronaut-security = "4.10.2"
-micronaut-test = "4.5.0"
+micronaut = "4.7.0"
+micronaut-cache = "5.1.0"
+micronaut-core = "4.7.5"
+micronaut-data = "4.10.3"
+micronaut-email = "2.7.0"
+micronaut-jaxrs = "4.7.0"
+micronaut-jdbc = "6.0.2"
+micronaut-kotlin = "4.5.0"
+micronaut-micrometer = "5.9.2"
+micronaut-openapi = "6.13.1"
+micronaut-security = "4.11.1"
+micronaut-test = "4.6.0"
 moshi = "1.15.0"
 mockito = "5.8.0"
 mockito-kotlin = "5.2.1"
@@ -223,7 +223,7 @@ micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", vers
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
 micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
-micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.4.0" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.6.0" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut-core" }
@@ -245,17 +245,17 @@ micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micr
 micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations", version.ref = "micronaut-openapi" }
-micronaut-picocli = { module = "io.micronaut.picocli:micronaut-picocli", version = "5.5.0" }
+micronaut-picocli = { module = "io.micronaut.picocli:micronaut-picocli", version = "5.6.0" }
 micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version.ref = "micronaut" }
-micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "3.5.0" }
-micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.6.0" }
+micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "3.6.0" }
+micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.6.1" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut-core" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
 micronaut-security-jwt = { module = "io.micronaut.security:micronaut-security-jwt", version.ref = "micronaut-security" }
 micronaut-security-oauth2 = { module = "io.micronaut.security:micronaut-security-oauth2", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
-micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.7.0" }
+micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.8.0" }
 
 [bundles]
 apache = ["apache-commons", "apache-commons-lang"]
