@@ -1037,7 +1037,7 @@
   "settings.workspace.usage.title": "Workspace usage",
   "settings.workspace.usage.tooltip": "Workspace usage is measured in <lnk>credits</lnk>.",
   "settings.connector.editDefinition.title": "Edit connector definition",
-  "settings.connector.editDefinition.updateAvailable": "A new verison of {connectorName} is available: {latestVersion}",
+  "settings.connector.editDefinition.updateAvailable": "A new version of {connectorName} is available: {latestVersion}",
   "settings.connector.editDefinition.displayName": "Connector display name",
   "settings.connector.editDefinition.dockerImage": "Docker image",
   "settings.connector.editDefinition.dockerImageTag": "Docker image tag",
