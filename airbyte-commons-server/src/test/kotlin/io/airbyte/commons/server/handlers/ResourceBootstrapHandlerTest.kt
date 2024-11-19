@@ -10,10 +10,8 @@ import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.BillingInArrearsForNewSignups
 import io.airbyte.featureflag.FeatureFlagClient
 import io.kotest.assertions.asClue
-import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -65,31 +63,12 @@ class ResourceBootstrapHandlerTest {
     }
 
     @Test
-    fun `creates organization without billing in arrears`() {
-      val spy = spyk(handler)
-      val createdOrgSlot = slot<Organization>()
-
-      every { spy.findExistingOrganization(any()) } returns null
-      every { featureFlagClient.boolVariation(eq(BillingInArrearsForNewSignups), any()) } returns false
-      every { organizationService.writeOrganization(capture(createdOrgSlot)) } returns Unit
-
-      spy.findOrCreateOrganizationAndPermission(user)
-
-      verify { organizationService.writeOrganization(any()) }
-
-      createdOrgSlot.captured.asClue {
-        it.orgLevelBilling.shouldBeFalse()
-      }
-    }
-
-    @Test
-    fun `creates organization with billing in arrears`() {
+    fun `creates organization with organization payment config`() {
       val spy = spyk(handler)
       val createdOrgSlot = slot<Organization>()
       val paymentConfigSlot = slot<OrganizationPaymentConfig>()
 
       every { spy.findExistingOrganization(any()) } returns null
-      every { featureFlagClient.boolVariation(eq(BillingInArrearsForNewSignups), any()) } returns true
       every { organizationService.writeOrganization(capture(createdOrgSlot)) } returns Unit
       every { organizationPaymentConfigService.savePaymentConfig(capture(paymentConfigSlot)) } returns Unit
 

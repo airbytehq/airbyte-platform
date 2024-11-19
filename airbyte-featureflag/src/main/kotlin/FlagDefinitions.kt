@@ -83,10 +83,6 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
-object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
-
-object BillingInArrearsForNewSignups : Temporary<Boolean>(key = "billing.inArrearsForNewSignups", default = false)
-
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.

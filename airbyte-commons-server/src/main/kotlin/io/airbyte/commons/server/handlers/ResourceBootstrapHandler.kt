@@ -21,10 +21,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.BillingInArrearsForNewSignups
-import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -92,27 +89,23 @@ open class ResourceBootstrapHandler(
 
   fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
     findExistingOrganization(user)?.let { return it }
-    val billingInArrears = featureFlagClient.boolVariation(BillingInArrearsForNewSignups, User(user.userId, EmailAttribute(user.email)))
     val organization =
       Organization().apply {
         this.organizationId = uuidSupplier.get()
         this.userId = user.userId
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
-        this.orgLevelBilling = billingInArrears
+        this.orgLevelBilling = true
         this.pba = false
       }
     organizationService.writeOrganization(organization)
 
-    if (billingInArrears) {
-      logger.info { "Creating organization ${organization.organizationId} with billing in arrears enabled" }
-      val paymentConfig =
-        OrganizationPaymentConfig()
-          .withOrganizationId(organization.organizationId)
-          .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+    val paymentConfig =
+      OrganizationPaymentConfig()
+        .withOrganizationId(organization.organizationId)
+        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
 
-      organizationPaymentConfigService.savePaymentConfig(paymentConfig)
-    }
+    organizationPaymentConfigService.savePaymentConfig(paymentConfig)
 
     val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
     permissionService.createPermission(organizationPermission)
