@@ -39,6 +39,7 @@ dependencies {
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)
   implementation(libs.guava)
+  implementation(libs.cron.utils)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))

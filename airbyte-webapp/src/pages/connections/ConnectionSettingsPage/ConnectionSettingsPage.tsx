@@ -1,6 +1,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classnames from "classnames";
-import React from "react";
+import React, { useCallback } from "react";
+import { UseFormReturn } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import {
@@ -9,6 +10,7 @@ import {
   useInitialFormValues,
 } from "components/connection/ConnectionForm/formConfig";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
 import { ScrollableContainer } from "components/ScrollableContainer";
@@ -17,7 +19,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
-import { useCurrentWorkspace } from "core/api";
+import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
@@ -59,14 +61,22 @@ export const ConnectionSettingsPage: React.FC = () => {
     });
   };
 
-  const onError = (e: Error, { name }: FormConnectionFormValues) => {
-    trackError(e, { connectionName: name });
-    registerNotification({
-      id: "connection_settings_change_error",
-      text: formatMessage({ id: "connection.updateFailed" }),
-      type: "error",
-    });
-  };
+  const onError = useCallback(
+    (error: Error, values: FormConnectionFormValues, methods: UseFormReturn<FormConnectionFormValues>) => {
+      trackError(error, { connectionName: values.name });
+      if (error instanceof HttpError && HttpProblem.isType(error, "error:cron-validation/under-one-hour-not-allowed")) {
+        methods.setError("scheduleData.cron.cronExpression", {
+          message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
+        });
+      }
+      registerNotification({
+        id: "connection_settings_change_error",
+        text: formatMessage({ id: "connection.updateFailed" }),
+        type: "error",
+      });
+    },
+    [formatMessage, registerNotification]
+  );
 
   const isDeprecated = connection.status === "deprecated";
   const hasConfiguredGeography =
@@ -88,8 +98,8 @@ export const ConnectionSettingsPage: React.FC = () => {
 
             return updateConnection(connectionUpdates);
           }}
-          onError={onError}
           onSuccess={onSuccess}
+          onError={onError}
           schema={validationSchema}
           defaultValues={simplifiedInitialValues}
         >

@@ -284,7 +284,7 @@ public class ConnectionsHandler {
    * patch. Any fields that are null in the patch will be left unchanged.
    */
   private void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
-      throws JsonValidationException {
+      throws JsonValidationException, ConfigNotFoundException {
     // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
     // the helper to ensure both fields
     // make sense together.
@@ -678,7 +678,6 @@ public class ConnectionsHandler {
         case CRON -> Preconditions.checkArgument(
             patch.getScheduleData() != null,
             "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON.");
-
         // shouldn't be possible to reach this case
         default -> throw new RuntimeException("Unrecognized scheduleType!");
       }

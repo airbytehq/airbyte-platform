@@ -482,6 +482,27 @@ components:
               default: The specified cron timezone is invalid
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
+    CronValidationUnderOneHourNotAllowedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/under-one-hour-not-allowed
+            title:
+              type: string
+              default: Cron sync schedules more frequent than once per hour are not allowed
+            detail:
+              type: string
+              default: Syncs
+            data:
+              $ref: "#/components/schemas/ProblemCronExpressionData"
     MapperValidationProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

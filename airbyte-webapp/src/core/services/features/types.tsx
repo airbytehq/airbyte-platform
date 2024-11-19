@@ -11,7 +11,6 @@ export enum FeatureItem {
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
   AllowOAuthConnector = "ALLOW_OAUTH_CONNECTOR",
   AllowChangeDataGeographies = "ALLOW_CHANGE_DATA_GEOGRAPHIES",
-  AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   CloudForTeamsUpsell = "CLOUD_FOR_TEAMS_UPSELLING",
   ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",

@@ -4,7 +4,6 @@ export const defaultOssFeatures = [
   FeatureItem.AllowAutoDetectSchema,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
-  FeatureItem.AllowSyncSubOneHourCronExpressions,
   FeatureItem.EnterpriseUpsell,
 ];
 

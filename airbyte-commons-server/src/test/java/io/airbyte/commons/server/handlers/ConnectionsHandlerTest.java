@@ -94,6 +94,7 @@ import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
+import io.airbyte.commons.server.helpers.CronExpressionHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.commons.server.validation.ValidationError;
@@ -226,7 +227,7 @@ class ConnectionsHandlerTest {
   private static final String AZKABAN_USERS = "azkaban_users";
   private static final String CRON_TIMEZONE_UTC = "UTC";
   private static final String TIMEZONE_LOS_ANGELES = "America/Los_Angeles";
-  private static final String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String CRON_EXPRESSION = "0 0 */2 * * ?";
   private static final String STREAM_SELECTION_DATA = "null/users-data0";
   private JobPersistence jobPersistence;
   private Supplier<UUID> uuidGenerator;
@@ -283,10 +284,11 @@ class ConnectionsHandlerTest {
   private CatalogService catalogService;
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
+  private ConnectionScheduleHelper connectionSchedulerHelper;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
-  private final ConnectionScheduleHelper connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters);
+  private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -434,6 +436,7 @@ class ConnectionsHandlerTest {
         catalogConverter,
         apiPojoConverters);
 
+    connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =
         new MatchSearchHandler(destinationHandler, sourceHandler, sourceService, destinationService, connectionService, apiPojoConverters);
     featureFlagClient = mock(TestClient.class);
@@ -1380,6 +1383,8 @@ class ConnectionsHandlerTest {
 
       @Test
       void testUpdateConnectionPatchScheduleToCron() throws Exception {
+        when(workspaceHelper.getWorkspaceForSourceId(any())).thenReturn(UUID.randomUUID());
+        when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(UUID.randomUUID());
 
         final ConnectionScheduleData cronScheduleData = new ConnectionScheduleData().cron(
             new ConnectionScheduleDataCron().cronExpression(CRON_EXPRESSION).cronTimeZone(CRON_TIMEZONE_UTC));

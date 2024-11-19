@@ -2,6 +2,7 @@ package io.airbyte.server.handlers
 
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
+import io.airbyte.commons.server.helpers.CronExpressionHelper
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import org.junit.jupiter.api.Test
@@ -12,7 +13,8 @@ const val CRON_EVERY_MINUTE = "0 * * * * ?"
 const val Y2K = "0 0 0 1 1 ? 2000"
 
 class WebBackendCronExpressionHandlerTest {
-  private var webBackendCronExpressionHandler: WebBackendCronExpressionHandler = WebBackendCronExpressionHandler()
+  private val cronExpressionHelper: CronExpressionHelper = CronExpressionHelper()
+  private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler = WebBackendCronExpressionHandler(cronExpressionHelper)
 
   @Test
   fun testDescribeEveryHourCronExpression() {
