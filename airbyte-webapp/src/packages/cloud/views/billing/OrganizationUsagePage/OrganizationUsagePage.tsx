@@ -7,6 +7,7 @@ import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 
@@ -15,6 +16,8 @@ import styles from "./OrganizationUsagePage.module.scss";
 import { UsageByWorkspaceTable } from "./UsageByWorkspaceTable";
 
 export const OrganizationUsagePage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_USAGE);
+
   return (
     <FlexContainer direction="column" gap="xl">
       <FlexContainer alignItems="center">

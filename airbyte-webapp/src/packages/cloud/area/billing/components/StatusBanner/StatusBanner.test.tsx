@@ -18,11 +18,6 @@ jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceLink: jest.fn().mockReturnValue((link: string) => link),
 }));
 
-// We just mock out the legacy workspace banner, since that file has its own tests
-jest.mock("./LegacyStatusBanner/WorkspaceStatusBanner", () => ({
-  WorkspaceStatusBanner: () => <div data-testid="mockLegacyWorkspaceBanner" />,
-}));
-
 jest.mock("core/api/cloud", () => ({
   useGetCloudWorkspaceAsync: jest.fn().mockReturnValue({
     workspaceId: "workspace-1",
@@ -62,12 +57,6 @@ const mockGeneratedIntent = (options: { canViewTrialStatus: boolean; canManageOr
 };
 
 describe("StatusBanner", () => {
-  it("should render legacy banner if no billing information is available", async () => {
-    mockOrgInfo(undefined);
-    const wrapper = await render(<StatusBanner />);
-    expect(wrapper.getByTestId("mockLegacyWorkspaceBanner")).toBeInTheDocument();
-  });
-
   it("should render nothing with paymentStatus=OKAY and not in trial", async () => {
     mockOrgInfo({ paymentStatus: "okay" });
     mockTrialStatus({ trialStatus: "post_trial" });

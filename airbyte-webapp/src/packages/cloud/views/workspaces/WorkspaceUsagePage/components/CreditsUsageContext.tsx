@@ -1,19 +1,15 @@
-import dayjs from "dayjs";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import { Option } from "components/ui/ListBox";
 
-import { useCurrentWorkspace, useFilters } from "core/api";
-import { useGetCloudWorkspaceUsage, useGetWorkspaceUsage } from "core/api/cloud";
+import { useFilters } from "core/api";
+import { useGetWorkspaceUsage } from "core/api/cloud";
 import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 import { UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
-import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
   ConnectionFreeAndPaidUsage,
-  calculateFreeAndPaidUsageByTimeChunk,
-  calculateFreeAndPaidUsageByConnection,
   getWorkspaceUsageByTimeChunk,
   getWorkspaceUsageByConnection,
 } from "./calculateUsageDataObjects";
@@ -67,103 +63,6 @@ interface FilterValues {
   selectedSource: SourceId | null;
   selectedDestination: DestinationId | null;
 }
-
-export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const [filters, setFilterValue] = useFilters<FilterValues>({
-    selectedTimeWindow: ConsumptionTimeWindow.lastMonth,
-    selectedSource: null,
-    selectedDestination: null,
-  });
-  const { selectedTimeWindow, selectedSource, selectedDestination } = filters;
-
-  const [hasFreeUsage, setHasFreeUsage] = useState<boolean>(false);
-
-  const { workspaceId } = useCurrentWorkspace();
-  const data = useGetCloudWorkspaceUsage(workspaceId, filters.selectedTimeWindow);
-
-  const { consumptionPerConnectionPerTimeframe, timeWindow } = data;
-
-  const rawConsumptionData = useMemo(() => {
-    return consumptionPerConnectionPerTimeframe.map((consumption) => {
-      if (consumption.freeUsage > 0) {
-        setHasFreeUsage(true);
-      }
-
-      return {
-        ...consumption,
-        startTime: dayjs(consumption.startTime).format("YYYY-MM-DD"),
-        endTime: dayjs(consumption.endTime).format("YYYY-MM-DD"),
-      };
-    });
-  }, [consumptionPerConnectionPerTimeframe]);
-
-  const availableSourcesAndDestinations = useMemo(
-    () => calculateAvailableSourcesAndDestinations(rawConsumptionData),
-    [rawConsumptionData]
-  );
-
-  const filteredConsumptionData = useMemo(() => {
-    if (selectedSource && selectedDestination) {
-      return rawConsumptionData.filter(
-        (consumption) =>
-          consumption.connection.sourceId === selectedSource &&
-          consumption.connection.destinationId === selectedDestination
-      );
-    } else if (selectedSource) {
-      return rawConsumptionData.filter((consumption) => consumption.connection.sourceId === selectedSource);
-    } else if (selectedDestination) {
-      return rawConsumptionData.filter((consumption) => consumption.connection.destinationId === selectedDestination);
-    }
-
-    return rawConsumptionData;
-  }, [rawConsumptionData, selectedDestination, selectedSource]);
-
-  const sourceOptions = useMemo(
-    () =>
-      availableSourcesAndDestinations.sources
-        .filter((source) => (selectedDestination ? source.connectedDestinations.includes(selectedDestination) : true))
-        .map((source) => ({
-          label: <ConnectorOptionLabel connector={source} />,
-          value: source.id,
-        })),
-    [availableSourcesAndDestinations.sources, selectedDestination]
-  );
-
-  const destinationOptions = useMemo(
-    () =>
-      availableSourcesAndDestinations.destinations
-        .filter((destination) => (selectedSource ? destination.connectedSources.includes(selectedSource) : true))
-        .map((destination) => ({
-          label: <ConnectorOptionLabel connector={destination} />,
-          value: destination.id,
-        })),
-    [availableSourcesAndDestinations.destinations, selectedSource]
-  );
-
-  return (
-    <creditsUsageContext.Provider
-      value={{
-        freeAndPaidUsageByTimeChunk: calculateFreeAndPaidUsageByTimeChunk(filteredConsumptionData, timeWindow),
-        freeAndPaidUsageByConnection: calculateFreeAndPaidUsageByConnection(filteredConsumptionData, timeWindow),
-        sourceOptions,
-        destinationOptions,
-        selectedSource,
-        setSelectedSource: (selectedSource: SourceId | null) => setFilterValue("selectedSource", selectedSource),
-        selectedDestination,
-        setSelectedDestination: (selectedDestination: DestinationId | null) =>
-          setFilterValue("selectedDestination", selectedDestination),
-        selectedTimeWindow,
-        setSelectedTimeWindow: (selectedTimeWindow: ConsumptionTimeWindow) =>
-          setFilterValue("selectedTimeWindow", selectedTimeWindow),
-        hasFreeUsage,
-        // There is no internal usage in the old billing page, only the new workspace usage page
-        hasInternalUsage: false,
-      }}
-    >
-      {children}
-    </creditsUsageContext.Provider>
-  );
-};
 
 export const WorkspaceCreditUsageContextProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const [filters, setFilterValue] = useFilters<FilterValues>({

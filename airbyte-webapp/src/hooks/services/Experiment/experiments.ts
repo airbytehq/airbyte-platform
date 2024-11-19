@@ -9,8 +9,6 @@
 export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
-  "billing.autoRecharge": boolean;
-  "billing.migrationMaintenance": boolean;
   "connection.columnSelection": boolean;
   "connection.hashingUI": boolean;
   "connection.mappingsUI": boolean;
@@ -32,9 +30,7 @@ export interface Experiments {
 
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
-  "billing.autoRecharge": false,
   "billing.early-sync-enabled": false,
-  "billing.migrationMaintenance": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
   "connection.mappingsUI": false,

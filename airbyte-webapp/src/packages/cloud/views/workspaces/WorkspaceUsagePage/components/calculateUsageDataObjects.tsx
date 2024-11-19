@@ -1,7 +1,7 @@
-import dayjs, { ConfigType } from "dayjs";
+import dayjs from "dayjs";
 
 import { ConnectionUsageRead, TimeframeUsage } from "core/api/types/AirbyteClient";
-import { ConnectionProto, ConsumptionRead, ConsumptionTimeWindow } from "core/api/types/CloudApi";
+import { ConnectionProto, ConsumptionTimeWindow } from "core/api/types/CloudApi";
 import { generateArrayForTimeWindow, UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
 export interface ConnectionFreeAndPaidUsage {
@@ -12,89 +12,6 @@ export interface ConnectionFreeAndPaidUsage {
   totalInternalUsage: number;
   totalUsage: number;
 }
-
-/**
- * if there is no consumption for a given time chunk (in this case, day) we will not receive a data point
- * however, we still want to include that day on our graph, so we create an array with an entry for each time window
- * then backfill it with the data from the API.
- */
-
-const mergeUsageData = (usageArray: UsagePerTimeChunk, consumption: ConsumptionRead) => {
-  const timeframeItemIndex = usageArray.findIndex((item) => {
-    // first two params are the start and end of the timeframe
-    // final param makes the compare inclusive
-    const isBetween = dayjs(consumption.startTime as ConfigType).isBetween(
-      dayjs(item.startTime),
-      dayjs(item.endTime),
-      "day",
-      "[)"
-    );
-
-    return isBetween;
-  });
-
-  if (timeframeItemIndex !== -1) {
-    const usage = usageArray[timeframeItemIndex];
-    usage.billedCost += consumption.billedCost;
-    usage.freeUsage += consumption.freeUsage;
-  }
-};
-export const calculateFreeAndPaidUsageByConnection = (
-  filteredConsumptionData: ConsumptionRead[],
-  timeWindow: ConsumptionTimeWindow
-) => {
-  if (filteredConsumptionData.length === 0) {
-    return [];
-  }
-  const usagePerConnection = filteredConsumptionData.reduce(
-    (allConsumption, consumption) => {
-      const { connection } = consumption;
-
-      // if this connection isn't in our list yet, add it
-      // also, generate an array for the usage array
-      if (!allConsumption[connection.connectionId]) {
-        allConsumption[connection.connectionId] = {
-          connection,
-          totalFreeUsage: consumption.freeUsage,
-          totalBilledCost: consumption.billedCost,
-          // Hard-coded to 0 because there is no internal usage in the old billing page, only in the new workspace usage page
-          totalInternalUsage: 0,
-          totalUsage: consumption.freeUsage + consumption.billedCost,
-          usage: generateArrayForTimeWindow(timeWindow),
-        };
-      } else {
-        allConsumption[connection.connectionId].totalFreeUsage += consumption.freeUsage;
-        allConsumption[connection.connectionId].totalBilledCost += consumption.billedCost;
-        allConsumption[connection.connectionId].totalUsage += consumption.freeUsage + consumption.billedCost;
-      }
-
-      mergeUsageData(allConsumption[connection.connectionId].usage, consumption);
-
-      return allConsumption;
-    },
-    {} as Record<string, ConnectionFreeAndPaidUsage>
-  );
-
-  const array = Object.values(usagePerConnection);
-  return array;
-};
-
-// currently assumes a default time window of 30 days and no other conditions (yet)
-export const calculateFreeAndPaidUsageByTimeChunk = (
-  filteredConsumptionData: ConsumptionRead[],
-  timeWindow: ConsumptionTimeWindow
-) => {
-  if (filteredConsumptionData.length === 0) {
-    return [];
-  }
-
-  const usagePerTimeChunk = generateArrayForTimeWindow(timeWindow);
-
-  filteredConsumptionData.forEach((consumption) => {
-    mergeUsageData(usagePerTimeChunk, consumption);
-  });
-  return usagePerTimeChunk;
-};
 
 // Used for the workspace usage page
 export function getWorkspaceUsageByConnection(

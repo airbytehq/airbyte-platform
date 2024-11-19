@@ -1,23 +1,15 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentUser } from "core/services/auth";
 
 import {
   deleteCloudWorkspace,
-  getCloudWorkspace,
-  getCloudWorkspaceUsage,
   updateCloudWorkspace,
   webBackendCreatePermissionedCloudWorkspace,
   webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
 import { SCOPE_USER } from "../../scopes";
-import {
-  CloudWorkspaceRead,
-  CloudWorkspaceReadList,
-  ConsumptionTimeWindow,
-  PermissionedCloudWorkspaceCreate,
-} from "../../types/CloudApi";
+import { CloudWorkspaceRead, CloudWorkspaceReadList, PermissionedCloudWorkspaceCreate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 import { useListPermissions } from "../permissions";
@@ -27,8 +19,6 @@ export const workspaceKeys = {
   all: [SCOPE_USER, "cloud_workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
-  detail: (id: number | string) => [...workspaceKeys.all, "detail", id] as const,
-  usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
 
 type CloudWorkspaceCount = { count: "zero" } | { count: "one"; workspace: CloudWorkspaceRead } | { count: "multiple" };
@@ -118,13 +108,6 @@ export function useUpdateCloudWorkspace() {
 
           return { workspaces: [...list.slice(0, index), result, ...list.slice(index + 1)] };
         });
-
-        queryClient.setQueryData<CloudWorkspaceRead>(workspaceKeys.detail(result.workspaceId), (old) => {
-          return {
-            ...old,
-            ...result,
-          };
-        });
       },
     }
   );
@@ -141,47 +124,6 @@ export function useRemoveCloudWorkspace() {
       );
     },
   });
-}
-
-export function getCloudWorkspaceQueryKey(workspaceId: string) {
-  return workspaceKeys.detail(workspaceId);
-}
-
-export function useGetCloudWorkspaceQuery(workspaceId: string) {
-  const requestOptions = useRequestOptions();
-
-  return () => getCloudWorkspace({ workspaceId }, requestOptions);
-}
-
-export function useGetCloudWorkspace(workspaceId: string) {
-  const queryKey = getCloudWorkspaceQueryKey(workspaceId);
-  const queryFn = useGetCloudWorkspaceQuery(workspaceId);
-
-  return useSuspenseQuery(queryKey, queryFn);
-}
-
-export function useGetCloudWorkspaceAsync(workspaceId: string) {
-  const queryKey = getCloudWorkspaceQueryKey(workspaceId);
-  const queryFn = useGetCloudWorkspaceQuery(workspaceId);
-
-  return useQuery(queryKey, queryFn).data;
-}
-
-export function useInvalidateCloudWorkspace(workspaceId: string): () => Promise<void> {
-  const queryClient = useQueryClient();
-
-  return useCallback(
-    () => queryClient.invalidateQueries(workspaceKeys.detail(workspaceId)),
-    [queryClient, workspaceId]
-  );
-}
-
-export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: ConsumptionTimeWindow) {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(workspaceKeys.usage(workspaceId, timeWindow), () =>
-    getCloudWorkspaceUsage({ workspaceId, timeWindow }, requestOptions)
-  );
 }
 
 /**

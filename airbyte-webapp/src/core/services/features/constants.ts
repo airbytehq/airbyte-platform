@@ -28,7 +28,6 @@ export const defaultCloudFeatures = [
   FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
-  FeatureItem.Billing,
   FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorBreakingChangeDeadlines,

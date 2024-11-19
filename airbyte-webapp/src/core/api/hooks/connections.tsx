@@ -12,7 +12,7 @@ import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } 
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
@@ -416,7 +416,7 @@ export const useUpdateConnection = () => {
             type: "error",
             text: <FormattedMessage id="connection.enable.creditsProblem" />,
             actionBtnText: <FormattedMessage id="connection.enable.creditsProblem.cta" />,
-            onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${CloudRoutes.Billing}`),
+            onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${CloudSettingsRoutePaths.Billing}`),
           });
         }
 

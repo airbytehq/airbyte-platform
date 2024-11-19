@@ -13,6 +13,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useGetOrganizationBillingBalance } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 
@@ -21,9 +22,11 @@ import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
 import { PaymentMethod } from "./PaymentMethod";
-import { useRedirectToCustomerPortal } from "../useRedirectToCustomerPortal";
+import { useRedirectToCustomerPortal } from "../../../area/billing/utils/useRedirectToCustomerPortal";
 
 export const OrganizationBillingPage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_BILLING);
+
   const { formatMessage } = useIntl();
   const { organizationId } = useCurrentWorkspace();
   const { billing } = useCurrentOrganizationInfo();

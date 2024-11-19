@@ -9,7 +9,7 @@ import { Heading } from "components/ui/Heading";
 import { useCurrentWorkspace, useGetInvoices } from "core/api";
 
 import { InvoiceGrid, InvoiceGridLoadingSkeleton } from "./InvoiceGrid";
-import { useRedirectToCustomerPortal } from "../../useRedirectToCustomerPortal";
+import { useRedirectToCustomerPortal } from "../../../../area/billing/utils/useRedirectToCustomerPortal";
 import { UpdateButton } from "../UpdateButton";
 
 export const Invoices = () => {
