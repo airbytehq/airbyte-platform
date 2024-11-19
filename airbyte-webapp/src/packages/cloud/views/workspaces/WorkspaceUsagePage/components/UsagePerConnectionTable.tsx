@@ -148,9 +148,9 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               ) : (
                 <FormattedMessage
                   id={`frequency.${
-                    props.row.original.connection.connectionScheduleTimeUnit?.toLowerCase() ?? "manual"
+                    props.row.original.connection.connectionSchedule?.timeUnit?.toLowerCase() ?? "manual"
                   }`}
-                  values={{ value: props.row.original.connection.connectionScheduleUnits }}
+                  values={{ value: props.row.original.connection.connectionSchedule?.units }}
                 />
               )}
             </TextWithOverflowTooltip>

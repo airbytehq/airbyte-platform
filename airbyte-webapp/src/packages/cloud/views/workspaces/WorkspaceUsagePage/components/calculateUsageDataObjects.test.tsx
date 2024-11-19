@@ -1,6 +1,6 @@
 import { mockWorkspaceUsage } from "test-utils/mock-data/mockWorkspaceUsage";
 
-import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
+import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
 
 import { getWorkspaceUsageByConnection } from "./calculateUsageDataObjects";
 

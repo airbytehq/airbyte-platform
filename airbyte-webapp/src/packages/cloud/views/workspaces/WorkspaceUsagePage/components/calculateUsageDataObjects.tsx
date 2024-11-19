@@ -1,11 +1,43 @@
 import dayjs from "dayjs";
 
-import { ConnectionUsageRead, TimeframeUsage } from "core/api/types/AirbyteClient";
-import { ConnectionProto, ConsumptionTimeWindow } from "core/api/types/CloudApi";
+import {
+  ConnectionSchedule,
+  ConnectionScheduleType,
+  ConnectionStatus,
+  ConnectionUsageRead,
+  ConsumptionTimeWindow,
+  ReleaseStage,
+  SupportLevel,
+  TimeframeUsage,
+} from "core/api/types/AirbyteClient";
 import { generateArrayForTimeWindow, UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
+interface ConnectionSummary {
+  connectionId: string;
+  connectionName: string;
+  connectionScheduleType?: ConnectionScheduleType;
+  connectionSchedule?: ConnectionSchedule;
+  status: ConnectionStatus;
+  sourceId: string;
+  sourceConnectionName: string;
+  sourceCustom: boolean;
+  sourceIcon: string;
+  sourceDefinitionId: string;
+  sourceDefinitionName: string;
+  sourceReleaseStage: ReleaseStage;
+  sourceSupportLevel: SupportLevel;
+  destinationId: string;
+  destinationConnectionName: string;
+  destinationCustom: boolean;
+  destinationIcon: string;
+  destinationDefinitionId: string;
+  destinationDefinitionName: string;
+  destinationReleaseStage: ReleaseStage;
+  destinationSupportLevel: SupportLevel;
+}
+
 export interface ConnectionFreeAndPaidUsage {
-  connection: ConnectionProto;
+  connection: ConnectionSummary;
   usage: UsagePerTimeChunk;
   totalFreeUsage: number;
   totalBilledCost: number;
@@ -25,6 +57,8 @@ export function getWorkspaceUsageByConnection(
       connection: {
         connectionId: usage.connection.connectionId,
         connectionName: usage.connection.name,
+        connectionScheduleType: usage.connection.scheduleType,
+        connectionSchedule: usage.connection.schedule,
         status: usage.connection.status,
         sourceId: usage.source.sourceId,
         sourceConnectionName: usage.source.name,

@@ -4,8 +4,7 @@ import { Option } from "components/ui/ListBox";
 
 import { useFilters } from "core/api";
 import { useGetWorkspaceUsage } from "core/api/cloud";
-import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
-import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
+import { ConsumptionTimeWindow, DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { UsagePerTimeChunk } from "packages/cloud/area/billing/utils/chartUtils";
 
 import {
