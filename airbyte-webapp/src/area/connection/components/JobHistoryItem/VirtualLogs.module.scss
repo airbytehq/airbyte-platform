@@ -31,6 +31,55 @@
 
   &__lineLogContent {
     position: relative;
+    flex-grow: 1;
+  }
+
+  &__timestamp {
+    align-self: flex-start;
+  }
+
+  &__logSource {
+    align-self: flex-start;
+
+    &--source {
+      background-color: colors.$ansi-blue-bg;
+    }
+
+    &--destination {
+      background-color: colors.$ansi-yellow-bg;
+    }
+
+    &--replicationOrchestrator {
+      background-color: colors.$ansi-cyan-bg;
+    }
+
+    &--platform {
+      background-color: colors.$ansi-cyan-bg;
+    }
+  }
+
+  &__level {
+    align-self: flex-start;
+
+    &--warn {
+      color: colors.$ansi-yellow-fg;
+    }
+
+    &--error {
+      color: colors.$ansi-yellow-fg;
+    }
+
+    &--info {
+      color: colors.$ansi-cyan-fg;
+    }
+
+    &--debug {
+      color: colors.$ansi-cyan-fg;
+    }
+
+    &--trace {
+      color: colors.$ansi-cyan-fg;
+    }
   }
 
   &__searchMatch {

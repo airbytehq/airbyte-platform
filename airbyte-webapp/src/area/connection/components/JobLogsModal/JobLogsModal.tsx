@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 
 import { AttemptDetails } from "area/connection/components/AttemptDetails";
 import { LogSearchInput } from "area/connection/components/JobHistoryItem/LogSearchInput";
-import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { LOG_LEVELS, LOG_SOURCE_REGEX_MAP, useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import {
@@ -21,8 +21,8 @@ import {
   useAttemptForJob,
   useJobInfoWithoutLogs,
 } from "core/api";
+import { LogLevel, LogSource } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -62,7 +62,6 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
 const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, connectionId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const job = useJobInfoWithoutLogs(jobId);
-  const showStructuredLogsUI = useExperiment("logs.structured-logs-ui");
 
   const [inputValue, setInputValue] = useState("");
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
@@ -74,16 +73,16 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
   );
 
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
+  const showStructuredLogs = attemptHasStructuredLogs(jobAttempt);
   const aggregatedAttemptStats = useAttemptCombinedStatsForJob(jobId, selectedAttemptId, {
     refetchInterval() {
       // if the attempt hasn't ended refetch every 2.5 seconds
       return jobAttempt.attempt.endedAt ? false : 2500;
     },
   });
-  const { logLines, origins } = useCleanLogs(jobAttempt);
-  const [selectedLogOrigins, setSelectedLogOrigins] = useState<JobLogOrigins[] | null>(
-    KNOWN_LOG_ORIGINS.map(({ key }) => key)
-  );
+  const { logLines, sources, levels } = useCleanLogs(jobAttempt);
+  const [selectedLogLevels, setSelectedLogLevels] = useState<LogLevel[]>(LOG_LEVELS);
+  const [selectedLogOrigins, setSelectedLogOrigins] = useState<LogSource[]>(LOG_SOURCE_REGEX_MAP.map(({ key }) => key));
   const firstMatchIndex = 0;
   const lastMatchIndex = matchingLines.length - 1;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -111,18 +110,26 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
     setInputValue("");
   };
 
-  const logOriginOptions = useMemo<Array<{ label: string; value: JobLogOrigins }>>(
+  const logLevelOptions = useMemo<Array<{ label: string; value: LogLevel }>>(
     () =>
-      KNOWN_LOG_ORIGINS.map(({ key }) => {
-        return { label: formatMessage({ id: `jobHistory.logs.logOrigin.${key}` }), value: key };
+      LOG_LEVELS.map((level) => {
+        return { label: formatMessage({ id: `jobHistory.logs.logLevel.${level}` }), value: level };
+      }),
+    [formatMessage]
+  );
+
+  const logOriginOptions = useMemo<Array<{ label: string; value: LogSource }>>(
+    () =>
+      LOG_SOURCE_REGEX_MAP.map(({ key }) => {
+        return { label: formatMessage({ id: `jobHistory.logs.logSource.${key}` }), value: key };
       }),
     [formatMessage]
   );
 
   const onSelectLogOrigin = useCallback(
-    (origin: JobLogOrigins) => {
+    (origin: LogSource) => {
       if (!selectedLogOrigins) {
-        setSelectedLogOrigins(origins.filter((o) => o !== origin));
+        setSelectedLogOrigins(sources.filter((o) => o !== origin));
       } else {
         setSelectedLogOrigins(
           selectedLogOrigins.includes(origin)
@@ -131,12 +138,20 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
         );
       }
     },
-    [origins, selectedLogOrigins]
+    [sources, selectedLogOrigins]
   );
 
   const filteredLogLines = useMemo(() => {
-    return logLines.filter((line) => selectedLogOrigins?.includes(line.domain ?? JobLogOrigins.Other) ?? true);
-  }, [logLines, selectedLogOrigins]);
+    return logLines.filter((line) => {
+      if (line.source && !selectedLogOrigins?.includes(line.source)) {
+        return false;
+      }
+      if (line.level && !selectedLogLevels?.includes(line.level)) {
+        return false;
+      }
+      return true;
+    });
+  }, [logLines, selectedLogOrigins, selectedLogLevels]);
 
   // Debounces changes to the search input so we don't recompute the matching lines on every keystroke
   useDebounce(
@@ -147,7 +162,7 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
       if (inputValue.length > 0) {
         const matchingLines: number[] = [];
         filteredLogLines.forEach((line, index) => {
-          return line.text.toLocaleLowerCase().includes(searchTermLowerCase) && matchingLines.push(index);
+          return line.original.toLocaleLowerCase().includes(searchTermLowerCase) && matchingLines.push(index);
         });
         setMatchingLines(matchingLines);
         if (matchingLines.length > 0) {
@@ -267,20 +282,30 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
               scrollToPreviousMatch={scrollToPreviousMatch}
             />
           </FlexItem>
-          {showStructuredLogsUI && (
-            <FlexItem>
-              <MultiListBox
-                selectedValues={selectedLogOrigins ?? origins}
-                options={logOriginOptions}
-                onSelectValues={(newOrigins) => setSelectedLogOrigins(newOrigins ?? origins)}
-                label="Log sources"
-              />
-            </FlexItem>
+          {showStructuredLogs && (
+            <>
+              <FlexItem>
+                <MultiListBox
+                  selectedValues={selectedLogOrigins ?? sources}
+                  options={logOriginOptions}
+                  onSelectValues={(newOrigins) => setSelectedLogOrigins(newOrigins ?? sources)}
+                  label={formatMessage({ id: "jobHistory.logs.logSources" })}
+                />
+              </FlexItem>
+              <FlexItem>
+                <MultiListBox
+                  selectedValues={selectedLogLevels ?? levels}
+                  options={logLevelOptions}
+                  onSelectValues={(newLevels) => setSelectedLogLevels(newLevels ?? levels)}
+                  label={formatMessage({ id: "jobHistory.logs.logLevels" })}
+                />
+              </FlexItem>
+            </>
           )}
         </FlexContainer>
       </Box>
 
-      {origins.length > 0 && (
+      {sources.length > 0 && (
         <Box px="md">
           <FlexContainer gap="lg">
             {logOriginOptions.map((option) => (
@@ -304,7 +329,7 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}
         hasFailure={!!jobAttempt.attempt.failureSummary}
-        attemptHasStructuredLogs={attemptHasStructuredLogs(jobAttempt)}
+        showStructuredLogs={showStructuredLogs}
       />
     </FlexContainer>
   );
