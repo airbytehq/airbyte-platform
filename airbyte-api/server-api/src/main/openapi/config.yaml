@@ -7509,6 +7509,12 @@ components:
           type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        actor_selection_info:
+          $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
+        actor_syncs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutState:
       type: string

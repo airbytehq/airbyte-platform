@@ -158,6 +158,8 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         expiresAt = getOffset(input.connectorRollout?.expiresAt),
         errorMsg = input.connectorRollout?.errorMsg,
         failedReason = input.connectorRollout?.failedReason,
+        actorSelectionInfo = input.actorSelectionInfo,
+        actorSyncs = input.actorSyncs,
       )
   }
 

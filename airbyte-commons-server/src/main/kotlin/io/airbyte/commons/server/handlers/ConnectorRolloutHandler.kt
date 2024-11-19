@@ -96,6 +96,8 @@ open class ConnectorRolloutHandler
         .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
         .errorMsg(connectorRollout.errorMsg)
         .failedReason(connectorRollout.failedReason)
+        .actorSelectionInfo(getPinnedActorInfo(connectorRollout.id))
+        .actorSyncs(getActorSyncInfo(connectorRollout.id))
     }
 
     @VisibleForTesting
@@ -591,7 +593,7 @@ open class ConnectorRolloutHandler
       targetPercent: Int,
     ): ActorSelectionInfo {
       val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(connectorRollout, targetPercent)
-      if (actorSelectionInfo.actorIdsToPin.isEmpty()) {
+      if (targetPercent > 0 && actorSelectionInfo.actorIdsToPin.isEmpty()) {
         throw ConnectorRolloutNotEnoughActorsProblem(
           ProblemMessageData().message(
             "No actors are eligible to be pinned for a progressive rollout.",
