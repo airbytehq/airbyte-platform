@@ -3,7 +3,9 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.RemoveServiceAccountFromPods
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -75,6 +77,13 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val conditionalServiceAccount =
+      if (featureFlagClient.boolVariation(RemoveServiceAccountFromPods, Workspace(workspaceId))) {
+        null
+      } else {
+        serviceAccount
+      }
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -84,7 +93,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
-      .withServiceAccount(serviceAccount)
+      .withServiceAccount(conditionalServiceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
@@ -136,6 +145,13 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val conditionalServiceAccount =
+      if (featureFlagClient.boolVariation(RemoveServiceAccountFromPods, Workspace(workspaceId))) {
+        null
+      } else {
+        serviceAccount
+      }
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -145,7 +161,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
-      .withServiceAccount(serviceAccount)
+      .withServiceAccount(conditionalServiceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)

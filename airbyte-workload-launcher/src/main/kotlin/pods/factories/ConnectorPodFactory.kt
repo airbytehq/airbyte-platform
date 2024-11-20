@@ -3,7 +3,9 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.RemoveServiceAccountFromPods
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
@@ -55,6 +57,13 @@ data class ConnectorPodFactory(
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
+    val conditionalServiceAccount =
+      if (featureFlagClient.boolVariation(RemoveServiceAccountFromPods, Workspace(workspaceId))) {
+        null
+      } else {
+        serviceAccount
+      }
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -64,7 +73,7 @@ data class ConnectorPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
-      .withServiceAccount(serviceAccount)
+      .withServiceAccount(conditionalServiceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withContainers(sidecar, main)

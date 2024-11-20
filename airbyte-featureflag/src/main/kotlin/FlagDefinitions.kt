@@ -182,6 +182,8 @@ object PlatformInitContainerImage : Temporary<String>(key = "platform.init-conta
 
 object StructuredLogs : Temporary<Boolean>(key = "platform.structured-logs", default = false)
 
+object RemoveServiceAccountFromPods : Temporary<Boolean>(key = "platform.remove-service-account-from-pods", default = false)
+
 object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = false)
 
 object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
