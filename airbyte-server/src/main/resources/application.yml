@@ -40,7 +40,10 @@ micronaut:
         channels:
           enabled: false
         queues:
-          enabled: true
+          # Turning this on causes compatibility issues with Micronaut ClientCredentialsClient,
+          # which is used to add auth tokens when using keycloak for internal service auth.
+          # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
+          enabled: false
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
