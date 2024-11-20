@@ -180,8 +180,6 @@ object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-conn
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
-object StructuredLogs : Temporary<Boolean>(key = "platform.structured-logs", default = false)
-
 object RemoveServiceAccountFromPods : Temporary<Boolean>(key = "platform.remove-service-account-from-pods", default = false)
 
 object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = false)

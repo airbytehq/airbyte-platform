@@ -67,6 +67,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogEvents;
 import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -129,7 +130,6 @@ import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -148,7 +148,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -284,11 +283,9 @@ class SchedulerHandlerTest {
   private OperationService operationService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
-  private WorkspaceHelper workspaceHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
-    featureFlagClient = new TestClient(Map.of());
     job = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -329,9 +326,9 @@ class SchedulerHandlerTest {
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     logClientManager = mock(LogClientManager.class);
     logUtils = mock(LogUtils.class);
-    workspaceHelper = mock(WorkspaceHelper.class);
 
-    jobConverter = spy(new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper));
+    when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
+    jobConverter = spy(new JobConverter(logClientManager, logUtils));
 
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);

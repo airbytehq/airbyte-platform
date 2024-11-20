@@ -39,8 +39,6 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.WorkflowStateConverter;
@@ -64,7 +62,6 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
@@ -114,14 +111,12 @@ public class JobHistoryHandler {
                            final AirbyteVersion airbyteVersion,
                            final TemporalClient temporalClient,
                            final FeatureFlagClient featureFlagClient,
-                           final LogClientManager logClientManager,
+                           final JobConverter jobConverter,
                            final JobService jobService,
-                           final ApiPojoConverters apiPojoConverters,
-                           final LogUtils logUtils,
-                           final WorkspaceHelper workspaceHelper) {
+                           final ApiPojoConverters apiPojoConverters) {
     this.featureFlagClient = featureFlagClient;
+    this.jobConverter = jobConverter;
     this.jobService = jobService;
-    jobConverter = new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
     this.connectionService = connectionService;
