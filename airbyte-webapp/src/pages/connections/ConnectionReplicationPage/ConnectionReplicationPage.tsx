@@ -239,7 +239,7 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <ScrollParent props={{ className: styles.scrollableContainer }}>
+      <ScrollParent>
         <Form<RelevantConnectionValues>
           defaultValues={initialValues}
           reinitializeDefaultValues

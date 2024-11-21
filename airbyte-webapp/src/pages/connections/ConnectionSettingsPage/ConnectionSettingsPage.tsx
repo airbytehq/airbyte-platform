@@ -13,9 +13,9 @@ import { ConnectionSyncContextProvider } from "components/connection/ConnectionS
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
-import { ScrollableContainer } from "components/ScrollableContainer";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
@@ -85,7 +85,7 @@ export const ConnectionSettingsPage: React.FC = () => {
     connection.geography !== Geography.auto;
 
   return (
-    <ScrollableContainer>
+    <ScrollParent>
       <FlexContainer direction="column">
         <Form<FormConnectionFormValues>
           trackDirtyChanges
@@ -140,6 +140,6 @@ export const ConnectionSettingsPage: React.FC = () => {
           )}
         </Disclosure>
       </FlexContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };

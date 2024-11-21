@@ -1,13 +1,12 @@
-import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
-import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -29,7 +28,6 @@ const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eve
 };
 
 export const ConnectionTimelinePage = () => {
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TIMELINE);
   const connection = useCurrentConnection();
   const { openModal } = useModalService();
@@ -61,7 +59,7 @@ export const ConnectionTimelinePage = () => {
   }
 
   return (
-    <ScrollableContainer ref={setScrollElement}>
+    <ScrollParent>
       <PageContainer centered>
         <ConnectionSyncContextProvider>
           <Box pb="xl">
@@ -84,12 +82,12 @@ export const ConnectionTimelinePage = () => {
               {filterValues.eventId ? (
                 <OneEventItem eventId={filterValues.eventId} connectionId={connection.connectionId} />
               ) : (
-                <ConnectionTimelineAllEventsList filterValues={filterValues} scrollElement={scrollElement} />
+                <ConnectionTimelineAllEventsList filterValues={filterValues} />
               )}
             </Card>
           </Box>
         </ConnectionSyncContextProvider>
       </PageContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };

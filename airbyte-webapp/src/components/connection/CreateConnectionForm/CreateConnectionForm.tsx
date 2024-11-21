@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { connectionsKeys, HttpError, HttpProblem, useCreateConnection, useDiscoverSchema } from "core/api";
@@ -23,7 +24,6 @@ import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "./SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { ScrollableContainer } from "../../ScrollableContainer";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -152,9 +152,9 @@ export const CreateConnectionForm: React.FC = () => {
 
   if (schemaErrorStatus) {
     return (
-      <ScrollableContainer>
+      <ScrollParent>
         <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />
-      </ScrollableContainer>
+      </ScrollParent>
     );
   }
   if (!schema) {

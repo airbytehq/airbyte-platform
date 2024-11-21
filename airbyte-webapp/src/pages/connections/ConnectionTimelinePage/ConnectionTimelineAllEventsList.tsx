@@ -1,4 +1,4 @@
-import { HTMLAttributes, Ref, forwardRef, useEffect, useMemo } from "react";
+import { HTMLAttributes, Ref, forwardRef, useContext, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
 import { InferType } from "yup";
@@ -9,6 +9,7 @@ import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { ScrollParentContext } from "components/ui/ScrollParent";
 
 import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
 import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
@@ -135,8 +136,8 @@ UlList.displayName = "UlList";
 
 export const ConnectionTimelineAllEventsList: React.FC<{
   filterValues: TimelineFilterValues;
-  scrollElement: HTMLDivElement | null;
-}> = ({ filterValues, scrollElement }) => {
+}> = ({ filterValues }) => {
+  const customScrollParent = useContext(ScrollParentContext);
   const connection = useCurrentConnection();
   const { status } = useConnectionStatus(connection.connectionId);
   const { data: syncProgressData } = useGetConnectionSyncProgress(
@@ -243,7 +244,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     <>
       <Virtuoso
         data={validatedEvents}
-        customScrollParent={scrollElement ?? undefined}
+        customScrollParent={customScrollParent ?? undefined}
         useWindowScroll
         endReached={handleEndReached}
         components={{

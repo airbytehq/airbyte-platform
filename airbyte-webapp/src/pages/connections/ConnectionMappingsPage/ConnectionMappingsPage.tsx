@@ -1,5 +1,5 @@
 import { PageContainer } from "components/PageContainer";
-import { ScrollableContainer } from "components/ScrollableContainer";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
 
@@ -10,7 +10,7 @@ export const ConnectionMappingsPage = () => {
   const existingMappings = [];
 
   return (
-    <ScrollableContainer>
+    <ScrollParent>
       <PageContainer centered>
         {existingMappings.length === 0 && (
           <>
@@ -23,6 +23,6 @@ export const ConnectionMappingsPage = () => {
           </>
         )}
       </PageContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };
