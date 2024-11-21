@@ -5,6 +5,10 @@ package io.airbyte.config.init
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
+import io.airbyte.featureflag.ANONYMOUS
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.RunDeclarativeSourcesUpdater
+import io.airbyte.featureflag.Workspace
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.justRun
@@ -19,6 +23,7 @@ internal class DeclarativeSourceUpdaterTest {
   private var mDeclarativeManifestImageVersionService: DeclarativeManifestImageVersionService = mockk()
   private var mActorDefinitionService: ActorDefinitionService = mockk()
   private var airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
+  private var featureFlagClient: FeatureFlagClient = mockk()
   private lateinit var declarativeSourceUpdater: DeclarativeSourceUpdater
 
   @BeforeEach
@@ -29,6 +34,7 @@ internal class DeclarativeSourceUpdaterTest {
         mDeclarativeManifestImageVersionService,
         mActorDefinitionService,
         airbyteCompatibleConnectorsValidator,
+        featureFlagClient,
       )
 
     justRun { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any()) }
@@ -38,6 +44,7 @@ internal class DeclarativeSourceUpdaterTest {
     } returns DeclarativeManifestImageVersion(0, "0.1.0", testSha)
     every { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) } returns 1
     every { airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
+    every { featureFlagClient.boolVariation(RunDeclarativeSourcesUpdater, Workspace(ANONYMOUS)) } returns true
   }
 
   @Test
@@ -137,6 +144,16 @@ internal class DeclarativeSourceUpdaterTest {
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
     verify(exactly = 0) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion1) }
     verify(exactly = 0) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.0", "1.0.1") }
+    confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
+  }
+
+  @Test
+  fun `feature flag should turn off behavior`() {
+    every { featureFlagClient.boolVariation(RunDeclarativeSourcesUpdater, Workspace(ANONYMOUS)) } returns false
+    declarativeSourceUpdater.apply()
+
+    verify(exactly = 0) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
+    verify(exactly = 0) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }
 }

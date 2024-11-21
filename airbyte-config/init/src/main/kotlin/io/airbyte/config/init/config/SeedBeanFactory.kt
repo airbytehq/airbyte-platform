@@ -12,6 +12,7 @@ import io.airbyte.config.specs.LocalDefinitionsProvider
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
@@ -68,12 +69,14 @@ class SeedBeanFactory {
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
+    featureFlagClient: FeatureFlagClient,
   ): DeclarativeSourceUpdater {
     return DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
+      featureFlagClient,
     )
   }
 
@@ -84,12 +87,14 @@ class SeedBeanFactory {
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
+    featureFlagClient: FeatureFlagClient,
   ): DeclarativeSourceUpdater {
     return DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
+      featureFlagClient,
     )
   }
 
