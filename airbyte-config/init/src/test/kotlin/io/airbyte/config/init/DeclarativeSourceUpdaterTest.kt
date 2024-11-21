@@ -58,7 +58,7 @@ internal class DeclarativeSourceUpdaterTest {
   }
 
   @Test
-  fun `new cdk versions are added to database and actor definitions are updated`() {
+  fun `new sdm versions are added to database and actor definitions are updated`() {
     val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
     val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
     val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1", testSha)
@@ -71,6 +71,22 @@ internal class DeclarativeSourceUpdaterTest {
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion1) }
     verify(exactly = 1) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.0", "1.0.1") }
+    confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
+  }
+
+  @Test
+  fun `versions are rolled back if the image in the db is no longer found in docker hub`() {
+    val olderVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
+    val laterVersion1 = DeclarativeManifestImageVersion(1, "1.0.1", testSha)
+    every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(laterVersion1)
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(olderVersion1)
+
+    declarativeSourceUpdater.apply()
+
+    verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(olderVersion1) }
+    verify(exactly = 1) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.1", "1.0.0") }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }
 
