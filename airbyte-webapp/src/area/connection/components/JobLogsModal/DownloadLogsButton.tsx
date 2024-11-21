@@ -18,7 +18,7 @@ export const DownloadLogsButton: React.FC<DownloadButtonProps> = ({ logLines, fi
   const { name } = useCurrentWorkspace();
 
   const downloadFileWithLogs = () => {
-    const file = new Blob([logLines.map((logLine) => logLine.text).join("\n")], {
+    const file = new Blob([logLines.map((log) => log.original).join("\n")], {
       type: FILE_TYPE_DOWNLOAD,
     });
     downloadFile(file, fileizeString(`${name}-${fileName}.txt`));

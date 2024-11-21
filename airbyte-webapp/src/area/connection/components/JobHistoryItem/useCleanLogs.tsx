@@ -91,7 +91,7 @@ export const useCleanLogs = (attempt: AttemptInfoRead): CleanedLogs => {
 // the log message. Structured logs from the platform (using logback) do not have this issue.
 const beginsWithLogLevel = new RegExp(`^(${LOG_LEVELS.map((level) => level.toUpperCase()).join("|")})\\s*`);
 
-function formatLogEvent(event: LogEvent): string {
+export function formatLogEvent(event: LogEvent): string {
   return `${formatLogEventTimestamp(event.timestamp)} ${event.level} ${event.message}`;
 }
 

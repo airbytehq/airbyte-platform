@@ -7,6 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 
+import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import {
   attemptHasFormattedLogs,
   attemptHasStructuredLogs,
@@ -151,7 +152,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
                     .flatMap((info, index) => [
                       `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
                       ...(attemptHasFormattedLogs(info) ? info.logs.logLines : []),
-                      ...(attemptHasStructuredLogs(info) ? info.logs.events.map((event) => JSON.stringify(event)) : []),
+                      ...(attemptHasStructuredLogs(info) ? info.logs.events.map((event) => formatLogEvent(event)) : []),
                       `\n\n\n`,
                     ])
                     .join("\n"),
