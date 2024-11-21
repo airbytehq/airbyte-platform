@@ -325,7 +325,7 @@ airbyte:
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
     client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
-    client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     realm: ${KEYCLOAK_REALM:master}
     internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
