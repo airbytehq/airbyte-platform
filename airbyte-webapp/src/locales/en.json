@@ -1914,6 +1914,7 @@
   "jobHistory.logs.previousMatchLabel": "Jump to previous match",
   "jobHistory.logs.downloadLogs": "Download logs",
   "jobHistory.logs.attemptLabel": "Attempt {attemptNumber} of {totalAttempts}",
+  "jobHistory.logs.moreDetails": "More details",
   "jobHistory.logs.logDownloadPending": "Downloading logs for job {jobId}…",
   "jobHistory.logs.logDownloadFailed": "Failed to download logs for job {jobId}.",
   "jobHistory.logs.searchPlaceholder": "Search logs",
