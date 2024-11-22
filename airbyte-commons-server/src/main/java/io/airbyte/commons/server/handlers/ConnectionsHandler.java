@@ -175,9 +175,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ *
+ * @deprecated New connection-related functionality should be added to the ConnectionService
  */
 @Singleton
 @SuppressWarnings("PMD.PreserveStackTrace")
+@Deprecated
 public class ConnectionsHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionsHandler.class);

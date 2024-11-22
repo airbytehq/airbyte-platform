@@ -12,6 +12,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OP
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
@@ -458,18 +459,18 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * Disable a list of connections by setting their status to inactive.
    *
    * @param connectionIds list of connection ids to disable
+   * @return set of connection ids that were updated
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
-    database.transaction(ctx -> {
-      ctx.update(CONNECTION)
-          .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
-          .set(CONNECTION.STATUS, StatusType.inactive)
-          .where(CONNECTION.ID.in(connectionIds))
-          .execute();
-      return null;
-    });
+  public Set<UUID> disableConnectionsById(final List<UUID> connectionIds) throws IOException {
+    return database.transaction(ctx -> ctx.update(CONNECTION)
+        .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
+        .set(CONNECTION.STATUS, StatusType.inactive)
+        .where(CONNECTION.ID.in(connectionIds)
+            .and(CONNECTION.STATUS.ne(StatusType.inactive)))
+        .returning(CONNECTION.ID)
+        .fetchSet(CONNECTION.ID));
   }
 
   @Override
@@ -478,6 +479,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .from(CONNECTION)
         .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
         .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .fetchInto(UUID.class));
+  }
+
+  @Override
+  public List<UUID> listConnectionIdsForOrganization(final UUID organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR.WORKSPACE_ID))
+        .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
         .fetchInto(UUID.class));
   }
 

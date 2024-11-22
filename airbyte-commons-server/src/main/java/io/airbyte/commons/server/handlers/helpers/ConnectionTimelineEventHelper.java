@@ -41,6 +41,7 @@ import io.airbyte.data.services.shared.FinalStatusEvent.FinalStatus;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -297,7 +298,7 @@ public class ConnectionTimelineEventHelper {
 
   public void logStatusChangedEventInConnectionTimeline(final UUID connectionId,
                                                         final ConnectionStatus status,
-                                                        final String updateReason,
+                                                        @Nullable final String updateReason,
                                                         final boolean autoUpdate) {
     try {
       if (status != null) {

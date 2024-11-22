@@ -17,7 +17,7 @@ import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
 import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
-import io.airbyte.commons.server.services.AutoDisableConnectionService
+import io.airbyte.commons.server.services.ConnectionService
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.server.apis.ConnectionApiController
 import io.airbyte.server.assertStatus
@@ -58,7 +58,7 @@ internal class ConnectionApiControllerTest {
   lateinit var operationsHandler: OperationsHandler
 
   @Inject
-  lateinit var autoDisableConnectionService: AutoDisableConnectionService
+  lateinit var connectionService: ConnectionService
 
   @MockBean(SchedulerHandler::class)
   fun schedulerHandler(): SchedulerHandler = mockk()
@@ -75,21 +75,20 @@ internal class ConnectionApiControllerTest {
   @MockBean(OperationsHandler::class)
   fun operationsHandler(): OperationsHandler = mockk()
 
-  @MockBean(AutoDisableConnectionService::class)
-  fun autoDisableConnectionService(): AutoDisableConnectionService = mockk()
+  @MockBean(ConnectionService::class)
+  fun connectionService(): ConnectionService = mockk()
 
   @Inject
   @Client("/")
   lateinit var client: HttpClient
 
-  // Disabled because mocking the AutoDisableConnectionService is not working as expected. Likely
-  // due to some Java/Kotlin/Mockito interaction that isn't worth the headache. This test is not
-  // covering critical functionality, it basically just ensures that the controller path is correct,
-  // which is unlikely to break.
+  // Disabled because this test somehow causes a failure in the `testConnectionStreamReset` test
+  // below with the following error:
+  // java.lang.IllegalStateException: No lock present for object: ConnectionService(#7)
   @Disabled
   @Test
-  fun testAutoDisableConnection() {
-    every { autoDisableConnectionService.autoDisableConnection(any()) } returns true andThenThrows
+  fun testWarnOrDisableConnection() {
+    every { connectionService.warnOrDisableForConsecutiveFailures(any<UUID>(), any()) } returns true andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/connections/auto_disable"
