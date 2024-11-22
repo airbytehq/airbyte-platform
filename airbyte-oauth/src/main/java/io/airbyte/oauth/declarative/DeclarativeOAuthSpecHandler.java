@@ -153,6 +153,36 @@ public class DeclarativeOAuthSpecHandler {
   }
 
   /**
+   * Retrieves the authorization code key from the provided user configuration.
+   *
+   * @param userConfig the JSON node containing user configuration details
+   * @return the authorization code key as a string
+   */
+  protected final String getAuthCodeKey(final JsonNode userConfig) {
+    return userConfig.path(AUTH_CODE_KEY).asText(AUTH_CODE_VALUE);
+  }
+
+  /**
+   * Retrieves the client ID key from the provided user configuration.
+   *
+   * @param userConfig the JSON node containing the user configuration
+   * @return the client ID key as a string, or a default value if the key is not present
+   */
+  protected final String getClientIdKey(final JsonNode userConfig) {
+    return userConfig.path(CLIENT_ID_KEY).asText(CLIENT_ID_VALUE);
+  }
+
+  /**
+   * Retrieves the client secret key from the provided user configuration.
+   *
+   * @param userConfig the JSON node containing the user configuration
+   * @return the client secret key as a string, or a default value if the key is not present
+   */
+  protected final String getClientSecretKey(final JsonNode userConfig) {
+    return userConfig.path(CLIENT_SECRET_KEY).asText(CLIENT_SECRET_VALUE);
+  }
+
+  /**
    * Generates a configurable state string based on the provided JSON configuration.
    *
    * @param stateConfig the JSON node containing the state configuration with optional "min" and "max"
