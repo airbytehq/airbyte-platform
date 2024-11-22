@@ -143,7 +143,6 @@ class ReplicationPodFactoryTest {
           ),
         volumeFactory = defaultVolumeFactory,
         workloadSecurityContextProvider = workloadSecurityContextProvider,
-        serviceAccount = "test-sa",
         imagePullSecrets = emptyList(),
         tolerations = emptyList(),
       )
