@@ -17,4 +17,6 @@ data class ConnectorRolloutActivityInputStart(
   var connectorRollout: ConnectorRollout? = null,
   var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
   var actorSyncs: List<ConnectorRolloutActorSyncInfo>? = null,
+  var initialRolloutPct: Int? = null,
+  var finalTargetRolloutPct: Int? = null,
 )

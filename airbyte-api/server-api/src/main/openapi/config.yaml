@@ -7827,6 +7827,16 @@ components:
           format: uuid
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        initial_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        final_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
 
     ConnectorRolloutManualRolloutRequestBody:
       type: object

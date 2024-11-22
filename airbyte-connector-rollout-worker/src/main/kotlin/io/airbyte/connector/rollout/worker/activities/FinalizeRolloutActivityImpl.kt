@@ -9,7 +9,6 @@ import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutFinalizeResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutStateTerminal
-import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
@@ -44,7 +43,7 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
       ConnectorRolloutFinalizeRequestBody(
         input.rolloutId,
         state,
-        ConnectorRolloutStrategy.MANUAL,
+        getRolloutStrategyFromInput(input.rolloutStrategy),
         errorMsg,
         failureReason,
         input.updatedBy,

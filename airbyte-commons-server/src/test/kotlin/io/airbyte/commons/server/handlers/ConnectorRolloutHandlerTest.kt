@@ -406,8 +406,10 @@ internal class ConnectorRolloutHandlerTest {
 
   @ParameterizedTest
   @MethodSource("invalidStartStates")
-  fun `test getAndValidateStartRequest with invalid state throws exception`(state: ConnectorEnumRolloutState) {
+  fun `test getAndValidateStartRequest adds new information to existing rollout`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
+    val runId = UUID.randomUUID().toString()
+    val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
         this.state = state
@@ -415,10 +417,16 @@ internal class ConnectorRolloutHandlerTest {
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns connectorRollout
 
-    assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getAndValidateStartRequest(createMockConnectorRolloutStartRequestBody())
-    }
+    val result =
+      connectorRolloutHandler.getAndValidateStartRequest(
+        ConnectorRolloutStartRequestBody()
+          .id(rolloutId)
+          .workflowRunId(runId)
+          .rolloutStrategy(rolloutStrategy),
+      )
 
+    assertEquals(connectorRollout.workflowRunId, result.workflowRunId)
+    assertEquals(rolloutStrategy.toString(), result.rolloutStrategy.toString())
     verify {
       connectorRolloutService.getConnectorRollout(any())
     }
@@ -853,6 +861,8 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
       every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+      every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+      every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
     every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
 
@@ -863,6 +873,8 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
         connectorRolloutClient.startRollout(any())
+        rolloutActorFinder.getActorSelectionInfo(any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
       }
       connectorRolloutClient.finalizeRollout(any())
     }
@@ -893,6 +905,8 @@ internal class ConnectorRolloutHandlerTest {
         dockerImageTag,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
 
     assertEquals(connectorRollout.id, result.id)
@@ -928,6 +942,8 @@ internal class ConnectorRolloutHandlerTest {
         dockerImageTag,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
   }
@@ -953,6 +969,8 @@ internal class ConnectorRolloutHandlerTest {
       DOCKER_IMAGE_TAG,
       UPDATED_BY,
       ConnectorRolloutStrategy.MANUAL,
+      null,
+      null,
     )
 
     verifyAll {
@@ -974,6 +992,8 @@ internal class ConnectorRolloutHandlerTest {
         DOCKER_IMAGE_TAG,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
 
@@ -994,6 +1014,8 @@ internal class ConnectorRolloutHandlerTest {
         DOCKER_IMAGE_TAG,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
 

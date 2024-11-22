@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutStartResponse
-import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -37,7 +36,7 @@ class StartRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) :
       ConnectorRolloutStartRequestBody(
         input.rolloutId,
         workflowRunId,
-        ConnectorRolloutStrategy.MANUAL,
+        getRolloutStrategyFromInput(input.rolloutStrategy),
         input.updatedBy,
       )
 

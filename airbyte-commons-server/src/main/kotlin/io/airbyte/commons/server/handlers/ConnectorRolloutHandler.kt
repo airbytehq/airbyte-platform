@@ -132,6 +132,8 @@ open class ConnectorRolloutHandler
       dockerImageTag: String,
       updatedBy: UUID,
       rolloutStrategy: ConnectorRolloutStrategy,
+      initialRolloutPct: Int?,
+      finalTargetRolloutPct: Int?,
     ): ConnectorRollout {
       val actorDefinitionVersion =
         actorDefinitionService.getActorDefinitionVersion(
@@ -177,6 +179,8 @@ open class ConnectorRolloutHandler
             .withState(ConnectorEnumRolloutState.INITIALIZED)
             .withHasBreakingChanges(false)
             .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
+            .withInitialRolloutPct(initialRolloutPct?.toLong())
+            .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
         connectorRolloutService.writeConnectorRollout(connectorRollout)
         return connectorRollout
       }
@@ -208,19 +212,26 @@ open class ConnectorRolloutHandler
 
     @VisibleForTesting
     open fun getAndValidateStartRequest(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRollout {
-      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
-      if (connectorRollout.state != ConnectorEnumRolloutState.INITIALIZED) {
-        throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message(
-            "Connector rollout must be in INITIALIZED state to start the rollout, but was in state " + connectorRollout.state.toString(),
-          ),
-        )
+      // We expect to hit this code path under 2 different circumstances:
+      // 1. When a rollout is being started for the first time
+      // 2. When a rollout's Temporal workflow is being reset, e.g. for a bug fix.
+      // In case 1, the rollout will be in INITIALIZED state, and we'll change the state to WORKFLOW_STARTED.
+      // In case 2, the rollout may be in any state, and we only want to change it to WORKFLOW_STARTED if it was INITIALIZED.
+      // However, in case 2 the workflow will have a new run ID, so we still want to update that.
+      var connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
+      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
+        connectorRollout =
+          connectorRollout
+            .withState(ConnectorEnumRolloutState.WORKFLOW_STARTED)
+            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutStart.rolloutStrategy.toString()))
       }
+      // Always update the workflow run ID if provided; if the workflow was restarted it will have changed
+      connectorRollout =
+        connectorRollout
+          .withWorkflowRunId(connectorRolloutStart.workflowRunId)
+          // Also include the version ID, for cases where the rollout wasn't automatically added to the rollouts table (i.e. for testing)
+          .withInitialVersionId(connectorRollout.initialVersionId)
       return connectorRollout
-        .withWorkflowRunId(connectorRolloutStart.workflowRunId)
-        .withInitialVersionId(connectorRollout.initialVersionId)
-        .withState(ConnectorEnumRolloutState.WORKFLOW_STARTED)
-        .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutStart.rolloutStrategy.toString()))
     }
 
     @VisibleForTesting
@@ -465,6 +476,8 @@ open class ConnectorRolloutHandler
           connectorRolloutWorkflowStart.dockerImageTag,
           connectorRolloutWorkflowStart.updatedBy,
           connectorRolloutWorkflowStart.rolloutStrategy,
+          connectorRolloutWorkflowStart.initialRolloutPct,
+          connectorRolloutWorkflowStart.finalTargetRolloutPct,
         )
       try {
         connectorRolloutClient.startRollout(
@@ -477,6 +490,10 @@ open class ConnectorRolloutHandler
             rollout.rolloutStrategy,
             actorDefinitionService.getActorDefinitionVersion(rollout.initialVersionId).dockerImageTag,
             rollout,
+            getPinnedActorInfo(rollout.id),
+            getActorSyncInfo(rollout.id),
+            rollout.initialRolloutPct?.toInt(),
+            rollout.finalTargetRolloutPct?.toInt(),
           ),
         )
       } catch (e: WorkflowUpdateException) {
@@ -502,6 +519,8 @@ open class ConnectorRolloutHandler
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
               actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
               connectorRollout,
+              getPinnedActorInfo(connectorRollout.id),
+              getActorSyncInfo(connectorRollout.id),
             ),
           )
         } catch (e: WorkflowUpdateException) {
@@ -532,6 +551,7 @@ open class ConnectorRolloutHandler
     ): ConnectorRolloutManualFinalizeResponse {
       // Start a workflow if one doesn't exist
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutFinalize.id)
+
       if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
         try {
           connectorRolloutClient.startRollout(
@@ -544,6 +564,8 @@ open class ConnectorRolloutHandler
               getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
               actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
               connectorRollout,
+              getPinnedActorInfo(connectorRollout.id),
+              getActorSyncInfo(connectorRollout.id),
             ),
           )
         } catch (e: WorkflowUpdateException) {
