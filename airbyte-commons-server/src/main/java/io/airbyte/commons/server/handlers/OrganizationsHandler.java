@@ -103,15 +103,6 @@ public class OrganizationsHandler {
       organization.setName(organizationUpdateRequestBody.getOrganizationName());
       hasChanged = true;
     }
-    if (organizationUpdateRequestBody.getPba() != null && !organization.getPba().equals(organizationUpdateRequestBody.getPba())) {
-      organization.setPba(organizationUpdateRequestBody.getPba());
-      hasChanged = true;
-    }
-    if (organizationUpdateRequestBody.getOrgLevelBilling() != null && !organization.getOrgLevelBilling()
-        .equals(organizationUpdateRequestBody.getOrgLevelBilling())) {
-      organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
-      hasChanged = true;
-    }
     if (organizationUpdateRequestBody.getEmail() != null && !organizationUpdateRequestBody.getEmail()
         .equals(organization.getEmail())) {
       organization.setEmail(organizationUpdateRequestBody.getEmail());

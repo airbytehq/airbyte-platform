@@ -653,10 +653,6 @@ components:
       properties:
         authUserId:
           type: string
-    UserPaymentAccountId:
-      type: string
-      description: UserPaymentAccount ID from the Cloud database
-      format: uuid
     UserRead:
       type: object
       required:
@@ -926,40 +922,6 @@ components:
             If not set or false, the configuration is active. If true, then this
             configuration is permanently off.
           type: boolean
-        remainingCredits:
-          type: number
-          format: double
-        creditStatus:
-          description:
-            Status of the workspace's credit balance, to determine if sync jobs
-            can be launched for this workspace.
-          type: string
-          enum:
-            - positive
-            - negative_within_grace_period
-            - negative_beyond_grace_period
-            - negative_max_threshold
-        lastCreditPurchaseIncrementTimestamp:
-          description: The timestamp of the last time that credits were incremented for this workspace as a result of a credit purchase. Format is in unix epoch time milliseconds.
-          type: integer
-          format: int64
-        workspaceTrialStatus:
-          description: Status of the workspace trial, depending on trial expiry date and credit purchase history
-          type: string
-          enum:
-            - pre_trial
-            - in_trial
-            - out_of_trial
-            - credit_purchased
-        trialExpiryTimestamp:
-          description: The timestamp of when the workspace trial's expires. Format is in unix epoch time milliseconds. Unset if workspace is out of trial.
-          type: integer
-          format: int64
-        userPaymentAccountId:
-          $ref: "#/components/schemas/UserPaymentAccountId"
-        enrolledInFreeConnectorProgram:
-          type: boolean
-          description: Whether the workspace is enrolled in the Free Connector Program
     CloudWorkspaceLightRead:
       type: object
       required:
