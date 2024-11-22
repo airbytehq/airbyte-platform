@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.config.JobConfig.ConfigType.REFRESH;
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
@@ -183,7 +184,7 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric, final Job job, final int attemptNumber) throws IOException {
-    emitAttemptEvent(metric, job, attemptNumber, Collections.emptyList());
+    emitAttemptEvent(metric, job, attemptNumber, imageAttrsFromJob(job));
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric,
@@ -245,13 +246,32 @@ public class JobCreationAndStatusUpdateHelper {
         .map(MetricTags::getFailureType)
         .findFirst());
 
-    final List<MetricAttribute> additionalAttributes = List.of(
-        new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()),
-        new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)),
-        new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)),
-        new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    final List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    additionalAttributes.addAll(imageAttrsFromJob(job));
 
     emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
+  }
+
+  private List<MetricAttribute> imageAttrsFromJob(final Job job) {
+    final List<MetricAttribute> attrs = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var config = job.getConfig().getSync();
+      attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var config = job.getConfig().getRefresh();
+      attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+    } else if (job.getConfigType() == RESET_CONNECTION) {
+      final var config = job.getConfig().getResetConnection();
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+    }
+
+    return attrs;
   }
 
   @VisibleForTesting
@@ -280,31 +300,27 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var refresh = job.getConfig().getRefresh();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
     }
+    additionalAttributes.addAll(imageAttrsFromJob(job));
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
 
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobFailureRequest input) throws IOException {
-    List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    final List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
+      additionalAttributes.addAll(imageAttrsFromJob(job));
       job.getLastAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(attemptFailureSummary -> {
             for (FailureReason failureReason : attemptFailureSummary.getFailures()) {
