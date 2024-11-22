@@ -37,9 +37,8 @@ image.airbyte-base-java-python-image: buildx.start
 			--push \
 			-f $(IMAGES_DIR)/airbyte-base-java-python-image/Dockerfile . ; \
 	else \
-		docker build \
+		docker build -t airbyte/airbyte-base-java-python-image:$(VERSION) \
 			--build-arg JDK_IMAGE=$(BASE_JAVA_IMAGE) \
-			-t airbyte/airbyte-base-java-python-image:$(VERSION) \
 			-f $(IMAGES_DIR)/airbyte-base-java-python-image/Dockerfile . ; \
 	fi
 
@@ -52,9 +51,8 @@ image.airbyte-base-java-worker-image: buildx.start
 			--push \
 			-f $(IMAGES_DIR)/airbyte-base-java-worker-image/Dockerfile . ; \
 	else \
-		docker build \
+		docker build -t airbyte/airbyte-base-java-worker-image:$(VERSION) \
 			--build-arg JDK_IMAGE=$(BASE_JAVA_IMAGE) \
-			-t airbyte/airbyte-base-java-worker-image:$(VERSION) \
 			-f $(IMAGES_DIR)/airbyte-base-java-worker-image/Dockerfile . ; \
 	fi
 
@@ -67,9 +65,8 @@ image.airbyte-busybox: buildx.start
 			--push \
 			-f $(IMAGES_DIR)/airbyte-busybox/Dockerfile . ; \
 	else \
-		docker build \
+		docker build -t airbyte/busybox:$(VERSION) \
 			--build-arg BASE_BUSYBOX_IMAGE_VERSION=$(BASE_BUSYBOX_IMAGE_VERSION) \
-			-t airbyte/busybox:$(VERSION) \
 			-f $(IMAGES_DIR)/airbyte-busybox/Dockerfile . ; \
 	fi
 
@@ -82,8 +79,23 @@ image.airbyte-mc: buildx.start
 			--push \
 			-f $(IMAGES_DIR)/airbyte-mc/Dockerfile . ; \
 	else \
-		docker build \
+		docker build -t airbyte/mc:$(VERSION) \
 			--build-arg ALPINE_IMAGE_VERSION=$(ALPINE_IMAGE_VERSION) \
-			-t airbyte/mc:$(VERSION) \
 			-f $(IMAGES_DIR)/airbyte-mc/Dockerfile . ; \
+	fi
+
+image.airbyte-nginx: ## Build the airbyte/nginx image
+image.airbyte-nginx: buildx.start
+	@if [ "$(PUBLISH)" = "true" ]; then \
+		docker buildx build -t airbyte/nginx-unprivileged:$(VERSION) \
+			--build-arg UID="1000" \
+			--build-arg GID="1000" \
+			--platform linux/amd64,linux/arm64 \
+			--push \
+			-f $(IMAGES_DIR)/airbyte-nginx/Dockerfile . ; \
+	else \
+		docker build -t airbyte/nginx-unprivileged:$(VERSION) \
+			--build-arg UID="1000" \
+			--build-arg GID="1000" \
+			-f $(IMAGES_DIR)/airbyte-nginx/Dockerfile . ; \
 	fi
