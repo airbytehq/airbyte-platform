@@ -108,9 +108,15 @@ class AutoDisableConnectionServiceTest {
 
     @Test
     fun `should disable connection if disable thresholds are met`() {
-      val failedJob =
+      val firstJob =
         mockJob(
           id = jobId1,
+          status = JobStatus.FAILED,
+          createdAt = timestamp.minus(Duration.ofDays(32)).epochSecond,
+        )
+      val failedJob =
+        mockJob(
+          id = jobId2,
           status = JobStatus.FAILED,
           createdAt = timestamp.minus(Duration.ofDays(31)).epochSecond,
         )
@@ -120,9 +126,9 @@ class AutoDisableConnectionServiceTest {
           every { it.connectionId } returns connectionId
         }
 
-      every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(failedJob)
+      every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(firstJob)
       every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(failedJob)
-      every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), jobId1, JobStatus.FAILED) } returns null
+      every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), jobId2, JobStatus.FAILED) } returns null
       every { jobService.countFailedJobsSinceLastSuccessForScope(connectionId.toString()) } returns maxJobsBeforeDisable
       every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
       every { connectionService.getStandardSync(connectionId) } returns sync

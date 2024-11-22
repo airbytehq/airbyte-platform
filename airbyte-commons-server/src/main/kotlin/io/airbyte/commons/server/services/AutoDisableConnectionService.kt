@@ -74,7 +74,7 @@ open class AutoDisableConnectionService(
     val daysWithoutSuccess = getDaysBetweenTimestamps(daysWithoutSuccessWindowStart, timestamp)
 
     if (shouldDisableConnection(numConsecutiveFailedJobs, daysWithoutSuccess)) {
-      disableConnection(standardSync, firstJob)
+      disableConnection(standardSync, mostRecentJob)
       return true
     }
 
