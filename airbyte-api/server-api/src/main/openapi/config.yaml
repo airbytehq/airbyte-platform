@@ -7313,8 +7313,6 @@ components:
       required:
         - value
         - config_key
-        - resource_id
-        - resource_type
         - scope_id
         - scope_type
         - origin
@@ -7355,8 +7353,6 @@ components:
       type: object
       required:
         - config_key
-        - resource_id
-        - resource_type
         - scope_id
         - scope_type
       properties:

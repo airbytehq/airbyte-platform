@@ -66,6 +66,17 @@ interface ScopedConfigurationService {
   ): List<ScopedConfiguration>
 
   /**
+   * Get a scoped configuration by key and scope map.
+   *
+   * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.
+   * Scopes included in the map must be defined as a supported scope in the key definition (see ScopedConfigurationKey).
+   */
+  fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
+  ): List<ScopedConfiguration>
+
+  /**
    * Get scoped configurations for multiple key, resource and scope map (in batch).
    *
    * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.

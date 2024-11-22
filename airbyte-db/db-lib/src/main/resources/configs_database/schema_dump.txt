@@ -327,8 +327,8 @@ create table "public"."schema_management" (
 create table "public"."scoped_configuration" (
   "id" uuid not null,
   "key" varchar(256) not null,
-  "resource_type" "public"."config_resource_type" not null,
-  "resource_id" uuid not null,
+  "resource_type" "public"."config_resource_type",
+  "resource_id" uuid,
   "scope_type" "public"."config_scope_type" not null,
   "scope_id" uuid not null,
   "value" varchar(256) not null,

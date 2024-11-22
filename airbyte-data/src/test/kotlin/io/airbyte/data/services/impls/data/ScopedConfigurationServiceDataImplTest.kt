@@ -183,6 +183,56 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `test get configuration by only scope and key object`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE),
+      )
+
+    val configId = UUID.randomUUID()
+    val scopeId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = configId,
+        key = configKey.key,
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = scopeId,
+        resourceType = null,
+        resourceId = null,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    every {
+      scopedConfigurationRepository.findByKeyAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigScopeType.workspace,
+        scopeId,
+      )
+    } returns listOf(config)
+
+    val retrievedConfig =
+      scopedConfigurationService.getScopedConfigurations(
+        configKey,
+        mapOf(ModelConfigScopeType.WORKSPACE to scopeId),
+      )
+
+    assert(retrievedConfig == listOf(config.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByKeyAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigScopeType.workspace,
+        scopeId,
+      )
+    }
+  }
+
+  @Test
   fun `test get configurations by scope map and key object`() {
     val configKey =
       ScopedConfigurationKey(
