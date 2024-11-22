@@ -44,45 +44,16 @@ spec:
       image: {{ include "imageUrl" (list .Values.airbyteBootloader.image $) }}
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
       env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-              key: AIRBYTE_VERSION
-        - name: RUN_DATABASE_MIGRATION_ON_STARTUP
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-              key: RUN_DATABASE_MIGRATION_ON_STARTUP
-
-        # Airbyte auth secret keys and values
-        {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
-        - name: AB_AUTH_SECRET_CREATION_ENABLED
-          value: "true"
-        - name: AB_KUBERNETES_SECRET_NAME
-          value: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-        - name: AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY
-          value: {{ .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" | quote }}
-        - name: AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY
-          value: {{ .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" | quote }}
-        - name: AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY
-          value: {{ .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" | quote }}
-        - name: AB_JWT_SIGNATURE_SECRET_KEY
-          value: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
-        - name: AB_INSTANCE_ADMIN_PASSWORD
-          value: {{ .Values.global.auth.instanceAdmin.password | quote }}
-        - name: AB_INSTANCE_ADMIN_CLIENT_ID
-          value: {{ .Values.global.auth.instanceAdmin.clientId | quote }}
-        - name: AB_INSTANCE_ADMIN_CLIENT_SECRET
-          value: {{ .Values.global.auth.instanceAdmin.clientSecret | quote }}
-        - name: AB_JWT_SIGNATURE_SECRET
-          value: {{ .Values.global.auth.jwtSignatureSecret | quote }}
-        {{- end }}
-
+        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
 
+        {{- if (eq .Values.global.edition "community") }}
+        {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
+        {{- else if (eq .Values.global.edition "enterprise") }}
+        {{- include "airbyte.auth.envs" . | nindent 8 }}
+        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
+
         # Values from secret
         {{- if .Values.airbyteBootloader.secrets }}
         {{- range $k, $v := .Values.airbyteBootloader.secrets }}

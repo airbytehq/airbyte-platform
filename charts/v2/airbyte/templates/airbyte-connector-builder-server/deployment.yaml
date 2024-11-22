@@ -59,42 +59,13 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorBuilderServer.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
-        {{- if eq .Values.global.deploymentMode "oss" }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: MICROMETER_METRICS_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_ENABLED
-        - name: MICROMETER_METRICS_STATSD_FLAVOR
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STATSD_FLAVOR
-        - name: SEGMENT_WRITE_KEY
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: SEGMENT_WRITE_KEY
-        - name: STATSD_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_HOST
-        - name: STATSD_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_PORT
-        - name: TRACKING_STRATEGY
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TRACKING_STRATEGY
+
+        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.tracking.envs" . | nindent 8 }}
+
+        {{- if (eq .Values.global.edition "enterprise") }}
+        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret

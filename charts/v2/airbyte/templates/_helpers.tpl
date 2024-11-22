@@ -48,6 +48,7 @@ Selector labels
 {{- define "airbyte.selectorLabels" -}}
 {{ $tplPathParts := split "/" $.Template.Name }}
 {{- if gt (len $tplPathParts) 3 }}
+airbyte: {{ trimPrefix "airbyte-" $tplPathParts._2 }}
 app.kubernetes.io/name: {{ trimPrefix "airbyte-" $tplPathParts._2 }}
 {{- else }}
 app.kubernetes.io/name: {{ .Chart.Name }}

@@ -56,43 +56,12 @@ spec:
         image: {{ include "imageUrl" (list .Values.webapp.image $) }}
         imagePullPolicy: "{{ .Values.webapp.image.pullPolicy }}"
         env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
-        - name: TRACKING_STRATEGY
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TRACKING_STRATEGY
-        - name: AIRBYTE_SERVER_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_SERVER_HOST
-        - name: KEYCLOAK_INTERNAL_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: KEYCLOAK_INTERNAL_HOST
-        - name: CONNECTOR_BUILDER_API_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONNECTOR_BUILDER_API_HOST
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: API_URL
-        - name: CONNECTOR_BUILDER_API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONNECTOR_BUILDER_API_URL
-        {{- end }}
+
+        {{ include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{ include "airbyte.webapp.envs" . | nindent 8 }}
+        {{ include "airbyte.tracking.envs" . | nindent 8 }}
+        {{ include "airbyte.keycloak.internalHost.env" . | nindent 8 }}
+
         # Values from secret
         {{- if .Values.webapp.secrets }}
         {{- range $k, $v := .Values.webapp.secrets }}
@@ -105,8 +74,8 @@ spec:
         {{- end }}
 
         # Values from env
-        {{- if or .Values.webapp.envVars .Values.global.env_vars }}
-        {{- range $k, $v := mergeOverwrite .Values.webapp.envVars .Values.global.env_vars }}
+        {{- if or .Values.webapp.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.webapp.env_vars .Values.global.env_vars }}
         - name: {{ $k }}
           value: {{ $v | quote }}
         {{- end }}

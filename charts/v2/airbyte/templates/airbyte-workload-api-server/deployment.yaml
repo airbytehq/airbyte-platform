@@ -62,55 +62,15 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadApiServer.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
-        {{- if eq .Values.global.deploymentMode "oss" }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: INTERNAL_API_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: INTERNAL_API_HOST
-        - name: AIRBYTE_API_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_API_HOST
-        - name: MICROMETER_METRICS_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_ENABLED
-        - name: MICROMETER_METRICS_STATSD_FLAVOR
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STATSD_FLAVOR
-        - name: STATSD_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_HOST
-        - name: STATSD_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_PORT
-        - name: TEMPORAL_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TEMPORAL_HOST
-        - name: WORKLOAD_API_BEARER_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.workloadApiServer.workloadApi.bearerTokenSecretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.workloadApiServer.workloadApi.bearerTokenSecretKey | default "WORKLOAD_API_BEARER_TOKEN" }}
-        # Database
-        {{- include "airbyte.database.envs" . | nindent 8 }}
 
+        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.envs" . | nindent 8 }}
+        {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
+
+        {{- if (eq .Values.global.edition "enterprise") }}
+        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret

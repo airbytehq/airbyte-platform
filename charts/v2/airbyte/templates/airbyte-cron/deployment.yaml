@@ -1,3 +1,4 @@
+{{- if .Values.cron.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,88 +57,19 @@ spec:
           image: {{ include "imageUrl" (list .Values.cron.image $) }}
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
           env:
-          {{- if eq .Values.global.deploymentMode "oss"  }}
-          - name: AIRBYTE_VERSION
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: AIRBYTE_VERSION
-          - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-          - name: MICROMETER_METRICS_ENABLED
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: MICROMETER_METRICS_ENABLED
-          - name: MICROMETER_METRICS_STATSD_FLAVOR
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: MICROMETER_METRICS_STATSD_FLAVOR
-          - name: MICRONAUT_ENVIRONMENTS
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: CRON_MICRONAUT_ENVIRONMENTS
-          - name: TEMPORAL_HOST
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: TEMPORAL_HOST
-          - name: SEGMENT_WRITE_KEY
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: SEGMENT_WRITE_KEY
-          - name: STATSD_HOST
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: STATSD_HOST
-          - name: STATSD_PORT
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: STATSD_PORT
-          - name: TRACKING_STRATEGY
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: TRACKING_STRATEGY
-          - name: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
-          - name: WORKLOAD_API_BEARER_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: {{ index .Values.cron "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                key: {{ index .Values.cron "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
-          - name: WORKLOAD_API_HOST
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: WORKLOAD_API_HOST
-          - name: WORKSPACE_DOCKER_MOUNT
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: WORKSPACE_DOCKER_MOUNT
-          - name: WORKSPACE_ROOT
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: WORKSPACE_ROOT
 
-          # Database
+          {{- include "airbyte.airbyte.envs" . | nindent 10 }}
           {{- include "airbyte.database.envs" . | nindent 10 }}
+          {{- include "airbyte.database.migrations.envs" . | nindent 10 }}
+          {{- include "airbyte.metrics.envs" . | nindent 10 }}
+          {{- include "airbyte.micronaut.envs" . | nindent 10 }}
+          {{- include "airbyte.temporal.envs" . | nindent 10 }}
+          {{- include "airbyte.tracking.envs" . | nindent 10 }}
+          {{- include "airbyte.worker.envs" . | nindent 10 }}
 
+          {{- if (eq .Values.global.edition "enterprise") }}
+          {{- include "airbyte.enterprise.envs" . | nindent 10 }}
           {{- end }}
-
 
           # Values from secret
           {{- if .Values.cron.secrets }}
@@ -185,3 +117,4 @@ spec:
       {{- if .Values.cron.extraVolumes }}
       volumes: {{ toYaml .Values.cron.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

@@ -10,13 +10,16 @@ global:
   # -- Edition; "community" or "pro"
   edition: "community"
 
+  cluster:
+    type: "control-plane" # or "data-plane"
+
   airbyteYml: ""
 
   enterprise:
     # -- Secret name where an Airbyte license key is stored
-    secretName: "airbyte-config-secrets"
+    secretName: ""
     # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
-    licenseKeySecretKey: "license-key"
+    licenseKeySecretKey: ""
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
@@ -36,36 +39,47 @@ global:
   auth:
     # -- Whether auth is enabled
     enabled: false
+
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
-      secretName: "airbyte-config-secrets"
+      secretName: "airbyte-auth-secrets"
       # -- The first name of the initial user
       firstName: ""
       # -- The last name of the initial user
       lastName:  ""
       # -- The key within `emailSecretName` where the initial user's email is stored
-      emailSecretKey: "instance-admin-email"
+      emailSecretKey: ""
       # -- The key within `passwordSecretName` where the initial user's password is stored
-      passwordSecretKey: "instance-admin-password"
+      passwordSecretKey: ""
     
     # -- SSO Identify Provider configuration; (requires Enterprise)
-    #identityProvider:
-    #  # -- Secret name where the OIDC configuration is stored
-    #  secretName: "airbyte-config-secrets"
-    #  # -- The identity provider type (e.g. oidc)
-    #  type: ""
-    #  # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-    #  oidc:
-    #    # -- OIDC application domain
-    #    domain: ""
-    #    # -- OIDC application name
-    #    appName: ""
-    #    # -- The key within `clientIdSecretName` where the OIDC client id is stored
-    #    clientIdSecretKey: "client-id"
-    #    # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
-    #    clientSecretSecretKey: "client-secret"
+    identityProvider:
+      # -- Secret name where the OIDC configuration is stored
+      secretName: ""
+      # -- The identity provider type (e.g. oidc)
+      type: "oidc"
 
+      # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
+      oidc:
+        # -- OIDC application domain
+        domain: ""
+        # -- OIDC application name
+        appName: ""
+        # -- The key within `clientIdSecretName` where the OIDC client id is stored
+        clientIdSecretKey: ""
+        # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+        clientSecretSecretKey: ""
+
+    # -- Security configuration
+    security:
+      secretName: ""
+
+      cookieSecureSetting: true
+      cookieSameSiteSetting: "Strict"
+
+      jwtSignatureSecretKey: ""
+    
   # -- Environment variables
   env_vars: {}
 
@@ -95,45 +109,183 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
+  migrations:
+    runAtStartup: true
+
+    configDb: 
+      minimumFlywayMigrationVersion: ""
+
+    jobsDb:
+      minimumFlywayMigrationVersion: ""
+
   storage:
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
     # -- Secret name where storage provider credentials are stored
     #storageSecretName: "airbyte-config-secrets"
 
+    # Minio
+    minio:
+      accessKeyId: minio 
+      secretAccessKey: "minio123"
+      endpoint: "http://airbyte-minio-svc:9000"
+
+    bucket: 
+      log: airbyte-bucket
+      state: airbyte-bucket
+      workloadOutput: airbyte-bucket
+      activityPayload: airbyte-bucket
+    
     # S3
-    #bucket: ## S3 bucket names that you've created. We recommend storing the following all in one bucket.
-    #  log: airbyte-bucket
-    #  state: airbyte-bucket
-    #  workloadOutput: airbyte-bucket
     #s3:
     #  region: "" ## e.g. us-east-1
     #  authenticationType: credentials ## Use "credentials" or "instanceProfile"
+    #  accessKeyId: ""
+    #  secretAccessKey: ""
 
     # GCS
-    #bucket: ## GCS bucket names that you've created. We recommend storing the following all in one bucket.
-    #  log: airbyte-bucket
-    #  state: airbyte-bucket
-    #  workloadOutput: airbyte-bucket
     #gcs:
     #  projectId: <project-id>
     #  credentialsJson: /secrets/gcs-log-creds/gcp.json
 
     # Azure
-    #bucket: ## Azure Blob Storage container names that you've created. We recommend storing the following all in one bucket.
-    #  log: airbyte-bucket
-    #  state: airbyte-bucket
-    #  workloadOutput: airbyte-bucket
     #azure:
     #  # one of the following: connectionString, connectionStringSecretKey
     #  connectionString: <azure storage connection string>
     #  connectionStringSecretKey: <secret coordinate containing an existing connection-string secret>
 
+  secretsManager:
+    enabled: false
+    type: "" # one of: VAULT, GOOGLE_SECRET_MANAGER, AWS_SECRET_MANAGER, AZURE_KEY_VAULT, TESTING_CONFIG_DB_TABLE
+    #secretName: "airbyte-config-secrets"
+
+    #awsSecretManager:
+    #  region: <aws-region>
+    #  authenticationType: credentials ## Use "credentials" or "instanceProfile"
+    #  tags: ## Optional - You may add tags to new secrets created by Airbyte.
+    #    - key: ## e.g. team
+    #      value: ## e.g. deployments
+    #    - key: business-unit
+    #      value: engineering
+    #  kms: ## Optional - ARN for KMS Decryption.
+
+    #googleSecretManager:
+    #  projectId: <project-id>
+    #  credentialsSecretKey: gcp.json
+
+    #azureKeyVault:
+    #  tenantId: ""
+    #  vaultUrl: "" 
+    #  clientId: ""
+    #  clientIdSecretKey: ""
+    #  clientSecret: ""
+    #  clientSecretSecretKey: ""
+    #  tags: ""
+
+    #vault:
+
+  logging:
+    level: info
+    httpAccessLogsEnabled: false
+    log4jConfigFile: ""
+
+  email:
+    enabled: false
+    secretName: ""
+    client: "" # one of: sengrid
+
+    sendgrid:
+      apiKey: ""
+      apiKeySecretKey: ""
+
+  connectorRegistry:
+    seedProvider: "local"
+
+  workloads:
+    secretName: ""
+
+    images:
+      workloadInit: ""
+      connectorSideCar: ""
+      containerOrchestrator: ""
+
+    api:
+      bearerToken: "token"
+      bearerTokenSecretName: ""
+      bearerTokenSecretKey: ""
+
+    containerOrchestrator:
+      javaOpts: []
+      secretMountPath: ""
+
+    queues:
+      check: []
+      discover: []
+      sync: []
+
+    pubSub:
+      enabled: false
+      topicName: ""
+
+    resources:
+      useConnectorResourceDefaults: true
+
+      mainContainer:
+        cpu: {}
+        memory: {}
+      check:
+        cpu: {}
+        memory: {}
+      discover:
+        cpu: {}
+        memory: {}
+      replication:
+        cpu: {}
+        memory: {}
+      sidecar:
+        cpu: {}
+        memory: {}
+
+      fileTransfer:
+        storage:
+          request: 5G
+          limit: 5G
+
+  featureFlags:  
+    secretName: ""
+    client: "configfile"
+
+    configfile: {}
+
+    launchdarkly:
+      key: ""
+
+  java:
+    opts: []
+
   metrics:
     # -- The metric client to configure globally. Supports "otel"
     metricClient: ""
-    # -- The open-telemetry-collector endpoint that metrics will be sent to
-    otelCollectorEndpoint: ""
+
+    micrometer:
+      enabled: false
+      statsdFlavor: "datadog" # datadog
+
+    otel:
+      resourceAttributes: ""
+
+      collector:
+        endpoint: ""
+
+      exporter:
+        name: "otlp"
+        protocol: "grpc" 
+        timeout: "30000"
+        metricExportInterval: "10000"
+    
+    statsd:
+      host: ""
+      port: ""
 
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -179,6 +331,9 @@ global:
       # -- image pull secret to use for job pod
       main_container_image_pull_secret: ""
 
+      localVolume:
+        enabled: false
+
       images:
         ## JOB_KUBE_BUSYBOX_IMAGE
         # -- busybox image used by the job pod
@@ -186,6 +341,80 @@ global:
         ## JOB_KUBE_CURL_IMAGE
         # -- curl image used by the job pod
         curl: "curlimages/curl:8.1.1"
+
+  temporal:
+    secretName: ""
+
+    cli:
+      address: ""
+      namespace: ""
+      tlsCert: ""
+      tlsCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
+      tlsKey: ""
+      tlsKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
+
+    cloud:
+      enabled: false
+      host: ""
+      namespace: ""
+      clientCert: ""
+      clientCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
+      clientKey: ""
+      clientKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
+
+    sdk:
+      rpc:
+        timeout: "120s"
+        longPollTimeout: "140s"
+        queryTimeout: "20s"
+
+  datadog:
+    enabled: false
+    env: dev
+    traceAgentPort: 8126
+
+    statsd:
+      port: 8125
+
+    integrations:
+      dbm:
+        enabled: false
+        propagationMode: "full"
+
+      grpc:
+        enabled: false
+        clientEnabled: false
+        serverEnabled: false
+
+      googleHttpClient:
+        enabled: false
+      
+      httpUrlConnection:
+        enabled: false
+
+      urlConnection:
+        enabled: false
+
+      netty:
+        enabled: false
+
+      netty41:
+        enabled: false
+
+  customerio:
+    secretName: ""
+    apiKeySecretKey: ""
+
+  tracking:
+    enabled: true
+    secretName: ""
+    strategy: "segment" # one of: logging, segment
+
+    segment:
+      writeKeySecretKey: ""
+
+  micronaut:
+    environments: []
 
 ## @section Common Parameters
 
@@ -210,7 +439,7 @@ version: ""
 ## @section Webapp Parameters
 
 webapp:
-  enabled: true
+  enabled: false
   # -- Number of webapp replicas
   replicaCount: 1
 
@@ -441,7 +670,7 @@ webapp:
 ## @section Pod Sweeper parameters
 
 podSweeper:
-  enabled: true
+  enabled: false
   image:
     # -- The image repository to use for the pod sweeper
     repository: bitnami/kubectl
@@ -563,7 +792,7 @@ podSweeper:
 ## @section Server parameters
 
 server:
-  enabled: true
+  enabled: false
   # -- Number of server replicas
   replicaCount: 1
 
@@ -751,10 +980,14 @@ server:
   # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
+  debug:
+    enabled: false
+    remoteDebugPort: 5005
+
 ## @section Worker Parameters
 
 worker:
-  enabled: true
+  enabled: false
   # -- Number of worker replicas
   replicaCount: 1
 
@@ -895,7 +1128,7 @@ worker:
 ## @section Workload Launcher Parameters
 
 workloadLauncher:
-  enabled: true
+  enabled: false
   # -- Number of workload launcher replicas
   replicaCount: 1
 
@@ -1171,6 +1404,8 @@ connectorRolloutWorker:
 
   extraContainers: []
 
+  env_vars: {}
+
   hpa:
     enabled: false
 
@@ -1289,7 +1524,7 @@ metrics:
 ## @section Bootloader Parameters
 
 airbyteBootloader:
-  enabled: true
+  enabled: false
   image:
     # -- The repository to use for the airbyte bootloader image.
     repository: airbyte/bootloader
@@ -1439,7 +1674,7 @@ airbyteBootloader:
 ## TODO: Move to consuming temporal from a dedicated helm chart
 
 temporal:
-  enabled: true
+  enabled: false
   # -- The number of temporal replicas to deploy
   replicaCount: 1
 
@@ -1450,6 +1685,39 @@ temporal:
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
     tag: "1.23.0"
+
+  secretName: ""
+
+  database:
+    engine: "postgresql"
+    host: ""
+    port: ""
+    user: ""
+    userSecretKey: ""
+    password: ""
+    passwordSecretKey: ""
+
+  host: ""
+
+  cli:
+    address: ""
+    namespace: ""
+    tlsCert: ""
+    tlsKey: ""
+
+  cloud: 
+    namespace: 
+    clientCert: ""
+    clientKey: ""
+  
+  sdk:
+    rpc:
+      timeout: "120s"
+      longPollTimeout: "140s"
+      queryTimeout: "20s"
+
+  worker:
+    ports: ""
 
   service:
     # -- The Kubernetes Service Type
@@ -1561,6 +1829,8 @@ temporal:
     limits: {}
 
   extraContainers: []
+
+  env_vars: {}
 
 ## @section Temporal parameters
 ## TODO: Move to consuming temporal from a dedicated helm chart
@@ -1688,9 +1958,13 @@ temporalUi:
 
   extraContainers: []
 
+  env_vars: {}
+  
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+
 
 ## @section Airbyte Database parameters
 
@@ -1764,11 +2038,16 @@ externalDatabase:
   jdbcUrl: ""
 
 minio:
+  secretName: ""
+
   image:
     # -- Minio image used by Minio helm chart
     repository: minio/minio
     # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
+
+  rootUser: ""
+  rootPassword: ""
 
   mcImage:
     repository: airbyte/mc
@@ -1806,6 +2085,10 @@ cron:
     repository: airbyte/cron
     # -- The pull policy to use for the airbyte cron image
     pullPolicy: IfNotPresent
+
+  jobs:
+    updateDefinitions:
+      enabled: false
 
   ## workloadApi:
   ##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
@@ -1979,7 +2262,7 @@ cron:
   env_vars: {}
 
 connectorBuilderServer:
-  enabled: true
+  enabled: false
   # -- Number of connector-builder-server replicas
   replicaCount: 1
 
@@ -2084,13 +2367,44 @@ keycloak:
   enabled: true
   env_vars: {}
 
+  secretName: ""
+
+  database:
+    name: ""
+    host: ""
+
+    user: ""
+    userSecretKey: ""
+
+    password: ""
+    passwordSecretKey: ""
+
   auth:
     adminUsername: airbyteAdmin
+    adminUsernameSecretKey: ""
+
     adminPassword: keycloak123
+    adminPasswordSecretKey: ""
+
+    adminRealm: ""
+    adminRealmSecretKey: ""
+
+  url: ""
+  internalHost:
+  internalProtocol: "http"
+  internalBasePath:
 
   image:
     repository: airbyte/keycloak
     pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8180
+    annotations: {}
+
+  headlessService:
+    annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2137,8 +2451,48 @@ keycloak:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  ## Configure extra options for the keycloak containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ##  livenessProbe.enabled Enable livenessProbe on keycloak
+  ##  livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ##  livenessProbe.periodSeconds Period seconds for livenessProbe
+  ##  livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ##  livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ##  livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  ##  readinessProbe.enabled Enable readinessProbe on keycloak
+  ##  readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ##  readinessProbe.periodSeconds Period seconds for readinessProbe
+  ##  readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ##  readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ##  readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 60
+    successThreshold: 1
+
 keycloakSetup:
-  enabled: true
+  enabled: false
   env_vars: {}
 
   image:
@@ -2190,8 +2544,12 @@ keycloakSetup:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  debug:
+    enabled: false
+    remoteDebugPort: 5005
+
 workloadApiServer:
-  enabled: true
+  enabled: false
 
   bearerToken: token
 

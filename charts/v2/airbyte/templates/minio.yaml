@@ -38,17 +38,7 @@ spec:
             - server
             - /storage
           env:
-            # Minio access key and secret key. This must match the S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY declared in /dev/.env.
-            - name: MINIO_ROOT_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-airbyte-secrets
-                  key: MINIO_ACCESS_KEY_ID 
-            - name: MINIO_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-airbyte-secrets
-                  key: MINIO_SECRET_ACCESS_KEY
+            {{- include "airbyte.minio.envs" . | nindent 12 }}
           ports:
             - containerPort: 9000
           resources:
@@ -153,33 +143,5 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       env:
-        {{- if and (eq (lower (default "" .Values.global.storage.type)) "minio") (((.Values.global).storage).minio) }}
-        - name: MINIO_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.minioAccessKeyIdSecretKey" .Values.global.storage.minio.accessKeyIdSecretKey }}
-        - name: MINIO_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.minioSecretAccessKeySecretKey" .Values.global.storage.minio.secretAccessKeySecretKey }}
-        {{- else }}
-        # this is for the internally deployed minio
-        - name: MINIO_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: MINIO_ACCESS_KEY_ID
-        - name: MINIO_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: MINIO_SECRET_ACCESS_KEY
-        {{- end }}
-        - name: MINIO_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MINIO_ENDPOINT
+        {{- include "airbyte.storage.minio.envs" . | nindent 8 }}
 {{- end }}
