@@ -4,9 +4,9 @@
 
 package io.airbyte.oauth.declarative;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.json.JsonPaths;
 import io.airbyte.commons.json.Jsons;
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -50,18 +50,12 @@ public class DeclarativeOAuthSpecHandler {
   }
 
   /**
-   * TypeReference to cover expected objects in the userConfig.
-   */
-  private static final TypeReference<Map<String, Integer>> STATE_TYPE_REF = new TypeReference<>() {};
-  private static final TypeReference<Map<String, String>> COMPLETE_OAUTH_HEADERS_TYPE_REF = new TypeReference<>() {};
-  private static final TypeReference<List<String>> EXTRACT_OUTPUT_TYPE_REF = new TypeReference<>() {};
-
-  /**
    * The Airbyte Protocol declared literals for an easy access and reuse.
    */
   protected static final String ACCESS_TOKEN = "access_token";
   protected static final String ACCESS_TOKEN_HEADERS_KEY = "access_token_headers";
   protected static final String ACCESS_TOKEN_KEY = "access_token_key";
+  protected static final String ACCESS_TOKEN_PARAMS_KEY = "access_token_params";
   protected static final String ACCESS_TOKEN_URL = "access_token_url";
   protected static final String AUTH_CODE_KEY = "auth_code_key";
   protected static final String AUTH_CODE_VALUE = "code";
@@ -79,6 +73,8 @@ public class DeclarativeOAuthSpecHandler {
   protected static final String STATE_KEY = "state_key";
   protected static final String STATE_VALUE = "state";
   protected static final String STATE_PARAM_KEY = STATE_VALUE;
+  protected static final String STATE_PARAM_MIN_KEY = "min";
+  protected static final String STATE_PARAM_MAX_KEY = "max";
   protected static final String TOKEN_EXPIRY_KEY = "expires_in";
   protected static final String TOKEN_EXPIRY_DATE_KEY = "token_expiry_date";
 
@@ -193,9 +189,9 @@ public class DeclarativeOAuthSpecHandler {
    */
   protected final String getConfigurableState(final JsonNode stateConfig) {
 
-    final Map<String, Integer> state = Jsons.object(stateConfig, STATE_TYPE_REF);
-    final int min = state.getOrDefault("min", STATE_LEN_MIN);
-    final int max = state.getOrDefault("max", STATE_LEN_MAX);
+    final Map<String, Integer> userState = Jsons.deserializeToIntegerMap(stateConfig);
+    final int min = userState.getOrDefault(STATE_PARAM_MIN_KEY, STATE_LEN_MIN);
+    final int max = userState.getOrDefault(STATE_PARAM_MAX_KEY, STATE_LEN_MAX);
     final int length = secureRandom.nextInt((max - min) + 1) + min;
 
     final StringBuilder stateValue = new StringBuilder(length);
@@ -306,6 +302,34 @@ public class DeclarativeOAuthSpecHandler {
   }
 
   /**
+   * Generates a map of template values required for obtaining an access token.
+   *
+   * @param userConfig the user configuration as a JsonNode
+   * @param clientId the client ID for OAuth
+   * @param clientSecret the client secret for OAuth
+   * @param authCode the authorization code received from the authorization server
+   * @param redirectUrl the redirect URI used in the OAuth flow
+   * @param state the state parameter to maintain state between the request and callback
+   * @return a map containing the template values for the access token request
+   */
+  protected Map<String, String> getAccessTokenParamsTemplateValues(final JsonNode userConfig,
+                                                                   final String clientId,
+                                                                   final String clientSecret,
+                                                                   final String authCode,
+                                                                   final String redirectUrl,
+                                                                   final String state) {
+
+    final Map<String, String> templateValues = createDefaultTemplateMap(userConfig);
+    templateValues.put(templateValues.get(CLIENT_ID_KEY), clientId);
+    templateValues.put(templateValues.get(CLIENT_SECRET_KEY), clientSecret);
+    templateValues.put(templateValues.get(AUTH_CODE_KEY), authCode);
+    templateValues.put(templateValues.get(REDIRECT_URI_KEY), redirectUrl);
+    templateValues.put(templateValues.get(STATE_KEY), state);
+
+    return templateValues;
+  }
+
+  /**
    * Renders a string template by replacing placeholders with corresponding values from the provided
    * map.
    *
@@ -356,14 +380,42 @@ public class DeclarativeOAuthSpecHandler {
    * @return a list of strings representing the configuration extract output.
    */
   protected final List<String> getConfigExtractOutput(final JsonNode userConfig) {
+    final List<String> extractOutputConfig = Jsons.deserializeToStringList(
+        Jsons.getNodeOrEmptyObject(userConfig, EXTRACT_OUTPUT_KEY));
 
-    final JsonNode value = userConfig.path(EXTRACT_OUTPUT_KEY);
-    final List<String> extractOutputConfig = value.isMissingNode()
-        ? List.of()
-        : Jsons.object(value, EXTRACT_OUTPUT_TYPE_REF);
+    // match the default BaseOAuth2Flow behaviour, returning ["refresh_token"] by default.
+    return !extractOutputConfig.isEmpty() ? extractOutputConfig : List.of(REFRESH_TOKEN);
+  }
 
-    // match the default BaseOAuth2Flow behaviour
-    return (!extractOutputConfig.isEmpty()) ? extractOutputConfig : List.of(REFRESH_TOKEN);
+  /**
+   * Renders the access token parameters by replacing placeholders in the parameter keys and values
+   * with the corresponding values from the provided template values.
+   *
+   * @param templateValues a map containing the template values to be used for rendering the access
+   *        token parameters
+   * @param userConfig a JsonNode containing the user configuration, which includes the access token
+   *        parameters
+   * @return a map with the rendered access token parameters
+   * @throws RuntimeException if an IOException occurs during the rendering of the string templates
+   */
+  protected final Map<String, String> renderConfigAccessTokenParams(final Map<String, String> templateValues,
+                                                                    final JsonNode userConfig) {
+
+    final Map<String, String> accessTokenParamsRendered = new HashMap<>();
+    final Map<String, String> userAccessTokenParams = Jsons.deserializeToStringMap(
+        Jsons.getNodeOrEmptyObject(userConfig, ACCESS_TOKEN_PARAMS_KEY));
+
+    userAccessTokenParams.forEach((paramKey, paramValue) -> {
+      try {
+        accessTokenParamsRendered.put(
+            renderStringTemplate(templateValues, paramKey),
+            renderStringTemplate(templateValues, paramValue));
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+
+    return accessTokenParamsRendered;
   }
 
   /**
@@ -377,12 +429,10 @@ public class DeclarativeOAuthSpecHandler {
                                                                  final JsonNode userConfig)
       throws IOException {
 
-    final JsonNode value = userConfig.path(ACCESS_TOKEN_HEADERS_KEY);
-    final Map<String, String> userHeaders = value.isMissingNode()
-        ? new HashMap<>()
-        : Jsons.object(value, COMPLETE_OAUTH_HEADERS_TYPE_REF);
-
     final Map<String, String> accessTokenHeadersRendered = new HashMap<>();
+    final Map<String, String> userHeaders = Jsons.deserializeToStringMap(
+        Jsons.getNodeOrEmptyObject(userConfig, ACCESS_TOKEN_HEADERS_KEY));
+
     userHeaders.forEach((headerKey, headerValue) -> {
       try {
         accessTokenHeadersRendered.put(
@@ -397,14 +447,14 @@ public class DeclarativeOAuthSpecHandler {
   }
 
   /**
-   * Processes the OAuth output by extracting specified configuration items from the provided JSON
-   * data.
+   * Processes the OAuth output by extracting necessary fields from the provided data and user
+   * configuration.
    *
-   * @param userConfig the JSON configuration node containing items to extract from the JSON data.
-   * @param data The JSON data containing the OAuth output.
-   * @param accessTokenUrl The URL used to obtain the access token, used for error reporting.
-   * @return A map containing the extracted configuration items and their corresponding values.
-   * @throws IOException If any of the specified configuration items are missing from the JSON data.
+   * @param userConfig The user configuration as a JsonNode.
+   * @param data The data containing OAuth output as a JsonNode.
+   * @param accessTokenUrl The URL used to obtain the access token.
+   * @return A map containing the processed OAuth output.
+   * @throws IOException If a required field is missing in the data.
    */
   protected Map<String, Object> processOAuthOutput(final JsonNode userConfig,
                                                    final JsonNode data,
@@ -413,19 +463,33 @@ public class DeclarativeOAuthSpecHandler {
 
     final Map<String, Object> oauth_output = new HashMap<>();
 
-    for (final String item : getConfigExtractOutput(userConfig)) {
-      if (data.has(item)) {
-        if (TOKEN_EXPIRY_KEY.equals(item)) {
-          oauth_output.put(
-              TOKEN_EXPIRY_DATE_KEY,
-              Instant.now(clock).plusSeconds(data.get(TOKEN_EXPIRY_KEY).asInt()).toString());
+    for (final String path : getConfigExtractOutput(userConfig)) {
+      final String value = JsonPaths.getSingleValueTextOrNull(data, path);
+      final String key = JsonPaths.getTargetKeyFromJsonPath(path);
+
+      if (value != null) {
+        // handle `expires_in` presence
+        if (TOKEN_EXPIRY_KEY.equals(key)) {
+          oauth_output.put(TOKEN_EXPIRY_DATE_KEY, processExpiresIn(value));
         }
-        oauth_output.put(item, data.get(item).asText());
+
+        oauth_output.put(key, value);
       } else {
-        throw new IOException(String.format("Missing '%s' in query params from %s", item, accessTokenUrl));
+        throw new IOException(String.format("Missing '%s' in query params from %s", key, accessTokenUrl));
       }
     }
+
     return oauth_output;
+  }
+
+  /**
+   * Processes the expiration time by adding the specified number of seconds to the current time.
+   *
+   * @param value the number of seconds to add to the current time, represented as a string
+   * @return a string representation of the new expiration time
+   */
+  private String processExpiresIn(final String value) {
+    return Instant.now(clock).plusSeconds(Integer.parseInt(value)).toString();
   }
 
 }

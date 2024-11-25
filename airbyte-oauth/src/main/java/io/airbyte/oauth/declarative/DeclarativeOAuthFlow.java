@@ -16,7 +16,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -166,21 +165,52 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
+   * Determines the content type for the token request based on the provided OAuth configuration.
+   *
+   * @param inputOAuthConfiguration the JSON node containing the OAuth configuration.
+   * @return the content type for the token request. If the configuration contains the access token
+   *         parameters key, the content type is JSON. Otherwise, it delegates to the superclass
+   *         implementation.
+   */
+  @Override
+  protected TokenRequestContentType getRequestContentType(final JsonNode inputOAuthConfiguration) {
+    final JsonNode value = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_PARAMS_KEY);
+    return (!value.isMissingNode()) ? TokenRequestContentType.JSON : super.getRequestContentType(inputOAuthConfiguration);
+  }
+
+  /**
    * IMPORTANT: DO NOT MODIFY!
    *
-   * This is the override for the base `getAccessTokenQueryParameters`. For the Declarative way of how
-   * the `access_token_url` is constructed, we use the `${placeHolders}` to provide the in-place
-   * interpolation, instead of having the complete `HashMap`.
+   * Generates the access token query parameters required for OAuth authentication.
    *
-   * @return An empty HashMap.
+   * @param clientId The client ID provided by the OAuth provider.
+   * @param clientSecret The client secret provided by the OAuth provider.
+   * @param authCode The authorization code received from the OAuth provider after user authorization.
+   * @param redirectUrl The redirect URL configured for the OAuth provider.
+   * @param state The state parameter to maintain state between the request and callback.
+   * @param inputOAuthConfiguration The JSON configuration containing additional OAuth parameters.
+   * @return A map containing the rendered access token query parameters or an empty HashMap.
    */
   @Override
   protected Map<String, String> getAccessTokenQueryParameters(final String clientId,
                                                               final String clientSecret,
                                                               final String authCode,
                                                               final String redirectUrl,
+                                                              final String state,
                                                               final JsonNode inputOAuthConfiguration) {
-    return new HashMap<>();
+
+    final Map<String, String> renderedAccessTokenQueryParams =
+        specHandler.renderConfigAccessTokenParams(
+            specHandler.getAccessTokenParamsTemplateValues(
+                inputOAuthConfiguration,
+                clientId,
+                clientSecret,
+                authCode,
+                redirectUrl,
+                state),
+            inputOAuthConfiguration);
+
+    return renderedAccessTokenQueryParams;
   }
 
   /**
@@ -381,13 +411,15 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
-   * This function should parse and extract the state from these query parameters in order to continue
-   * the OAuth Flow.
+   * Extracts the state parameter from the query parameters based on the input OAuth configuration.
+   *
+   * @param queryParams the map of query parameters from the redirect URI
+   * @param inputOAuthConfiguration the JSON node containing the OAuth configuration
+   * @return the state parameter value if present in the query parameters
+   * @throws IOException if the state key is not found in the query parameters
    */
   @Override
-  protected String extractStateParameter(final Map<String, Object> queryParams,
-                                         final JsonNode inputOAuthConfiguration)
-      throws IOException {
+  protected String extractStateParameter(final Map<String, Object> queryParams, final JsonNode inputOAuthConfiguration) throws IOException {
     // get the state key name with respect to userConfig input
     final String stateKey = specHandler.getStateKey(inputOAuthConfiguration);
     if (queryParams.containsKey(stateKey)) {
