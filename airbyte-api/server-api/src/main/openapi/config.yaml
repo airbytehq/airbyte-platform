@@ -3175,6 +3175,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebBackendCheckUpdatesRead"
+  /v1/web_backend/mappers/validate:
+    post:
+      tags:
+        - web_backend
+      summary: Validates a draft set of mappers against a connection's configured streams
+      operationId: webBackendValidateMappers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebBackendValidateMappersRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebBackendValidateMappersResponse"
   /v1/web_backend/connections/list:
     post:
       tags:
@@ -13224,6 +13243,88 @@ components:
           type: integer
         sourceDefinitions:
           type: integer
+    WebBackendValidateMappersRequestBody:
+      type: object
+      required:
+        - connectionId
+        - mappers
+        - streamDescriptor
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        streamDescriptor:
+          $ref: "#/components/schemas/StreamDescriptor"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
+    WebBackendValidateMappersResponse:
+      type: object
+      required:
+        - initialFields
+        - mappers
+      properties:
+        initialFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        mappers:
+          type: array
+          items:
+            $ref: "#/components/schemas/MapperValidationResult"
+    FieldSpec:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - STRING
+            - BOOLEAN
+            - DATE
+            - TIMESTAMP_WITHOUT_TIMEZONE
+            - TIMESTAMP_WITH_TIMEZONE
+            - TIME_WITHOUT_TIMEZONE
+            - TIME_WITH_TIMEZONE
+            - INTEGER
+            - NUMBER
+            - ARRAY
+            - OBJECT
+            - MULTI
+            - UNKNOWN
+    MapperValidationResult:
+      type: object
+      required:
+        - outputFields
+      properties:
+        outputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        validationError:
+          $ref: "#/components/schemas/MapperValidationError"
+    MapperValidationError:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          $ref: "#/components/schemas/MapperValidationErrorType"
+        message:
+          type: string
+    MapperValidationErrorType:
+      type: string
+      enum:
+        - MISSING_MAPPER
+        - INVALID_MAPPER_CONFIG
+        - FIELD_NOT_FOUND
+        - FIELD_ALREADY_EXISTS
     WebBackendConnectionListRequestBody:
       type: object
       required:

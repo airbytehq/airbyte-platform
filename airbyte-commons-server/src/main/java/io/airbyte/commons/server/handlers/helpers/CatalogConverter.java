@@ -233,7 +233,7 @@ public class CatalogConverter {
     ).toList();
   }
 
-  private List<MapperConfig> toConfiguredMappers(final @Nullable List<io.airbyte.api.model.generated.ConfiguredStreamMapper> mapperConfigs) {
+  public List<MapperConfig> toConfiguredMappers(final @Nullable List<io.airbyte.api.model.generated.ConfiguredStreamMapper> mapperConfigs) {
     if (mapperConfigs == null) {
       return Collections.emptyList();
     }

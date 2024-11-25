@@ -24,6 +24,8 @@ import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendCronExpressionDescription;
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
+import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody;
+import io.airbyte.api.model.generated.WebBackendValidateMappersResponse;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
 import io.airbyte.commons.lang.MoreBooleans;
@@ -36,6 +38,7 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.metrics.lib.TracingHelper;
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler;
+import io.airbyte.server.handlers.WebBackendMappersHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -52,6 +55,7 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendGeographiesHandler webBackendGeographiesHandler;
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
   private final WebBackendCronExpressionHandler webBackendCronExpressionHandler;
+  private final WebBackendMappersHandler webBackendMappersHandler;
   private final ApiAuthorizationHelper apiAuthorizationHelper;
   private final CurrentUserService currentUserService;
 
@@ -59,12 +63,14 @@ public class WebBackendApiController implements WebBackendApi {
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
                                  final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
                                  final WebBackendCronExpressionHandler webBackendCronExpressionHandler,
+                                 final WebBackendMappersHandler webBackendMappersHandler,
                                  final ApiAuthorizationHelper apiAuthorizationHelper,
                                  final CurrentUserService currentUserService) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
     this.webBackendCronExpressionHandler = webBackendCronExpressionHandler;
+    this.webBackendMappersHandler = webBackendMappersHandler;
     this.apiAuthorizationHelper = apiAuthorizationHelper;
     this.currentUserService = currentUserService;
   }
@@ -159,6 +165,15 @@ public class WebBackendApiController implements WebBackendApi {
       TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());
       return webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate);
     });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/connections/mappers/validate")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WebBackendValidateMappersResponse webBackendValidateMappers(@Body final WebBackendValidateMappersRequestBody webBackendValidateMappersRequestBody) {
+    return ApiHelper.execute(() -> webBackendMappersHandler.validateMappers(webBackendValidateMappersRequestBody));
   }
 
   @Post("/describe_cron_expression")
