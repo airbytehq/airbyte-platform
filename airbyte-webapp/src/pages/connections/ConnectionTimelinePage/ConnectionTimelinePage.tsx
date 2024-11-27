@@ -51,9 +51,8 @@ export const ConnectionTimelinePage = () => {
       openModal,
       jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : undefined,
       eventId: filterValues.eventId,
-      connectionName: connection.name,
+      connection,
       attemptNumber: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
-      connectionId: connection.connectionId,
       setFilterValue,
     });
   }

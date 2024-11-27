@@ -15,7 +15,7 @@ interface VirtualLogsProps {
   logLines: CleanedLogLines;
   searchTerm?: string;
   scrollTo?: number;
-  selectedAttempt?: number;
+  attemptId: number;
   hasFailure: boolean;
   showStructuredLogs: boolean;
 }
@@ -57,7 +57,7 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
   logLines,
   searchTerm,
   scrollTo,
-  selectedAttempt,
+  attemptId,
   hasFailure,
   showStructuredLogs,
 }) => {
@@ -88,7 +88,7 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
             // scroll, which results in not positioning at the bottom
             (isAtBottom) => isAtBottom && (hasFailure ? true : "smooth")
           }
-          key={selectedAttempt}
+          key={attemptId}
           style={{ width: "100%", height: "100%" }}
           data={logLines}
           itemContent={Row}
@@ -245,6 +245,6 @@ export const VirtualLogs = React.memo(
     prevProps.logLines.length === nextProps.logLines.length &&
     prevProps.searchTerm === nextProps.searchTerm &&
     prevProps.scrollTo === nextProps.scrollTo &&
-    prevProps.selectedAttempt === nextProps.selectedAttempt &&
+    prevProps.attemptId === nextProps.attemptId &&
     prevProps.showStructuredLogs === nextProps.showStructuredLogs
 );

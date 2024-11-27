@@ -129,8 +129,7 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
     openJobLogsModal({
       openModal,
       jobId,
-      connectionId: connection.connectionId,
-      connectionName: connection.name,
+      connection,
     });
 
   return (
