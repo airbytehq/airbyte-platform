@@ -354,6 +354,7 @@ public class AttemptHandler {
 
     final Job job = jobPersistence.getJob(jobId);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.emitAttemptCompletedEventIfAttemptPresent(job);
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
   }
 

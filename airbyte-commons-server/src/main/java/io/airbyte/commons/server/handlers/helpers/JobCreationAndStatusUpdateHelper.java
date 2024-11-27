@@ -231,7 +231,7 @@ public class JobCreationAndStatusUpdateHelper {
     }
   }
 
-  private void emitAttemptCompletedEvent(final Job job, final Attempt attempt) throws IOException {
+  private void emitAttemptCompletedEvent(final Job job, final Attempt attempt) {
     final Optional<String> failureOrigin = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
         .stream()
         .map(FailureReason::getFailureOrigin)
@@ -253,7 +253,11 @@ public class JobCreationAndStatusUpdateHelper {
     additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
     additionalAttributes.addAll(imageAttrsFromJob(job));
 
-    emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
+    try {
+      emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
+    } catch (final IOException e) {
+      log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.getId());
+    }
   }
 
   private List<MetricAttribute> imageAttrsFromJob(final Job job) {
@@ -356,7 +360,7 @@ public class JobCreationAndStatusUpdateHelper {
     jobTracker.trackSync(job, Enums.convertTo(status, JobState.class));
   }
 
-  private void emitAttemptCompletedEventIfAttemptPresent(final Job job) throws IOException {
+  public void emitAttemptCompletedEventIfAttemptPresent(final Job job) {
     if (job == null) {
       return;
     }
