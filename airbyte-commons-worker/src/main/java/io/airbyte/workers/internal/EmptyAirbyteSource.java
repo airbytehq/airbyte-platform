@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmptyAirbyteSource implements AirbyteSource {
 
+  private final AtomicBoolean hasCustomNamespace;
   private final AtomicBoolean hasEmittedState;
   private final AtomicBoolean hasEmittedStreamStatus;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
@@ -49,7 +50,8 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private boolean isStarted = false;
   private Optional<StateWrapper> stateWrapper = Optional.empty();
 
-  public EmptyAirbyteSource() {
+  public EmptyAirbyteSource(final boolean hasCustomNamespace) {
+    this.hasCustomNamespace = new AtomicBoolean(hasCustomNamespace);
     hasEmittedState = new AtomicBoolean();
     hasEmittedStreamStatus = new AtomicBoolean();
   }
@@ -82,7 +84,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
-    return hasEmittedState.get() && hasEmittedStreamStatus.get();
+    return hasEmittedState.get() && (hasEmittedStreamStatus.get() || hasCustomNamespace.get());
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -137,9 +139,13 @@ public class EmptyAirbyteSource implements AirbyteSource {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
       final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      }
       perStreamMessages.add(buildNullStreamStateMessage(s));
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      }
     }
 
     final AirbyteMessage message = perStreamMessages.poll();
@@ -177,8 +183,10 @@ public class EmptyAirbyteSource implements AirbyteSource {
       // Per stream, we emit one 'started' and one 'complete' message.
       // The single null state message is to be emitted by the caller.
       final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      }
     }
 
     final AirbyteMessage message = perStreamMessages.poll();

@@ -17,6 +17,7 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -167,7 +168,7 @@ public class ReplicationWorkerFactory {
 
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource()
+        ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
         : new LocalContainerAirbyteSource(
             heartbeatMonitor,
             getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
