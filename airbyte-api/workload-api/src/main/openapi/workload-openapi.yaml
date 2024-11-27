@@ -560,9 +560,6 @@ components:
       enum:
       - high
       - default
-      x-enum-varnames:
-      - HIGH
-      - DEFAULT
       x-type: String
     WorkloadRunningRequest:
       required:
@@ -585,14 +582,6 @@ components:
       - success
       - failure
       - cancelled
-      x-enum-varnames:
-      - PENDING
-      - CLAIMED
-      - LAUNCHED
-      - RUNNING
-      - SUCCESS
-      - FAILURE
-      - CANCELLED
       x-type: String
     WorkloadSuccessRequest:
       required:
@@ -608,9 +597,4 @@ components:
       - check
       - discover
       - spec
-      x-enum-varnames:
-      - SYNC
-      - CHECK
-      - DISCOVER
-      - SPEC
       x-type: String

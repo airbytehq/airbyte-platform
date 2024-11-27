@@ -295,8 +295,8 @@ private fun updateApiClientWithFailsafe(clientPath: String) {
       .readText()
       // replace class declaration
       .replace(
-        "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient) {",
-        "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {",
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient) {",
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {",
       )
       // replace execute call
       .replace(
@@ -327,9 +327,9 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
       // replace class declaration
       domainClientFileText =
         domainClientFileText.replace(
-          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
+          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
             .toRegex(),
-          "class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
+          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
         )
 
       // add imports if not exist
