@@ -19,7 +19,7 @@ global:
     licenseKeySecretKey: "license-key"
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
-  airbyteUrl: ""
+  airbyteUrl: "https://airbyte.example.com"
 
   # Docker image config that will apply to all images.
   image:
@@ -35,20 +35,23 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
+    cookieSecureSetting: "false"
     enabled: false
     # -- Admin user configuration
     instanceAdmin:
       # -- Secret name where the instanceAdmin configuration is stored
+      namespace: "airbyte"
       secretName: "airbyte-config-secrets"
       # -- The first name of the initial user
-      firstName: ""
+      firstName: "numocity"
       # -- The last name of the initial user
       lastName:  ""
-      # -- The key within `emailSecretName` where the initial user's email is stored
-      emailSecretKey: "instance-admin-email"
-      # -- The key within `passwordSecretName` where the initial user's password is stored
-      passwordSecretKey: "instance-admin-password"
-    
+      # -- The key within emailSecretName where the initial user's email is stored
+      emailSecretKey: "emailSecretKey"
+      passwordSecretKey: "passwordSecretKey"  # Key within `passwordSecretName`
+
+
+      
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
     #  # -- Secret name where the OIDC configuration is stored
@@ -143,18 +146,24 @@ global:
   # resources, such as Minikube.
   jobs:
     resources:
-      ## Example:
-      ## requests:
-      ##    memory: 256Mi
-      ##    cpu: 250m
-      # -- Job resource requests
-      requests: {}
-      ## Example:
-      ## limits:
-      ##    cpu: 200m
-      ##    memory: 1Gi
-      # -- Job resource limits
-      limits: {}
+      requests:
+         memory: 500Mi
+         cpu: 300m
+    
+      limits:
+         cpu: 300m
+         memory: 750Mi
+      
+     
+  # jobs:
+  #   resources:
+  #     requests:
+  #       cpu: 300m  # equivalent to 0.3 CPU
+  #       memory: 500Mi
+  #     limits:
+  #       cpu: 300m  # equivalent to 0.3 CPU
+  #       memory: 750Mi
+
 
     local:
       volume:
@@ -1743,7 +1752,7 @@ minio:
     tag: latest
 
   storage:
-    volumeClaimValue: 500Mi
+    volumeClaimValue: 2Gi
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
@@ -2388,3 +2397,6 @@ testWebapp:
   image:
     repository: busybox
     tag: latest
+
+
+      
