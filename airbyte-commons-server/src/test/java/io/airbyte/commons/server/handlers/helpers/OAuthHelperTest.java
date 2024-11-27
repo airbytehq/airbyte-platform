@@ -11,7 +11,7 @@ import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class OAuthPathExtractorTest {
+class OAuthHelperTest {
 
   @Test
   void testExtract() {
@@ -36,7 +36,7 @@ class OAuthPathExtractorTest {
         Map.entry("tenant_id", List.of("tenant_id")),
         Map.entry("another_property", List.of("another", "property")));
 
-    Assertions.assertThat(OAuthPathExtractor.extractOauthConfigurationPaths(input))
+    Assertions.assertThat(OAuthHelper.extractOauthConfigurationPaths(input))
         .containsExactlyInAnyOrderEntriesOf(expected);
   }
 

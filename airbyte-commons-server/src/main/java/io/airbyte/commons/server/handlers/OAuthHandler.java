@@ -29,7 +29,7 @@ import io.airbyte.commons.constants.AirbyteSecretConstants;
 import io.airbyte.commons.json.JsonPaths;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
-import io.airbyte.commons.server.handlers.helpers.OAuthPathExtractor;
+import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
@@ -325,7 +325,7 @@ public class OAuthHandler {
     } catch (final Exception e) {
       LOGGER.error(ERROR_MESSAGE, e);
     }
-    return mapToCompleteOAuthResponse(result);
+    return OAuthHelper.mapToCompleteOAuthResponse(result);
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -387,7 +387,7 @@ public class OAuthHandler {
     } catch (final Exception e) {
       LOGGER.error(ERROR_MESSAGE, e);
     }
-    return mapToCompleteOAuthResponse(result);
+    return OAuthHelper.mapToCompleteOAuthResponse(result);
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -443,35 +443,12 @@ public class OAuthHandler {
                                                         final JsonNode hydratedSourceConnectionConfiguration,
                                                         final JsonNode oAuthInputConfiguration) {
     final Map<String, String> fieldsToGet =
-        buildJsonPathFromOAuthFlowInitParameters(OAuthPathExtractor.extractOauthConfigurationPaths(
+        buildJsonPathFromOAuthFlowInitParameters(OAuthHelper.extractOauthConfigurationPaths(
             spec.getAdvancedAuth().getOauthConfigSpecification().getOauthUserInputFromConnectorConfigSpecification()));
 
     final JsonNode oAuthInputConfigurationFromDB = getOAuthInputConfiguration(hydratedSourceConnectionConfiguration, fieldsToGet);
 
     return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB, oAuthInputConfiguration);
-  }
-
-  CompleteOAuthResponse mapToCompleteOAuthResponse(final Map<String, Object> input) {
-    final CompleteOAuthResponse response = new CompleteOAuthResponse();
-    response.setAuthPayload(new HashMap<>());
-
-    if (input.containsKey("request_succeeded")) {
-      response.setRequestSucceeded("true".equals(input.get("request_succeeded")));
-    } else {
-      response.setRequestSucceeded(true);
-    }
-
-    if (input.containsKey("request_error")) {
-      response.setRequestError(input.get("request_error").toString());
-    }
-
-    input.forEach((k, v) -> {
-      if (!"request_succeeded".equals(k) && !"request_error".equals(k)) {
-        response.getAuthPayload().put(k, v);
-      }
-    });
-
-    return response;
   }
 
   @VisibleForTesting
@@ -558,7 +535,7 @@ public class OAuthHandler {
             generateOAuthSecretCoordinate(workspaceId),
             payloadString, null);
       }
-      return mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
+      return OAuthHelper.mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
 
     } catch (final JsonProcessingException e) {
       throw new RuntimeException("Json object could not be written to string.", e);

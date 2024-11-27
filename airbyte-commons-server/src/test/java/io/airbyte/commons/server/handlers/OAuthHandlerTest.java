@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -284,9 +285,10 @@ class OAuthHandlerTest {
     final OAuthHandler handlerSpy = Mockito.spy(handler);
 
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy).completeSourceOAuth(any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy)
+            .completeSourceOAuth(any());
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
 
     handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest);
 
@@ -313,7 +315,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigNoFeatureFlag()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
@@ -333,7 +335,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigFeatureFlagNoOverride()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()

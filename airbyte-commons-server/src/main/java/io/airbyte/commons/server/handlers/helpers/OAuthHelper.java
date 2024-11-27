@@ -5,15 +5,16 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Extract paths to oauth fields from an oauth spec.
+ * Static helpers for Oauth-related reading and writing.
  */
-public class OAuthPathExtractor {
+public class OAuthHelper {
 
   private static final String PROPERTIES = "properties";
   private static final String PATH_IN_CONNECTOR_CONFIG = "path_in_connector_config";
@@ -44,6 +45,35 @@ public class OAuthPathExtractor {
     } else {
       return new HashMap<>();
     }
+  }
+
+  /**
+   * Map to the result of a completeOauth request to an API response.
+   *
+   * @param input input
+   * @return complete oauth response
+   */
+  public static CompleteOAuthResponse mapToCompleteOAuthResponse(final Map<String, Object> input) {
+    final CompleteOAuthResponse response = new CompleteOAuthResponse();
+    response.setAuthPayload(new HashMap<>());
+
+    if (input.containsKey("request_succeeded")) {
+      response.setRequestSucceeded("true".equals(input.get("request_succeeded")));
+    } else {
+      response.setRequestSucceeded(true);
+    }
+
+    if (input.containsKey("request_error")) {
+      response.setRequestError(input.get("request_error").toString());
+    }
+
+    input.forEach((k, v) -> {
+      if (!"request_succeeded".equals(k) && !"request_error".equals(k)) {
+        response.getAuthPayload().put(k, v);
+      }
+    });
+
+    return response;
   }
 
 }
