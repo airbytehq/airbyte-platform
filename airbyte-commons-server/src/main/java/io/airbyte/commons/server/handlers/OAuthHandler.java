@@ -70,7 +70,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +100,7 @@ public class OAuthHandler {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final WorkspaceService workspaceService;
 
-  public OAuthHandler(@Named("oauthHttpClient") final HttpClient httpClient,
+  public OAuthHandler(@Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory,
                       final TrackingClient trackingClient,
                       final SecretsRepositoryWriter secretsRepositoryWriter,
                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
@@ -111,7 +110,7 @@ public class OAuthHandler {
                       final OAuthService oauthService,
                       final SecretPersistenceConfigService secretPersistenceConfigService,
                       final WorkspaceService workspaceService) {
-    this.oAuthImplementationFactory = new OAuthImplementationFactory(httpClient);
+    this.oAuthImplementationFactory = oauthImplementationFactory;
     this.trackingClient = trackingClient;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
