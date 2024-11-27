@@ -463,17 +463,18 @@ public class Jsons {
   }
 
   /**
-   * Get the {@link JsonNode} at a location in a {@link JsonNode} object. Empty optional if no value
-   * at the specified location.
+   * Get the {@link JsonNode} at a location in a {@link JsonNode} object. Empty object node if no
+   * value at the specified location or the value at the specified location is null.
    *
    * @param json object to navigate
    * @param keys keys to follow to a value
    * @return value at location specified by keys wrapped in an optional. if no value there, empty
-   *         optional.
+   *         node.
    */
   public static JsonNode getNodeOrEmptyObject(final JsonNode json, final String... keys) {
     final JsonNode defaultValue = emptyObject();
-    return getOptional(json, Arrays.asList(keys)).orElse(defaultValue);
+    final Optional<JsonNode> valueOptional = getOptional(json, Arrays.asList(keys));
+    return valueOptional.filter(node -> !node.isNull()).orElse(defaultValue);
   }
 
   /**

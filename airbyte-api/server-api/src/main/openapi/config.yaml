@@ -3051,6 +3051,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/get_oauth_consent_url:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a connector builder project ID, return the URL to the consent screen where to redirect the user to.
+      operationId: getConnectorBuilderProjectOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectOauthConsentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthConsentRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/source_oauths/complete_oauth:
     post:
       tags:
@@ -3062,6 +3085,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CompleteSourceOauthRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteOAuthResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/complete_oauth:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a builder project Id generate an access/refresh token etc.
+      operationId: completeConnectorBuilderProjectOauth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteConnectorBuilderProjectOauthRequest"
         required: true
       responses:
         "200":
@@ -13089,6 +13135,22 @@ components:
           $ref: "#/components/schemas/OAuthInputConfiguration"
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    BuilderProjectOauthConsentRequest:
+      type: object
+      required:
+        - builderProjectId
+        - workspaceId
+        - redirectUrl
+      properties:
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        redirectUrl:
+          description: The url to redirect to after getting the user consent
+          type: string
+        oAuthInputConfiguration:
+          $ref: "#/components/schemas/OAuthInputConfiguration"
     DestinationOauthConsentRequest:
       type: object
       required:
@@ -13113,6 +13175,23 @@ components:
         - consentUrl
       properties:
         consentUrl:
+          type: string
+    CompleteConnectorBuilderProjectOauthRequest:
+      type: object
+      required:
+        - builderProjectId
+        - workspaceId
+      properties:
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        queryParams:
+          description: The query parameters present in the redirect URL after a user granted consent e.g auth code
+          type: object
+          additionalProperties: true # Oauth parameters like code, state, etc.. will be different per API so we don't specify them in advance
+        redirectUrl:
+          description: When completing OAuth flow to gain an access token, some API sometimes requires to verify that the app re-send the redirectUrl that was used when consent was given.
           type: string
     CompleteSourceOauthRequest:
       type: object

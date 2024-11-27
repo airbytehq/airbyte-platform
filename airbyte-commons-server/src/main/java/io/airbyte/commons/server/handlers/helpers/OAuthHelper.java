@@ -5,7 +5,11 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +78,22 @@ public class OAuthHelper {
     });
 
     return response;
+  }
+
+  /**
+   * Update the oauthUserInputFromConnectorConfigSpecification to allow for additional properties. The
+   * testing values must define the required values, but can send along additional fields from the
+   * testing values as well. TODO: Protocolize that this must always be set to true?
+   */
+  public static void updateOauthConfigToAcceptAdditionalUserInputProperties(
+                                                                            final OAuthConfigSpecification oauthConfigSpecification) {
+    final JsonNode userInputNode = oauthConfigSpecification.getOauthUserInputFromConnectorConfigSpecification();
+    final JsonNode updatedNode = Jsons.getNodeOrEmptyObject(userInputNode);
+
+    Jsons.setNestedValue(updatedNode, List.of("type"), TextNode.valueOf("object"));
+    Jsons.setNestedValue(updatedNode, List.of("additionalProperties"), BooleanNode.TRUE);
+
+    oauthConfigSpecification.setOauthUserInputFromConnectorConfigSpecification(updatedNode);
   }
 
 }
