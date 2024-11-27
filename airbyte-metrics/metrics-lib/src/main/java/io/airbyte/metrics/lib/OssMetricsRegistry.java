@@ -257,6 +257,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "running_pods_found_for_connection_id",
       "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
 
+  REPLICATION_THROUGHPUT_BPS(MetricEmittingApps.WORKER,
+      "replication_throughput_bps",
+      "throughput of replication in bps"),
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),
