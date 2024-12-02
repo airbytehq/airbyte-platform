@@ -114,7 +114,7 @@ class MapperSecretHelper(
         secretPersistence,
       )
 
-    return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, newConfigJson))
+    return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, newConfigJson, mapperConfig.id()))
   }
 
   /**
@@ -189,7 +189,7 @@ class MapperSecretHelper(
     val mapperInstance = getMapper(mapperName)
     val mapperConfigSchema = getConfigSchema(mapperInstance.spec())
     val maskedConfig = secretsProcessor.prepareSecretsForOutput(Jsons.jsonNode(mapperConfig.config()), mapperConfigSchema)
-    return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, maskedConfig))
+    return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, maskedConfig, mapperConfig.id()))
   }
 
   private fun maskMapperSecretsForStream(stream: ConfiguredAirbyteStream): ConfiguredAirbyteStream {

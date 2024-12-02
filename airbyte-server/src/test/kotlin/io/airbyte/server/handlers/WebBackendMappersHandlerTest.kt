@@ -61,7 +61,7 @@ class WebBackendMappersHandlerTest {
     every { catalogConverter.toConfiguredInternal(apiCatalog) } returns configuredCatalog
 
     val apiMappers = listOf(mockk<ConfiguredStreamMapper>(), mockk<ConfiguredStreamMapper>())
-    val allMappers = listOf(mockk<MapperConfig>(), mockk<MapperConfig>())
+    val allMappers = listOf(mockk<MapperConfig>(relaxed = true), mockk<MapperConfig>(relaxed = true))
     every { catalogConverter.toConfiguredMappers(apiMappers) } returns allMappers
 
     // First mapper hashes the password field

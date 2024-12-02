@@ -33,6 +33,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest
@@ -62,23 +63,29 @@ class CatalogConverterTest {
   @Test
   void testConvertInternal() throws JsonValidationException {
     final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(SECOND_FIELD_NAME);
+    final HashingMapperConfig hashingMapper2 = MapperHelperKt.createHashingMapper(FIELD_NAME, UUID.randomUUID());
     final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     final var apiStream = apiCatalog.getStreams().getFirst();
     apiStream.getConfig().setMappers(
         List.of(new ConfiguredStreamMapper()
             .type(StreamMapperType.HASHING)
-            .mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig()))));
+            .mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())),
+            new ConfiguredStreamMapper()
+                .id(hashingMapper2.id())
+                .type(StreamMapperType.HASHING)
+                .mapperConfiguration(Jsons.jsonNode(hashingMapper2.getConfig()))));
 
     final var internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog);
     assertEquals(1, internalCatalog.getStreams().size());
     final var internalStream = internalCatalog.getStreams().getFirst();
     final var mappers = internalStream.getMappers();
-    assertEquals(1, mappers.size());
+    assertEquals(2, mappers.size());
 
     final var fields = internalStream.getFields();
     assertEquals(2, fields.size());
 
     assertEquals(hashingMapper, mappers.getFirst());
+    assertEquals(hashingMapper2, mappers.get(1));
   }
 
   @Test

@@ -75,6 +75,7 @@ public class CatalogConverter {
 
   public ConfiguredStreamMapper toApi(final MapperConfig mapper) {
     return new ConfiguredStreamMapper()
+        .id(mapper.id())
         .type(Enums.toEnum(mapper.name(), StreamMapperType.class)
             .orElseThrow(() -> new IllegalArgumentException("Unexpected mapper name: " + mapper.name())))
         .mapperConfiguration(Jsons.jsonNode(mapper.config()));
@@ -242,7 +243,7 @@ public class CatalogConverter {
         .map(mapperConfig -> {
           final String mapperName = mapperConfig.getType().toString();
           final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
-          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration()));
+          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration(), mapperConfig.getId()));
         })
         .collect(Collectors.toList());
   }

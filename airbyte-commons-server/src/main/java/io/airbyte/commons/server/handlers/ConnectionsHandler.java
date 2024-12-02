@@ -303,6 +303,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
+      assignIdsToIncomingMappers(patch.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(patch.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
 
@@ -387,6 +388,14 @@ public class ConnectionsHandler {
     }
   }
 
+  private void assignIdsToIncomingMappers(final AirbyteCatalog catalog) {
+    catalog.getStreams().forEach(stream -> stream.getConfig().getMappers().forEach(mapper -> {
+      if (mapper.getId() == null) {
+        mapper.setId(uuidGenerator.get());
+      }
+    }));
+  }
+
   private void validateConfiguredMappers(final ConfiguredAirbyteCatalog configuredCatalog) {
     final CatalogGenerationResult result = destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog);
     if (result.getErrors().isEmpty()) {
@@ -399,6 +408,7 @@ public class ConnectionsHandler {
             .error(mapperError.getValue().getType().name())
             .mapper(
                 new ProblemMapperErrorDataMapper()
+                    .id(mapperError.getKey().id())
                     .type(mapperError.getKey().name())
                     .mapperConfiguration(mapperError.getKey().config()))))
         .toList();
@@ -461,6 +471,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
+      assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
           catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);

@@ -816,6 +816,9 @@ components:
             - type
             - mapperConfiguration
           properties:
+            id:
+              type: string
+              format: uuid
             type:
               type: string
             mapperConfiguration:

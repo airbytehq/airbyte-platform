@@ -1036,7 +1036,7 @@ class ConnectionsHandlerTest {
       }
 
       @Test
-      void testCreateConnectionWithMappers()
+      void testCreateConnectionWithHashedFields()
           throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
             .withWorkspaceId(workspaceId)
@@ -1054,6 +1054,34 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
         standardSync.getCatalog().getStreams().getFirst().setMappers(List.of(MapperHelperKt.createHashingMapper(FIELD_NAME)));
+        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
+      }
+
+      @Test
+      void testCreateConnectionWithMappers()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withDefaultGeography(Geography.EU);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final UUID newMapperId = UUID.randomUUID();
+        when(uuidGenerator.get()).thenReturn(connectionId, newMapperId);
+        final MapperConfig hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME, newMapperId);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().mappers(List.of(new ConfiguredStreamMapper()
+            .type(StreamMapperType.HASHING)
+            .mapperConfiguration(Jsons.jsonNode(hashingMapper.config()))));
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
+
+        final ConnectionRead expectedConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+        assertEquals(expectedConnectionRead, actualConnectionRead);
+
+        standardSync.getCatalog().getStreams().getFirst().setMappers(List.of(hashingMapper));
         verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
@@ -1079,6 +1107,12 @@ class ConnectionsHandlerTest {
                           @Override
                           public String name() {
                             return MapperOperationName.HASHING;
+                          }
+
+                          @Nullable
+                          @Override
+                          public UUID id() {
+                            return null;
                           }
 
                           @Nullable
@@ -1533,6 +1567,7 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalogForUpdate);
 
         final String streamName = "stream-name";
+        final UUID mapperId = UUID.randomUUID();
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
         when(destinationCatalogGenerator.generateDestinationCatalog(catalogConverter.toConfiguredInternal(catalogForUpdate)))
             .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(),
@@ -1552,6 +1587,11 @@ class ConnectionsHandlerTest {
                             return null;
                           }
 
+                          @Override
+                          public UUID id() {
+                            return mapperId;
+                          }
+
                           @NotNull
                           @Override
                           public String name() {
@@ -1568,7 +1608,7 @@ class ConnectionsHandlerTest {
             new ProblemMapperErrorData()
                 .stream(streamName)
                 .error(MapperErrorType.INVALID_MAPPER_CONFIG.name())
-                .mapper(new ProblemMapperErrorDataMapper().type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
+                .mapper(new ProblemMapperErrorDataMapper().id(mapperId).type(MapperOperationName.HASHING).mapperConfiguration(Map.of())));
       }
 
       @Test
@@ -1615,10 +1655,13 @@ class ConnectionsHandlerTest {
         standardSync.setCatalog(ConnectionHelpers.generateAirbyteCatalogWithTwoFields());
 
         // Send an update that hashes one of the fields, using mappers
-        final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME);
+        final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(FIELD_NAME, UUID.randomUUID());
         final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateApiCatalogWithTwoFields();
         catalogForUpdate.getStreams().getFirst().getConfig().addMappersItem(
-            new ConfiguredStreamMapper().type(StreamMapperType.HASHING).mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())));
+            new ConfiguredStreamMapper()
+                .id(hashingMapper.id())
+                .type(StreamMapperType.HASHING)
+                .mapperConfiguration(Jsons.jsonNode(hashingMapper.getConfig())));
 
         // Expect mapper in the persisted catalog
         final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateAirbyteCatalogWithTwoFields();

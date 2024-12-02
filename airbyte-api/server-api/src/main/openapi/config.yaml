@@ -11913,6 +11913,9 @@ components:
         - type
         - mapperConfiguration
       properties:
+        id:
+          type: string
+          format: uuid
         type:
           $ref: "#/components/schemas/StreamMapperType"
         mapperConfiguration:
@@ -13381,6 +13384,9 @@ components:
       required:
         - outputFields
       properties:
+        id:
+          type: string
+          format: uuid
         outputFields:
           type: array
           items:

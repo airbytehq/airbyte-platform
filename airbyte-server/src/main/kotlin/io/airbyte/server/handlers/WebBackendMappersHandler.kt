@@ -63,6 +63,7 @@ class WebBackendMappersHandler(
       val newStream = generationResult.catalog.streams.first()
 
       val validateRes = MapperValidationResult()
+      validateRes.id = mapper.id()
       validateRes.outputFields =
         newStream.fields!!.map {
           FieldSpec()

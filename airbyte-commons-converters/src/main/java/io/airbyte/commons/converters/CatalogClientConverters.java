@@ -216,7 +216,7 @@ public class CatalogClientConverters {
         .map(mapperConfig -> {
           final String mapperName = mapperConfig.getType().toString();
           final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
-          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration()));
+          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration(), mapperConfig.getId()));
         })
         .collect(Collectors.toList());
   }
