@@ -70,3 +70,8 @@ properties:
   useAsyncActivities:
     description: whether we should use async activities
     type: boolean
+  podLabels:
+    description: Additional labels to apply to the pods created for this job
+    type: array
+    items:
+      type: string

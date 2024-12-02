@@ -45,6 +45,7 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -131,12 +132,13 @@ public class TemporalClientTest {
     final var metricClient = mock(MetricClient.class);
     final var workflowClientWrapped = new WorkflowClientWrapped(workflowClient, metricClient);
     final var workflowServiceStubsWrapped = new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient);
+    final var scopedConfigurationService = mock(ScopedConfigurationService.class);
     connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
         spy(new TemporalClient(workspaceRoot, uiCommandsQueue, workflowClientWrapped, workflowServiceStubsWrapped, streamResetPersistence,
             streamRefreshesRepository,
-            connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class), new TestClient()));
+            connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class), new TestClient(), scopedConfigurationService));
   }
 
   @Nested
@@ -149,10 +151,11 @@ public class TemporalClientTest {
       mConnectionManagerUtils = mock(ConnectionManagerUtils.class);
 
       final var metricClient = mock(MetricClient.class);
+      final var scopedConfigurationService = mock(ScopedConfigurationService.class);
       temporalClient = spy(
           new TemporalClient(workspaceRoot, uiCommandsQueue, new WorkflowClientWrapped(workflowClient, metricClient),
               new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence, streamRefreshesRepository,
-              mConnectionManagerUtils, streamResetRecordsHelper, metricClient, new TestClient()));
+              mConnectionManagerUtils, streamResetRecordsHelper, metricClient, new TestClient(), scopedConfigurationService));
     }
 
     @Test

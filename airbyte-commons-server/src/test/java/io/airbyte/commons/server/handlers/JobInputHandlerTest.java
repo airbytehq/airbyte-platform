@@ -45,6 +45,7 @@ import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -101,6 +102,7 @@ class JobInputHandlerTest {
   private SourceService sourceService;
   private DestinationService destinatinonService;
   private ConnectionService connectionService;
+  private ScopedConfigurationService scopedConfigurationService;
 
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
@@ -121,6 +123,7 @@ class JobInputHandlerTest {
     sourceService = mock(SourceService.class);
     destinatinonService = mock(DestinationService.class);
     connectionService = mock(ConnectionService.class);
+    scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         featureFlagClient,
@@ -133,7 +136,8 @@ class JobInputHandlerTest {
         connectionService,
         sourceService,
         destinatinonService,
-        apiPojoConverters);
+        apiPojoConverters,
+        scopedConfigurationService);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);

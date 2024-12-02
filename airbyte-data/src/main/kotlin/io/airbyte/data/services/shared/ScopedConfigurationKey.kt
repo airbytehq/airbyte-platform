@@ -19,13 +19,16 @@ data object ConnectorVersionKey : ScopedConfigurationKey(
   supportedScopes = listOf(ConfigScopeType.ACTOR, ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION),
 )
 
-data object NetworkSecurityLabelKey : ScopedConfigurationKey(
-  key = "network_security_label",
+/**
+ * A token used to allow the workload launcher to add labels to a pod for network policy application.
+ */
+data object NetworkSecurityTokenKey : ScopedConfigurationKey(
+  key = "network_security_token",
   supportedScopes = listOf(ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION),
 )
 
 val ScopedConfigurationKeys: Map<String, ScopedConfigurationKey> =
   mapOf(
     ConnectorVersionKey.key to ConnectorVersionKey,
-    NetworkSecurityLabelKey.key to NetworkSecurityLabelKey,
+    NetworkSecurityTokenKey.key to NetworkSecurityTokenKey,
   )
