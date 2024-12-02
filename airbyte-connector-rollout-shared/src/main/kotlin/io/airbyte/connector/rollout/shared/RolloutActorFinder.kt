@@ -100,13 +100,20 @@ class RolloutActorFinder(
 
     // Calculate the number to pin based on the input percentage
     val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
+    val filteredActorDefinitionConnections = filterByConnectionActorId(candidates, sortedActorDefinitionConnections, actorType)
+    logger.info {
+      "Rollout ${connectorRollout.id}: " +
+        "candidates.size=$candidates.size " +
+        "sortedActorDefinitionConnections.size=${sortedActorDefinitionConnections.size} " +
+        "filteredActorDefinitionConnections.size=${filteredActorDefinitionConnections.size}"
+    }
 
     // From the eligible actors, choose the ones with the next sync
     // TODO: filter out those with lots of data
     // TODO: prioritize internal connections
     val actorIdsToPin =
       getUniqueActorIds(
-        sortedActorDefinitionConnections.filter { candidates.map { it.id }.contains(it.sourceId ?: it.destinationId) },
+        filteredActorDefinitionConnections,
         targetTotalToPin - nPreviouslyPinned,
         actorType,
       )
@@ -128,6 +135,25 @@ class RolloutActorFinder(
           ceil((nPreviouslyPinned + actorIdsToPin.size) * 100.0 / nEligibleOrAlreadyPinned).toInt()
         },
     )
+  }
+
+  @VisibleForTesting
+  internal fun filterByConnectionActorId(
+    candidates: Collection<ConfigScopeMapWithId>,
+    sortedActorDefinitionConnections: List<StandardSync>,
+    actorType: ActorType,
+  ): List<StandardSync> {
+    val candidateIds = candidates.map { it.id }.toSet()
+
+    return sortedActorDefinitionConnections.filter { connection ->
+      val relevantId =
+        if (actorType == ActorType.SOURCE) {
+          connection.sourceId
+        } else {
+          connection.destinationId
+        }
+      candidateIds.contains(relevantId)
+    }
   }
 
   fun getSyncInfoForPinnedActors(connectorRollout: ConnectorRollout): Map<UUID, ActorSyncJobInfo> {

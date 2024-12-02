@@ -1084,6 +1084,145 @@ class RolloutActorFinderTest {
   }
 
   @Test
+  fun `getIdFromConnection filters connections using sourceId when ActorType is SOURCE`() {
+    val candidates =
+      listOf(
+        mapOf(
+          ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+          ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+        ),
+      ).flatMap { it.values }
+
+    val connections =
+      listOf(
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+        },
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION
+        },
+      )
+
+    val result = rolloutActorFinder.filterByConnectionActorId(candidates, connections, ActorType.SOURCE)
+
+    assertEquals(2, result.size)
+    assertEquals(ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE, result[0].sourceId)
+    assertEquals(ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE, result[1].sourceId)
+  }
+
+  @Test
+  fun `getIdFromConnection filters connections using destinationId when ActorType is DESTINATION`() {
+    val candidates =
+      listOf(
+        mapOf(
+          ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+          ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+        ),
+      ).flatMap { it.values }
+
+    val connections =
+      listOf(
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+        },
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION
+        },
+      )
+
+    val result = rolloutActorFinder.filterByConnectionActorId(candidates, connections, ActorType.DESTINATION)
+
+    assertEquals(2, result.size)
+    assertEquals(ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION, result[0].destinationId)
+    assertEquals(ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION, result[1].destinationId)
+  }
+
+  @Test
+  fun `getIdFromConnection returns empty list if no matches are found`() {
+    val candidates =
+      listOf(
+        mapOf(
+          ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+          ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION to
+            ConfigScopeMapWithId(
+              id = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION,
+              scopeMap =
+                mapOf(
+                  ConfigScopeType.ACTOR to ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_DESTINATION,
+                  ConfigScopeType.WORKSPACE to ORGANIZATION_1_WORKSPACE_ID_1,
+                  ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1,
+                ),
+            ),
+        ),
+      ).flatMap { it.values }
+
+    val connections =
+      listOf(
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_2_WORKSPACE_1_ACTOR_ID_DESTINATION
+        },
+        StandardSync().apply {
+          sourceId = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID_SOURCE
+          destinationId = ORGANIZATION_2_WORKSPACE_2_ACTOR_ID_DESTINATION
+        },
+      )
+
+    val result = rolloutActorFinder.filterByConnectionActorId(candidates, connections, ActorType.DESTINATION)
+
+    assertEquals(0, result.size)
+  }
+
+  @Test
   fun `test getUniqueActorIds with fewer actors than nActorsToPin`() {
     val sortedConnections =
       listOf(
