@@ -300,6 +300,7 @@ create table "public"."organization_payment_config" (
   "usage_category_override" "public"."usage_category_override",
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "subscription_status" "public"."subscription_status" not null default cast('pre_subscription' as subscription_status),
   constraint "organization_payment_config_pkey" primary key ("organization_id"),
   constraint "organization_payment_config_payment_provider_id_key" unique ("payment_provider_id")
 );
