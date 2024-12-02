@@ -286,7 +286,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       if (elapsedMs > 0) {
         final var elapsedSeconds = elapsedMs / 1000;
         final var throughput = replicationSummary.getBytesSynced() / elapsedSeconds;
-        metricClient.gauge(OssMetricsRegistry.REPLICATION_THROUGHPUT_BPS, throughput, metricAttributes);
+        metricClient.count(OssMetricsRegistry.REPLICATION_THROUGHPUT_BPS, throughput, metricAttributes);
       }
     }
     if (!tags.isEmpty()) {
