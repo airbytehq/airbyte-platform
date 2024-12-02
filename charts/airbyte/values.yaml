@@ -464,16 +464,13 @@ pod-sweeper:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=1001(anon)
-    fsGroup: 1001
+    fsGroup: 1000
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1001(anon)
-    runAsUser: 1001
-    # gid=1001(anon)
-    runAsGroup: 1001
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
