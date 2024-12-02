@@ -1,18 +1,16 @@
 package io.airbyte.commons.server.handlers.helpers
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.problems.throwable.generated.MapperSecretNotFoundProblem
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.config.AirbyteSecret
-import io.airbyte.config.AirbyteStream
 import io.airbyte.config.Configs.DeploymentMode
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.config.ConfiguredAirbyteStream
-import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SecretPersistenceConfig
-import io.airbyte.config.SyncMode
 import io.airbyte.config.mapper.configs.AesEncryptionConfig
 import io.airbyte.config.mapper.configs.AesMode
 import io.airbyte.config.mapper.configs.AesPadding
@@ -22,6 +20,7 @@ import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.config.mapper.configs.HashingMapperConfig
 import io.airbyte.config.mapper.configs.HashingMethods
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
@@ -52,6 +51,7 @@ internal class MapperSecretHelperTest {
   private val workspaceService = mockk<WorkspaceService>()
   private val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
   private val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>()
+  private val secretsRepositoryReader = mockk<SecretsRepositoryReader>()
   private val secretsProcessor = mockk<JsonSecretsProcessor>()
   private val featureFlagClient = mockk<TestClient>()
 
@@ -64,6 +64,7 @@ internal class MapperSecretHelperTest {
       workspaceService = workspaceService,
       secretPersistenceConfigService = secretPersistenceConfigService,
       secretsRepositoryWriter = secretsRepositoryWriter,
+      secretsRepositoryReader = secretsRepositoryReader,
       featureFlagClient = featureFlagClient,
       secretsProcessor = secretsProcessor,
       deploymentMode = DeploymentMode.CLOUD,
@@ -190,65 +191,69 @@ internal class MapperSecretHelperTest {
   }
 
   @Test
-  fun `test update with masked secrets and no mapper changes resolves old secrets`() {
-    val maskedExistingMapperConfig =
+  fun `test updating mapper config with masked secrets`() {
+    val mapperId = UUID.randomUUID()
+    val maskedUpdatedMapperConfig =
       EncryptionMapperConfig(
+        id = mapperId,
         config =
           AesEncryptionConfig(
             algorithm = EncryptionConfig.ALGO_AES,
-            targetField = "target",
+            targetField = "some_other_target",
+            fieldNameSuffix = "_enc",
             mode = AesMode.CBC,
             padding = AesPadding.NoPadding,
             key = AirbyteSecret.Hydrated(AirbyteSecretConstants.SECRETS_MASK),
           ),
       )
-    val catalogWithMaskedSecrets = generateCatalogWithMapper(maskedExistingMapperConfig)
-    val addedConfiguredStream =
-      ConfiguredAirbyteStream.Builder()
-        .stream(AirbyteStream("new_stream", Jsons.emptyObject(), listOf()))
-        .syncMode(SyncMode.FULL_REFRESH)
-        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-        .mappers(listOf())
-        .build()
-    catalogWithMaskedSecrets.withStreams(listOf(catalogWithMaskedSecrets.streams.first(), addedConfiguredStream))
+    val maskedUpdatedConfigJson = Jsons.jsonNode(maskedUpdatedMapperConfig.config()) as ObjectNode
+    val catalogWithMaskedSecrets = generateCatalogWithMapper(maskedUpdatedMapperConfig)
 
-    val referencedMapperConfig =
+    val persistedMapperConfig =
       EncryptionMapperConfig(
+        id = mapperId,
         config =
           AesEncryptionConfig(
             algorithm = EncryptionConfig.ALGO_AES,
             targetField = "target",
+            fieldNameSuffix = "_enc",
             mode = AesMode.CBC,
             padding = AesPadding.NoPadding,
             key = AirbyteSecret.Reference(SECRET_COORDINATE),
           ),
       )
-    val persistedCatalog = generateCatalogWithMapper(referencedMapperConfig)
+    val persistedCatalog = generateCatalogWithMapper(persistedMapperConfig)
 
-    val maskedConfig =
-      Jsons.jsonNode(
-        mapOf(
-          "algorithm" to "AES",
-          "targetField" to "target",
-          "mode" to "CBC",
-          "padding" to "NoPadding",
-          "key" to AirbyteSecretConstants.SECRETS_MASK,
-        ),
-      )
+    val persistedConfigJson = Jsons.jsonNode(persistedMapperConfig.config()) as ObjectNode
+    val hydratedPersistedConfigJson = persistedConfigJson.deepCopy().put("key", SECRET_VALUE)
+
+    every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(eq(persistedConfigJson), any()) } returns hydratedPersistedConfigJson
 
     val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
-    every { secretsProcessor.prepareSecretsForOutput(Jsons.jsonNode(referencedMapperConfig.config()), configSpec) } returns maskedConfig
+    val resolvedUpdatedConfigJson = maskedUpdatedConfigJson.deepCopy().put("key", SECRET_VALUE)
 
-    val catalogWithoutSecrets = mapperSecretHelper.updateAndReplaceMapperSecrets(WORKSPACE_ID, persistedCatalog, catalogWithMaskedSecrets)
-    assertEquals(2, catalogWithoutSecrets.streams.size)
-    assertEquals(addedConfiguredStream, catalogWithoutSecrets.streams.last())
+    every { secretsProcessor.copySecrets(hydratedPersistedConfigJson, maskedUpdatedConfigJson, configSpec) } returns resolvedUpdatedConfigJson
 
-    // The important part: return the persisted catalog's mappers (with coordinates) rather than the mask
-    assertEquals(referencedMapperConfig, catalogWithoutSecrets.streams.first().mappers.first())
+    val expectedMapperConfig =
+      maskedUpdatedMapperConfig.copy(
+        config = (maskedUpdatedMapperConfig.config() as AesEncryptionConfig).copy(key = AirbyteSecret.Reference(SECRET_COORDINATE)),
+      )
+
+    every {
+      secretsRepositoryWriter.updateFromConfig(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
+    } returns Jsons.jsonNode(expectedMapperConfig.config())
+    val res = mapperSecretHelper.updateAndReplaceMapperSecrets(WORKSPACE_ID, persistedCatalog, catalogWithMaskedSecrets)
+    assertEquals(expectedMapperConfig, res.streams.first().mappers.first())
+
+    verify {
+      secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(eq(persistedConfigJson), any())
+      secretsProcessor.copySecrets(hydratedPersistedConfigJson, maskedUpdatedConfigJson, configSpec)
+      secretsRepositoryWriter.updateFromConfig(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
+    }
   }
 
   @Test
-  fun `test updating mapper config with masked secrets is not supported`() {
+  fun `test updating mapper config with masked secrets and missing previous secret is not supported`() {
     val maskedUpdatedMapperConfig =
       EncryptionMapperConfig(
         config =
@@ -289,7 +294,7 @@ internal class MapperSecretHelperTest {
     val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
     every { secretsProcessor.prepareSecretsForOutput(Jsons.jsonNode(referencedMapperConfig.config()), configSpec) } returns maskedConfig
 
-    assertThrows<IllegalArgumentException> {
+    assertThrows<MapperSecretNotFoundProblem> {
       mapperSecretHelper.updateAndReplaceMapperSecrets(WORKSPACE_ID, persistedCatalog, catalogWithMaskedSecrets)
     }
   }

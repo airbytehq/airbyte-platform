@@ -524,6 +524,28 @@ components:
               default: The mapper configuration is invalid
             data:
               $ref: "#/components/schemas/ProblemMapperErrorsData"
+    MapperSecretNotFoundProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/secret-not-found
+            title:
+              type: string
+              default: Mapper secret not found
+            detail:
+              type: string
+              default: Attempted to use pre-existing secret values, but an existing secret for that mapper was not found. Please provide the secret values.
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+
     RuntimeSecretsManagerRequiredProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -789,6 +811,16 @@ components:
         connectionId:
           type: string
         cronTimezone:
+          type: string
+    ProblemMapperIdData:
+      type: object
+      required:
+        - mapperType
+      properties:
+        mapperId:
+          type: string
+          format: uuid
+        mapperType:
           type: string
     ProblemMapperErrorsData:
       type: object

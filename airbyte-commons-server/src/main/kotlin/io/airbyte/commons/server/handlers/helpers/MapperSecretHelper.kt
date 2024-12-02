@@ -1,6 +1,8 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.problems.model.generated.ProblemMapperIdData
+import io.airbyte.api.problems.throwable.generated.MapperSecretNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.RuntimeSecretsManagerRequiredProblem
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
@@ -10,8 +12,10 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScopeType
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsHelpers
+import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -25,6 +29,7 @@ import io.airbyte.mappers.transformations.MapperSpec
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 
 @Singleton
@@ -33,6 +38,7 @@ class MapperSecretHelper(
   private val workspaceService: WorkspaceService,
   private val secretPersistenceConfigService: SecretPersistenceConfigService,
   private val secretsRepositoryWriter: SecretsRepositoryWriter,
+  private val secretsRepositoryReader: SecretsRepositoryReader,
   @Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
   private val featureFlagClient: FeatureFlagClient,
   private val deploymentMode: DeploymentMode,
@@ -43,6 +49,7 @@ class MapperSecretHelper(
     workspaceService: WorkspaceService,
     secretPersistenceConfigService: SecretPersistenceConfigService,
     secretsRepositoryWriter: SecretsRepositoryWriter,
+    secretsRepositoryReader: SecretsRepositoryReader,
     @Named("jsonSecretsProcessorWithCopy") secretsProcessor: JsonSecretsProcessor,
     featureFlagClient: FeatureFlagClient,
     deploymentMode: DeploymentMode,
@@ -51,6 +58,7 @@ class MapperSecretHelper(
     workspaceService,
     secretPersistenceConfigService,
     secretsRepositoryWriter,
+    secretsRepositoryReader,
     secretsProcessor,
     featureFlagClient,
     deploymentMode,
@@ -81,8 +89,28 @@ class MapperSecretHelper(
     return RuntimeSecretPersistence(secretPersistenceConfig)
   }
 
+  private fun assertConfigHasNoMaskedSecrets(
+    config: JsonNode,
+    mapperId: UUID?,
+    mapperType: String,
+  ) {
+    val configAsString = Jsons.serialize(config)
+    if (configAsString.contains(AirbyteSecretConstants.SECRETS_MASK)) {
+      throw MapperSecretNotFoundProblem(ProblemMapperIdData().mapperId(mapperId).mapperType(mapperType))
+    }
+  }
+
   private fun handleMapperConfigSecrets(
     mapperConfig: MapperConfig,
+    workspaceId: UUID,
+    organizationId: UUID,
+  ): MapperConfig {
+    return handleMapperConfigSecrets(mapperConfig, existingMapperConfig = null, workspaceId, organizationId)
+  }
+
+  private fun handleMapperConfigSecrets(
+    mapperConfig: MapperConfig,
+    existingMapperConfig: MapperConfig?,
     workspaceId: UUID,
     organizationId: UUID,
   ): MapperConfig {
@@ -95,24 +123,36 @@ class MapperSecretHelper(
       return mapperConfig
     }
 
-    val configAsJson = Jsons.jsonNode(mapperConfig.config())
     val secretPersistence = getSecretPersistence(organizationId)
-
-    val configAsString = Jsons.serialize(configAsJson)
-    val doesConfigHaveSecretMask = configAsString.contains(AirbyteSecretConstants.SECRETS_MASK)
-    if (doesConfigHaveSecretMask) {
-      // TODO(pedro): This is here to prevent the secret mask from overwriting actual secrets. If we hit this codepath, there's either a bug or an API user is attempting to save a secret mask.
-      // Updates without specifying the secret value are not currently supported.
-      throw IllegalArgumentException("Attempting to store masked secrets")
-    }
+    val persistedConfigAsJson = existingMapperConfig?.let { Jsons.jsonNode(it.config()) }
+    val hydratedPersistedConfig = tryHydrateConfigJson(persistedConfigAsJson, secretPersistence)
 
     val newConfigJson =
-      secretsRepositoryWriter.createFromConfig(
-        workspaceId,
-        configAsJson,
-        mapperConfigSchema,
-        secretPersistence,
-      )
+      if (hydratedPersistedConfig != null) {
+        // copy any necessary secrets from the current mapper to the incoming updated mapper
+        val configWithSecrets =
+          secretsProcessor.copySecrets(
+            hydratedPersistedConfig,
+            Jsons.jsonNode(mapperConfig.config()),
+            mapperConfigSchema,
+          )
+        secretsRepositoryWriter.updateFromConfig(
+          workspaceId,
+          persistedConfigAsJson!!,
+          configWithSecrets,
+          mapperConfigSchema,
+          secretPersistence,
+        )
+      } else {
+        val configWithSecrets = Jsons.jsonNode(mapperConfig.config())
+        assertConfigHasNoMaskedSecrets(configWithSecrets, mapperConfig.id(), mapperName)
+        secretsRepositoryWriter.createFromConfig(
+          workspaceId,
+          configWithSecrets,
+          mapperConfigSchema,
+          secretPersistence,
+        )
+      }
 
     return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, newConfigJson, mapperConfig.id()))
   }
@@ -145,16 +185,10 @@ class MapperSecretHelper(
     workspaceId: UUID,
     organizationId: UUID,
   ): List<MapperConfig> {
-    // TODO(pedro): implement updates correctly once mapper have IDs so we can keep secrets that have been set before
-
-    if (oldStream != null && maskMapperSecretsForStream(oldStream).mappers == stream.mappers) {
-      // HACK: If the old catalog (masked)'s mappers are the same as the incoming catalog's mappers, don't try to do anything to mappers
-      // This is a workaround so that internal calls with masked mappers continue to function properly before implementing mapper IDs
-      return oldStream.mappers
-    }
-
+    val oldMappersById = oldStream?.mappers?.filter { it.id() != null }?.associateBy { it.id() } ?: emptyMap()
     return stream.mappers.map {
-      handleMapperConfigSecrets(it, workspaceId, organizationId)
+      val existingConfig = it.id().let { id -> oldMappersById[id] }
+      handleMapperConfigSecrets(it, existingConfig, workspaceId, organizationId)
     }
   }
 
@@ -164,11 +198,15 @@ class MapperSecretHelper(
     newCatalog: ConfiguredAirbyteCatalog,
   ): ConfiguredAirbyteCatalog {
     val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
-    val oldStreams = oldCatalog.streams.associateBy { it.stream.name }
+    val oldStreams = oldCatalog.streams.associateBy { StreamDescriptor().withName(it.stream.name).withNamespace(it.stream.namespace) }
     return newCatalog.copy(
       streams =
         newCatalog.streams.map { stream ->
-          val oldStream = oldStreams[stream.stream.name]
+          val streamDescriptor =
+            StreamDescriptor()
+              .withName(stream.stream.name)
+              .withNamespace(stream.stream.namespace)
+          val oldStream = oldStreams[streamDescriptor]
           stream.copy(
             mappers = getStreamUpdatedMappers(stream, oldStream, workspaceId, organizationId),
           )
@@ -211,5 +249,28 @@ class MapperSecretHelper(
           maskMapperSecretsForStream(it)
         },
     )
+  }
+
+  private fun tryHydrateConfigJson(
+    persistedConfigJson: JsonNode?,
+    runtimeSecretPersistence: RuntimeSecretPersistence?,
+  ): JsonNode? {
+    if (persistedConfigJson == null) {
+      return null
+    }
+
+    return try {
+      if (runtimeSecretPersistence != null) {
+        secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
+          persistedConfigJson,
+          runtimeSecretPersistence,
+        )
+      } else {
+        secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(persistedConfigJson)
+      }
+    } catch (e: SecretCoordinateException) {
+      // Some secret is missing, treat as a new config
+      null
+    }
   }
 }
