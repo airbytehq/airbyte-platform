@@ -1,7 +1,7 @@
 import { HTMLAttributes, Ref, forwardRef, useContext, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
-import { InferType } from "yup";
+import { InferType, SchemaOf } from "yup";
 
 import { LoadingPage } from "components";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -42,68 +42,47 @@ import {
 } from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
 
+type AllSchemaEventTypes =
+  | InferType<typeof jobRunningSchema>
+  | InferType<typeof syncEventSchema>
+  | InferType<typeof syncFailEventSchema>
+  | InferType<typeof refreshEventSchema>
+  | InferType<typeof clearEventSchema>
+  | InferType<typeof jobStartedEventSchema>
+  | InferType<typeof connectionEnabledEventSchema>
+  | InferType<typeof connectionDisabledEventSchema>
+  | InferType<typeof connectionSettingsUpdateEventSchema>
+  | InferType<typeof schemaUpdateEventSchema>;
+
+interface EventSchemaComponentMapItem<T> {
+  schema: SchemaOf<T>;
+  component: React.FC<{ event: T }>;
+}
+
+const eventSchemaComponentMap = [
+  { schema: jobRunningSchema, component: RunningJobItem },
+  { schema: syncEventSchema, component: SyncEventItem },
+  { schema: syncFailEventSchema, component: SyncFailEventItem },
+  { schema: refreshEventSchema, component: RefreshEventItem },
+  { schema: clearEventSchema, component: ClearEventItem },
+  { schema: jobStartedEventSchema, component: JobStartEventItem },
+  { schema: connectionEnabledEventSchema, component: ConnectionEnabledEventItem },
+  { schema: connectionDisabledEventSchema, component: ConnectionDisabledEventItem },
+  { schema: connectionSettingsUpdateEventSchema, component: ConnectionSettingsUpdateEventItem },
+  { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
+] as Array<EventSchemaComponentMapItem<AllSchemaEventTypes>>;
+
 export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineRunningEvent) => {
-  if (jobRunningSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <RunningJobItem jobRunningItem={event} />
-      </Box>
-    );
-  } else if (syncEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <SyncEventItem syncEvent={event} />
-      </Box>
-    );
-  } else if (syncFailEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <SyncFailEventItem syncEvent={event} />
-      </Box>
-    );
-  } else if (refreshEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <RefreshEventItem refreshEvent={event} />
-      </Box>
-    );
-  } else if (clearEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <ClearEventItem clearEvent={event} />
-      </Box>
-    );
-  } else if (jobStartedEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <JobStartEventItem jobStartEvent={event} />
-      </Box>
-    );
-  } else if (connectionEnabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <ConnectionEnabledEventItem event={event} />
-      </Box>
-    );
-  } else if (connectionDisabledEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <ConnectionDisabledEventItem event={event} />
-      </Box>
-    );
-  } else if (connectionSettingsUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <ConnectionSettingsUpdateEventItem event={event} />
-      </Box>
-    );
-  } else if (schemaUpdateEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-    return (
-      <Box py="lg" key={event.id}>
-        <SchemaUpdateEventItem event={event} />
-      </Box>
-    );
+  for (const { schema, component: Component } of eventSchemaComponentMap) {
+    if (schema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+      return (
+        <Box py="lg" key={event.id}>
+          <Component event={event} />
+        </Box>
+      );
+    }
   }
+
   /**
    * known cases for excluding timeline events that we should not trigger error reporting for:
    * - events with only resourceRequirement patches

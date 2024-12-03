@@ -16,13 +16,13 @@ import { clearEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface ClearEventProps {
-  clearEvent: InferType<typeof clearEventSchema>;
+  event: InferType<typeof clearEventSchema>;
 }
-export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
+export const ClearEventItem: React.FC<ClearEventProps> = ({ event }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
-  const title = titleIdMap[clearEvent.eventType];
-  const jobStatus = getStatusByEventType(clearEvent.eventType);
-  const streamsToList = clearEvent.summary.streams.map((stream) => stream.name);
+  const title = titleIdMap[event.eventType];
+  const jobStatus = getStatusByEventType(event.eventType);
+  const streamsToList = event.summary.streams.map((stream) => stream.name);
 
   return (
     <ConnectionTimelineEventItem>
@@ -32,32 +32,32 @@ export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
           <FormattedMessage id={title} values={{ value: streamsToList.length }} />
         </Text>
         <Box pt="xs">
-          {jobStatus === "cancelled" && !!clearEvent.user && (
+          {jobStatus === "cancelled" && !!event.user && (
             <div>
-              <UserCancelledDescription user={clearEvent.user} jobType="clear" />
+              <UserCancelledDescription user={event.user} jobType="clear" />
             </div>
           )}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
           {showExtendedStats && (
             <>
               <Text as="span" color="grey400" size="sm">
-                <FormattedMessage id="jobs.jobId" values={{ id: clearEvent.summary.jobId }} />
+                <FormattedMessage id="jobs.jobId" values={{ id: event.summary.jobId }} />
               </Text>
               <Text as="span" color="grey400" size="sm">
                 |
               </Text>
               <Text as="span" color="grey400" size="sm">
-                <FormattedMessage id="jobs.attemptCount" values={{ count: clearEvent.summary.attemptsCount }} />
+                <FormattedMessage id="jobs.attemptCount" values={{ count: event.summary.attemptsCount }} />
               </Text>
             </>
           )}
         </Box>
       </ConnectionTimelineEventSummary>
       <ConnectionTimelineEventActions
-        createdAt={clearEvent.createdAt}
-        eventId={clearEvent.id}
-        jobId={clearEvent.summary.jobId}
-        attemptCount={clearEvent.summary.attemptsCount}
+        createdAt={event.createdAt}
+        eventId={event.id}
+        jobId={event.summary.jobId}
+        attemptCount={event.summary.attemptsCount}
       />
     </ConnectionTimelineEventItem>
   );

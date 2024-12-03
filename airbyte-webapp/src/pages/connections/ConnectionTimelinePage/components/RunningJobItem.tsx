@@ -6,40 +6,36 @@ import { RefreshRunningItem } from "./RefreshRunningItem";
 import { SyncRunningItem } from "./SyncRunningItem";
 import { jobRunningSchema } from "../types";
 
-export const RunningJobItem: React.FC<{ jobRunningItem: InferType<typeof jobRunningSchema> }> = React.memo(
-  ({ jobRunningItem }) => {
-    if (!jobRunningItem || !jobRunningItem.createdAt || !jobRunningItem.summary) {
-      return null;
-    }
+interface RunningJobItemProps {
+  event: InferType<typeof jobRunningSchema>;
+}
 
-    const getStreams = (types: string[]) =>
-      jobRunningItem.summary.streams
-        .filter((stream) => types.includes(stream.configType))
-        .map((stream) => stream.streamName);
-
-    switch (jobRunningItem.summary.configType) {
-      case "sync":
-        return <SyncRunningItem startedAt={jobRunningItem.createdAt} jobId={jobRunningItem.summary.jobId} />;
-      case "refresh":
-        return (
-          <RefreshRunningItem
-            startedAt={jobRunningItem.createdAt}
-            jobId={jobRunningItem.summary.jobId}
-            streams={getStreams(["refresh"])}
-          />
-        );
-      case "clear":
-      case "reset_connection":
-        return (
-          <ClearRunningItem
-            startedAt={jobRunningItem.createdAt}
-            jobId={jobRunningItem.summary.jobId}
-            streams={getStreams(["clear", "reset_connection"])}
-          />
-        );
-      default:
-        return null;
-    }
+export const RunningJobItem: React.FC<RunningJobItemProps> = React.memo(({ event }) => {
+  if (!event || !event.createdAt || !event.summary) {
+    return null;
   }
-);
+
+  const getStreams = (types: string[]) =>
+    event.summary.streams.filter((stream) => types.includes(stream.configType)).map((stream) => stream.streamName);
+
+  switch (event.summary.configType) {
+    case "sync":
+      return <SyncRunningItem startedAt={event.createdAt} jobId={event.summary.jobId} />;
+    case "refresh":
+      return (
+        <RefreshRunningItem startedAt={event.createdAt} jobId={event.summary.jobId} streams={getStreams(["refresh"])} />
+      );
+    case "clear":
+    case "reset_connection":
+      return (
+        <ClearRunningItem
+          startedAt={event.createdAt}
+          jobId={event.summary.jobId}
+          streams={getStreams(["clear", "reset_connection"])}
+        />
+      );
+    default:
+      return null;
+  }
+});
 RunningJobItem.displayName = "RunningJobItem";
