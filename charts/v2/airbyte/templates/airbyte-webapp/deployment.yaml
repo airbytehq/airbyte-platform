@@ -57,10 +57,10 @@ spec:
         imagePullPolicy: "{{ .Values.webapp.image.pullPolicy }}"
         env:
 
-        {{ include "airbyte.airbyte.envs" . | nindent 8 }}
-        {{ include "airbyte.webapp.envs" . | nindent 8 }}
+        {{ include "airbyte.common.envs" . | nindent 8 }}
+        {{ include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 8 }}
         {{ include "airbyte.tracking.envs" . | nindent 8 }}
-        {{ include "airbyte.keycloak.internalHost.env" . | nindent 8 }}
+        {{ include "airbyte.webapp.envs" . | nindent 8 }}
 
         # Values from secret
         {{- if .Values.webapp.secrets }}

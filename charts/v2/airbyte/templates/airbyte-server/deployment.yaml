@@ -67,8 +67,7 @@ spec:
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
 
-        {{- include "airbyte.airbyte.envs" . | nindent 8 }} 
-        {{- include "airbyte.auth.envs" . | nindent 8 }} 
+        {{- include "airbyte.common.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.security.envs" . | nindent 8 }} 
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
@@ -88,7 +87,10 @@ spec:
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }} 
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- else }}
+        {{- include "airbyte.auth.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
         {{- end}}
 

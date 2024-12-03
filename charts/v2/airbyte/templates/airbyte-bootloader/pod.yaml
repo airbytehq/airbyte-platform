@@ -44,14 +44,12 @@ spec:
       image: {{ include "imageUrl" (list .Values.airbyteBootloader.image $) }}
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
       env:
-        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.common.version.env" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.database.migrations.runAtStartup.env" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
-        {{- else if (eq .Values.global.edition "enterprise") }}
-        {{- include "airbyte.auth.envs" . | nindent 8 }}
-        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret

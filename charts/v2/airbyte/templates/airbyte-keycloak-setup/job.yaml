@@ -42,7 +42,7 @@ spec:
           image: {{ include "imageUrl" (list .Values.keycloakSetup.initContainers.keycloakReadinessCheck.image $) }}
           command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
           env:
-            {{- include "airbyte.keycloak.internalHost.env" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 12 }}
           securityContext: 
             {{- toYaml .Values.keycloakSetup.initContainerSecurityContext | nindent 12 }}
         {{- if .Values.keycloakSetup.extraInitContainers }}
@@ -58,9 +58,11 @@ spec:
               value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.keycloakSetup.debug.remoteDebugPort }},server=y,suspend=y"
             {{- end}}
 
-            {{- include "airbyte.airbyte.envs" . | nindent 12 }}
+            {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.database.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.client.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
 
             {{- if (eq .Values.global.edition "enterprise") }}
             {{- include "airbyte.enterprise.envs" . | nindent 12 }}

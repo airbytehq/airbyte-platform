@@ -76,7 +76,8 @@ spec:
           imagePullPolicy: {{ .Values.keycloak.image.pullPolicy }}
           env:
             {{- include "airbyte.keycloak.envs" . | nindent 12 }}
-            {{- include "airbyte.keycloak.javaOpts.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
 
             {{- if .Values.keycloak.extraEnv }}
             {{ .Values.keycloak.extraEnv | toYaml | nindent 12 }}

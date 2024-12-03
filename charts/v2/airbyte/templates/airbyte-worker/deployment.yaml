@@ -64,7 +64,7 @@ spec:
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
 
-        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}

@@ -143,5 +143,6 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       env:
-        {{- include "airbyte.storage.minio.envs" . | nindent 8 }}
+        {{- include "airbyte.minio.envs" . | nindent 8 }}
+        {{- include "airbyte.storage.minio.endpoint.env" . | nindent 8 }}
 {{- end }}
