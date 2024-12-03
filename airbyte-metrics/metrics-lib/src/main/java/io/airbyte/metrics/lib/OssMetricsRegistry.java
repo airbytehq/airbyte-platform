@@ -259,7 +259,7 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   REPLICATION_THROUGHPUT_BPS(MetricEmittingApps.WORKER,
       "replication_throughput_bps",
-      "throughput of replication in bps"),
+      "throughput of replication in bytes per second"),
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),

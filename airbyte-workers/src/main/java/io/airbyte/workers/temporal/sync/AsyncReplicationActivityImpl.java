@@ -300,6 +300,14 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     if (replicationSummary.getStatus() != null) {
       tags.put(REPLICATION_STATUS_KEY, replicationSummary.getStatus().value());
     }
+    if (replicationSummary.getStartTime() != null && replicationSummary.getEndTime() != null && replicationSummary.getBytesSynced() != null) {
+      final var elapsedMs = replicationSummary.getEndTime() - replicationSummary.getStartTime();
+      if (elapsedMs > 0) {
+        final var elapsedSeconds = elapsedMs / 1000;
+        final var throughput = replicationSummary.getBytesSynced() / elapsedSeconds;
+        metricClient.count(OssMetricsRegistry.REPLICATION_THROUGHPUT_BPS, throughput, metricAttributes);
+      }
+    }
     if (!tags.isEmpty()) {
       ApmTraceUtils.addTagsToTrace(tags);
     }
