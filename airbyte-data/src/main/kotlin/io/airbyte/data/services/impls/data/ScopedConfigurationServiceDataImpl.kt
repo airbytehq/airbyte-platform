@@ -273,4 +273,24 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
   override fun deleteScopedConfigurations(configIds: List<UUID>) {
     repository.deleteByIdInList(configIds)
   }
+
+  override fun updateScopedConfigurationsOriginAndValuesForOriginInList(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    newOrigin: String,
+    newValue: String,
+  ) {
+    repository.updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+      key,
+      resourceType.toEntity(),
+      resourceId,
+      originType.toEntity(),
+      origins,
+      newOrigin,
+      newValue,
+    )
+  }
 }

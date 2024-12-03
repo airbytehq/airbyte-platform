@@ -10,8 +10,10 @@ import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ScopedConfigurationKey
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
@@ -1002,5 +1004,78 @@ internal class ScopedConfigurationServiceDataImplTest {
     scopedConfigurationService.deleteScopedConfigurations(configIds)
 
     verifyAll { scopedConfigurationRepository.deleteByIdInList(configIds) }
+  }
+
+  @Test
+  fun `test update scoped configurations values for origin in list`() {
+    val resourceId = UUID.randomUUID()
+    val newValue = "updated_value"
+    val origin1 = UUID.randomUUID().toString()
+    val origin2 = UUID.randomUUID().toString()
+    val newOrigin = UUID.randomUUID().toString()
+
+    val config1 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "old_value",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.connector_rollout,
+        origin = origin1,
+        description = "description1",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "old_value2",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.connector_rollout,
+        origin = origin2,
+        description = "description2",
+      )
+
+    val origins = listOf(origin1, origin2)
+
+    every {
+      scopedConfigurationRepository.updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+        "key",
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        ConfigOriginType.connector_rollout,
+        origins,
+        newOrigin,
+        newValue,
+      )
+    } just Runs
+
+    scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+      key = "key",
+      resourceType = ModelConfigResourceType.ACTOR_DEFINITION,
+      resourceId = resourceId,
+      originType = ModelConfigOriginType.CONNECTOR_ROLLOUT,
+      origins = origins,
+      newOrigin = newOrigin,
+      newValue = newValue,
+    )
+
+    verify {
+      scopedConfigurationRepository.updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+        "key",
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        ConfigOriginType.connector_rollout,
+        origins,
+        newOrigin,
+        newValue,
+      )
+    }
   }
 }

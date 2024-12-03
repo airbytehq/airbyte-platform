@@ -299,6 +299,23 @@ class ActorDefinitionVersionUpdater(
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
   }
 
+  fun migrateReleaseCandidatePins(
+    actorDefinitionId: UUID,
+    origins: List<String>,
+    newOrigin: String,
+    newReleaseCandidateVersionId: UUID,
+  ) {
+    scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+      ConnectorVersionKey.key,
+      ConfigResourceType.ACTOR_DEFINITION,
+      actorDefinitionId,
+      ConfigOriginType.CONNECTOR_ROLLOUT,
+      origins,
+      newOrigin,
+      newReleaseCandidateVersionId.toString(),
+    )
+  }
+
   @VisibleForTesting
   fun removeReleaseCandidatePinsForVersion(
     actorDefinitionId: UUID,

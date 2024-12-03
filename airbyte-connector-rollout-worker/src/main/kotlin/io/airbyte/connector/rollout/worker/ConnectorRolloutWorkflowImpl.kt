@@ -306,7 +306,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       }
     }
 
-    // Unpin all actors that were pinned to the release candidate
+    // Mark the rollout as finalized, and unpin all actors that were pinned to the release candidate if appropriate
     logger.info { "finalizeRollout: calling finalizeRolloutActivity" }
     val rolloutResult = finalizeRolloutActivity.finalizeRollout(input)
     logger.info { "finalizeRolloutActivity.finalizeRollout rolloutResult = $rolloutResult" }

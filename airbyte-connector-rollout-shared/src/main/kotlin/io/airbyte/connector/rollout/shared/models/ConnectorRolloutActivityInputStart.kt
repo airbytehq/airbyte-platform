@@ -19,4 +19,5 @@ data class ConnectorRolloutActivityInputStart(
   var actorSyncs: List<ConnectorRolloutActorSyncInfo>? = null,
   var initialRolloutPct: Int? = null,
   var finalTargetRolloutPct: Int? = null,
+  var migratePins: Boolean? = true,
 )

@@ -15,4 +15,5 @@ data class ConnectorRolloutActivityInputFinalize(
   var failedReason: String? = null,
   var updatedBy: UUID? = null,
   var rolloutStrategy: ConnectorEnumRolloutStrategy? = null,
+  var retainPinsOnCancellation: Boolean = true,
 )

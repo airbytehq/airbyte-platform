@@ -47,6 +47,7 @@ class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient
         errorMsg,
         failureReason,
         input.updatedBy,
+        input.retainPinsOnCancellation,
       )
 
     return try {

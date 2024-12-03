@@ -88,7 +88,7 @@ class RolloutActorFinder(
     logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
     logger.info { "Rollout ${connectorRollout.id}: ${nEligibleOrAlreadyPinned - candidates.size - nPreviouslyPinned} pinned to a non-RC" }
 
-    if (targetPercent == null) {
+    if (targetPercent == null || targetPercent == 0) {
       return ActorSelectionInfo(
         actorIdsToPin = emptyList(),
         nActors = initialNCandidates,

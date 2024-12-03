@@ -38,6 +38,7 @@ class StartRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) :
         workflowRunId,
         getRolloutStrategyFromInput(input.rolloutStrategy),
         input.updatedBy,
+        true,
       )
 
     return try {
