@@ -3,6 +3,7 @@ package io.airbyte.api.client.auth
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.exceptions.HttpException
 import io.micronaut.security.oauth2.client.clientcredentials.ClientCredentialsClient
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -10,6 +11,8 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import reactor.core.publisher.Mono
+import reactor.util.retry.Retry
+import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
@@ -26,13 +29,22 @@ private val logger = KotlinLogging.logger {}
 class KeycloakAccessTokenInterceptor(
   @Named("keycloak") private val clientCredentialsClient: ClientCredentialsClient,
 ) : AirbyteApiInterceptor {
+  private fun fetchAccessToken(): Mono<String?> {
+    return Mono.defer { Mono.from(clientCredentialsClient.requestToken()) }
+      .map { it.accessToken }
+      .retryWhen(
+        Retry
+          .backoff(3, Duration.ofSeconds(1))
+          .filter { it is HttpException },
+      )
+  }
+
   override fun intercept(chain: Interceptor.Chain): Response =
     try {
       logger.debug { "Intercepting request to add Keycloak access token..." }
       val originalRequest: Request = chain.request()
       val builder: Request.Builder = originalRequest.newBuilder()
-      val tokenResponse = Mono.from(clientCredentialsClient.requestToken()).block()
-      val accessToken = tokenResponse?.accessToken
+      val accessToken = fetchAccessToken().block()
       if (accessToken != null) {
         builder.addHeader(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
         logger.debug { "Added access token to header $accessToken" }
