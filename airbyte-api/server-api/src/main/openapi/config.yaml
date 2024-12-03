@@ -8262,6 +8262,21 @@ components:
           $ref: "#/components/schemas/OrganizationId"
         tombstone:
           type: boolean
+        workspaceLimits:
+          $ref: "#/components/schemas/WorkspaceLimits"
+    WorkspaceLimits:
+      type: object
+      required:
+        - sources
+        - destinations
+        - activeConnections
+      properties:
+        sources:
+          $ref: "#/components/schemas/Limit"
+        destinations:
+          $ref: "#/components/schemas/Limit"
+        activeConnections:
+          $ref: "#/components/schemas/Limit"
     WorkspaceOrganizationInfoRead:
       type: object
       description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
@@ -11393,6 +11408,27 @@ components:
           type: boolean
         ssoRealm:
           type: string
+        organizationLimits:
+          $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationLimits:
+      type: object
+      properties:
+        users:
+          $ref: "#/components/schemas/Limit"
+        workspaces:
+          $ref: "#/components/schemas/Limit"
+    Limit:
+      type: object
+      required:
+        - current
+        - max
+      properties:
+        current:
+          type: integer
+          format: int64
+        max:
+          type: integer
+          format: int64
     OrganizationReadList:
       type: object
       required:

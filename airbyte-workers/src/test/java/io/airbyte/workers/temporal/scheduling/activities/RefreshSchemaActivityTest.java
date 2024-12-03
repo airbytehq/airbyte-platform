@@ -97,7 +97,7 @@ class RefreshSchemaActivityTest {
     mPayloadChecker = mock(PayloadChecker.class, withSettings().strictness(Strictness.LENIENT));
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
-            null, null, null, null, null, null));
+            null, null, null, null, null, null, null));
     when(mSourceApi.getSource(new SourceIdRequestBody(SOURCE_ID))).thenReturn(
         new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
             null));
@@ -222,7 +222,7 @@ class RefreshSchemaActivityTest {
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
         .thenReturn(new WorkspaceRead(workspaceId, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
-            null, null, null, null, null, null));
+            null, null, null, null, null, null, null));
 
     refreshSchemaActivity.refreshSchema(sourceId, connectionId);
 
