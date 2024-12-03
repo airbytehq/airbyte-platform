@@ -12,6 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import {
+  GzipJsonDecoderType,
   IterableDecoderType,
   JsonDecoderType,
   JsonlDecoderType,
@@ -109,6 +110,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
                 XmlDecoderType.XmlDecoder,
                 JsonlDecoderType.JsonlDecoder,
                 IterableDecoderType.IterableDecoder,
+                GzipJsonDecoderType.GzipJsonDecoder,
               ]}
             />
             <BuilderField

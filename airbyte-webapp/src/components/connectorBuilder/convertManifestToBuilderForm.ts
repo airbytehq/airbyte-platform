@@ -43,6 +43,7 @@ import {
   XmlDecoderType,
   IterableDecoderType,
   SimpleRetrieverDecoder,
+  GzipJsonDecoderType,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -384,16 +385,16 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
 }
 
 const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+  const supportedDecoderTypes: Array<string | undefined> = [
+    undefined,
+    JsonDecoderType.JsonDecoder,
+    JsonlDecoderType.JsonlDecoder,
+    XmlDecoderType.XmlDecoder,
+    IterableDecoderType.IterableDecoder,
+    GzipJsonDecoderType.GzipJsonDecoder,
+  ];
   const decoderType = decoder?.type;
-  if (
-    ![
-      undefined,
-      JsonDecoderType.JsonDecoder,
-      JsonlDecoderType.JsonlDecoder,
-      XmlDecoderType.XmlDecoder,
-      IterableDecoderType.IterableDecoder,
-    ].includes(decoderType)
-  ) {
+  if (!supportedDecoderTypes.includes(decoderType)) {
     throw new ManifestCompatibilityError(streamName, "decoder is not supported");
   }
 
@@ -406,6 +407,8 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
       return "JSON Lines";
     case IterableDecoderType.IterableDecoder:
       return "Iterable";
+    case GzipJsonDecoderType.GzipJsonDecoder:
+      return "gzip JSON";
     default:
       return "JSON";
   }
