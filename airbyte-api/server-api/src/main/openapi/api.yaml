@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: airbyte-api
   version: 1.0.0
-  description: Programatically control Airbyte Cloud, OSS & Enterprise.
+  description: Programmatically control Airbyte Cloud, OSS & Enterprise.
 servers:
   - url: https://api.airbyte.com/v1
     description: Airbyte API v1
@@ -1805,6 +1805,7 @@ components:
         - hashing
         - field-renaming
         - row-filtering
+        - encryption
       x-speakeasy-component: true
     ConfiguredStreamMapper:
       type: object
@@ -2236,6 +2237,7 @@ components:
         - schedule
         - dataResidency
         - configurations
+        - createdAt
       properties:
         connectionId:
           format: UUID
@@ -2267,6 +2269,9 @@ components:
           type: string
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+        createdAt:
+          format: int64
+          type: integer
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2384,6 +2389,7 @@ components:
         - definitionId
         - workspaceId
         - configuration
+        - createdAt
       properties:
         destinationId:
           format: UUID
@@ -2400,6 +2406,9 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        createdAt:
+          format: int64
+          type: integer
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -2418,6 +2427,7 @@ components:
         - workspaceId
         - configuration
         - definitionId
+        - createdAt
       properties:
         sourceId:
           format: UUID
@@ -2434,6 +2444,9 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        createdAt:
+          format: int64
+          type: integer
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
