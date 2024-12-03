@@ -84,18 +84,36 @@ image.airbyte-mc: buildx.start
 			-f $(IMAGES_DIR)/airbyte-mc/Dockerfile . ; \
 	fi
 
-image.airbyte-nginx: ## Build the airbyte/nginx image
-image.airbyte-nginx: buildx.start
+image.airbyte-nginx-slim: ## Build the airbyte/nginx-unprivileged image
+image.airbyte-nginx-slim: buildx.start
 	@if [ "$(PUBLISH)" = "true" ]; then \
-		docker buildx build -t airbyte/nginx-unprivileged:$(VERSION) \
+		docker buildx build -t airbyte/nginx-alpine-slim:$(VERSION) \
 			--build-arg UID="1000" \
 			--build-arg GID="1000" \
 			--platform linux/amd64,linux/arm64 \
 			--push \
-			-f $(IMAGES_DIR)/airbyte-nginx/Dockerfile . ; \
+			-f $(IMAGES_DIR)/airbyte-nginx/alpine-slim/Dockerfile $(IMAGES_DIR)/airbyte-nginx/alpine-slim/. ; \
 	else \
-		docker build -t airbyte/nginx-unprivileged:$(VERSION) \
+		docker build -t airbyte/nginx-alpine-slim:$(VERSION) \
 			--build-arg UID="1000" \
 			--build-arg GID="1000" \
-			-f $(IMAGES_DIR)/airbyte-nginx/Dockerfile . ; \
+			-f $(IMAGES_DIR)/airbyte-nginx/alpine-slim/Dockerfile $(IMAGES_DIR)/airbyte-nginx/alpine-slim/. ; \
+	fi
+
+image.airbyte-nginx-unprivileged: ## Build the airbyte/nginx-unprivileged image
+image.airbyte-nginx-unprivileged: buildx.start
+	@if [ "$(PUBLISH)" = "true" ]; then \
+		docker buildx build -t airbyte/nginx-unprivileged:$(VERSION) \
+			--build-arg IMAGE="airbyte/nginx-alpine-slim:1.27.2-alpine-slim-2" \
+			--build-arg UID="1000" \
+			--build-arg GID="1000" \
+			--platform linux/amd64,linux/arm64 \
+			--push \
+			-f $(IMAGES_DIR)/airbyte-nginx/unprivileged/Dockerfile $(IMAGES_DIR)/airbyte-nginx/unprivileged/. ; \
+	else \
+		docker build -t airbyte/nginx-unprivileged:$(VERSION) \
+			--build-arg IMAGE="airbyte/nginx-alpine-slim:1.27.2-alpine-slim-2" \
+			--build-arg UID="1000" \
+			--build-arg GID="1000" \
+			-f $(IMAGES_DIR)/airbyte-nginx/unprivileged/Dockerfile $(IMAGES_DIR)/airbyte-nginx/unprivileged/. ; \
 	fi

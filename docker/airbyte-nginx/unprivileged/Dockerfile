@@ -1,5 +1,7 @@
 #
-# NOTE: THIS DOCKERFILE IS COPIED FROM https://raw.githubusercontent.com/nginxinc/docker-nginx-unprivileged/refs/heads/main/mainline/alpine/Dockerfile
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "update.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
 #
 ARG IMAGE=nginxinc/nginx-unprivileged:1.27.2-alpine-slim
 FROM $IMAGE
