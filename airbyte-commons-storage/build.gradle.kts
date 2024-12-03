@@ -25,6 +25,9 @@ dependencies {
   api(project(":oss:airbyte-metrics:metrics-lib"))
   api(project(":oss:airbyte-featureflag"))
 
+  implementation(project(":oss:airbyte-api:problems-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(libs.bundles.micronaut)
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)
   implementation(libs.jackson.annotations)

@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
+import io.airbyte.commons.annotation.AuditLogging;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.validation.json.JsonValidationException;
@@ -54,6 +55,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/create")
   @Override
+  @AuditLogging(provider = "createPermission")
   public PermissionRead createPermission(@Body final PermissionCreate permissionCreate) {
     return ApiHelper.execute(() -> {
       validatePermissionCreation(permissionCreate);

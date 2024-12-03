@@ -10,6 +10,8 @@ dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
 
+  api(libs.bundles.micronaut.annotation)
+
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
   implementation(libs.bundles.slf4j)

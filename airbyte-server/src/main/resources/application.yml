@@ -347,6 +347,11 @@ airbyte:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
       value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
 
+  # Enterprise feature
+  audit:
+    logging:
+      enabled: ${AUDIT_LOGGING_ENABLED:false}
+
 temporal:
   cloud:
     client:
