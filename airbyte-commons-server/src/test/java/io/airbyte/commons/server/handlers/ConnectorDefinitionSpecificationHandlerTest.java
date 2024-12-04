@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.handlers.helpers;
+package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -19,22 +19,28 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.converters.JobConverter;
-import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.protocol.models.AdvancedAuth;
+import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +74,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
 
   private SourceService sourceService;
   private DestinationService destinationService;
+  private OAuthService oAuthService;
 
   @BeforeEach
   void setup() {
@@ -75,9 +82,10 @@ class ConnectorDefinitionSpecificationHandlerTest {
     jobConverter = mock(JobConverter.class);
     sourceService = mock(SourceService.class);
     destinationService = mock(DestinationService.class);
+    oAuthService = mock(OAuthService.class);
 
     connectorDefinitionSpecificationHandler =
-        new ConnectorDefinitionSpecificationHandler(actorDefinitionVersionHelper, jobConverter, sourceService, destinationService);
+        new ConnectorDefinitionSpecificationHandler(actorDefinitionVersionHelper, jobConverter, sourceService, destinationService, oAuthService);
   }
 
   @Test
@@ -222,7 +230,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void testDestinationSyncModeEnrichment(boolean supportsRefreshes)
+  void testDestinationSyncModeEnrichment(final boolean supportsRefreshes)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
@@ -261,7 +269,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void testDestinationSyncModeEnrichmentWithoutOverwrite(boolean supportsRefreshes)
+  void testDestinationSyncModeEnrichmentWithoutOverwrite(final boolean supportsRefreshes)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
@@ -291,6 +299,60 @@ class ConnectorDefinitionSpecificationHandlerTest {
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
         DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP));
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void getDestinationSpecificationReadAdvancedAuth(final boolean advancedAuthCredentialsAvailable) throws IOException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID destinationDefinitionId = UUID.randomUUID();
+    when(oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId))
+        .thenReturn(advancedAuthCredentialsAvailable ? Optional.of(new DestinationOAuthParameter()) : Optional.empty());
+
+    final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
+        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withName(NAME)
+        .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+
+    final ConnectorSpecification connectorSpecification = new ConnectorSpecification()
+        .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+        .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+        .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
+        .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(new OAuthConfigSpecification()));
+
+    final DestinationDefinitionSpecificationRead response =
+        connectorDefinitionSpecificationHandler.getDestinationSpecificationRead(destinationDefinition, connectorSpecification, true, workspaceId);
+
+    verify(oAuthService).getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId);
+    assertEquals(advancedAuthCredentialsAvailable, response.getAdvancedAuthCredentialsAvailable());
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void getSourceSpecificationReadAdvancedAuth(final boolean advancedAuthCredentialsAvailable) throws IOException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    when(oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId))
+        .thenReturn(advancedAuthCredentialsAvailable ? Optional.of(new SourceOAuthParameter()) : Optional.empty());
+
+    final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
+        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withName(NAME)
+        .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
+
+    final ConnectorSpecification connectorSpecification = new ConnectorSpecification()
+        .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+        .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
+        .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
+        .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(new OAuthConfigSpecification()));
+
+    final SourceDefinitionSpecificationRead response =
+        connectorDefinitionSpecificationHandler.getSourceSpecificationRead(sourceDefinition, connectorSpecification, workspaceId);
+
+    verify(oAuthService).getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
+    assertEquals(advancedAuthCredentialsAvailable, response.getAdvancedAuthCredentialsAvailable());
   }
 
 }
