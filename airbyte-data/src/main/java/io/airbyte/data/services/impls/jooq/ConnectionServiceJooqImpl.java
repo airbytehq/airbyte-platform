@@ -468,7 +468,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
         .set(CONNECTION.STATUS, StatusType.inactive)
         .where(CONNECTION.ID.in(connectionIds)
-            .and(CONNECTION.STATUS.ne(StatusType.inactive)))
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
         .returning(CONNECTION.ID)
         .fetchSet(CONNECTION.ID));
   }
@@ -489,6 +489,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
         .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR.WORKSPACE_ID))
         .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+        .and(CONNECTION.STATUS.ne(StatusType.deprecated))
         .fetchInto(UUID.class));
   }
 
