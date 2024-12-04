@@ -1,4 +1,4 @@
-package io.airbyte.commons.audit
+package io.airbyte.audit.logging
 
 import java.util.UUID
 

@@ -1,4 +1,4 @@
-package io.airbyte.commons.audit
+package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PermissionRead
@@ -8,12 +8,17 @@ import jakarta.inject.Singleton
 @Singleton
 @Named("createPermission")
 class CreatePermissionAuditProvider(
-  private val helper: AuditProviderHelper,
+  private val helper: AuditLoggingHelper,
 ) : AuditProvider {
-  override fun generateSummary(result: Any?): String {
+  override fun generateSummaryFromRequest(request: Any?): String {
+    return AuditProvider.EMPTY_SUMMARY
+  }
+
+  override fun generateSummaryFromResult(result: Any?): String {
     if (result is PermissionRead) {
       val permissionLogEntry =
         AuditPermissionLogEntry(
+          // Todo: get user email from id
           targetUser = TargetUser(id = result.userId.toString()),
           previousRole = null,
           newRole = result.permissionType.toString(),
@@ -25,6 +30,6 @@ class CreatePermissionAuditProvider(
         )
       return ObjectMapper().writeValueAsString(permissionLogEntry)
     }
-    return ""
+    return AuditProvider.EMPTY_SUMMARY
   }
 }

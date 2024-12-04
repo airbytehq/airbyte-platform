@@ -82,6 +82,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/update")
   @Override
+  @AuditLogging(provider = "updatePermission")
   public void updatePermission(@Body final PermissionUpdate permissionUpdate) {
     ApiHelper.execute(() -> {
       validatePermissionUpdate(permissionUpdate);
@@ -99,6 +100,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/delete")
   @Override
+  @AuditLogging(provider = "deletePermission")
   public void deletePermission(@Body final PermissionIdRequestBody permissionIdRequestBody) {
 
     ApiHelper.execute(() -> {

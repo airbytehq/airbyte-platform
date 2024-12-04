@@ -21,10 +21,13 @@ dependencies {
   api(libs.slf4j.api)
   api(libs.jackson.kotlin)
 
-  api(project(":oss:airbyte-commons"))
-  api(project(":oss:airbyte-metrics:metrics-lib"))
-  api(project(":oss:airbyte-featureflag"))
-
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-api:problems-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-commons-server"))
+  implementation(project(":oss:airbyte-commons-storage"))
+  implementation(libs.bundles.micronaut)
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)
   implementation(libs.jackson.annotations)
