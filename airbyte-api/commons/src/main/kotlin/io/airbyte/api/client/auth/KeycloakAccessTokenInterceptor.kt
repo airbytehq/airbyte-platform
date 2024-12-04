@@ -39,24 +39,26 @@ class KeycloakAccessTokenInterceptor(
       )
   }
 
-  override fun intercept(chain: Interceptor.Chain): Response =
+  override fun intercept(chain: Interceptor.Chain): Response {
+    val originalRequest: Request = chain.request()
+    val builder: Request.Builder = originalRequest.newBuilder()
+
     try {
       logger.debug { "Intercepting request to add Keycloak access token..." }
-      val originalRequest: Request = chain.request()
-      val builder: Request.Builder = originalRequest.newBuilder()
       val accessToken = fetchAccessToken().block()
       if (accessToken != null) {
         builder.addHeader(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
         logger.debug { "Added access token to header $accessToken" }
-        chain.proceed(builder.build())
       } else {
         logger.error { "Failed to obtain access token from Keycloak" }
-        chain.proceed(originalRequest)
       }
     } catch (e: Exception) {
       logger.error(e) { "Failed to add Keycloak access token to request" }
       // do not throw exception, just proceed with the original request and let the request fail
       // authorization downstream.
-      chain.proceed(chain.request())
+      return chain.proceed(originalRequest)
     }
+
+    return chain.proceed(builder.build())
+  }
 }

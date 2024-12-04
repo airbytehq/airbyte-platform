@@ -35,6 +35,7 @@ class KeycloakAccessTokenInterceptorTest {
   fun `test intercept when clientCredentialsClient fails to return token`() {
     every { clientCredentialsClient.requestToken() } returns Mono.error(RuntimeException("Failed to get token"))
     every { chain.request() } returns request
+    every { request.newBuilder() } returns Request.Builder().url("http://localhost")
     every { chain.proceed(request) } returns response
 
     val result = interceptor.intercept(chain)
