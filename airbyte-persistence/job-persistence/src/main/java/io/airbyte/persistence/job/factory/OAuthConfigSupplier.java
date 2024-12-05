@@ -203,7 +203,7 @@ public class OAuthConfigSupplier {
                                                final BiConsumer<String, List<String>> consumer) {
     final JsonNode outputSpecTop = spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
     final JsonNode outputSpec;
-    if (outputSpecTop.has(PROPERTIES)) {
+    if (outputSpecTop != null && outputSpecTop.has(PROPERTIES)) {
       outputSpec = outputSpecTop.get(PROPERTIES);
     } else {
       LOGGER.error(String.format("In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare properties.", connectorName));
