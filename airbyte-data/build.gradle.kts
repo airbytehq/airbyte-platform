@@ -9,6 +9,7 @@ dependencies {
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
   api(libs.bundles.micronaut.annotation)
+  api(libs.micronaut.cache.caffeine)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)

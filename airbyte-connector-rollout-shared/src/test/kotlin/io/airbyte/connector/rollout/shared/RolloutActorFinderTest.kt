@@ -20,8 +20,10 @@ import io.airbyte.config.StandardSync
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.JobService
+import io.airbyte.data.services.OrganizationCustomerAttributesService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
@@ -52,6 +54,7 @@ class RolloutActorFinderTest {
   private val scopedConfigurationService = mockk<ScopedConfigurationService>()
   private val sourceService = mockk<SourceService>()
   private val destinationService = mockk<DestinationService>()
+  private val organizationCustomerAttributesService = mockk<OrganizationCustomerAttributesService>()
   private val rolloutActorFinder =
     RolloutActorFinder(
       actorDefinitionVersionUpdater,
@@ -60,6 +63,7 @@ class RolloutActorFinderTest {
       scopedConfigurationService,
       sourceService,
       destinationService,
+      organizationCustomerAttributesService,
     )
 
   companion object {
@@ -261,6 +265,7 @@ class RolloutActorFinderTest {
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), TARGET_PERCENTAGE)
 
@@ -275,6 +280,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
     }
 
     if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
@@ -306,6 +312,7 @@ class RolloutActorFinderTest {
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), null)
 
@@ -320,6 +327,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
     }
 
     assertEquals(0, actorSelectionInfo.actorIdsToPin.size)
@@ -562,6 +570,7 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
 
@@ -576,6 +585,7 @@ class RolloutActorFinderTest {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
     }
 
     assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
@@ -632,6 +642,7 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
     val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
 
@@ -646,6 +657,7 @@ class RolloutActorFinderTest {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
     }
 
     // We already exceed the target percentage so shouldn't pin something new
@@ -699,9 +711,37 @@ class RolloutActorFinderTest {
 
   @ParameterizedTest
   @MethodSource("actorDefinitionIds")
-  fun `test filterByTier is a no-op`(actorDefinitionId: UUID) {
-    // This is not currently being used
-    assertEquals(CONFIG_SCOPE_MAP.values, rolloutActorFinder.filterByTier(CONFIG_SCOPE_MAP.values))
+  fun `test filterByTier excludes organizations listed as tier 0 or 1`(actorDefinitionId: UUID) {
+    val organizationTiers =
+      mapOf(
+        ORGANIZATION_ID_1 to CustomerTier.TIER_0,
+        ORGANIZATION_ID_2 to CustomerTier.TIER_2,
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns organizationTiers
+
+    val candidates =
+      listOf(
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_2),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to null),
+        ),
+      )
+
+    val filteredCandidates = rolloutActorFinder.filterByTier(candidates)
+
+    assertEquals(2, filteredCandidates.size)
+    assertTrue(filteredCandidates.any { it.scopeMap[ConfigScopeType.ORGANIZATION] == ORGANIZATION_ID_2 })
+    assertTrue(filteredCandidates.any { it.scopeMap[ConfigScopeType.ORGANIZATION] == null })
+
+    verify { organizationCustomerAttributesService.getOrganizationTiers() }
   }
 
   @ParameterizedTest

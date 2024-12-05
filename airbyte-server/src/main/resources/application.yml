@@ -12,6 +12,8 @@ micronaut:
       expire-after-access: 10m
     platform-compatibility-provider:
       expire-after-write: 15s
+    organization-customer-attributes:
+      expire-after-access: 1h
   env:
     cloud-deduction: true
   executors:
@@ -133,6 +135,13 @@ airbyte:
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
     enterprise:
       enterprise-source-stubs-url: ${ENTERPRISE_SOURCE_STUBS_URL}
+  connector-rollout:
+    gcs:
+      application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      project-id: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID:}
+      bucket-name: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME:}
+      object-prefix: ${GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX:}
+
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   support-email-domains:
     oss: ""
