@@ -19,10 +19,12 @@ import { ClearEventItem } from "./components/ClearEventItem";
 import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
 import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
 import { ConnectionSettingsUpdateEventItem } from "./components/ConnectionSettingsUpdateEventItem";
+import { DestinationConnectorUpdateEventItem } from "./components/DestinationConnectorUpdateEventItem";
 import { JobStartEventItem } from "./components/JobStartEventItem";
 import { RefreshEventItem } from "./components/RefreshEventItem";
 import { RunningJobItem } from "./components/RunningJobItem";
 import { SchemaUpdateEventItem } from "./components/SchemaUpdateEventItem";
+import { SourceConnectorUpdateEventItem } from "./components/SourceConnectorUpdateEventItem";
 import { SyncEventItem } from "./components/SyncEventItem";
 import { SyncFailEventItem } from "./components/SyncFailEventItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
@@ -32,11 +34,13 @@ import {
   connectionDisabledEventSchema,
   connectionEnabledEventSchema,
   connectionSettingsUpdateEventSchema,
+  destinationConnectorUpdateEventSchema,
   generalEventSchema,
   jobRunningSchema,
   jobStartedEventSchema,
   refreshEventSchema,
   schemaUpdateEventSchema,
+  sourceConnectorUpdateEventSchema,
   syncEventSchema,
   syncFailEventSchema,
 } from "./types";
@@ -52,7 +56,9 @@ type AllSchemaEventTypes =
   | InferType<typeof connectionEnabledEventSchema>
   | InferType<typeof connectionDisabledEventSchema>
   | InferType<typeof connectionSettingsUpdateEventSchema>
-  | InferType<typeof schemaUpdateEventSchema>;
+  | InferType<typeof schemaUpdateEventSchema>
+  | InferType<typeof sourceConnectorUpdateEventSchema>
+  | InferType<typeof destinationConnectorUpdateEventSchema>;
 
 interface EventSchemaComponentMapItem<T> {
   schema: SchemaOf<T>;
@@ -70,6 +76,8 @@ const eventSchemaComponentMap = [
   { schema: connectionDisabledEventSchema, component: ConnectionDisabledEventItem },
   { schema: connectionSettingsUpdateEventSchema, component: ConnectionSettingsUpdateEventItem },
   { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
+  { schema: sourceConnectorUpdateEventSchema, component: SourceConnectorUpdateEventItem },
+  { schema: destinationConnectorUpdateEventSchema, component: DestinationConnectorUpdateEventItem },
 ] as Array<EventSchemaComponentMapItem<AllSchemaEventTypes>>;
 
 export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineRunningEvent) => {

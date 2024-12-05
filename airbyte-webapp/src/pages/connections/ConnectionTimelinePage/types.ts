@@ -45,6 +45,8 @@ const connectionAutoDisabledReasons = [
   "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
 ];
 
+const connectorChangeReasons = ["SYSTEM", "USER"];
+
 // property-specific schemas
 /**
  * @typedef {import("core/api/types/AirbyteClient").StreamDescriptor}
@@ -132,6 +134,22 @@ const streamTransformsSchema = yup.object({
  */
 const catalogDiffSchema = yup.object({
   transforms: yup.array().of(streamTransformsSchema).required(),
+});
+
+const sourceDefinitionUpdateSchema = yup.object({
+  name: yup.string().required(),
+  sourceDefinitionId: yup.string().required(),
+  newDockerImageTag: yup.string().required(),
+  oldDockerImageTag: yup.string().required(),
+  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
+});
+
+const destinationDefinitionUpdateSchema = yup.object({
+  name: yup.string().required(),
+  destinationDefinitionId: yup.string().required(),
+  newDockerImageTag: yup.string().required(),
+  oldDockerImageTag: yup.string().required(),
+  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
 });
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
@@ -363,6 +381,16 @@ export const connectionSettingsUpdateEventSchema = generalEventSchema.shape({
 export const schemaUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
   summary: schemaUpdateSummarySchema.required(),
+});
+
+export const sourceConnectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: sourceDefinitionUpdateSchema.required(),
+});
+
+export const destinationConnectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: destinationDefinitionUpdateSchema.required(),
 });
 
 export interface ConnectionTimelineRunningEvent {

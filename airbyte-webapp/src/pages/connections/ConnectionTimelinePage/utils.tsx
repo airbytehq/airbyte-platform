@@ -219,3 +219,24 @@ export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
       : []),
   ];
 };
+
+export const isSemanticVersionTags = (newTag: string, oldTag: string): boolean =>
+  [newTag, oldTag].every((tag) => /^\d+\.\d+\.\d+$/.test(tag));
+
+export const isVersionUpgraded = (newVersion: string, oldVersion: string): boolean => {
+  const parseVersion = (version: string) => version.split(".").map(Number);
+  const newParsedVersion = parseVersion(newVersion);
+  const oldParsedVersion = parseVersion(oldVersion);
+
+  for (let i = 0; i < Math.max(newParsedVersion.length, oldParsedVersion.length); i++) {
+    const num1 = newParsedVersion[i] || 0;
+    const num2 = oldParsedVersion[i] || 0;
+    if (num1 > num2) {
+      return true;
+    }
+    if (num1 < num2) {
+      return false;
+    }
+  }
+  return false;
+};
