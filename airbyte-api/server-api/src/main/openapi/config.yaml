@@ -4723,13 +4723,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
-  /v1/billing/organization_balance:
+  /v1/billing/subscription_info:
     post:
-      summary: Get the current balance of an organization
+      summary: Get the current information about the organization's subscription
       tags:
         - billing
         - cloud-only
-      operationId: getOrganizationBalance
+      operationId: getSubscriptionInfo
       requestBody:
         content:
           application/json:
@@ -4737,11 +4737,11 @@ paths:
               $ref: "#/components/schemas/OrganizationIdRequestBody"
       responses:
         "200":
-          description: Successfully got organization's balance
+          description: Successfully got organization subscription info
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationBalanceRead"
+                $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
   /v1/billing/trial_status:
     post:
       summary: Get the current trial status of an organization
@@ -11243,22 +11243,22 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
-    OrganizationBalanceRead:
+    OrganizationSubscriptionInfoRead:
       type: object
       required:
-        - hidden
-        - planType
+        - name
+        - selfServeSubscription
+        - balanceHidden
       properties:
-        hidden:
+        name:
+          type: string
+        selfServeSubscription:
+          type: boolean
+        cancellationDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        balanceHidden:
           description: Whether the organization balance is hidden and should not be shown to the user.
           type: boolean
-        planType:
-          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
-          type: string
-          enum:
-            - in_arrears
-            - prepaid
-          deprecated: true
         upcomingInvoice:
           type: object
           description: Describe the current state of the upcoming invoice. If `hidden` is `true`, this will be `null`, since no balance should be shown.

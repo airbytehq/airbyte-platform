@@ -690,22 +690,6 @@ components:
             title:
               type: string
               default: A subscription is required for this operation to succeed.
-    BillingTooManyNonPrepaidSubscriptionsProblemResponse:
-      x-implements: io.airbyte.api.problems.ProblemResponse
-      type: object
-      allOf:
-        - $ref: "#/components/schemas/BaseProblemFields"
-        - type: object
-          properties:
-            status:
-              type: integer
-              default: 400
-            type:
-              type: string
-              default: error:billing/subscription/too-many-incompatible-subscriptions
-            title:
-              type: string
-              default: Found more than one subscription with some not being prepaid.
     BillingInsufficientPaymentStatusProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -742,6 +726,22 @@ components:
               default: The credit balance of the associated Workspace or Organization is insufficient.
             data:
               $ref: "#/components/schemas/BillingInsufficientCreditBalanceProblemData"
+    BillingNoActiveSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:billing/no-active-subscription
+            title:
+              type: string
+              default: The organization doesn't have an active subscription.
     ConnectorRolloutInvalidRequestProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

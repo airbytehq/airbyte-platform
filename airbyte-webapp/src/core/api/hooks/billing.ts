@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   getCustomerPortalLink,
-  getOrganizationBalance,
+  getSubscriptionInfo,
   getPaymentInformation,
   listPastInvoices,
 } from "../generated/AirbyteClient";
@@ -47,10 +47,10 @@ export const useGetPaymentInformation = (organizationId: string) => {
   );
 };
 
-export const useGetOrganizationBillingBalance = (organizationId: string) => {
+export const useGetOrganizationSubscriptionInfo = (organizationId: string) => {
   const requestOptions = useRequestOptions();
 
   return useQuery(billingKeys.upcomingInvoice(organizationId), () =>
-    getOrganizationBalance({ organizationId }, requestOptions)
+    getSubscriptionInfo({ organizationId }, requestOptions)
   );
 };
