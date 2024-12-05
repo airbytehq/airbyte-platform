@@ -96,6 +96,7 @@ data:
   WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
   CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
 
+  JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ $.Values.global.image.registry | quote }}
   JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_MEMORY_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).memory | default "" | quote }}

@@ -132,6 +132,7 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
+        connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}

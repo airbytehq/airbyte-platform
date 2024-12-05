@@ -42,6 +42,7 @@ class PayloadKubeInputMapper(
   private val labeler: PodLabeler,
   private val podNameGenerator: PodNameGenerator,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
+  @Value("\${airbyte.worker.job.kube.connector-image-registry}") private val imageRegistry: String?,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
@@ -67,11 +68,11 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = resourceRequirementsFactory.orchestrator(input)
     val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
-    val sourceImage = input.sourceLauncherConfig.dockerImage
+    val sourceImage = input.sourceLauncherConfig.dockerImage.withImageRegistry()
     val sourceReqs = resourceRequirementsFactory.replSource(input)
     val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceReqs, input.useFileTransfer)
 
-    val destinationImage = input.destinationLauncherConfig.dockerImage
+    val destinationImage = input.destinationLauncherConfig.dockerImage.withImageRegistry()
     val destinationReqs = resourceRequirementsFactory.replDestination(input)
     val destinationRuntimeEnvVars =
       runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig, destinationReqs, input.useFileTransfer)
@@ -128,7 +129,7 @@ class PayloadKubeInputMapper(
         namespace,
         podName,
         KubeContainerInfo(
-          input.launcherConfig.dockerImage,
+          input.launcherConfig.dockerImage.withImageRegistry(),
           checkWorkerConfigs.jobImagePullPolicy,
         ),
       )
@@ -171,7 +172,7 @@ class PayloadKubeInputMapper(
         namespace,
         podName,
         KubeContainerInfo(
-          input.launcherConfig.dockerImage,
+          input.launcherConfig.dockerImage.withImageRegistry(),
           discoverWorkerConfigs.jobImagePullPolicy,
         ),
       )
@@ -214,7 +215,7 @@ class PayloadKubeInputMapper(
         namespace,
         podName,
         KubeContainerInfo(
-          input.launcherConfig.dockerImage,
+          input.launcherConfig.dockerImage.withImageRegistry(),
           specWorkerConfigs.jobImagePullPolicy,
         ),
       )
@@ -261,6 +262,30 @@ class PayloadKubeInputMapper(
     } else {
       nodeSelectorOverride.toNodeSelectorMap()
     }
+  }
+
+  // Return an image ref with the image registry prefix, if the image registry is configured.
+  private fun String.withImageRegistry(): String {
+    if (imageRegistry.isNullOrEmpty()) {
+      return this
+    }
+    // Custom connectors may contain a fully-qualified image registry name, e.g. my.registry.com/my/image.
+    // In this case, we don't want to add an additional image registry prefix.
+    //
+    // In order to detect whether the connector already has an image registry,
+    // we follow this code: https://github.com/distribution/distribution/blob/2461543d988979529609e8cb6fca9ca190dc48da/reference/normalize.go#L64
+    // If the image contains a slash and the string before the slash contains a "." or a ":" or is "localhost"
+    val i = this.indexOfFirst { it == '/' }
+    if (i != -1) {
+      val before = this.slice(0..i - 1)
+      if (before.contains('.') || before.contains(':') || before == "localhost") {
+        return this
+      }
+    }
+
+    // Ensure there's a trailing slash between the image registry and the image ref
+    // by stripping the slash (no-op if it doesn't exit) and adding it back.
+    return "${imageRegistry.trimEnd('/')}/$this"
   }
 }
 

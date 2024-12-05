@@ -2,10 +2,12 @@ package io.airbyte.workload.launcher.pods
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.workers.config.WorkerConfigs
+import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
@@ -50,6 +52,7 @@ class PayloadKubeInputMapperTest {
   fun `builds a kube input from a replication payload`(useCustomConnector: Boolean) {
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
+    val imageRegistry = null
     val podName = "a-repl-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getReplicationPodName(any(), any()) } returns podName
@@ -76,6 +79,7 @@ class PayloadKubeInputMapperTest {
         labeler,
         podNameGenerator,
         namespace,
+        imageRegistry,
         containerInfo,
         replConfigs,
         checkConfigs,
@@ -187,6 +191,7 @@ class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
+    val imageRegistry = null
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getCheckPodName(any(), any(), any()) } returns podName
@@ -212,6 +217,7 @@ class PayloadKubeInputMapperTest {
         labeler,
         podNameGenerator,
         namespace,
+        imageRegistry,
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -298,6 +304,7 @@ class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
+    val imageRegistry = null
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getDiscoverPodName(any(), any(), any()) } returns podName
@@ -323,6 +330,7 @@ class PayloadKubeInputMapperTest {
         labeler,
         podNameGenerator,
         namespace,
+        imageRegistry,
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -407,6 +415,7 @@ class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
+    val imageRegistry = null
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getSpecPodName(any(), any(), any()) } returns podName
@@ -430,6 +439,7 @@ class PayloadKubeInputMapperTest {
         labeler,
         podNameGenerator,
         namespace,
+        imageRegistry,
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -440,9 +450,7 @@ class PayloadKubeInputMapperTest {
         ffClient,
         listOf(),
       )
-    val input: SpecInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
@@ -458,10 +466,13 @@ class PayloadKubeInputMapperTest {
     every { envVarFactory.specConnectorEnvVars(workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
 
+    val input: SpecInput = mockk()
+    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.jobRunConfig } returns jobRunConfig
     every { input.launcherConfig } returns launcherConfig
+
     val resourceReqs1 =
       ResourceRequirements()
         .withCpuLimit("1")
@@ -495,6 +506,159 @@ class PayloadKubeInputMapperTest {
   fun `parses custom node selector strings into a map`() {
     val result = "node-pool=my-env-pool ; other = value".toNodeSelectorMap()
     assertEquals(mapOf("node-pool" to "my-env-pool", "other" to "value"), result)
+  }
+
+  @Test
+  fun `prefixes images with a custom image registry`() {
+    val ffClient = TestClient()
+    val envVarFactory: RuntimeEnvVarFactory = mockk()
+    val labeler = PodLabeler()
+    val podNameGenerator = PodNameGenerator("test-ns")
+    val orchestratorContainerInfo = KubeContainerInfo("orch-img", "Always")
+    val reqs = ResourceRequirements()
+    val resourceReqFactory = ResourceRequirementsFactory(reqs, reqs, reqs, reqs, reqs)
+    val workerConfigs = WorkerConfigs(reqs, emptyList(), emptyMap(), Optional.empty(), emptyMap(), emptyMap(), emptyList(), "Always")
+    val workloadId = "workload-1"
+    val jobConfig =
+      JobRunConfig().apply {
+        jobId = "job-1"
+        attemptId = 1
+      }
+
+    every { envVarFactory.specConnectorEnvVars(any()) } returns emptyList()
+    every { envVarFactory.checkConnectorEnvVars(any(), any(), any()) } returns emptyList()
+    every { envVarFactory.discoverConnectorEnvVars(any(), any(), any()) } returns emptyList()
+    every { envVarFactory.orchestratorEnvVars(any(), any()) } returns emptyList()
+    every { envVarFactory.replicationConnectorEnvVars(any(), any(), any()) } returns emptyList()
+
+    val testConfig =
+      IntegrationLauncherConfig().apply {
+        dockerImage = "test-img"
+        this.workspaceId = UUID.randomUUID()
+        isCustomConnector = false
+      }
+
+    val checkConnectionInput =
+      StandardCheckConnectionInput().apply {
+        connectionConfiguration = mockk<JsonNode>()
+        actorContext = ActorContext().withOrganizationId(UUID.randomUUID())
+        resourceRequirements = reqs
+      }
+
+    val discoverCatalogInput =
+      StandardDiscoverCatalogInput().apply {
+        actorContext = ActorContext().withOrganizationId(UUID.randomUUID())
+      }
+
+    val specInput: SpecInput = mockk()
+    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
+    every { specInput.getJobId() } returns "job-1"
+    every { specInput.getAttemptId() } returns 1
+    every { specInput.jobRunConfig } returns jobConfig
+    every { specInput.launcherConfig } returns testConfig
+
+    val checkInput: CheckConnectionInput = mockk()
+    mockkStatic("io.airbyte.workload.launcher.model.CheckConnectionInputExtensionsKt")
+    every { checkInput.jobRunConfig } returns jobConfig
+    every { checkInput.launcherConfig } returns testConfig
+    every { checkInput.checkConnectionInput } returns checkConnectionInput
+
+    val discoverInput: DiscoverCatalogInput = mockk()
+    mockkStatic("io.airbyte.workload.launcher.model.DiscoverCatalogInputExtensionsKt")
+    every { discoverInput.getJobId() } returns "job-1"
+    every { discoverInput.getAttemptId() } returns 1
+    every { discoverInput.jobRunConfig } returns jobConfig
+    every { discoverInput.launcherConfig } returns testConfig
+    every { discoverInput.discoverCatalogInput } returns discoverCatalogInput
+
+    val replInput: ReplicationInput = mockk()
+    mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
+    every { replInput.connectionId } returns UUID.randomUUID()
+    every { replInput.jobRunConfig } returns jobConfig
+    every { replInput.sourceLauncherConfig } returns testConfig
+    every { replInput.destinationLauncherConfig } returns testConfig
+    every { replInput.syncResourceRequirements } returns SyncResourceRequirements()
+    every { replInput.useFileTransfer } returns false
+
+    var mapper =
+      PayloadKubeInputMapper(
+        labeler,
+        podNameGenerator,
+        "test-ns",
+        "custom-image-registry",
+        orchestratorContainerInfo,
+        workerConfigs,
+        workerConfigs,
+        workerConfigs,
+        workerConfigs,
+        resourceReqFactory,
+        envVarFactory,
+        ffClient,
+        listOf(),
+      )
+
+    mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.sourceImage)
+      assertEquals("custom-image-registry/test-img", it.destinationImage)
+    }
+
+    // Now test a mapper with an image registry with a trailing slash.
+    mapper =
+      PayloadKubeInputMapper(
+        labeler,
+        podNameGenerator,
+        "test-ns",
+        "custom-image-registry/",
+        orchestratorContainerInfo,
+        workerConfigs,
+        workerConfigs,
+        workerConfigs,
+        workerConfigs,
+        resourceReqFactory,
+        envVarFactory,
+        ffClient,
+        listOf(),
+      )
+    mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+      assertEquals("custom-image-registry/test-img", it.sourceImage)
+      assertEquals("custom-image-registry/test-img", it.destinationImage)
+    }
+
+    // Now test that custom connectors which define a fully-qualified image (i.e. image includes registry domain)
+    // will not get the custom registry prefix.
+    testConfig.dockerImage = "my.registry.com/test-img"
+
+    mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+    }
+    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+      assertEquals("my.registry.com/test-img", it.sourceImage)
+      assertEquals("my.registry.com/test-img", it.destinationImage)
+    }
   }
 
   companion object {

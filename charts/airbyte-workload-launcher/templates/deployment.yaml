@@ -185,6 +185,11 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
+        - name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
         - name: CONNECTOR_SIDECAR_IMAGE
           valueFrom:
             configMapKeyRef:
