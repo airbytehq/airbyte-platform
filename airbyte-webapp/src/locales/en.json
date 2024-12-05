@@ -803,6 +803,24 @@
   "connection.timeline.connector_update.destination.version.description.reason.upgraded.SYSTEM": "Airbyte upgraded {destination} from {from} to {to}",
   "connection.timeline.connector_update.destination.version.description.reason.downgraded.SYSTEM": "Airbyte downgraded {destination} from {from} to {to}",
 
+  "connection.timeline.mapping_create": "Mapping created",
+  "connection.timeline.mapping_create.hashing.description": "{user} created a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_create.field_renaming.description": "{user} created a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_create.row_filtering.description": "{user} created a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_create.encryption.description": "{user} created an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+
+  "connection.timeline.mapping_update": "Mapping edited",
+  "connection.timeline.mapping_update.hashing.description": "{user} updated a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_update.field_renaming.description": "{user} updated a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_update.row_filtering.description": "{user} updated a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_update.encryption.description": "{user} updated an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+
+  "connection.timeline.mapping_delete": "Mapping deleted",
+  "connection.timeline.mapping_delete.hashing.description": "{user} deleted a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_delete.field_renaming.description": "{user} deleted a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_delete.row_filtering.description": "{user} deleted a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_delete.encryption.description": "{user} deleted an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+
   "connectionAutoDisabledReason.TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS": "Airbyte disabled the connection due to consecutive failures with no recent success.",
   "connectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY": "Airbyte disabled the connection due to only failed jobs recently.",
   "connectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW": "Airbyte disabled the connection due to consecutive failures.",

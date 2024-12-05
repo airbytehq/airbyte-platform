@@ -34,6 +34,12 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   // todo
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
   [ConnectionEventType.UNKNOWN]: "",
+
+  // TODO: waiting for the backend to add these
+  // issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/10947
+  // [ConnectionEventType.MAPPING_CREATE]: "connection.timeline.mapping_create",
+  // [ConnectionEventType.MAPPING_UPDATE]: "connection.timeline.mapping_update",
+  // [ConnectionEventType.MAPPING_DELETE]: "connection.timeline.mapping_delete",
 };
 
 /**

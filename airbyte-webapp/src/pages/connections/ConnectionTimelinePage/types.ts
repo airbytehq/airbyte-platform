@@ -13,6 +13,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   StreamAttributeTransformTransformType,
+  StreamMapperType,
   StreamTransformTransformType,
 } from "core/api/types/AirbyteClient";
 
@@ -294,6 +295,15 @@ export const schemaUpdateSummarySchema = yup.object({
   updateReason: yup.mixed().oneOf(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
 });
 
+export const mappingEventSummarySchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  mapperType: yup
+    .mixed<StreamMapperType>()
+    .oneOf([...Object.values(StreamMapperType)])
+    .required(),
+});
+
 /**
  * @typedef {import("core/api/types/AirbyteClient").ConnectionEvent}
  */
@@ -391,6 +401,13 @@ export const sourceConnectorUpdateEventSchema = generalEventSchema.shape({
 export const destinationConnectorUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
   summary: destinationDefinitionUpdateSchema.required(),
+});
+
+export const mappingEventSchema = generalEventSchema.shape({
+  // TODO: add mapping event types from AirbyteClient once they are defined
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
+  eventType: yup.mixed().oneOf(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]).required(),
+  summary: mappingEventSummarySchema.required(),
 });
 
 export interface ConnectionTimelineRunningEvent {
