@@ -117,6 +117,8 @@ import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -130,6 +132,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -168,6 +171,7 @@ class WebBackendConnectionsHandlerTest {
   private WorkspaceService workspaceService;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private DestinationCatalogGenerator destinationCatalogGenerator;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
@@ -197,6 +201,7 @@ class WebBackendConnectionsHandlerTest {
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -261,7 +266,8 @@ class WebBackendConnectionsHandlerTest {
         sourceService,
         workspaceService, catalogConverter,
         applySchemaChangeHelper,
-        apiPojoConverters));
+        apiPojoConverters,
+        destinationCatalogGenerator));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
@@ -308,6 +314,9 @@ class WebBackendConnectionsHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any())).thenReturn(mockADVWithOverrideStatus);
     when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(mockADV);
     when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(mockADV);
+
+    when(destinationCatalogGenerator.generateDestinationCatalog(any()))
+        .thenAnswer(invocation -> new CatalogGenerationResult(invocation.getArgument(0), Map.of()));
 
     connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
     brokenConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(brokenStandardSync);
@@ -1037,6 +1046,9 @@ class WebBackendConnectionsHandlerTest {
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
     assertEquals(expectedWithNewSchema.getSyncCatalog(), result.getSyncCatalog());
+
+    verify(destinationCatalogGenerator).generateDestinationCatalog(catalogConverter.toConfiguredInternal(expectedWithNewSchema.getSyncCatalog()));
+    verify(destinationCatalogGenerator).generateDestinationCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
