@@ -7939,6 +7939,9 @@ components:
           format: int32
           minimum: 1
           maximum: 100
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutManualFinalizeRequestBody:
       type: object

@@ -549,6 +549,9 @@ open class ConnectorRolloutHandler
               connectorRollout,
               getPinnedActorInfo(connectorRollout.id),
               getActorSyncInfo(connectorRollout.id),
+              connectorRollout.initialRolloutPct.toInt(),
+              connectorRollout.finalTargetRolloutPct.toInt(),
+              connectorRolloutUpdate.migratePins,
             ),
           )
         } catch (e: WorkflowUpdateException) {
