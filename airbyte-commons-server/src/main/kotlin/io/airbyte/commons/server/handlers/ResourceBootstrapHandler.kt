@@ -104,6 +104,7 @@ open class ResourceBootstrapHandler(
       OrganizationPaymentConfig()
         .withOrganizationId(organization.organizationId)
         .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
 
     organizationPaymentConfigService.savePaymentConfig(paymentConfig)
 

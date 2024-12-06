@@ -8303,6 +8303,12 @@ components:
           required:
             - paymentStatus
           properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
             paymentStatus:
               type: string
               enum:
